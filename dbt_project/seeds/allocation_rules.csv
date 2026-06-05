@@ -1,0 +1,4 @@
+allocation_rule_id,rule_name,source_account,source_cost_center,driver_type,target_account,description
+ALLOC_001,IT Cost Allocation,7100,IT,headcount,7100,Allocate IT costs to departments by headcount
+ALLOC_002,Facility Cost Allocation,7200,FACILITY,sqm,7200,Allocate facility costs by square meters
+ALLOC_003,Management Fee Allocation,7300,MGMT,revenue,7300,Allocate management fees by revenue share
