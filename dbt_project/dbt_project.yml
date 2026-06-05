@@ -15,6 +15,43 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+vars:
+  dimensions:
+    - name: dim_cost_center
+      source_column: CostCenter
+      label: "Cost Center"
+      cube_type: string
+      in_budget: true
+      allocation_role: cost_center
+    - name: dim_department
+      source_column: Department
+      label: "Department"
+      cube_type: string
+      in_budget: true
+    - name: dim_business_unit
+      source_column: BusinessUnit
+      label: "Business Unit"
+      cube_type: string
+      in_budget: false
+
+  base_measures:
+    - name: period_debit
+      expression: "sum(debit_amount)"
+      label: "Debit"
+      cube_type: sum
+    - name: period_credit
+      expression: "sum(credit_amount)"
+      label: "Credit"
+      cube_type: sum
+    - name: period_net_amount
+      expression: "sum(accounting_currency_amount)"
+      label: "Net Amount"
+      cube_type: sum
+    - name: transaction_count
+      expression: "count(*)"
+      label: "Transaction Count"
+      cube_type: sum
+
 models:
   open_epm:
     bronze:
@@ -33,3 +70,19 @@ models:
 seeds:
   open_epm:
     +schema: gold
+    consolidation_groups:
+      +column_types:
+        ownership_pct: "Decimal(5,2)"
+    consolidation_adjustments:
+      +column_types:
+        consolidation_group: "String"
+        adjustment_type: "String"
+        journal_id: "String"
+        data_area_id: "String"
+        fiscal_year: "UInt16"
+        fiscal_period: "UInt8"
+        main_account: "String"
+        debit_amount: "Decimal(18,2)"
+        credit_amount: "Decimal(18,2)"
+        description: "String"
+        posted_by: "String"

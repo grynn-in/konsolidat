@@ -1,7 +1,7 @@
 {{
     config(
         engine='MergeTree()',
-        order_by='(scenario_id, data_area_id, fiscal_year, fiscal_period, main_account)'
+        order_by='tuple()'
     )
 }}
 
@@ -14,8 +14,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    dim_cost_center,
-    dim_department,
+    {{ dim_select(dims=get_budget_dimensions()) }},
     period_net_amount as amount,
     'gl' as data_source
 from {{ ref('gold_trial_balance') }}
@@ -31,8 +30,7 @@ select
     main_account,
     '' as account_name,
     '' as account_type_name,
-    dim_cost_center,
-    dim_department,
+    {{ dim_select(dims=get_budget_dimensions()) }},
     accounting_currency_amount as amount,
     'd365_budget' as data_source
 from {{ ref('silver_budget_entries') }}
@@ -48,8 +46,7 @@ select
     main_account,
     '' as account_name,
     '' as account_type_name,
-    dim_cost_center,
-    dim_department,
+    {{ dim_select(dims=get_budget_dimensions()) }},
     amount,
     'api_input' as data_source
 from epm_staging.budget_input

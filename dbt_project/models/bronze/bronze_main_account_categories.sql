@@ -6,11 +6,11 @@
 }}
 
 select
-    toInt64(RecId) as recid,
-    toString(AccountCategory) as account_category,
-    toString(Description) as description,
-    toString(AccountType) as account_type,
-    toString(coalesce(IsClosed, '')) as is_closed,
-    toDateTime(_airbyte_extracted_at) as _airbyte_extracted_at,
-    toString(_airbyte_raw_id) as _airbyte_raw_id
+    {{ cast_to_int64('RecId') }} as recid,
+    {{ cast_to_string('AccountCategory') }} as account_category,
+    {{ cast_to_string('Description') }} as description,
+    {{ cast_to_string('AccountType') }} as account_type,
+    {{ cast_to_string("coalesce(IsClosed, '')") }} as is_closed,
+    {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
+    {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ source('airbyte_raw', 'main_account_categories') }}

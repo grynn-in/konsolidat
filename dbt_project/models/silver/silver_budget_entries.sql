@@ -1,8 +1,7 @@
 {{
     config(
         engine='MergeTree()',
-        order_by='(data_area_id, transaction_date, main_account)',
-        partition_by='toYYYYMM(transaction_date)'
+        order_by='(data_area_id, transaction_date, main_account)'
     )
 }}
 
@@ -10,14 +9,13 @@ select
     btl.recid,
     bre.data_area_id,
     btl.transaction_date,
-    toYear(btl.transaction_date) as fiscal_year,
-    toMonth(btl.transaction_date) as fiscal_period,
+    {{ extract_year('btl.transaction_date') }} as fiscal_year,
+    {{ extract_month('btl.transaction_date') }} as fiscal_period,
     btl.main_account,
     btl.accounting_currency_amount,
     btl.transaction_currency_amount,
     btl.transaction_currency,
-    btl.dim_cost_center,
-    btl.dim_department,
+    {{ dim_select(prefix='btl.', dims=get_budget_dimensions()) }},
     bre.budget_model_id,
     bre.budget_transaction_code,
     bre.budget_status,

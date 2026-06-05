@@ -7,17 +7,17 @@
 }}
 
 select
-    toInt64(RecId) as recid,
-    toString(dataAreaId) as data_area_id,
-    toDate(AccountingDate) as accounting_date,
-    toString(JournalNumber) as journal_number,
-    toString(JournalCategory) as journal_category,
-    toString(DocumentNumber) as document_number,
-    toDate(DocumentDate) as document_date,
-    toString(Description) as description,
-    toString(PostingLayer) as posting_layer,
-    toString(FiscalCalendarPeriod) as fiscal_calendar_period,
-    toInt64(FiscalCalendarYear) as fiscal_calendar_year_recid,
-    toDateTime(_airbyte_extracted_at) as _airbyte_extracted_at,
-    toString(_airbyte_raw_id) as _airbyte_raw_id
+    {{ cast_to_int64('RecId') }} as recid,
+    {{ cast_to_string('dataAreaId') }} as data_area_id,
+    {{ cast_to_date('AccountingDate') }} as accounting_date,
+    {{ cast_to_string('JournalNumber') }} as journal_number,
+    {{ cast_to_string('JournalCategory') }} as journal_category,
+    {{ cast_to_string('DocumentNumber') }} as document_number,
+    {{ cast_to_date('DocumentDate') }} as document_date,
+    {{ cast_to_string('Description') }} as description,
+    {{ cast_to_string('PostingLayer') }} as posting_layer,
+    {{ cast_to_string('FiscalCalendarPeriod') }} as fiscal_calendar_period,
+    {{ cast_to_int64('FiscalCalendarYear') }} as fiscal_calendar_year_recid,
+    {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
+    {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ source('airbyte_raw', 'general_journal_entries') }}

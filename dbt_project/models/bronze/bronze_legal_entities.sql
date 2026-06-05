@@ -6,12 +6,12 @@
 }}
 
 select
-    toString(dataArea) as data_area,
-    toString(Name) as entity_name,
-    toString(coalesce(AccountingCurrency, '')) as accounting_currency,
-    toString(coalesce(ReportingCurrency, '')) as reporting_currency,
-    toString(coalesce(PartyNumber, '')) as party_number,
-    toString(coalesce(AddressCountryRegionId, '')) as country_region,
-    toDateTime(_airbyte_extracted_at) as _airbyte_extracted_at,
-    toString(_airbyte_raw_id) as _airbyte_raw_id
+    {{ cast_to_string('dataArea') }} as data_area,
+    {{ cast_to_string('Name') }} as entity_name,
+    {{ cast_to_string("coalesce(AccountingCurrency, '')") }} as accounting_currency,
+    {{ cast_to_string("coalesce(ReportingCurrency, '')") }} as reporting_currency,
+    {{ cast_to_string("coalesce(PartyNumber, '')") }} as party_number,
+    {{ cast_to_string("coalesce(AddressCountryRegionId, '')") }} as country_region,
+    {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
+    {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ source('airbyte_raw', 'legal_entities') }}

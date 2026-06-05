@@ -6,10 +6,10 @@
 }}
 
 select
-    toString(ExchangeRateType) as exchange_rate_type,
-    toString(coalesce(Name, '')) as type_name,
-    toString(coalesce(Description, '')) as description,
-    toInt64(RecId) as recid,
-    toDateTime(_airbyte_extracted_at) as _airbyte_extracted_at,
-    toString(_airbyte_raw_id) as _airbyte_raw_id
+    {{ cast_to_string('ExchangeRateType') }} as exchange_rate_type,
+    {{ cast_to_string("coalesce(Name, '')") }} as type_name,
+    {{ cast_to_string("coalesce(Description, '')") }} as description,
+    {{ cast_to_int64('RecId') }} as recid,
+    {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
+    {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ source('airbyte_raw', 'exchange_rate_types') }}
