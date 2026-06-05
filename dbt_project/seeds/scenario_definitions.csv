@@ -1,0 +1,5 @@
+scenario_id,scenario_name,scenario_type,is_active
+ACTUAL,Actuals,actual,1
+BUDGET,Budget 2024,budget,1
+FORECAST,Forecast Q3,forecast,1
+WHATIF_01,What-If Scenario 1,whatif,0
