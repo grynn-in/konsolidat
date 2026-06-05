@@ -1,0 +1,35 @@
+name: 'open_epm'
+version: '1.0.0'
+config-version: 2
+
+profile: 'open_epm'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  open_epm:
+    bronze:
+      +schema: bronze
+      +materialized: table
+      +tags: ['bronze']
+    silver:
+      +schema: silver
+      +materialized: table
+      +tags: ['silver']
+    gold:
+      +schema: gold
+      +materialized: table
+      +tags: ['gold']
+
+seeds:
+  open_epm:
+    +schema: gold

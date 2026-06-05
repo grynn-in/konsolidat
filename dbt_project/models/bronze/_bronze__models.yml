@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: bronze_general_journal_account_entries
+    description: "GL line items - raw from D365 with explicit types"
+    columns:
+      - name: recid
+        description: "D365 record ID"
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "Legal entity / company code"
+        tests:
+          - not_null
+
+  - name: bronze_general_journal_entries
+    description: "Journal headers - raw from D365"
+    columns:
+      - name: recid
+        tests:
+          - not_null
+
+  - name: bronze_main_accounts
+    description: "Chart of accounts master"
+    columns:
+      - name: main_account_id
+        tests:
+          - not_null
+          - unique
+
+  - name: bronze_main_account_categories
+    description: "Account category mapping"
+    columns:
+      - name: recid
+        tests:
+          - not_null
+
+  - name: bronze_legal_entities
+    description: "Company / legal entity master"
+    columns:
+      - name: data_area
+        tests:
+          - not_null
+          - unique
+
+  - name: bronze_fiscal_calendars
+    description: "Fiscal calendar definitions"
+
+  - name: bronze_fiscal_calendar_years
+    description: "Fiscal year definitions"
+
+  - name: bronze_financial_dimensions
+    description: "Financial dimension definitions"
+
+  - name: bronze_financial_dimension_values
+    description: "Financial dimension value master"
+
+  - name: bronze_exchange_rate_currency_pairs
+    description: "Exchange rate data"
+
+  - name: bronze_exchange_rate_types
+    description: "Exchange rate type definitions"
+
+  - name: bronze_budget_register_entries
+    description: "Budget register headers"
+
+  - name: bronze_budget_transaction_lines
+    description: "Budget transaction line items"
+
+  - name: bronze_consolidation_account_groups
+    description: "Consolidation account group mapping"
+
+  - name: bronze_trial_balance_snapshot
+    description: "Trial balance fiscal year snapshots"
