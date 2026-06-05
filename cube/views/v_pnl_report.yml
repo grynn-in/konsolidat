@@ -1,0 +1,20 @@
+views:
+  - name: v_pnl_report
+    description: "P&L report view for Excel PivotTables"
+    cubes:
+      - join_path: trial_balance
+        includes:
+          - data_area_id
+          - fiscal_year
+          - fiscal_period
+          - main_account
+          - account_name
+          - dim_cost_center
+          - dim_department
+          - dim_business_unit
+          - period_debit
+          - period_credit
+          - period_net_amount
+          - transaction_count
+    meta:
+      sql_filter: "trial_balance.is_pnl = true"

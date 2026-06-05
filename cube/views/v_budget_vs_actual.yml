@@ -1,0 +1,16 @@
+views:
+  - name: v_budget_vs_actual
+    description: "Budget vs Actual comparison for Excel"
+    cubes:
+      - join_path: scenario_trial_balance
+        includes:
+          - data_area_id
+          - fiscal_year
+          - fiscal_period
+          - main_account
+          - account_name
+          - dim_cost_center
+          - dim_department
+          - actual_amount
+          - budget_amount
+          - variance
