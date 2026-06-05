@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /opt/dagster/app
+
+RUN pip install --no-cache-dir \
+    dagster \
+    dagster-webserver \
+    dagster-postgres \
+    dagster-dbt \
+    dagster-airbyte \
+    dbt-core \
+    dbt-clickhouse \
+    clickhouse-connect
+
+COPY dagster/ dagster/
+COPY dbt_project/ dbt_project/
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home
+RUN mkdir -p $DAGSTER_HOME
+
+COPY dagster/dagster.yaml $DAGSTER_HOME/dagster.yaml
+COPY dagster/workspace.yaml $DAGSTER_HOME/workspace.yaml
+
+EXPOSE 3000

@@ -1,0 +1,47 @@
+# Environment
+.env
+.env.local
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ClickHouse data
+clickhouse/data/
+clickhouse/logs/
+
+# dbt
+dbt_project/target/
+dbt_project/logs/
+dbt_project/dbt_packages/
+
+# Cube
+cube/node_modules/
+cube/.cubestore/
+
+# Dagster
+dagster/storage/
+dagster/logs/
+
+# Python
+*.egg-info/
+dist/
+build/
+
+# Docker
+docker/volumes/
+
+# Claude memory (keep structure, ignore logs)
+.claude/memory/lossless/
+.claude/memory/cache/
+
+# Codegraph
+.codegraph/

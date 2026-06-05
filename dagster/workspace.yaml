@@ -1,0 +1,5 @@
+load_from:
+  - python_package:
+      package_name: open_epm_dagster
+      location_name: open_epm
+      working_directory: /opt/dagster/app/dagster
