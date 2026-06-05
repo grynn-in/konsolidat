@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: gold_trial_balance
+    description: "Period-level trial balance aggregated from GL entries"
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: fiscal_year
+        tests:
+          - not_null
+      - name: fiscal_period
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+
+  - name: gold_pnl_by_period
+    description: "P&L view - revenue and expense accounts only"
+
+  - name: gold_balance_sheet
+    description: "Balance sheet view - cumulative balances for BS accounts"
+
+  - name: gold_allocation_results
+    description: "Results of driver-based cost allocations"
+
+  - name: gold_consolidated_trial_balance
+    description: "Multi-company consolidated trial balance with currency translation"
+
+  - name: gold_ic_eliminations
+    description: "Intercompany elimination entries"
+
+  - name: gold_fx_revaluation
+    description: "Currency translation adjustment (CTA) entries"
+
+  - name: gold_scenario_versions
+    description: "Scenario version metadata"
+
+  - name: gold_scenario_trial_balance
+    description: "Union of actual + budget + forecast across all scenarios"
