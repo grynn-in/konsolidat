@@ -1,0 +1,53 @@
+version: 2
+
+models:
+  - name: silver_gl_entries
+    description: "Joined GL entries with journal headers, flattened dimensions"
+    columns:
+      - name: recid
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: accounting_date
+        tests:
+          - not_null
+
+  - name: silver_main_accounts
+    description: "Clean chart of accounts with readable account type names"
+    columns:
+      - name: main_account_id
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_legal_entities
+    description: "Clean company master with currency"
+    columns:
+      - name: data_area
+        tests:
+          - not_null
+          - unique
+
+  - name: silver_fiscal_periods
+    description: "Standardized period lookup"
+
+  - name: silver_financial_dimensions
+    description: "Clean dimension values with active status"
+
+  - name: silver_exchange_rates
+    description: "Cleaned exchange rates (D365 rate / 100)"
+    columns:
+      - name: exchange_rate
+        tests:
+          - name: positive_rate
+            config:
+              severity: warn
+              where: "exchange_rate <= 0"
+
+  - name: silver_budget_entries
+    description: "Standardized budget lines joined with register headers"
+
+  - name: silver_trial_balance
+    description: "Trial balance from D365 snapshot entity (validation baseline)"
