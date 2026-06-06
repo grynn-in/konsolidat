@@ -60,6 +60,19 @@ dbt build
 - **Scenarios**: Version-controlled budget/forecast/what-if scenarios
 - **Reporting**: Excel PivotTables via Cube SQL API (Postgres wire protocol)
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | System design, ADRs, data flow, security overview |
+| [Security Architecture](docs/security-architecture.md) | Frappe + Entra ID SSO, RBAC, Excel Online Add-in design |
+| [Cost Comparison](docs/cost-comparison-vs-commercial.md) | Open EPM vs. Tagetik, OneStream, Anaplan, Planful, Prophix |
+| [Roadmap](docs/roadmap.md) | Remaining activities: Frappe migration, Excel Online, analytical gaps |
+| [Setup Guide](docs/setup-guide.md) | Installation and configuration |
+| [Consolidation Guide](docs/consolidation-guide.md) | Multi-entity consolidation, FX, IC elimination |
+| [Allocation Guide](docs/allocation-guide.md) | Multi-step cascading allocations |
+| [Excel User Guide](docs/excel-user-guide.md) | PivotTables, budget submission, ODBC setup |
+
 ## License
 
 MIT
