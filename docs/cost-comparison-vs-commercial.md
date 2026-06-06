@@ -1,18 +1,18 @@
-# Open EPM vs. Commercial CPM: Cost & Feature Comparison
+# Konsol vs. Commercial CPM: Cost & Feature Comparison
 
 *Last updated: 2026-06-06*
 
 ## Overview
 
-This document compares Open EPM against the top 5 commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, Anaplan, Planful, and Prophix.
+This document compares Konsol against the top 5 commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, Anaplan, Planful, and Prophix.
 
-**Target market:** Private mid-market companies (2–50 entities) running D365 F&O. Open EPM is not positioned for publicly listed companies requiring SOX certification or statutory regulatory reporting.
+**Target market:** Private mid-market companies (2–50 entities) running D365 F&O. Konsol is not positioned for publicly listed companies requiring SOX certification or statutory regulatory reporting.
 
 ---
 
 ## Feature Parity Matrix
 
-| Feature | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Open EPM** |
+| Feature | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Konsol** |
 |---|---|---|---|---|---|---|
 | Multi-entity consolidation | Native | Native | Add-on | Native | Native | **Yes** (dbt gold layer) |
 | FX translation (closing/avg rate) | Native | Native | Manual | Native | Native | **Yes** (IFRS/GAAP compliant) |
@@ -38,7 +38,7 @@ This document compares Open EPM against the top 5 commercial Corporate Performan
 
 ## Cost Comparison (3-Year TCO, ~50 Users)
 
-| Cost Item | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Open EPM** |
+| Cost Item | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Konsol** |
 |---|---|---|---|---|---|---|
 | Year 1 license | $50K–100K | $80K–178K | $180K–350K | $240K | $170K–210K | **$0** |
 | Year 2 license | $50K–100K | $80K–178K | $180K–350K | $240K | $170K–210K | **$0** |
@@ -46,7 +46,7 @@ This document compares Open EPM against the top 5 commercial Corporate Performan
 | Implementation | $50K–200K | $50K–200K | $150K–350K | ~$100K | ~$80K | **$10K–30K** (internal) |
 | Infra (hosting) | Included | Included | Included | Included | Included | **$3K–8K/yr** (VM + ClickHouse) |
 | **3-Year Total** | **$200K–500K** | **$300K–700K** | **$700K–1.4M** | **$820K** | **$600K** | **$20K–55K** |
-| **Savings vs. Open EPM** | — | — | — | — | — | **90–97%** |
+| **Savings vs. Konsol** | — | — | — | — | — | **90–97%** |
 
 ### Commercial Pricing Sources
 
@@ -58,7 +58,7 @@ This document compares Open EPM against the top 5 commercial Corporate Performan
 
 ---
 
-## What Open EPM Actually Ships
+## What Konsol Actually Ships
 
 ### Data Pipeline (Medallion Architecture)
 
@@ -116,13 +116,13 @@ This document compares Open EPM against the top 5 commercial Corporate Performan
 
 ## Real-World Gap Analysis: Private Luxury Retailer (e.g. multi-country, 7+ currencies, 70+ locations)
 
-A company like a Swiss-headquartered luxury retailer with stores across CH, DE, AT, DK, FR, UK, and US illustrates what Open EPM covers vs. what's still missing.
+A company like a Swiss-headquartered luxury retailer with stores across CH, DE, AT, DK, FR, UK, and US illustrates what Konsol covers vs. what's still missing.
 
 ### Already Covered — No Gaps
 
 | Requirement | Why It's Not a Gap |
 |---|---|
-| **Store-level P&L** | D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Open EPM extracts these in bronze and flows them through to gold. Just configure the Cube schema to expose them. |
+| **Store-level P&L** | D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Konsol extracts these in bronze and flows them through to gold. Just configure the Cube schema to expose them. |
 | **Management reporting hierarchies** (by region, brand, product category) | Same — financial dimensions support arbitrary rollups. Add hierarchy mapping as a dbt seed and join in gold models. |
 | **Multi-currency consolidation** (CHF, EUR, GBP, DKK, USD) | Fully implemented — closing rate for BS, average rate for P&L, CTA equity plug, all tested. |
 | **IC elimination** (intercompany sales between country entities) | Implemented with configurable rules (CSV seed). |
@@ -133,7 +133,7 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 | Gap | Impact | Why It Matters | Buildable? |
 |---|---|---|---|
 | **Cash flow statement** | High | CFOs need consolidated indirect cash flow. No CF model exists in dbt today. | Yes — derive from GL movements (BS delta method). ~2–3 days of dbt work. |
-| **Multi-GAAP / dual reporting** | Medium | Swiss GAAP FER for local statutory + IFRS for group reporting. Open EPM runs one consolidation path. | Yes — add a `reporting_standard` dimension to gold models and maintain two sets of adjustment rules. ~1 week. |
+| **Multi-GAAP / dual reporting** | Medium | Swiss GAAP FER for local statutory + IFRS for group reporting. Konsol runs one consolidation path. | Yes — add a `reporting_standard` dimension to gold models and maintain two sets of adjustment rules. ~1 week. |
 | **Rolling forecasts** | Medium | Retail needs 12-month rolling forecasts updated monthly, not just annual budget vs actual. | Yes — extend scenario management with a rolling window function and period-shift logic. ~2–3 days. |
 
 ### Not Gaps (commonly assumed, but wrong)
@@ -163,9 +163,9 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 
 ## Maintenance & Org Model
 
-### Who Maintains Open EPM?
+### Who Maintains Konsol?
 
-In a mid-market company ($100M–$1B revenue, 2–50 entities), Open EPM is maintained by a small team — typically 2.5–3.5 FTE touching the system, of which only 1 is technical.
+In a mid-market company ($100M–$1B revenue, 2–50 entities), Konsol is maintained by a small team — typically 2.5–3.5 FTE touching the system, of which only 1 is technical.
 
 | Role | FTE | Team | Responsibilities |
 |---|---|---|---|
@@ -208,7 +208,7 @@ A company running Tagetik or OneStream at similar scale typically needs:
 | Implementation partner | 0.5 (retainer) | Upgrades, patches, custom reports — vendor lock-in |
 | Same finance roles | 2–3 | Controller + FP&A still needed regardless |
 
-**Total CPM cost with commercial:** $200K–400K/yr (license + partner + admin). With Open EPM: **$30K–50K/yr** (data engineer time + hosting).
+**Total CPM cost with commercial:** $200K–400K/yr (license + partner + admin). With Konsol: **$30K–50K/yr** (data engineer time + hosting).
 
 ---
 
@@ -220,10 +220,10 @@ A company running Tagetik or OneStream at similar scale typically needs:
 | **D365 F&O shop wanting fast EPM** | **Best fit** | Native OData integration, `docker compose up` and go |
 | **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible |
 | **Private group, 10–50 entities** | **Good fit** | Handles NCI and multi-currency; validate at scale during PoC |
-| **Planning-heavy (500+ planners)** | Consider commercial | Open EPM write-back is functional but basic vs. Anaplan |
+| **Planning-heavy (500+ planners)** | Consider commercial | Konsol write-back is functional but basic vs. Anaplan |
 
 ---
 
 ## Bottom Line
 
-Open EPM implements the three features traditionally cited as having "no open-source solution": financial consolidation, intercompany elimination, and FX translation with CTA. For a private mid-market D365 F&O company, it replaces ~80% of what commercial CPM platforms deliver at 3–10% of the cost — saving $200K–600K over three years.
+Konsol implements the three features traditionally cited as having "no open-source solution": financial consolidation, intercompany elimination, and FX translation with CTA. For a private mid-market D365 F&O company, it replaces ~80% of what commercial CPM platforms deliver at 3–10% of the cost — saving $200K–600K over three years.

@@ -1,4 +1,4 @@
-# Open EPM — Roadmap & Remaining Activities
+# Konsol — Roadmap & Remaining Activities
 
 *Last updated: 2026-06-07*
 
@@ -31,7 +31,7 @@ Replace FastAPI + Streamlit + CSV seeds with Frappe. This closes the auth, workf
 ### 1.1 Frappe App Scaffold (1 day)
 
 - [ ] `bench init open-epm-bench`
-- [ ] `bench new-app open_epm`
+- [ ] `bench new-app konsol`
 - [ ] Add ClickHouse connection module (`clickhouse-connect`)
 - [ ] Add Frappe app to `docker-compose.yml` (Frappe + MariaDB + Redis + workers)
 - [ ] Verify Frappe Desk loads at `localhost:8000`
@@ -75,7 +75,7 @@ Replace CSV seeds with Frappe DocTypes. Each DocType gets auto-generated REST AP
 
 ### 2.1 Entra ID Integration (1 day)
 
-- [ ] Register Open EPM as an app in Microsoft Entra ID (same tenant as D365)
+- [ ] Register Konsol as an app in Microsoft Entra ID (same tenant as D365)
 - [ ] Configure Frappe Social Login Key for Entra ID (OAuth2 / OpenID Connect)
 - [ ] Map Entra ID groups to Frappe roles (Reader, Planner, Controller, Admin)
 - [ ] Test SSO login flow from browser
@@ -106,11 +106,11 @@ Replace CSV seeds with Frappe DocTypes. Each DocType gets auto-generated REST AP
 
 ### 3.2 API Integration (1 day)
 
-- [ ] `EPM.VALUE()` → `GET /api/method/open_epm.api.get_value`
-- [ ] `EPM.CONSOLIDATED()` → `GET /api/method/open_epm.api.get_consolidated`
-- [ ] `EPM.VARIANCE()` → `GET /api/method/open_epm.api.get_variance`
-- [ ] `EPM.MEMBERS()` → `GET /api/method/open_epm.api.get_members`
-- [ ] `EPM.SUBMIT()` → `POST /api/method/open_epm.api.submit_budget`
+- [ ] `EPM.VALUE()` → `GET /api/method/konsol.api.get_value`
+- [ ] `EPM.CONSOLIDATED()` → `GET /api/method/konsol.api.get_consolidated`
+- [ ] `EPM.VARIANCE()` → `GET /api/method/konsol.api.get_variance`
+- [ ] `EPM.MEMBERS()` → `GET /api/method/konsol.api.get_members`
+- [ ] `EPM.SUBMIT()` → `POST /api/method/konsol.api.submit_budget`
 - [ ] Batch optimization: coalesce multiple `EPM.VALUE()` calls into single batch request during recalc
 - [ ] Result caching: 5-minute TTL per dimension combination
 

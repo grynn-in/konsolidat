@@ -1,8 +1,6 @@
-# Open EPM
+# Konsol
 
-Open-source, self-hostable Enterprise Performance Management for D365 Finance.
-
-Excel-native budgeting, consolidation, and reporting — without the enterprise price tag.
+Open-source CPM for D365 Finance. Multi-entity consolidation, Excel-native budgeting, and reporting — at 3% of the cost of Tagetik or OneStream.
 
 ## Architecture
 
@@ -66,7 +64,7 @@ dbt build
 |----------|-------------|
 | [Architecture](docs/architecture.md) | System design, ADRs, data flow, security overview |
 | [Security Architecture](docs/security-architecture.md) | Frappe + Entra ID SSO, RBAC, Excel Online Add-in design |
-| [Cost Comparison](docs/cost-comparison-vs-commercial.md) | Open EPM vs. Tagetik, OneStream, Anaplan, Planful, Prophix |
+| [Cost Comparison](docs/cost-comparison-vs-commercial.md) | Konsol vs. Tagetik, OneStream, Anaplan, Planful, Prophix |
 | [Roadmap](docs/roadmap.md) | Remaining activities: Frappe migration, Excel Online, analytical gaps |
 | [Setup Guide](docs/setup-guide.md) | Installation and configuration |
 | [Consolidation Guide](docs/consolidation-guide.md) | Multi-entity consolidation, FX, IC elimination |

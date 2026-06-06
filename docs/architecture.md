@@ -1,8 +1,8 @@
-# Open EPM Architecture
+# Konsol Architecture
 
 ## Overview
 
-Open EPM is an open-source Enterprise Performance Management stack for D365 Finance. It provides Excel-native budgeting, consolidation, and reporting at a fraction of the cost of commercial EPM tools.
+Konsol is an open-source Enterprise Performance Management stack for D365 Finance. It provides Excel-native budgeting, consolidation, and reporting at a fraction of the cost of commercial EPM tools.
 
 ## Data Flow (Target Architecture)
 

@@ -1,10 +1,10 @@
-# Open EPM — Security Architecture & Excel Online Integration
+# Konsol — Security Architecture & Excel Online Integration
 
 *Last updated: 2026-06-06*
 
 ## Overview
 
-This document describes the security architecture for exposing Open EPM to Excel Online and web users, using Frappe as the application layer and ClickHouse (cloud-hosted) as the analytical backend.
+This document describes the security architecture for exposing Konsol to Excel Online and web users, using Frappe as the application layer and ClickHouse (cloud-hosted) as the analytical backend.
 
 **Design principles:**
 - Frappe owns **application concerns** (users, config, workflows, write-back, audit)
@@ -117,15 +117,15 @@ No custom code needed — this is Frappe's built-in behavior.
 
 ### The HSGETVALUE Equivalent
 
-Open EPM provides an Excel Custom Functions Add-in that registers cell formulas working in Excel Online, Desktop, and iPad:
+Konsol provides an Excel Custom Functions Add-in that registers cell formulas working in Excel Online, Desktop, and iPad:
 
 | Formula | Purpose | API Endpoint |
 |---|---|---|
-| `=EPM.VALUE(entity, year, period, account, scenario, [cost_center], [dept])` | Single cell value (HSGETVALUE equivalent) | `GET /api/method/open_epm.api.get_value` |
-| `=EPM.CONSOLIDATED(entity, year, period, account, measure)` | Consolidated group amount (after IC elim + CTA) | `GET /api/method/open_epm.api.get_consolidated` |
-| `=EPM.VARIANCE(entity, year, period, account)` | Actual vs budget variance | `GET /api/method/open_epm.api.get_variance` |
-| `=EPM.MEMBERS(dimension)` | Populate dropdown lists (entities, accounts, periods) | `GET /api/method/open_epm.api.get_members` |
-| `=EPM.SUBMIT(range, scenario_id)` | Write budget data back (planner role only) | `POST /api/method/open_epm.api.submit_budget` |
+| `=EPM.VALUE(entity, year, period, account, scenario, [cost_center], [dept])` | Single cell value (HSGETVALUE equivalent) | `GET /api/method/konsol.api.get_value` |
+| `=EPM.CONSOLIDATED(entity, year, period, account, measure)` | Consolidated group amount (after IC elim + CTA) | `GET /api/method/konsol.api.get_consolidated` |
+| `=EPM.VARIANCE(entity, year, period, account)` | Actual vs budget variance | `GET /api/method/konsol.api.get_variance` |
+| `=EPM.MEMBERS(dimension)` | Populate dropdown lists (entities, accounts, periods) | `GET /api/method/konsol.api.get_members` |
+| `=EPM.SUBMIT(range, scenario_id)` | Write budget data back (planner role only) | `POST /api/method/konsol.api.submit_budget` |
 
 ### Example Usage in a Spreadsheet
 
@@ -143,7 +143,7 @@ Open EPM provides an Excel Custom Functions Add-in that registers cell formulas 
 
 ### How It Compares to Hyperion SmartView
 
-| | **Hyperion SmartView** | **Open EPM Add-in** |
+| | **Hyperion SmartView** | **Konsol Add-in** |
 |---|---|---|
 | Cell formula | `=HsGetValue(...)` | `=EPM.VALUE(...)` |
 | Bulk refresh | Ad hoc retrieve | Auto-recalc or ribbon refresh button |
@@ -158,7 +158,7 @@ Open EPM provides an Excel Custom Functions Add-in that registers cell formulas 
 - **Technology:** TypeScript, Office.js Custom Functions API
 - **Auth:** MSAL.js acquires Entra ID token; passed as Bearer header on every API call
 - **Caching:** Results cached for 5 minutes per dimension combination (configurable)
-- **Batch optimization:** Multiple `=EPM.VALUE(...)` calls in a sheet are batched into a single `/api/method/open_epm.api.batch` request during recalc
+- **Batch optimization:** Multiple `=EPM.VALUE(...)` calls in a sheet are batched into a single `/api/method/konsol.api.batch` request during recalc
 - **Deployment:** Upload to Microsoft 365 admin center for org-wide availability
 - **Scaffold:** `npx yo office --type excel-functions-shared` generates the project skeleton
 
@@ -250,7 +250,7 @@ For mid-market EPM workloads (a few GB of GL data, monthly refresh cycles), the 
 
 | Component | Effort | Notes |
 |---|---|---|
-| Frappe app scaffold + DocTypes | 2–3 days | `bench new-app open_epm`, define 6 DocTypes |
+| Frappe app scaffold + DocTypes | 2–3 days | `bench new-app konsol`, define 6 DocTypes |
 | ClickHouse integration (server scripts) | 1–2 days | `clickhouse-connect` from Frappe to read/write |
 | Entra ID SSO configuration | 1 day | Frappe Social Login + Entra app registration |
 | Budget approval workflow | Half day | Frappe workflow builder (configuration, not code) |
