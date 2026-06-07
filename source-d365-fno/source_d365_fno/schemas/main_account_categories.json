@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "ReferenceId": { "type": ["integer", "null"] },
+    "MainAccountCategory": { "type": ["string", "null"] },
+    "Description": { "type": ["string", "null"] },
+    "MainAccountType": { "type": ["string", "null"] },
+    "Closed": { "type": ["string", "null"] }
+  }
+}

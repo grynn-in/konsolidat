@@ -93,6 +93,10 @@ vars:
 
 models:
   open_epm:
+    staging:
+      +schema: staging
+      +materialized: view
+      +tags: ['staging']
     bronze:
       +schema: bronze
       +materialized: table

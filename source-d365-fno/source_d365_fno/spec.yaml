@@ -1,0 +1,44 @@
+documentationUrl: https://github.com/open-epm/open-epm
+connectionSpecification:
+  $schema: http://json-schema.org/draft-07/schema#
+  title: D365 Finance & Operations Source Spec
+  type: object
+  required:
+    - tenant_id
+    - client_id
+    - client_secret
+    - environment_url
+  properties:
+    tenant_id:
+      type: string
+      title: Azure AD Tenant ID
+      description: "The Azure Active Directory tenant ID for the D365 environment."
+      airbyte_secret: false
+      order: 0
+    client_id:
+      type: string
+      title: Azure AD Client ID
+      description: "The application (client) ID registered in Azure AD."
+      airbyte_secret: false
+      order: 1
+    client_secret:
+      type: string
+      title: Azure AD Client Secret
+      description: "The client secret for the Azure AD application."
+      airbyte_secret: true
+      order: 2
+    environment_url:
+      type: string
+      title: D365 Environment URL
+      description: "The base URL of the D365 F&O environment (e.g. https://mycompany.operations.dynamics.com)."
+      examples:
+        - "https://mycompany.operations.dynamics.com"
+      order: 3
+    page_size:
+      type: integer
+      title: Page Size
+      description: "Number of records per OData page. Default 5000."
+      default: 5000
+      minimum: 100
+      maximum: 10000
+      order: 4

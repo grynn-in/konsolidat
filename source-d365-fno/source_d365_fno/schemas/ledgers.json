@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "LegalEntityId": { "type": ["string", "null"] },
+    "AccountingCurrency": { "type": ["string", "null"] },
+    "ReportingCurrency": { "type": ["string", "null"] },
+    "Name": { "type": ["string", "null"] },
+    "ChartOfAccountsId": { "type": ["string", "null"] }
+  }
+}

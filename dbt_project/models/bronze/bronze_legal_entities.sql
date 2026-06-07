@@ -14,4 +14,4 @@ select
     {{ cast_to_string("coalesce(AddressCountryRegionId, '')") }} as country_region,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ source('airbyte_raw', 'legal_entities') }}
+from {{ ref('stg_d365__legal_entities') }}

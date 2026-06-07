@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "LedgerName": { "type": ["string", "null"] },
+    "DimensionValue1": { "type": ["string", "null"] },
+    "YearName": { "type": ["string", "null"] },
+    "PeriodStartDate": { "type": ["string", "null"], "format": "date-time" },
+    "OpeningBalance": { "type": ["number", "null"] },
+    "AmountDebit": { "type": ["number", "null"] },
+    "AmountCredit": { "type": ["number", "null"] },
+    "EndingBalance": { "type": ["number", "null"] }
+  }
+}

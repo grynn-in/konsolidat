@@ -15,4 +15,4 @@ select
     {{ cast_to_int8('coalesce(IsSuspended, 0)') }} as is_suspended,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ source('airbyte_raw', 'main_accounts') }}
+from {{ ref('stg_d365__main_accounts') }}

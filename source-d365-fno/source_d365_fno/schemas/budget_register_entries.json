@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "EntryNumber": { "type": ["string", "null"] },
+    "dataAreaId": { "type": ["string", "null"] },
+    "LegalEntityId": { "type": ["string", "null"] },
+    "BudgetModelId": { "type": ["string", "null"] },
+    "BudgetCode": { "type": ["string", "null"] },
+    "Comment": { "type": ["string", "null"] },
+    "ReasonComment": { "type": ["string", "null"] },
+    "Status": { "type": ["string", "null"] },
+    "Date": { "type": ["string", "null"], "format": "date-time" },
+    "DimensionDisplayValue": { "type": ["string", "null"] },
+    "AccountingCurrencyAmount": { "type": ["number", "null"] },
+    "TransactionCurrencyAmount": { "type": ["number", "null"] },
+    "CurrencyCode": { "type": ["string", "null"] },
+    "BusinessUnit": { "type": ["string", "null"] },
+    "Department": { "type": ["string", "null"] },
+    "IncludeInCashFlowForecast": { "type": ["string", "boolean", "null"] }
+  }
+}

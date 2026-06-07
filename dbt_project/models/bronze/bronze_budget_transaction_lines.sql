@@ -18,4 +18,4 @@ select
     {{ cast_to_int8('coalesce(IncludeInCashFlowForecast, 0)') }} as include_in_cash_flow,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ source('airbyte_raw', 'budget_transaction_lines') }}
+from {{ ref('stg_d365__budget_transaction_lines') }}

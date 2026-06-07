@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: stg_d365__gl_account_entries
+    description: "GL account entry lines — joined BI entities with parsed dimensions"
+    columns:
+      - name: RecId
+        tests:
+          - not_null
+      - name: dataAreaId
+        tests:
+          - not_null
+      - name: MainAccount
+        tests:
+          - not_null
+
+  - name: stg_d365__gl_journal_entries
+    description: "GL journal entry headers from BI entities"
+    columns:
+      - name: RecId
+        tests:
+          - not_null
+
+  - name: stg_d365__main_accounts
+    description: "Chart of accounts with MainAccountType mapped to Type"
+    columns:
+      - name: MainAccountId
+        tests:
+          - not_null
+
+  - name: stg_d365__main_account_categories
+    description: "Account categories with field renames from OData names"
+    columns:
+      - name: RecId
+        tests:
+          - not_null
+
+  - name: stg_d365__legal_entities
+    description: "Legal entities joined with Ledgers for currency info"
+    columns:
+      - name: dataArea
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_d365__fiscal_calendar_years
+    description: "Fiscal calendar years with Calendar mapped to FiscalCalendar"
+
+  - name: stg_d365__fiscal_calendars
+    description: "Fiscal calendar definitions derived from FiscalCalendarYears"
+
+  - name: stg_d365__financial_dimensions
+    description: "Financial dimension definitions from DimensionAttributes"
+
+  - name: stg_d365__financial_dimension_values
+    description: "Financial dimension values with FinancialDimension mapped to FinancialDimensionName"
+
+  - name: stg_d365__exchange_rates
+    description: "Exchange rates with rate scaling for ConversionFactor"
+
+  - name: stg_d365__exchange_rate_types
+    description: "Exchange rate type definitions"
+
+  - name: stg_d365__budget_register_entries
+    description: "Budget register headers deduplicated by EntryNumber"
+
+  - name: stg_d365__budget_transaction_lines
+    description: "Budget transaction lines with parsed DimensionDisplayValue"
+
+  - name: stg_d365__consolidation_groups
+    description: "Consolidation account groups deduplicated"
+
+  - name: stg_d365__trial_balance
+    description: "Trial balance snapshots with field name mapping"

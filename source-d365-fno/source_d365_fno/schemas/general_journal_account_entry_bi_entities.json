@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "SourceKey": { "type": ["integer", "null"] },
+    "GeneralJournalEntry": { "type": ["integer", "null"] },
+    "LedgerAccount": { "type": ["string", "null"] },
+    "LedgerDimensionValuesJson": { "type": ["string", "null"] },
+    "AccountingCurrencyAmount": { "type": ["number", "null"] },
+    "ReportingCurrencyAmount": { "type": ["number", "null"] },
+    "TransactionCurrencyAmount": { "type": ["number", "null"] },
+    "TransactionCurrencyCode": { "type": ["string", "null"] },
+    "PostingType": { "type": ["string", "null"] },
+    "Text": { "type": ["string", "null"] },
+    "IsCredit": { "type": ["string", "boolean", "null"] },
+    "AccountingDate": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

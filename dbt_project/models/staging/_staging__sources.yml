@@ -9,3 +9,70 @@ sources:
         description: "Budget/forecast line items submitted via the API"
       - name: scenario_definitions
         description: "Scenario metadata created via the API"
+
+  - name: d365_raw
+    description: "Raw D365 F&O OData entities landed by Airbyte connector"
+    database: epm_bronze
+    schema: ""
+    tables:
+      - name: general_journal_account_entry_bi_entities
+        description: "GL account entry lines from D365 GeneralJournalAccountEntryBiEntities"
+        loaded_at_field: _airbyte_extracted_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: general_journal_entry_bi_entities
+        description: "GL journal entry headers from D365 GeneralJournalEntryBiEntities"
+        loaded_at_field: _airbyte_extracted_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: main_accounts
+        description: "Chart of accounts from D365 MainAccounts"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: main_account_categories
+        description: "Account categories from D365 MainAccountCategories"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: legal_entities
+        description: "Legal entity master from D365 LegalEntities"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: ledgers
+        description: "Ledger configuration from D365 Ledgers"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: fiscal_calendar_years
+        description: "Fiscal calendar years from D365 FiscalCalendarYears"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: dimension_attributes
+        description: "Financial dimension definitions from D365 DimensionAttributes"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: financial_dimension_values
+        description: "Dimension values from D365 FinancialDimensionValues"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: exchange_rates
+        description: "Exchange rates from D365 ExchangeRates"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: exchange_rate_types
+        description: "Exchange rate types from D365 ExchangeRateTypes"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: budget_register_entries
+        description: "Budget register entries (combined header+line) from D365 BudgetRegisterEntries"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: consolidate_account_groups
+        description: "Consolidation account groups from D365 ConsolidateAccountGroups"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: trial_balance_fiscal_year_snapshots
+        description: "Trial balance snapshots from D365 TrialBalanceFiscalYearSnapshots"
+        loaded_at_field: _airbyte_extracted_at

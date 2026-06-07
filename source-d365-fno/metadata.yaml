@@ -1,0 +1,15 @@
+data:
+  connectorType: source
+  definitionId: "open-epm-d365-fno"
+  dockerImageTag: "0.1.0"
+  dockerRepository: "open-epm/source-d365-fno"
+  connectorSubtype: api
+  githubIssueLabel: source-d365-fno
+  license: MIT
+  name: D365 Finance & Operations
+  releaseStage: alpha
+  supportLevel: community
+  documentationUrl: https://github.com/open-epm/open-epm
+  tags:
+    - language:python
+    - cdk:python

@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "LegalEntityId": { "type": ["string", "null"] },
+    "Name": { "type": ["string", "null"] },
+    "PartyNumber": { "type": ["string", "null"] },
+    "AddressCountryRegionId": { "type": ["string", "null"] }
+  }
+}

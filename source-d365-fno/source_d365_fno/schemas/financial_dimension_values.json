@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "FinancialDimension": { "type": ["string", "null"] },
+    "DimensionValue": { "type": ["string", "null"] },
+    "Description": { "type": ["string", "null"] },
+    "IsSuspended": { "type": ["string", "boolean", "null"] },
+    "ActiveFrom": { "type": ["string", "null"], "format": "date-time" },
+    "ActiveTo": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

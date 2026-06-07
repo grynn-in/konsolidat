@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "SourceKey": { "type": ["integer", "null"] },
+    "SubledgerVoucherDataAreaId": { "type": ["string", "null"] },
+    "AccountingDate": { "type": ["string", "null"], "format": "date-time" },
+    "JournalNumber": { "type": ["string", "null"] },
+    "JournalCategory": { "type": ["string", "null"] },
+    "DocumentNumber": { "type": ["string", "null"] },
+    "DocumentDate": { "type": ["string", "null"], "format": "date-time" },
+    "SubledgerVoucher": { "type": ["string", "null"] },
+    "PostingLayer": { "type": ["string", "null"] },
+    "FiscalCalendarPeriod": { "type": ["integer", "null"] },
+    "FiscalCalendarYear": { "type": ["integer", "null"] }
+  }
+}

@@ -2,7 +2,7 @@
     config(
         engine='MergeTree()',
         order_by='(from_currency, to_currency, valid_from)',
-        partition_by='toYYYYMM(valid_from)'
+        partition_by='toYear(valid_from)'
     )
 }}
 
@@ -16,4 +16,4 @@ select
     {{ cast_to_int64('RecId') }} as recid,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ source('airbyte_raw', 'exchange_rate_currency_pairs') }}
+from {{ ref('stg_d365__exchange_rates') }}
