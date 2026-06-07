@@ -7,15 +7,15 @@
 select
     SourceKey as RecId,
     upper(coalesce(SubledgerVoucherDataAreaId, '')) as dataAreaId,
-    AccountingDate,
+    toString(substring(coalesce(toString(AccountingDate), '1900-01-01'), 1, 10)) as AccountingDate,
     coalesce(JournalNumber, '') as JournalNumber,
     coalesce(JournalCategory, '') as JournalCategory,
     coalesce(DocumentNumber, '') as DocumentNumber,
-    DocumentDate,
+    toString(substring(coalesce(toString(DocumentDate), '1900-01-01'), 1, 10)) as DocumentDate,
     coalesce(SubledgerVoucher, '') as Description,
     coalesce(PostingLayer, '') as PostingLayer,
     toString(coalesce(FiscalCalendarPeriod, 0)) as FiscalCalendarPeriod,
     coalesce(FiscalCalendarYear, 0) as FiscalCalendarYear,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'general_journal_entry_bi_entities') }}
+from {{ source('d365_raw', 'GeneralJournalEntryBiEntities') }}

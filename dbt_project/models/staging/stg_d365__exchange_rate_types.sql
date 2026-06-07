@@ -10,4 +10,4 @@ select
     rowNumberInAllBlocks() as RecId,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'exchange_rate_types') }}
+from {{ source('d365_raw', 'ExchangeRateTypes') }}

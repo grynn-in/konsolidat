@@ -9,13 +9,13 @@ with entries as (
     select
         *,
         dense_rank() over (order by EntryNumber) as header_recid
-    from {{ source('d365_raw', 'budget_register_entries') }}
+    from {{ source('d365_raw', 'BudgetRegisterEntries') }}
 )
 
 select
     rowNumberInAllBlocks() as RecId,
     header_recid as BudgetRegisterEntry,
-    Date,
+    toString(substring(coalesce(toString(Date), '1900-01-01'), 1, 10)) as Date,
     splitByChar('-', coalesce(DimensionDisplayValue, ''))[1] as MainAccount,
     coalesce(AccountingCurrencyAmount, 0) as AccountingCurrencyAmount,
     coalesce(TransactionCurrencyAmount, 0) as TransactionCurrencyAmount,

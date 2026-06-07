@@ -7,18 +7,18 @@
 #}
 
 with entries as (
-    select * from {{ source('d365_raw', 'general_journal_account_entry_bi_entities') }}
+    select * from {{ source('d365_raw', 'GeneralJournalAccountEntryBiEntities') }}
 ),
 
 headers as (
-    select * from {{ source('d365_raw', 'general_journal_entry_bi_entities') }}
+    select * from {{ source('d365_raw', 'GeneralJournalEntryBiEntities') }}
 ),
 
 joined as (
     select
         entries.SourceKey as RecId,
         upper(coalesce(headers.SubledgerVoucherDataAreaId, '')) as dataAreaId,
-        headers.AccountingDate,
+        toString(substring(coalesce(toString(headers.AccountingDate), '1900-01-01'), 1, 10)) as AccountingDate,
         -- Parse MainAccount from LedgerDimensionValuesJson, fallback to LedgerAccount
         coalesce(
             JSON_VALUE(

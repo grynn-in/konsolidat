@@ -11,8 +11,8 @@ select
     coalesce(DimensionValue1, '') as MainAccount,
     '' as MainAccountName,
     case
-        when match(coalesce(YearName, ''), '^[0-9]+$') then toUInt16(YearName)
-        else toYear(coalesce(PeriodStartDate, toDate('1970-01-02')))
+        when match(coalesce(toString(YearName), ''), '^[0-9]+$') then toUInt16(YearName)
+        else toYear(toDate(substring(coalesce(toString(PeriodStartDate), '1970-01-02'), 1, 10)))
     end as FiscalYear,
     coalesce(OpeningBalance, 0) as OpeningBalance,
     coalesce(AmountDebit, 0) as DebitAmount,
@@ -22,4 +22,4 @@ select
     '' as AccountType,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'trial_balance_fiscal_year_snapshots') }}
+from {{ source('d365_raw', 'TrialBalanceFiscalYearSnapshots') }}

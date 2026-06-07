@@ -7,7 +7,7 @@ with numbered as (
     select
         *,
         row_number() over (partition by EntryNumber order by Date) as rn
-    from {{ source('d365_raw', 'budget_register_entries') }}
+    from {{ source('d365_raw', 'BudgetRegisterEntries') }}
 ),
 
 deduplicated as (
@@ -21,7 +21,7 @@ select
     coalesce(BudgetCode, '') as BudgetTransactionCode,
     coalesce(ReasonComment, Comment, '') as ReasonComment,
     coalesce(Status, 'Completed') as BudgetStatus,
-    Date as DocumentDate,
+    toString(substring(coalesce(toString(Date), '1900-01-01'), 1, 10)) as DocumentDate,
     _airbyte_extracted_at,
     _airbyte_raw_id
 from deduplicated

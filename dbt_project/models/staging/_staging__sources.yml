@@ -12,67 +12,81 @@ sources:
 
   - name: d365_raw
     description: "Raw D365 F&O OData entities landed by Airbyte connector"
-    database: epm_bronze
+    database: epm_raw
     schema: ""
     tables:
-      - name: general_journal_account_entry_bi_entities
+      - name: GeneralJournalAccountEntryBiEntities
+        identifier: GeneralJournalAccountEntryBiEntities
         description: "GL account entry lines from D365 GeneralJournalAccountEntryBiEntities"
         loaded_at_field: _airbyte_extracted_at
         freshness:
           warn_after: {count: 24, period: hour}
           error_after: {count: 48, period: hour}
 
-      - name: general_journal_entry_bi_entities
+      - name: GeneralJournalEntryBiEntities
+        identifier: GeneralJournalEntryBiEntities
         description: "GL journal entry headers from D365 GeneralJournalEntryBiEntities"
         loaded_at_field: _airbyte_extracted_at
         freshness:
           warn_after: {count: 24, period: hour}
           error_after: {count: 48, period: hour}
 
-      - name: main_accounts
+      - name: MainAccounts
+        identifier: MainAccounts
         description: "Chart of accounts from D365 MainAccounts"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: main_account_categories
+      - name: MainAccountCategories
+        identifier: MainAccountCategories
         description: "Account categories from D365 MainAccountCategories"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: legal_entities
+      - name: LegalEntities
+        identifier: LegalEntities
         description: "Legal entity master from D365 LegalEntities"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: ledgers
+      - name: Ledgers
+        identifier: Ledgers
         description: "Ledger configuration from D365 Ledgers"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: fiscal_calendar_years
+      - name: FiscalCalendarYears
+        identifier: FiscalCalendarYears
         description: "Fiscal calendar years from D365 FiscalCalendarYears"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: dimension_attributes
+      - name: DimensionAttributes
+        identifier: DimensionAttributes
         description: "Financial dimension definitions from D365 DimensionAttributes"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: financial_dimension_values
+      - name: FinancialDimensionValues
+        identifier: FinancialDimensionValues
         description: "Dimension values from D365 FinancialDimensionValues"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: exchange_rates
+      - name: ExchangeRates
+        identifier: ExchangeRates
         description: "Exchange rates from D365 ExchangeRates"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: exchange_rate_types
+      - name: ExchangeRateTypes
+        identifier: ExchangeRateTypes
         description: "Exchange rate types from D365 ExchangeRateTypes"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: budget_register_entries
+      - name: BudgetRegisterEntries
+        identifier: BudgetRegisterEntries
         description: "Budget register entries (combined header+line) from D365 BudgetRegisterEntries"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: consolidate_account_groups
+      - name: ConsolidateAccountGroups
+        identifier: ConsolidateAccountGroups
         description: "Consolidation account groups from D365 ConsolidateAccountGroups"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: trial_balance_fiscal_year_snapshots
+      - name: TrialBalanceFiscalYearSnapshots
+        identifier: TrialBalanceFiscalYearSnapshots
         description: "Trial balance snapshots from D365 TrialBalanceFiscalYearSnapshots"
         loaded_at_field: _airbyte_extracted_at

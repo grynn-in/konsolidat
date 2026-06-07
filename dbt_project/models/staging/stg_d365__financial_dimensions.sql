@@ -12,4 +12,4 @@ select
     rowNumberInAllBlocks() as RecId,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'dimension_attributes') }}
+from {{ source('d365_raw', 'DimensionAttributes') }}

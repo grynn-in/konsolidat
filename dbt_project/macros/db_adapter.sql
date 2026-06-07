@@ -6,39 +6,39 @@
    ============================================================ #}
 
 {% macro cast_to_string(expr) %}
-    toString({{ expr }})
+    toString(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_int64(expr) %}
-    toInt64({{ expr }})
+    toInt64(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_int8(expr) %}
-    toInt8({{ expr }})
+    toInt8(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_uint16(expr) %}
-    toUInt16({{ expr }})
+    toUInt16(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_uint8(expr) %}
-    toUInt8({{ expr }})
+    toUInt8(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_float64(expr) %}
-    toFloat64({{ expr }})
+    toFloat64(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_date(expr) %}
-    toDate({{ expr }})
+    toDate(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_datetime(expr) %}
-    toDateTime({{ expr }})
+    toDateTime(assumeNotNull({{ expr }}))
 {% endmacro %}
 
 {% macro cast_to_decimal128(expr, scale) %}
-    toDecimal128({{ expr }}, {{ scale }})
+    toDecimal128(assumeNotNull({{ expr }}), {{ scale }})
 {% endmacro %}
 
 {% macro extract_year(expr) %}

@@ -8,12 +8,12 @@ select
     coalesce(DimensionValue, '') as DimensionValue,
     coalesce(Description, '') as Description,
     case
-        when lower(toString(coalesce(IsSuspended, ''))) in ('yes', 'true', '1') then 1
+        when lower(coalesce(toString(IsSuspended), '')) in ('yes', 'true', '1') then 1
         else 0
     end as IsSuspended,
-    coalesce(ActiveFrom, toDate('1900-01-01')) as ActiveFrom,
-    coalesce(ActiveTo, toDate('2099-12-31')) as ActiveTo,
+    toDate(substring(coalesce(toString(ActiveFrom), '1900-01-01'), 1, 10)) as ActiveFrom,
+    toDate(substring(coalesce(toString(ActiveTo), '2099-12-31'), 1, 10)) as ActiveTo,
     rowNumberInAllBlocks() as RecId,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'financial_dimension_values') }}
+from {{ source('d365_raw', 'FinancialDimensionValues') }}

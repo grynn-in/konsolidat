@@ -4,11 +4,11 @@
 #}
 
 with entities as (
-    select * from {{ source('d365_raw', 'legal_entities') }}
+    select * from {{ source('d365_raw', 'LegalEntities') }}
 ),
 
 ledgers as (
-    select * from {{ source('d365_raw', 'ledgers') }}
+    select * from {{ source('d365_raw', 'Ledgers') }}
 ),
 
 joined as (
