@@ -32,11 +32,11 @@ select
     gae.transaction_currency_amount as transaction_currency_amount,
     gae.transaction_currency_code as transaction_currency_code,
     case
-        when gae.is_credit = 1 then gae.accounting_currency_amount
+        when gae.is_credit = 1 then abs(gae.accounting_currency_amount)
         else 0
     end as credit_amount,
     case
-        when gae.is_credit = 0 then gae.accounting_currency_amount
+        when gae.is_credit = 0 then abs(gae.accounting_currency_amount)
         else 0
     end as debit_amount,
     gae.posting_type as posting_type,

@@ -5,6 +5,14 @@
     )
 }}
 
+with deduped as (
+    select
+        *,
+        row_number() over (partition by main_account_id order by chart_of_accounts) as rn
+    from {{ ref('bronze_main_accounts') }}
+    where account_type != '7' and account_type != 'Total'  -- Exclude total accounts
+)
+
 select
     main_account_id,
     account_name,
@@ -17,5 +25,5 @@ select
     debit_credit_default,
     chart_of_accounts,
     is_suspended
-from {{ ref('bronze_main_accounts') }}
-where account_type != '7' and account_type != 'Total'  -- Exclude total accounts
+from deduped
+where rn = 1
