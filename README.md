@@ -1,4 +1,4 @@
-# Konsol
+# Konsolidat
 
 Open-source CPM for D365 Finance. Multi-entity consolidation, Excel-native budgeting, and reporting — at 3% of the cost of Tagetik or OneStream.
 
