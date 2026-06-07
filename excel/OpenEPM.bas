@@ -1,0 +1,627 @@
+' ============================================================
+' Open EPM — Excel Add-in (SmartView-style batch retrieval)
+' ============================================================
+'
+' How it works:
+'   1. Write =EPM(...) formulas in cells — they return cached values or 0
+'   2. Click Refresh (Ctrl+Shift+R) or run EPM_Refresh
+'   3. VBA scans the sheet, collects ALL EPM cells, sends ONE batch
+'      request to the server, and populates every cell at once
+'
+' Functions:
+'   =EPM(entity, year, period, account)
+'   =EPM(entity, year, period, account, measure, scenario, cost_center, dept)
+'   =EPM_BUDGET(entity, year, period, account)
+'   =EPM_VARIANCE(entity, year, period, account)
+'
+' Macros:
+'   EPM_Refresh          Refresh active sheet   (Ctrl+Shift+R)
+'   EPM_RefreshAll        Refresh all sheets
+'   EPM_ClearCache        Clear cached values
+'   EPM_SetServer         Change API server URL
+'
+' ============================================================
+
+Option Explicit
+
+' ── Configuration ───────────────────────────────────────────
+Private Const DEFAULT_API_URL As String = "http://localhost:8000"
+Private pApiUrl As String
+Private pCache As Object  ' Scripting.Dictionary
+
+Public Property Get API_BASE_URL() As String
+    If pApiUrl = "" Then
+        On Error Resume Next
+        pApiUrl = ActiveWorkbook.CustomDocumentProperties("EPM_API_URL").Value
+        On Error GoTo 0
+        If pApiUrl = "" Then pApiUrl = DEFAULT_API_URL
+    End If
+    API_BASE_URL = pApiUrl
+End Property
+
+' ── Cache management ─────────────────────────────────────────
+
+Private Sub EnsureCache()
+    If pCache Is Nothing Then
+        Set pCache = CreateObject("Scripting.Dictionary")
+    End If
+End Sub
+
+Public Sub EPM_ClearCache()
+    Set pCache = Nothing
+    MsgBox "Cache cleared. Press Ctrl+Shift+R to refresh.", vbInformation, "Open EPM"
+End Sub
+
+' ── EPM functions (return cached value or 0) ────────────────
+
+Public Function EPM( _
+    entity As String, _
+    fiscal_year As Variant, _
+    fiscal_period As Variant, _
+    account As String, _
+    Optional measure As String = "period_net_amount", _
+    Optional scenario As String = "actuals", _
+    Optional cost_center As String = "", _
+    Optional department As String = "" _
+) As Variant
+    Application.Volatile True
+    Dim Key As String
+    Key = BuildKey(CStr(entity), CLng(fiscal_year), CLng(fiscal_period), CStr(account), _
+                   measure, scenario, cost_center, department)
+
+    If pCache Is Nothing Then
+        EPM = 0
+    ElseIf pCache.Exists(Key) Then
+        EPM = pCache(Key)
+    Else
+        EPM = 0
+    End If
+End Function
+
+Public Function EPM_BUDGET( _
+    entity As String, fiscal_year As Variant, fiscal_period As Variant, _
+    account As String, _
+    Optional cost_center As String = "", Optional department As String = "" _
+) As Variant
+    EPM_BUDGET = EPM(entity, fiscal_year, fiscal_period, account, _
+                     "budget_amount", "budget", cost_center, department)
+End Function
+
+Public Function EPM_VARIANCE( _
+    entity As String, fiscal_year As Variant, fiscal_period As Variant, _
+    account As String, _
+    Optional cost_center As String = "", Optional department As String = "" _
+) As Variant
+    EPM_VARIANCE = EPM(entity, fiscal_year, fiscal_period, account, _
+                       "variance_abs", "variance", cost_center, department)
+End Function
+
+Public Function EPM_DEBIT( _
+    entity As String, fiscal_year As Variant, fiscal_period As Variant, _
+    account As String, _
+    Optional cost_center As String = "", Optional department As String = "" _
+) As Variant
+    EPM_DEBIT = EPM(entity, fiscal_year, fiscal_period, account, _
+                    "period_debit", "actuals", cost_center, department)
+End Function
+
+Public Function EPM_CREDIT( _
+    entity As String, fiscal_year As Variant, fiscal_period As Variant, _
+    account As String, _
+    Optional cost_center As String = "", Optional department As String = "" _
+) As Variant
+    EPM_CREDIT = EPM(entity, fiscal_year, fiscal_period, account, _
+                     "period_credit", "actuals", cost_center, department)
+End Function
+
+' ── REFRESH: scan sheet, batch fetch, populate ──────────────
+
+Public Sub EPM_Refresh()
+    RefreshSheet ActiveSheet
+End Sub
+
+Public Sub EPM_RefreshAll()
+    Dim ws As Worksheet
+    For Each ws In ActiveWorkbook.Worksheets
+        RefreshSheet ws
+    Next ws
+    MsgBox "All sheets refreshed.", vbInformation, "Open EPM"
+End Sub
+
+Private Sub RefreshSheet(ws As Worksheet)
+    Dim cell As Range
+    Dim formulaCells As New Collection
+    Dim requests As New Collection
+    Dim keys As New Collection
+    Dim usedRange As Range
+    Dim r As Long
+    Dim c As Long
+    Dim f As String
+    Dim args As Object
+    Dim i As Long
+
+    EnsureCache
+
+    Application.StatusBar = "Open EPM: Scanning " & ws.Name & "..."
+
+    Set usedRange = ws.UsedRange
+    If usedRange Is Nothing Then Exit Sub
+
+    ' Scan all formula cells for EPM functions
+    For r = 1 To usedRange.Rows.Count
+        For c = 1 To usedRange.Columns.Count
+            Set cell = usedRange.Cells(r, c)
+            If cell.HasFormula Then
+                f = UCase(cell.Formula)
+                If InStr(f, "EPM(") > 0 Or InStr(f, "EPM_BUDGET(") > 0 Or _
+                   InStr(f, "EPM_VARIANCE(") > 0 Or InStr(f, "EPM_DEBIT(") > 0 Or _
+                   InStr(f, "EPM_CREDIT(") > 0 Then
+
+                    Set args = Nothing
+                    Set args = ResolveEpmArgs(cell)
+                    If Not args Is Nothing Then
+                        formulaCells.Add cell
+                        requests.Add args
+                        keys.Add args("key")
+                    End If
+                End If
+            End If
+        Next c
+    Next r
+
+    If requests.Count = 0 Then
+        Application.StatusBar = False
+        Exit Sub
+    End If
+
+    Application.StatusBar = "Open EPM: Fetching " & requests.Count & " values..."
+
+    ' Build JSON batch request
+    Dim json As String
+    Dim req As Object
+    json = "["
+    For i = 1 To requests.Count
+        Set req = requests(i)
+        If i > 1 Then json = json & ","
+        json = json & "{"
+        json = json & """entity"":""" & JsonEscape(CStr(req("entity"))) & """"
+        json = json & ",""year"":" & req("year")
+        json = json & ",""period"":" & req("period")
+        json = json & ",""account"":""" & JsonEscape(CStr(req("account"))) & """"
+        json = json & ",""measure"":""" & JsonEscape(CStr(req("measure"))) & """"
+        json = json & ",""scenario"":""" & JsonEscape(CStr(req("scenario"))) & """"
+        If req("cost_center") <> "" Then
+            json = json & ",""cost_center"":""" & JsonEscape(CStr(req("cost_center"))) & """"
+        End If
+        If req("department") <> "" Then
+            json = json & ",""department"":""" & JsonEscape(CStr(req("department"))) & """"
+        End If
+        json = json & "}"
+    Next i
+    json = json & "]"
+
+    ' POST batch request
+    Dim http As Object
+    Dim url As String
+    url = API_BASE_URL & "/api/method/konsol.api.epm_batch"
+
+    On Error GoTo FetchError
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "POST", url, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.send json
+
+    If http.Status <> 200 Then
+        Application.StatusBar = False
+        MsgBox "EPM server returned error " & http.Status & ": " & http.responseText, _
+               vbExclamation, "Open EPM"
+        Exit Sub
+    End If
+
+    ' Parse response: {"message": {"values": [1.0, 2.0, ...]}}
+    ' Frappe wraps API responses in a "message" key
+    Dim response As String
+    response = http.responseText
+
+    Dim parsedValues() As Double
+    parsedValues = ParseValuesArray(response, requests.Count)
+
+    ' Populate cache
+    Application.StatusBar = "Open EPM: Populating " & requests.Count & " cells..."
+    Dim cacheKey As String
+    For i = 1 To requests.Count
+        cacheKey = keys(i)
+        If pCache.Exists(cacheKey) Then
+            pCache(cacheKey) = parsedValues(i - 1)
+        Else
+            pCache.Add cacheKey, parsedValues(i - 1)
+        End If
+    Next i
+
+    Set http = Nothing
+
+    ' Recalculate to pick up cached values
+    Application.ScreenUpdating = False
+    Application.CalculateFull
+    Application.ScreenUpdating = True
+
+    MsgBox "Refreshed " & requests.Count & " cells. Cache has " & pCache.Count & " entries.", _
+           vbInformation, "Open EPM"
+    Application.StatusBar = False
+    Exit Sub
+
+FetchError:
+    Application.StatusBar = False
+    MsgBox "Cannot connect to EPM server at " & url & vbCrLf & _
+           "Error: " & Err.Description, vbExclamation, "Open EPM"
+End Sub
+
+' ── Parse the values array from JSON response ────────────────
+
+Private Function ParseValuesArray(response As String, expectedCount As Long) As Double()
+    Dim result() As Double
+    ReDim result(0 To expectedCount - 1)
+
+    Dim arrStart As Long
+    Dim arrEnd As Long
+    arrStart = InStr(response, "[")
+    arrEnd = InStrRev(response, "]")
+
+    If arrStart = 0 Or arrEnd <= arrStart Then
+        ParseValuesArray = result
+        Exit Function
+    End If
+
+    ' Walk the array character by character to handle nulls properly
+    Dim content As String
+    content = Mid(response, arrStart + 1, arrEnd - arrStart - 1)
+
+    Dim idx As Long
+    Dim pos As Long
+    Dim token As String
+    Dim ch As String
+    idx = 0
+    token = ""
+
+    For pos = 1 To Len(content)
+        ch = Mid(content, pos, 1)
+        If ch = "," Then
+            If idx <= UBound(result) Then
+                result(idx) = ParseJsonNumber(Trim(token))
+            End If
+            idx = idx + 1
+            token = ""
+        Else
+            token = token & ch
+        End If
+    Next pos
+
+    ' Last token
+    If idx <= UBound(result) Then
+        result(idx) = ParseJsonNumber(Trim(token))
+    End If
+
+    ParseValuesArray = result
+End Function
+
+Private Function ParseJsonNumber(s As String) As Double
+    If s = "" Or s = "null" Or s = "None" Then
+        ParseJsonNumber = 0#
+    ElseIf IsNumeric(s) Then
+        ParseJsonNumber = CDbl(s)
+    Else
+        ParseJsonNumber = 0#
+    End If
+End Function
+
+' ── Parse EPM formula arguments from a cell ─────────────────
+
+Private Function ResolveEpmArgs(cell As Range) As Object
+    On Error GoTo ParseError
+
+    Dim f As String
+    f = cell.Formula
+
+    ' Determine which function and its defaults
+    Dim funcName As String
+    Dim defaultMeasure As String
+    Dim defaultScenario As String
+    Dim uf As String
+    uf = UCase(f)
+
+    defaultMeasure = "period_net_amount"
+    defaultScenario = "actuals"
+
+    If InStr(uf, "EPM_BUDGET(") > 0 Then
+        funcName = "EPM_BUDGET"
+        defaultMeasure = "budget_amount"
+        defaultScenario = "budget"
+    ElseIf InStr(uf, "EPM_VARIANCE(") > 0 Then
+        funcName = "EPM_VARIANCE"
+        defaultMeasure = "variance_abs"
+        defaultScenario = "variance"
+    ElseIf InStr(uf, "EPM_DEBIT(") > 0 Then
+        funcName = "EPM_DEBIT"
+        defaultMeasure = "period_debit"
+    ElseIf InStr(uf, "EPM_CREDIT(") > 0 Then
+        funcName = "EPM_CREDIT"
+        defaultMeasure = "period_credit"
+    Else
+        funcName = "EPM"
+    End If
+
+    ' Find the function call
+    Dim funcPos As Long
+    funcPos = InStr(uf, funcName & "(")
+    If funcPos = 0 Then
+        Set ResolveEpmArgs = Nothing
+        Exit Function
+    End If
+
+    Dim parenPos As Long
+    parenPos = funcPos + Len(funcName)
+
+    ' Extract arguments between the parentheses
+    Dim depth As Long
+    Dim argStart As Long
+    Dim argList(0 To 7) As String
+    Dim argCount As Long
+    Dim ch As String
+    Dim pos As Long
+
+    depth = 0
+    argStart = parenPos + 1
+    argCount = 0
+
+    For pos = parenPos To Len(f)
+        ch = Mid(f, pos, 1)
+        If ch = "(" Then
+            depth = depth + 1
+        ElseIf ch = ")" Then
+            depth = depth - 1
+            If depth = 0 Then
+                If pos > argStart Then
+                    argList(argCount) = Mid(f, argStart, pos - argStart)
+                    argCount = argCount + 1
+                End If
+                Exit For
+            End If
+        ElseIf ch = "," And depth = 1 Then
+            argList(argCount) = Mid(f, argStart, pos - argStart)
+            argCount = argCount + 1
+            argStart = pos + 1
+        End If
+    Next pos
+
+    If argCount < 4 Then
+        Set ResolveEpmArgs = Nothing
+        Exit Function
+    End If
+
+    ' Evaluate each argument (resolves cell references like $B$5)
+    Dim entity As String
+    Dim yr As Long
+    Dim per As Long
+    Dim account As String
+    Dim measure As String
+    Dim scenario As String
+    Dim costCenter As String
+    Dim department As String
+
+    entity = CStr(EvalArg(cell, argList(0)))
+    yr = CLng(EvalArg(cell, argList(1)))
+    per = CLng(EvalArg(cell, argList(2)))
+    account = CStr(EvalArg(cell, argList(3)))
+
+    If funcName = "EPM" Then
+        If argCount > 4 Then measure = CStr(EvalArg(cell, argList(4))) Else measure = defaultMeasure
+        If argCount > 5 Then scenario = CStr(EvalArg(cell, argList(5))) Else scenario = defaultScenario
+        If argCount > 6 Then costCenter = CStr(EvalArg(cell, argList(6))) Else costCenter = ""
+        If argCount > 7 Then department = CStr(EvalArg(cell, argList(7))) Else department = ""
+    Else
+        measure = defaultMeasure
+        scenario = defaultScenario
+        If argCount > 4 Then costCenter = CStr(EvalArg(cell, argList(4))) Else costCenter = ""
+        If argCount > 5 Then department = CStr(EvalArg(cell, argList(5))) Else department = ""
+    End If
+
+    ' Build result dictionary
+    Dim result As Object
+    Set result = CreateObject("Scripting.Dictionary")
+    result.Add "entity", entity
+    result.Add "year", yr
+    result.Add "period", per
+    result.Add "account", account
+    result.Add "measure", measure
+    result.Add "scenario", scenario
+    result.Add "cost_center", costCenter
+    result.Add "department", department
+    result.Add "key", BuildKey(entity, yr, per, account, measure, scenario, costCenter, department)
+
+    Set ResolveEpmArgs = result
+    Exit Function
+
+ParseError:
+    Set ResolveEpmArgs = Nothing
+End Function
+
+' ── Evaluate a formula argument (resolve cell refs) ─────────
+
+Private Function EvalArg(cell As Range, arg As String) As Variant
+    arg = Trim(arg)
+    If arg = "" Then
+        EvalArg = ""
+        Exit Function
+    End If
+
+    ' Remove surrounding quotes for string literals
+    If Left(arg, 1) = """" And Right(arg, 1) = """" Then
+        EvalArg = Mid(arg, 2, Len(arg) - 2)
+        Exit Function
+    End If
+
+    ' If it's a number
+    If IsNumeric(arg) Then
+        EvalArg = CDbl(arg)
+        Exit Function
+    End If
+
+    ' Try to evaluate as cell reference
+    On Error GoTo EvalFail
+    EvalArg = cell.Worksheet.Evaluate(arg)
+    Exit Function
+
+EvalFail:
+    EvalArg = arg
+End Function
+
+' ── Helpers ───────────────────────────────────────────────────
+
+Private Function BuildKey(entity As String, yr As Long, per As Long, _
+    account As String, measure As String, scenario As String, _
+    costCenter As String, department As String) As String
+    BuildKey = entity & "|" & yr & "|" & per & "|" & account & "|" & _
+               measure & "|" & scenario & "|" & costCenter & "|" & department
+End Function
+
+Private Function JsonEscape(s As String) As String
+    JsonEscape = Replace(Replace(s, "\", "\\"), """", "\""")
+End Function
+
+' ── Server configuration ────────────────────────────────────
+
+Public Sub EPM_SetServer()
+    Dim url As String
+    url = InputBox("Enter the Open EPM API server URL:", "Open EPM", API_BASE_URL)
+    If url = "" Then Exit Sub
+
+    pApiUrl = url
+
+    ' Save to workbook custom properties (4 = msoPropertyTypeString)
+    On Error Resume Next
+    ActiveWorkbook.CustomDocumentProperties("EPM_API_URL").Value = url
+    If Err.Number <> 0 Then
+        Err.Clear
+        ActiveWorkbook.CustomDocumentProperties.Add _
+            Name:="EPM_API_URL", LinkToContent:=False, _
+            Type:=4, Value:=url
+    End If
+    On Error GoTo 0
+
+    MsgBox "API URL set to: " & url, vbInformation, "Open EPM"
+End Sub
+
+' ── Status bar cleanup ──────────────────────────────────────
+
+Public Sub ClearStatusBar()
+    Application.StatusBar = False
+End Sub
+
+' ── Auto-bind Ctrl+Shift+R on workbook open ─────────────────
+
+Public Sub Workbook_Open()
+    EnsureCache
+    Application.OnKey "+^r", "EPM_Refresh"
+    Application.StatusBar = "Open EPM loaded. Ctrl+Shift+R to refresh."
+    Application.OnTime Now + TimeValue("00:00:03"), "ClearStatusBar"
+End Sub
+
+Public Sub Auto_Open()
+    Workbook_Open
+End Sub
+
+Public Sub Auto_Close()
+    Application.OnKey "+^r"
+End Sub
+
+' ── Debug: test connectivity and formula scanning ─────────
+Public Sub EPM_Debug()
+    Dim msg As String
+    msg = "=== EPM Debug ===" & vbCrLf
+
+    ' Test 1: Cache
+    EnsureCache
+    msg = msg & "Cache: OK" & vbCrLf
+
+    ' Test 2: HTTP connectivity
+    Dim http As Object
+    On Error Resume Next
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    If Err.Number <> 0 Then
+        msg = msg & "HTTP object: FAILED - " & Err.Description & vbCrLf
+        MsgBox msg, vbExclamation, "EPM Debug"
+        Exit Sub
+    End If
+    msg = msg & "HTTP object: OK" & vbCrLf
+
+    Dim url As String
+    url = API_BASE_URL & "/api/method/konsol.api.health"
+    http.Open "GET", url, False
+    http.send
+    If Err.Number <> 0 Then
+        msg = msg & "GET " & url & ": FAILED - " & Err.Description & vbCrLf
+        MsgBox msg, vbExclamation, "EPM Debug"
+        Exit Sub
+    End If
+    msg = msg & "GET " & url & ": " & http.Status & " " & http.responseText & vbCrLf
+    On Error GoTo 0
+
+    ' Test 3: Scan formulas
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    Dim usedRange As Range
+    Set usedRange = ws.usedRange
+    Dim epmCount As Long
+    Dim r As Long, c As Long
+    Dim cell As Range
+    Dim f As String
+    epmCount = 0
+
+    For r = 1 To usedRange.Rows.Count
+        For c = 1 To usedRange.Columns.Count
+            Set cell = usedRange.Cells(r, c)
+            If cell.HasFormula Then
+                f = UCase(cell.Formula)
+                If InStr(f, "EPM(") > 0 Or InStr(f, "EPM_BUDGET(") > 0 Or _
+                   InStr(f, "EPM_VARIANCE(") > 0 Then
+                    epmCount = epmCount + 1
+                    If epmCount <= 3 Then
+                        msg = msg & "Found: " & cell.Address & " = " & Left(cell.Formula, 60) & vbCrLf
+
+                        ' Try to resolve args
+                        Dim args As Object
+                        Set args = ResolveEpmArgs(cell)
+                        If args Is Nothing Then
+                            msg = msg & "  -> ResolveEpmArgs returned Nothing!" & vbCrLf
+                        Else
+                            msg = msg & "  -> entity=" & args("entity") & " yr=" & args("year") & _
+                                        " per=" & args("period") & " acct=" & args("account") & vbCrLf
+                        End If
+                    End If
+                End If
+            End If
+        Next c
+    Next r
+    msg = msg & "Total EPM formulas found: " & epmCount & vbCrLf
+
+    ' Test 4: Try a single batch call
+    If epmCount > 0 Then
+        Dim testJson As String
+        testJson = "[{""entity"":""USMF"",""year"":2024,""period"":5,""account"":""401100"",""measure"":""period_net_amount"",""scenario"":""actuals""}]"
+
+        On Error Resume Next
+        Set http = CreateObject("MSXML2.XMLHTTP")
+        url = API_BASE_URL & "/api/method/konsol.api.epm_batch"
+        http.Open "POST", url, False
+        http.setRequestHeader "Content-Type", "application/json"
+        http.send testJson
+        If Err.Number <> 0 Then
+            msg = msg & "POST batch: FAILED - " & Err.Description & vbCrLf
+        Else
+            msg = msg & "POST batch: " & http.Status & " " & http.responseText & vbCrLf
+        End If
+        On Error GoTo 0
+    End If
+
+    MsgBox msg, vbInformation, "EPM Debug"
+End Sub
