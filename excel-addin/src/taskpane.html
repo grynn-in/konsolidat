@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open EPM</title>
+  <link rel="stylesheet" href="taskpane.css" />
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Open EPM</h1>
+      <p class="subtitle">Pipeline Control</p>
+    </header>
+
+    <!-- Login Section -->
+    <section id="login-section">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="admin@example.com" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+      <button id="login-btn" class="btn btn-primary" onclick="login()">Log In</button>
+      <div id="login-error" class="error" hidden></div>
+    </section>
+
+    <!-- Status Section -->
+    <section id="status-section" hidden>
+      <div class="user-bar">
+        <span id="user-label"></span>
+        <button class="btn btn-link" onclick="logout()">Log out</button>
+      </div>
+
+      <div id="status-card" class="card">
+        <h2>Latest Pipeline Run</h2>
+        <div id="no-runs" hidden>
+          <p class="muted">No pipeline runs found.</p>
+        </div>
+        <div id="run-details" hidden>
+          <div class="field">
+            <span class="label">Status</span>
+            <span id="run-status" class="badge"></span>
+          </div>
+          <div class="field">
+            <span class="label">Started</span>
+            <span id="run-started"></span>
+          </div>
+          <div class="field">
+            <span class="label">Rows Synced</span>
+            <span id="run-rows"></span>
+          </div>
+          <div class="field">
+            <span class="label">dbt Result</span>
+            <span id="run-dbt"></span>
+          </div>
+        </div>
+      </div>
+
+      <button id="run-btn" class="btn btn-primary" onclick="triggerPipeline()">
+        Run Extract + dbt Build
+      </button>
+      <div id="run-error" class="error" hidden></div>
+
+      <div id="polling-indicator" class="muted" hidden>
+        Auto-refreshing every 5s&hellip;
+      </div>
+    </section>
+
+    <!-- Loading overlay -->
+    <div id="loading" class="loading" hidden>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>
