@@ -1,7 +1,7 @@
 {{
     config(
         engine='MergeTree()',
-        order_by='(scenario_id)'
+        order_by='tuple()'
     )
 }}
 
@@ -22,7 +22,7 @@ select
     scenario_type,
     is_active,
     'api' as source
-from epm_staging.scenario_definitions
+from {{ source('epm_staging', 'scenario_definitions') }}
 where scenario_id not in (
     select scenario_id from {{ ref('scenario_definitions') }}
 )

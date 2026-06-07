@@ -49,4 +49,4 @@ select
     {{ dim_select(dims=get_budget_dimensions()) }},
     amount,
     'api_input' as data_source
-from epm_staging.budget_input
+from {{ source('epm_staging', 'budget_input') }}

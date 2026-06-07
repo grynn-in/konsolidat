@@ -5,12 +5,23 @@
     )
 }}
 
+{# Build a date-keyed fiscal lookup: one row per calendar date with fiscal_year/period.
+   ClickHouse doesn't support range joins or correlated subqueries, so we pre-expand
+   the fiscal calendar into a date-level lookup table. #}
+with fiscal_dates as (
+    select
+        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(period_start_date, x), range(toUInt32(dateDiff(\'day\', period_start_date, period_end_date) + 1))))') }} as calendar_date,
+        {{ extract_year('year_start_date') }} as fiscal_year,
+        calendar_month as fiscal_period
+    from {{ ref('silver_fiscal_periods') }}
+)
+
 select
     gae.recid as recid,
     gae.data_area_id as data_area_id,
     gae.accounting_date as accounting_date,
-    {{ extract_year('gae.accounting_date') }} as fiscal_year,
-    {{ extract_month('gae.accounting_date') }} as fiscal_period,
+    coalesce(fp.fiscal_year, {{ extract_year('gae.accounting_date') }}) as fiscal_year,
+    coalesce(fp.fiscal_period, {{ extract_month('gae.accounting_date') }}) as fiscal_period,
     gae.main_account as main_account,
     ma.account_name as account_name,
     ma.account_type_name as account_type_name,
@@ -42,3 +53,5 @@ left join {{ ref('bronze_general_journal_entries') }} as gje
     and gae.data_area_id = gje.data_area_id
 left join {{ ref('silver_main_accounts') }} as ma
     on gae.main_account = ma.main_account_id
+left join fiscal_dates as fp
+    on gae.accounting_date = fp.calendar_date

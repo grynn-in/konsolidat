@@ -48,6 +48,8 @@ eliminations as (
         and cr.fiscal_year = db.fiscal_year
         and cr.fiscal_period = db.fiscal_period
     where cr.data_area_id != db.data_area_id
+      and (icr.debit_entity_pattern = '*' or db.data_area_id = icr.debit_entity_pattern)
+      and (icr.credit_entity_pattern = '*' or cr.data_area_id = icr.credit_entity_pattern)
 )
 
 select * from eliminations

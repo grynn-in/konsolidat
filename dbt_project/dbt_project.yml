@@ -34,6 +34,45 @@ vars:
       cube_type: string
       in_budget: false
 
+  # Extra fiscal periods beyond 1-12 (D365: 0=opening, 13=closing, 14=adjustment)
+  fiscal_extra_periods:
+    - period: 0
+      label: OPN
+      quarter: OPN
+      half: OPN
+    - period: 13
+      label: CLS
+      quarter: CLS
+      half: CLS
+
+  # Fiscal period → quarter/half mapping (override for non-calendar fiscal years)
+  fiscal_quarter_mapping:
+    1: Q1
+    2: Q1
+    3: Q1
+    4: Q2
+    5: Q2
+    6: Q2
+    7: Q3
+    8: Q3
+    9: Q3
+    10: Q4
+    11: Q4
+    12: Q4
+  fiscal_half_mapping:
+    1: H1
+    2: H1
+    3: H1
+    4: H1
+    5: H1
+    6: H1
+    7: H2
+    8: H2
+    9: H2
+    10: H2
+    11: H2
+    12: H2
+
   base_measures:
     - name: period_debit
       expression: "sum(debit_amount)"

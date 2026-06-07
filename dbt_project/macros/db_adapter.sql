@@ -60,3 +60,12 @@
 {% macro string_pad_left(expr, len, ch) %}
     lpad({{ expr }}, {{ len }}, {{ ch }})
 {% endmacro %}
+
+{# Returns engine config for ClickHouse targets, empty dict otherwise #}
+{% macro epm_config(order_by='tuple()') %}
+    {% if target.type == 'clickhouse' %}
+        {{ return({'engine': "MergeTree()", 'order_by': order_by}) }}
+    {% else %}
+        {{ return({}) }}
+    {% endif %}
+{% endmacro %}

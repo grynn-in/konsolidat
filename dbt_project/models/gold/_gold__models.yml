@@ -5,38 +5,241 @@ models:
     description: "Period-level trial balance aggregated from GL entries"
     columns:
       - name: data_area_id
+        description: "Legal entity identifier"
         tests:
           - not_null
       - name: fiscal_year
+        description: "Fiscal year"
         tests:
           - not_null
       - name: fiscal_period
+        description: "Fiscal period (1-12)"
+        tests:
+          - not_null
+      - name: main_account
+        description: "Main account ID from chart of accounts"
+        tests:
+          - not_null
+
+  - name: gold_pnl_by_period
+    description: "P&L view - revenue and expense accounts only"
+    columns:
+      - name: data_area_id
         tests:
           - not_null
       - name: main_account
         tests:
           - not_null
 
-  - name: gold_pnl_by_period
-    description: "P&L view - revenue and expense accounts only"
-
   - name: gold_balance_sheet
     description: "Balance sheet view - cumulative balances for BS accounts"
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+      - name: cumulative_balance
+        description: "Running sum of period_net_amount within the year"
 
   - name: gold_allocation_results
     description: "Results of driver-based cost allocations"
+    columns:
+      - name: allocation_rule_id
+        tests:
+          - not_null
+      - name: allocated_amount
+        description: "Amount allocated to each target cost center"
 
   - name: gold_consolidated_trial_balance
     description: "Multi-company consolidated trial balance with currency translation"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: translated_amount
+        description: "local_amount * translation_rate"
+      - name: group_amount
+        description: "translated_amount * ownership_pct"
+      - name: nci_amount
+        description: "translated_amount * (1 - ownership_pct)"
 
   - name: gold_ic_eliminations
     description: "Intercompany elimination entries"
+    columns:
+      - name: rule_id
+        tests:
+          - not_null
+      - name: elimination_amount
+        description: "Lesser of debit/credit IC balances to eliminate"
 
   - name: gold_fx_revaluation
     description: "Currency translation adjustment (CTA) entries"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: cta_amount
+        description: "PnL CTA component: sum(local * (closing - average) * ownership)"
 
   - name: gold_scenario_versions
-    description: "Scenario version metadata"
+    description: "Scenario version metadata from seed and API"
+    columns:
+      - name: scenario_id
+        tests:
+          - not_null
 
   - name: gold_scenario_trial_balance
     description: "Union of actual + budget + forecast across all scenarios"
+    columns:
+      - name: scenario_id
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: amount
+        description: "Period amount for the scenario"
+
+  - name: gold_consolidation_adjustments
+    description: "Top-side journal adjustments for consolidation"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: journal_id
+        tests:
+          - not_null
+      - name: net_amount
+        description: "debit_amount - credit_amount"
+
+  - name: gold_fully_consolidated_tb
+    description: "Unified consolidated TB: entity balances + IC elims + CTA + topside"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: adjustment_type
+        description: "Layer: entity, ic_elimination, cta, or topside adjustment type"
+        tests:
+          - not_null
+
+  - name: gold_variance_analysis
+    description: "Actual vs budget variance with favorable/unfavorable logic"
+    columns:
+      - name: main_account
+        tests:
+          - not_null
+      - name: variance_abs
+        description: "actual_amount - budget_amount"
+      - name: variance_pct
+        description: "Variance as percentage of budget"
+      - name: variance_favorable
+        description: "True if variance is favorable (revenue up or expense down)"
+
+  - name: gold_spread_budget
+    description: "Annual budget spread across 12 periods using profile weights"
+    columns:
+      - name: scenario_id
+        tests:
+          - not_null
+      - name: period_amount
+        description: "annual_amount * period_weight"
+
+  # --- New models (Phase 3) ---
+
+  - name: gold_period_hierarchy
+    description: "Period dimension mapping fiscal_period to quarter and half labels"
+    columns:
+      - name: fiscal_period
+        tests:
+          - not_null
+          - unique
+      - name: fiscal_quarter
+        description: "Quarter label (Q1-Q4)"
+      - name: fiscal_half
+        description: "Half-year label (H1-H2)"
+
+  - name: gold_ytd_trial_balance
+    description: "Year-to-date running totals over gold_trial_balance"
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: ytd_net_amount
+        description: "Cumulative sum of period_net_amount through fiscal_period"
+
+  - name: gold_pnl_quarterly
+    description: "Quarterly P&L aggregation for P&L accounts"
+    columns:
+      - name: fiscal_quarter
+        tests:
+          - not_null
+      - name: quarter_net_amount
+        description: "Sum of period_net_amount for the quarter"
+
+  - name: gold_pnl_half_yearly
+    description: "Half-yearly P&L aggregation for P&L accounts"
+    columns:
+      - name: fiscal_half
+        tests:
+          - not_null
+      - name: half_net_amount
+        description: "Sum of period_net_amount for the half"
+
+  - name: gold_variance_ytd
+    description: "YTD variance: actual vs budget with running totals"
+    columns:
+      - name: main_account
+        tests:
+          - not_null
+      - name: ytd_actual
+        description: "Year-to-date actual amount"
+      - name: ytd_budget
+        description: "Year-to-date budget amount"
+
+  - name: gold_variance_quarterly
+    description: "Quarterly variance: actual vs budget aggregated by quarter"
+    columns:
+      - name: fiscal_quarter
+        tests:
+          - not_null
+
+  - name: gold_prior_year_comparison
+    description: "Current vs prior year comparison with YoY variance"
+    columns:
+      - name: main_account
+        tests:
+          - not_null
+      - name: current_amount
+        description: "Current year period amount"
+      - name: prior_year_amount
+        description: "Same period prior year amount"
+      - name: yoy_variance_abs
+        description: "current_amount - prior_year_amount"
+
+  - name: gold_bs_movement
+    description: "Balance sheet movement schedule: opening, movement, closing"
+    columns:
+      - name: main_account
+        tests:
+          - not_null
+      - name: opening_balance
+        description: "Cumulative balance at prior period"
+      - name: period_movement
+        description: "Net amount for the period"
+      - name: closing_balance
+        description: "Cumulative balance at current period"
+
+  - name: gold_consolidated_ytd
+    description: "Year-to-date running totals on fully consolidated trial balance"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: ytd_amount
+        description: "Cumulative sum of amount through fiscal_period"

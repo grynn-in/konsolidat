@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: epm_staging
+    schema: epm_staging
+    description: "Write-back staging tables populated by the FastAPI budget input API"
+    tables:
+      - name: budget_input
+        description: "Budget/forecast line items submitted via the API"
+      - name: scenario_definitions
+        description: "Scenario metadata created via the API"
