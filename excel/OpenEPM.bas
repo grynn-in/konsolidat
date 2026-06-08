@@ -221,6 +221,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
     EnsureCache
 
     Application.StatusBar = "Open EPM: Scanning " & ws.Name & "..."
+    DoEvents
 
     Set usedRange = ws.UsedRange
     If usedRange Is Nothing Then Exit Function
@@ -257,6 +258,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
     End If
 
     Application.StatusBar = "Open EPM: Fetching " & requests.Count & " values from " & ws.Name & "..."
+    DoEvents
 
     ' Build JSON batch request
     Dim json As String
@@ -330,6 +332,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
 
     ' Populate cache
     Application.StatusBar = "Open EPM: " & ws.Name & " — populating " & requests.Count & " cells..."
+    DoEvents
     Dim cacheKey As String
     For i = 1 To requests.Count
         cacheKey = keys(i)
