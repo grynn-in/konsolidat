@@ -19,11 +19,11 @@ hide:
     <span class="ic-stat-label">Data Tests</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">5</span>
+    <span class="ic-stat-num">6</span>
     <span class="ic-stat-label">Excel Functions</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">3</span>
+    <span class="ic-stat-num">6</span>
     <span class="ic-stat-label">API Endpoints</span>
   </div>
 </div>
