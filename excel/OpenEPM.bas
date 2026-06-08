@@ -20,6 +20,7 @@
 '   EPM_RefreshAll        Refresh all sheets
 '   EPM_ClearCache        Clear cached values
 '   EPM_SetServer         Change API server URL
+'   EPM_ToggleLog         Toggle logging to _EPM_Log sheet
 '
 ' ============================================================
 
@@ -32,6 +33,7 @@ Private pCache As Object  ' Scripting.Dictionary
 Private pLoggedIn As Boolean
 Private pSessionCookie As String
 Private Const LOG_SHEET_NAME As String = "_EPM_Log"
+Private pLoggingEnabled As Boolean
 
 Public Property Get API_BASE_URL() As String
     If pApiUrl = "" Then
@@ -599,7 +601,17 @@ End Function
 
 ' ── Logging ─────────────────────────────────────────────────
 
+Public Sub EPM_ToggleLog()
+    pLoggingEnabled = Not pLoggingEnabled
+    If pLoggingEnabled Then
+        MsgBox "Logging enabled. Messages will appear in the _EPM_Log sheet.", vbInformation, "Open EPM"
+    Else
+        MsgBox "Logging disabled.", vbInformation, "Open EPM"
+    End If
+End Sub
+
 Private Sub LogMsg(level As String, msg As String)
+    If Not pLoggingEnabled Then Exit Sub
     Dim ws As Worksheet
     Dim nextRow As Long
 
