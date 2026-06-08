@@ -26,6 +26,7 @@ Send a JSON array as the raw POST body. Each element is a request object.
 | `scenario` | string | No | `actuals` | Scenario: `actuals`, `budget`, `variance` |
 | `cost_center` | string | No | `""` | Cost center filter |
 | `department` | string | No | `""` | Department filter |
+| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to tables with a `scenario_id` column. |
 
 ### Size Limit
 
@@ -101,7 +102,7 @@ print(data["values"])  # [125430.50, 89200.00]
 The batch endpoint doesn't issue one SQL query per item. Instead, it groups items by:
 
 ```
-(scenario, measure, period_tuple, has_cost_center, has_department)
+(scenario, measure, period_tuple, has_cost_center, has_department, scenario_id)
 ```
 
 All items in a group are fetched with a single ClickHouse `SELECT` using parameterized `IN` clauses:

@@ -10,7 +10,7 @@
 '
 ' Functions:
 '   =EPM(entity, year, period, account)
-'   =EPM(entity, year, period, account, measure, scenario, cost_center, dept)
+'   =EPM(entity, year, period, account, measure, scenario, cost_center, dept, scenario_id)
 '   =EPM_BUDGET(entity, year, period, account)
 '   =EPM_VARIANCE(entity, year, period, account)
 '
@@ -128,11 +128,12 @@ Public Function EPM( _
     Optional measure As String = "period_net_amount", _
     Optional scenario As String = "actuals", _
     Optional cost_center As String = "", _
-    Optional department As String = "" _
+    Optional department As String = "", _
+    Optional scenario_id As String = "" _
 ) As Variant
     Dim Key As String
     Key = BuildKey(CStr(entity), CLng(fiscal_year), CStr(fiscal_period), CStr(account), _
-                   measure, scenario, cost_center, department)
+                   measure, scenario, cost_center, department, scenario_id)
 
     If pCache Is Nothing Then
         EPM = 0
@@ -146,19 +147,21 @@ End Function
 Public Function EPM_BUDGET( _
     entity As String, fiscal_year As Variant, fiscal_period As Variant, _
     account As String, _
-    Optional cost_center As String = "", Optional department As String = "" _
+    Optional cost_center As String = "", Optional department As String = "", _
+    Optional scenario_id As String = "" _
 ) As Variant
     EPM_BUDGET = EPM(entity, fiscal_year, fiscal_period, account, _
-                     "period_amount", "budget", cost_center, department)
+                     "period_amount", "budget", cost_center, department, scenario_id)
 End Function
 
 Public Function EPM_VARIANCE( _
     entity As String, fiscal_year As Variant, fiscal_period As Variant, _
     account As String, _
-    Optional cost_center As String = "", Optional department As String = "" _
+    Optional cost_center As String = "", Optional department As String = "", _
+    Optional scenario_id As String = "" _
 ) As Variant
     EPM_VARIANCE = EPM(entity, fiscal_year, fiscal_period, account, _
-                       "variance_abs", "variance", cost_center, department)
+                       "variance_abs", "variance", cost_center, department, scenario_id)
 End Function
 
 Public Function EPM_DEBIT( _
@@ -285,6 +288,9 @@ Private Function RefreshSheet(ws As Worksheet) As Long
         End If
         If req("department") <> "" Then
             json = json & ",""department"":""" & JsonEscape(CStr(req("department"))) & """"
+        End If
+        If req("scenario_id") <> "" Then
+            json = json & ",""scenario_id"":""" & JsonEscape(CStr(req("scenario_id"))) & """"
         End If
         json = json & "}"
     Next i
@@ -487,7 +493,7 @@ Private Function ResolveEpmArgs(cell As Range) As Object
     ' Extract arguments between the parentheses
     Dim depth As Long
     Dim argStart As Long
-    Dim argList(0 To 7) As String
+    Dim argList(0 To 8) As String
     Dim argCount As Long
     Dim ch As String
     Dim pos As Long
@@ -530,6 +536,7 @@ Private Function ResolveEpmArgs(cell As Range) As Object
     Dim scenario As String
     Dim costCenter As String
     Dim department As String
+    Dim scenarioId As String
 
     entity = CStr(EvalArg(cell, argList(0)))
     yr = CLng(EvalArg(cell, argList(1)))
@@ -541,11 +548,13 @@ Private Function ResolveEpmArgs(cell As Range) As Object
         If argCount > 5 Then scenario = CStr(EvalArg(cell, argList(5))) Else scenario = defaultScenario
         If argCount > 6 Then costCenter = CStr(EvalArg(cell, argList(6))) Else costCenter = ""
         If argCount > 7 Then department = CStr(EvalArg(cell, argList(7))) Else department = ""
+        If argCount > 8 Then scenarioId = CStr(EvalArg(cell, argList(8))) Else scenarioId = ""
     Else
         measure = defaultMeasure
         scenario = defaultScenario
         If argCount > 4 Then costCenter = CStr(EvalArg(cell, argList(4))) Else costCenter = ""
         If argCount > 5 Then department = CStr(EvalArg(cell, argList(5))) Else department = ""
+        If argCount > 6 Then scenarioId = CStr(EvalArg(cell, argList(6))) Else scenarioId = ""
     End If
 
     ' Build result dictionary
@@ -559,7 +568,8 @@ Private Function ResolveEpmArgs(cell As Range) As Object
     result.Add "scenario", scenario
     result.Add "cost_center", costCenter
     result.Add "department", department
-    result.Add "key", BuildKey(entity, yr, per, account, measure, scenario, costCenter, department)
+    result.Add "scenario_id", scenarioId
+    result.Add "key", BuildKey(entity, yr, per, account, measure, scenario, costCenter, department, scenarioId)
 
     Set ResolveEpmArgs = result
     Exit Function
@@ -641,9 +651,11 @@ End Sub
 
 Private Function BuildKey(entity As String, yr As Long, per As String, _
     account As String, measure As String, scenario As String, _
-    costCenter As String, department As String) As String
+    costCenter As String, department As String, _
+    Optional scenarioId As String = "") As String
     BuildKey = entity & "|" & yr & "|" & per & "|" & account & "|" & _
-               measure & "|" & scenario & "|" & costCenter & "|" & department
+               measure & "|" & scenario & "|" & costCenter & "|" & department & _
+               "|" & scenarioId
 End Function
 
 Private Function JsonEscape(s As String) As String
@@ -700,6 +712,186 @@ End Sub
 
 Public Sub Auto_Close()
     Application.OnKey "+^r"
+End Sub
+
+Private Function EnsureLogin() As Boolean
+    If pLoggedIn And pSessionCookie <> "" Then
+        EnsureLogin = True
+        Exit Function
+    End If
+    EPM_Login
+    EnsureLogin = pLoggedIn
+End Function
+
+' ── Budget Save (write-back from Excel) ─────────────────────
+'
+' EPM_BUDGET_SAVE scans a budget template sheet and POSTs budget lines
+' to Frappe. The template layout expects:
+'   Row 1: Headers (Entity, Account, CostCenter, Department, P1..P12)
+'   Row 2+: Data rows
+'
+' The scenario_id and fiscal_year are read from named ranges or cells:
+'   - Named range "BudgetScenario" or cell A1 of a "Config" sheet
+'   - Named range "BudgetYear" or cell B1 of a "Config" sheet
+'
+Public Sub EPM_BUDGET_SAVE()
+    If Not EnsureLogin Then Exit Sub
+
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+
+    ' Read scenario and year from named ranges or config
+    Dim scenarioId As String
+    Dim fiscalYear As Long
+    On Error Resume Next
+    scenarioId = Range("BudgetScenario").Value
+    fiscalYear = CLng(Range("BudgetYear").Value)
+    On Error GoTo 0
+
+    If scenarioId = "" Then
+        scenarioId = InputBox("Enter Scenario ID (e.g. budget_2025):", "Budget Save")
+        If scenarioId = "" Then Exit Sub
+    End If
+    If fiscalYear = 0 Then
+        Dim yrStr As String
+        yrStr = InputBox("Enter Fiscal Year:", "Budget Save")
+        If yrStr = "" Then Exit Sub
+        fiscalYear = CLng(yrStr)
+    End If
+
+    ' Detect columns: find P1-P12 header columns
+    Dim lastCol As Long
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    Dim periodCols(1 To 12) As Long
+    Dim col As Long
+    Dim hdr As String
+    For col = 1 To lastCol
+        hdr = UCase(Trim(ws.Cells(1, col).Value))
+        If Left(hdr, 1) = "P" And Len(hdr) <= 3 Then
+            Dim pNum As Long
+            On Error Resume Next
+            pNum = CLng(Mid(hdr, 2))
+            On Error GoTo 0
+            If pNum >= 1 And pNum <= 12 Then
+                periodCols(pNum) = col
+            End If
+        End If
+    Next col
+
+    ' Detect entity, account, cost_center, department columns
+    Dim entityCol As Long, accountCol As Long
+    Dim ccCol As Long, deptCol As Long
+    entityCol = 0: accountCol = 0: ccCol = 0: deptCol = 0
+    For col = 1 To lastCol
+        hdr = UCase(Trim(ws.Cells(1, col).Value))
+        Select Case hdr
+            Case "ENTITY", "DATA_AREA_ID": entityCol = col
+            Case "ACCOUNT", "MAIN_ACCOUNT": accountCol = col
+            Case "COST_CENTER", "COSTCENTER", "DIM_COST_CENTER": ccCol = col
+            Case "DEPARTMENT", "DIM_DEPARTMENT": deptCol = col
+        End Select
+    Next col
+
+    If entityCol = 0 Or accountCol = 0 Then
+        MsgBox "Cannot find Entity and Account columns in row 1.", vbExclamation, "Budget Save"
+        Exit Sub
+    End If
+
+    ' Build JSON array of budget lines
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, entityCol).End(xlUp).Row
+    If lastRow < 2 Then
+        MsgBox "No data rows found.", vbInformation, "Budget Save"
+        Exit Sub
+    End If
+
+    Dim jsonLines As String
+    Dim lineCount As Long
+    jsonLines = "["
+    lineCount = 0
+
+    Dim r As Long
+    For r = 2 To lastRow
+        Dim entity As String, account As String
+        entity = Trim(CStr(ws.Cells(r, entityCol).Value))
+        account = Trim(CStr(ws.Cells(r, accountCol).Value))
+        If entity = "" Or account = "" Then GoTo NextRow
+
+        Dim cc As String, dept As String
+        cc = ""
+        dept = ""
+        If ccCol > 0 Then cc = Trim(CStr(ws.Cells(r, ccCol).Value))
+        If deptCol > 0 Then dept = Trim(CStr(ws.Cells(r, deptCol).Value))
+
+        ' Build periods array
+        Dim periodsJson As String
+        periodsJson = "["
+        Dim p As Long
+        Dim hasPeriod As Boolean
+        hasPeriod = False
+        For p = 1 To 12
+            If periodCols(p) > 0 Then
+                Dim amt As Double
+                amt = 0
+                On Error Resume Next
+                amt = CDbl(ws.Cells(r, periodCols(p)).Value)
+                On Error GoTo 0
+                If hasPeriod Then periodsJson = periodsJson & ","
+                periodsJson = periodsJson & "{""period"":" & p & ",""amount"":" & amt & "}"
+                hasPeriod = True
+            End If
+        Next p
+        periodsJson = periodsJson & "]"
+
+        If lineCount > 0 Then jsonLines = jsonLines & ","
+        jsonLines = jsonLines & "{" & _
+            """scenario_id"":""" & JsonEscape(scenarioId) & """," & _
+            """data_area_id"":""" & JsonEscape(entity) & """," & _
+            """fiscal_year"":" & fiscalYear & "," & _
+            """main_account"":""" & JsonEscape(account) & """," & _
+            """dim_cost_center"":""" & JsonEscape(cc) & """," & _
+            """dim_department"":""" & JsonEscape(dept) & """," & _
+            """periods"":" & periodsJson & "}"
+        lineCount = lineCount + 1
+
+        Application.StatusBar = "Saving " & lineCount & " budget lines..."
+NextRow:
+    Next r
+    jsonLines = jsonLines & "]"
+
+    If lineCount = 0 Then
+        MsgBox "No valid budget lines found.", vbInformation, "Budget Save"
+        Exit Sub
+    End If
+
+    ' POST to budget_save_batch
+    Dim http As Object
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    Dim url As String
+    url = API_BASE_URL & "/api/method/konsol.api.budget_save_batch"
+
+    On Error GoTo BudgetSaveFail
+    http.Open "POST", url, False
+    http.setRequestHeader "Content-Type", "application/json"
+    If pSessionCookie <> "" Then http.setRequestHeader "Cookie", pSessionCookie
+    http.send jsonLines
+
+    Application.StatusBar = False
+
+    If http.Status = 200 Then
+        LogMsg "INFO", "Budget save: " & lineCount & " lines saved"
+        MsgBox lineCount & " budget lines saved successfully.", vbInformation, "Budget Save"
+    Else
+        LogMsg "ERROR", "Budget save failed: HTTP " & http.Status & " " & http.responseText
+        MsgBox "Budget save failed (HTTP " & http.Status & "):" & vbCrLf & _
+               Left(http.responseText, 500), vbExclamation, "Budget Save"
+    End If
+    Exit Sub
+
+BudgetSaveFail:
+    Application.StatusBar = False
+    LogMsg "ERROR", "Budget save error: " & Err.Description
+    MsgBox "Budget save error: " & Err.Description, vbExclamation, "Budget Save"
 End Sub
 
 ' ── Debug: test connectivity and formula scanning ─────────

@@ -2,6 +2,9 @@
 
 Open EPM supports annual budget input with configurable spread profiles that distribute amounts across 12 fiscal periods.
 
+!!! tip "Budget Layers — Collaborative Budgeting"
+    Open EPM supports **additive budget layers** (base, challenge, management, board) where each stakeholder contributes adjustments tracked separately. The effective budget is always the sum of all layers. See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers are entered in Frappe, synced to ClickHouse, and retrieved via `=EPM()`.
+
 ## Budget Data Flow
 
 ```mermaid
@@ -143,6 +146,7 @@ The weights don't need to sum to 12.0 — they're normalized during the spread c
 
 ## Next Steps
 
+- **[Budget Layers Guide](budget-layers.md)** — Collaborative layered budgeting with workflow and approval
 - [Variance Analysis Guide](variance-analysis-guide.md) — Actual vs budget comparison
 - [Excel VBA Guide](excel-vba-guide.md) — Budget formulas in Excel
 - [Seeds Reference](../data-dictionary/seeds-reference.md) — Full seed documentation

@@ -19,7 +19,7 @@ All five functions share the same parameter pattern. They differ only in the def
 ### EPM() — General Purpose
 
 ```
-=EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [cost_center], [department])
+=EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [cost_center], [department], [scenario_id])
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -32,6 +32,7 @@ All five functions share the same parameter pattern. They differ only in the def
 | `scenario` | String | No | `"actuals"` | Data scenario (see [Scenarios](#scenarios)) |
 | `cost_center` | String | No | `""` | Filter by cost center |
 | `department` | String | No | `""` | Filter by department |
+| `scenario_id` | String | No | `""` | Filter to a specific scenario ID (e.g., `"BUDGET_2025"`). See [Scenario ID Filtering](#scenario-id-filtering). |
 
 **Examples:**
 
@@ -39,12 +40,13 @@ All five functions share the same parameter pattern. They differ only in the def
 =EPM("USMF", 2024, 5, "401100")
 =EPM("USMF", 2024, "Q1", "401100", "ytd_net_amount")
 =EPM("USMF", 2024, "FY", "401100", "period_net_amount", "actuals", "SALES")
+=EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "", "BUDGET_2025")
 ```
 
 ### EPM_BUDGET() — Budget Values
 
 ```
-=EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [cost_center], [department])
+=EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id])
 ```
 
 Shorthand for `=EPM(..., "period_amount", "budget", ...)`.
@@ -52,7 +54,7 @@ Shorthand for `=EPM(..., "period_amount", "budget", ...)`.
 ### EPM_VARIANCE() — Actual vs Budget Variance
 
 ```
-=EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [cost_center], [department])
+=EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id])
 ```
 
 Shorthand for `=EPM(..., "variance_abs", "variance", ...)`.
@@ -130,6 +132,24 @@ Instead of a single month number, you can pass period range codes. The API sums 
 | `"FY"` | Months 1–12 (full year) |
 
 **Example:** `=EPM("USMF", 2024, "Q1", "401100")` returns the sum of periods 1+2+3.
+
+## Scenario ID Filtering
+
+The `scenario_id` parameter lets you target a specific scenario instance (e.g., `BUDGET_2025`, `FORECAST_Q3_2025`) within tables that support it. This is useful for:
+
+- **Multiple budget versions**: Compare BUDGET_2025 vs BUDGET_2025_V2
+- **What-if analysis**: Query a what-if scenario alongside the approved budget
+- **Forecast vs budget**: Compare FORECAST_Q3_2025 with BUDGET_2025
+
+When `scenario_id` is omitted or empty, the query returns the sum across **all** scenario IDs — which is the default behavior and matches how EPM() has always worked.
+
+**Currently supported tables**: `gold_spread_budget` (scenario = `budget`)
+
+| Formula | What It Returns |
+|:--------|:----------------|
+| `=EPM_BUDGET("USMF", 2025, 5, "6100")` | Sum of ALL budget scenarios for P5 |
+| `=EPM_BUDGET("USMF", 2025, 5, "6100", "", "", "BUDGET_2025")` | Only BUDGET_2025 for P5 |
+| `=EPM_BUDGET("USMF", 2025, "Q1", "6100", "", "", "BUDGET_2025")` | BUDGET_2025 Q1 total |
 
 ## Macros
 

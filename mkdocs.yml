@@ -1,4 +1,5 @@
 site_name: Open EPM
+site_url: https://grynn-in.github.io/konsolidat/
 site_description: Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.
 repo_url: https://github.com/grynn-in/konsolidat
 repo_name: grynn-in/konsolidat
@@ -47,51 +48,55 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Features: features.md
-  - Getting Started:
-      - Quickstart: getting-started/quickstart.md
-      - Setup Guide: getting-started/setup-guide.md
-      - Configuration: getting-started/configuration-reference.md
-  - User Guide:
-      - Excel VBA Guide: user-guide/excel-vba-guide.md
-      - Excel Task Pane: user-guide/excel-taskpane-guide.md
-      - Consolidation: user-guide/consolidation-guide.md
-      - Allocations: user-guide/allocation-guide.md
-      - Budgeting: user-guide/budgeting-guide.md
-      - Variance Analysis: user-guide/variance-analysis-guide.md
-      - Report Catalog: user-guide/report-catalog.md
-  - API Reference:
-      - Overview: api-reference/api-overview.md
-      - GET epm_value: api-reference/api-epm-value.md
-      - POST epm_batch: api-reference/api-epm-batch.md
-      - GET health: api-reference/api-health.md
-  - Data Dictionary:
-      - Overview: data-dictionary/data-dictionary-overview.md
-      - Gold Models: data-dictionary/gold-models.md
-      - Silver Models: data-dictionary/silver-models.md
-      - Bronze Models: data-dictionary/bronze-models.md
-      - Seeds: data-dictionary/seeds-reference.md
-      - Staging Tables: data-dictionary/staging-tables.md
-  - Admin Guide:
-      - Deployment: admin-guide/deployment-guide.md
-      - Operations Runbook: admin-guide/operations-runbook.md
-      - D365 Integration: admin-guide/d365-integration.md
-      - Monitoring: admin-guide/monitoring.md
-  - Developer Guide:
-      - Overview: developer-guide/developer-overview.md
-      - Macro Reference: developer-guide/macro-reference.md
-      - Extending Models: developer-guide/extending-dbt-models.md
-      - Testing Guide: developer-guide/testing-guide.md
-      - Adding Dimensions: developer-guide/adding-dimensions.md
-      - Extending API: developer-guide/extending-api.md
-      - Contributing: developer-guide/contributing.md
-  - Troubleshooting:
-      - Troubleshooting: troubleshooting/troubleshooting.md
-      - FAQ: troubleshooting/faq.md
-  - Evaluation:
+  - About:
+      - Why Open EPM?: why-konsolidat.md
+      - Features: features.md
       - Cost Comparison: evaluation/cost-comparison-vs-commercial.md
       - Security Architecture: evaluation/security-architecture.md
-  - Reference:
-      - Why Open EPM?: why-konsolidat.md
       - Roadmap: reference/roadmap.md
+  - Guides:
+      - Getting Started:
+          - Quickstart: getting-started/quickstart.md
+          - Setup Guide: getting-started/setup-guide.md
+          - Configuration: getting-started/configuration-reference.md
+      - Excel:
+          - VBA Add-in: user-guide/excel-vba-guide.md
+          - Task Pane: user-guide/excel-taskpane-guide.md
+      - Financial Processes:
+          - Consolidation: user-guide/consolidation-guide.md
+          - Allocations: user-guide/allocation-guide.md
+          - Budgeting: user-guide/budgeting-guide.md
+          - Budget Layers: user-guide/budget-layers.md
+          - Variance Analysis: user-guide/variance-analysis-guide.md
+      - Reports:
+          - Report Catalog: user-guide/report-catalog.md
+      - Administration:
+          - Deployment: admin-guide/deployment-guide.md
+          - Operations Runbook: admin-guide/operations-runbook.md
+          - D365 Integration: admin-guide/d365-integration.md
+          - Monitoring: admin-guide/monitoring.md
+  - Developer:
+      - Overview: developer-guide/developer-overview.md
+      - API Reference:
+          - Overview: api-reference/api-overview.md
+          - GET epm_value: api-reference/api-epm-value.md
+          - POST epm_batch: api-reference/api-epm-batch.md
+          - GET health: api-reference/api-health.md
+      - Data Dictionary:
+          - Overview: data-dictionary/data-dictionary-overview.md
+          - Gold Models: data-dictionary/gold-models.md
+          - Silver Models: data-dictionary/silver-models.md
+          - Bronze Models: data-dictionary/bronze-models.md
+          - Seeds: data-dictionary/seeds-reference.md
+          - Staging Tables: data-dictionary/staging-tables.md
+      - Extending:
+          - dbt Macro Reference: developer-guide/macro-reference.md
+          - Extending Models: developer-guide/extending-dbt-models.md
+          - Adding Dimensions: developer-guide/adding-dimensions.md
+          - Extending API: developer-guide/extending-api.md
+      - Testing Guide: developer-guide/testing-guide.md
+      - Contributing: developer-guide/contributing.md
+  - Help:
+      - Troubleshooting: troubleshooting/troubleshooting.md
+      - FAQ: troubleshooting/faq.md
       - Glossary: reference/glossary.md
