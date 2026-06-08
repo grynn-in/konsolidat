@@ -130,7 +130,6 @@ Public Function EPM( _
     Optional cost_center As String = "", _
     Optional department As String = "" _
 ) As Variant
-    Application.Volatile True
     Dim Key As String
     Key = BuildKey(CStr(entity), CLng(fiscal_year), CLng(fiscal_period), CStr(account), _
                    measure, scenario, cost_center, department)
