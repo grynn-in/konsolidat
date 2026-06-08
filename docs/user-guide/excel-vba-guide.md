@@ -1,6 +1,6 @@
 # Excel VBA Guide
 
-The Open EPM VBA module turns Excel into a live reporting client. Five worksheet functions query financial data from ClickHouse via the Frappe API. A batch refresh mechanism fetches all values in a single HTTP round-trip.
+The Open EPM VBA module turns Excel into a live reporting and budgeting client. Six worksheet functions cover reading (`EPM`, `EPM_BUDGET`, `EPM_VARIANCE`, `EPM_DEBIT`, `EPM_CREDIT`) and writing (`EPMSAVE`). A batch refresh mechanism fetches all read values in a single HTTP round-trip. Budget writes happen immediately on recalc.
 
 ## Setup
 
@@ -14,7 +14,16 @@ See [Setup Guide](../getting-started/setup-guide.md) for full installation steps
 
 ## Formula Functions
 
-All five functions share the same parameter pattern. They differ only in the default `measure` and `scenario`.
+### Read vs Write
+
+| Function | Direction | When It Fires |
+|----------|-----------|---------------|
+| `EPM()`, `EPM_BUDGET()`, `EPM_VARIANCE()`, `EPM_DEBIT()`, `EPM_CREDIT()` | **Read** | Returns cached value; refresh with Ctrl+Shift+R |
+| `EPMSAVE()` | **Write** | Saves to server immediately on recalc (skips if unchanged) |
+
+### Read Functions
+
+All five read functions share the same parameter pattern. They differ only in the default `measure` and `scenario`.
 
 ### EPM() — General Purpose
 
@@ -74,6 +83,121 @@ Shorthand for `=EPM(..., "period_debit", "actuals", ...)`.
 ```
 
 Shorthand for `=EPM(..., "period_credit", "actuals", ...)`.
+
+### Write Function
+
+### EPMSAVE() — Budget Write-Back
+
+```
+=EPMSAVE(amount, entity, fiscal_year, fiscal_period, account, scenario_id, layer, [cost_center], [department])
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `amount` | Number | Yes | — | The value to save (number or cell reference) |
+| `entity` | String | Yes | — | Legal entity code (e.g., `"USMF"`) |
+| `fiscal_year` | Number | Yes | — | Fiscal year (e.g., `2025`) |
+| `fiscal_period` | Number | Yes | — | Single period `1`–`12` (no ranges — one cell per period) |
+| `account` | String | Yes | — | Main account code (e.g., `"6100"`) |
+| `scenario_id` | String | Yes | — | Scenario instance (e.g., `"BUDGET_2025"`) |
+| `layer` | String | Yes | — | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
+| `cost_center` | String | No | `""` | Cost center dimension |
+| `department` | String | No | `""` | Department dimension |
+
+**The cell displays the amount.** The write to the server happens silently in the background.
+
+**Examples:**
+
+```
+=EPMSAVE(100000, "USMF", 2025, 1, "6100", "BUDGET_2025", "base")
+=EPMSAVE(-5000, "USMF", 2025, 1, "6100", "BUDGET_2025", "challenge")
+=EPMSAVE(B5, $A$1, $A$2, C$3, $A5, $A$4, "base")     ' cell references
+```
+
+#### How EPMSAVE Works
+
+1. Formula evaluates → cell displays the amount (pass-through)
+2. VBA checks if the value changed since last save (skip-unchanged cache)
+3. If changed → `POST /api/method/konsol.api.budget_cell_save` with the parameters
+4. Server upserts a single period+layer row in the Budget Input doc (creates the doc if new)
+5. Budget Input doc stays in **Draft** until approved via Frappe workflow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Excel as EPMSAVE()
+    participant Cache as Save Cache
+    participant Frappe as Frappe API
+
+    User->>Excel: Types 95000 in cell
+    Excel->>Cache: Value changed?
+    alt Changed
+        Cache-->>Excel: Yes
+        Excel->>Frappe: POST budget_cell_save<br/>{entity, year, period, account,<br/>scenario_id, layer, amount}
+        Frappe-->>Excel: {status: ok}
+        Excel->>Cache: Update cache
+    else Unchanged
+        Cache-->>Excel: No (skip)
+    end
+    Excel-->>User: Cell shows 95000
+```
+
+#### Budget Layers
+
+Layers are **additive** — the effective budget is always the sum across all layers for a given period. Each layer represents a different stakeholder's contribution:
+
+| Layer | Typical Use |
+|:------|:------------|
+| `base` | Department's original submission |
+| `challenge` | Finance team adjustments (e.g., 5% cut) |
+| `management` | Executive overrides (e.g., Q3 launch funding) |
+| `board` | Board-level final adjustments |
+
+Any authorized user can write to any layer — the `layer` parameter is data, not security. Access to the budget module is controlled by Frappe's standard role permissions.
+
+See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers build up across 12 periods.
+
+#### Building a Budget Template
+
+| | A | B | C | D | E |
+|---|---|---|---|---|---|
+| 1 | **Scenario:** | BUDGET_2025 | **Year:** | 2025 | |
+| 2 | **Layer:** | base | | | |
+| 3 | **Account** | **P1** | **P2** | **P3** | **...** |
+| 4 | 6100 | `=EPMSAVE(100000,$B$1,$D$1,B$3,$A4,$B$2,"base")` | `=EPMSAVE(100000,$B$1,$D$1,C$3,$A4,$B$2,"base")` | ... | |
+| 5 | 6200 | `=EPMSAVE(50000,$B$1,$D$1,B$3,$A5,$B$2,"base")` | `=EPMSAVE(50000,$B$1,$D$1,C$3,$A5,$B$2,"base")` | ... | |
+
+Tips:
+
+- Use **absolute references** for scenario (`$B$1`), year (`$D$1`), and layer (`$B$2`)
+- Use **mixed references** for period (`B$3`, `C$3`) and account (`$A4`, `$A5`) so formulas copy correctly when dragged
+- To change the amount, just edit the first argument — EPMSAVE fires on recalc and saves the new value
+- To enter challenge adjustments, change `$B$2` to `"challenge"` and type your deltas
+
+#### Read + Write Side by Side
+
+A common pattern: read the current approved budget on one row, write your adjustments on the next:
+
+| | A | B | C | D |
+|---|---|---|---|---|
+| 1 | **Scenario:** | BUDGET_2025 | **Year:** | 2025 |
+| 2 | **Account** | **P1** | **P2** | **P3** |
+| 3 | 6100 Approved | `=EPM_BUDGET("USMF",2025,1,"6100")` | `=EPM_BUDGET(...)` | `=EPM_BUDGET(...)` |
+| 4 | 6100 Challenge | `=EPMSAVE(-5000,"USMF",2025,1,"6100","BUDGET_2025","challenge")` | `=EPMSAVE(...)` | `=EPMSAVE(...)` |
+| 5 | 6100 Effective | `=B3+B4` | `=C3+C4` | `=D3+D4` |
+
+- Row 3: reads current approved budget (Ctrl+Shift+R to refresh)
+- Row 4: writes your challenge layer adjustments (saves immediately)
+- Row 5: formula shows the effective budget (base + challenge)
+
+#### What Happens After Save
+
+EPMSAVE creates Budget Input docs in **Draft** state. To make them live:
+
+1. Open Frappe Desk → Budget Input list
+2. Review the entries
+3. Click **Submit for Review** → **Approve**
+4. On approval: ClickHouse sync fires → dbt rebuild → EPM() formulas return updated values on next Ctrl+Shift+R
 
 ## Measures
 
@@ -262,9 +386,14 @@ The batch mechanism means 500 EPM cells = 1 HTTP request, not 500.
 | Slow refresh | Too many unique queries | Group similar periods; use period ranges (Q1, FY) |
 | Values don't update | Stale cache | Run EPM_ClearCache, then Ctrl+Shift+R |
 | `ClickHouse connection failed` | ClickHouse is down | Check `docker ps` for healthy container |
+| EPMSAVE not saving | Not logged in | Run EPM_Login first — EPMSAVE skips if no session |
+| EPMSAVE saving duplicates | Value unchanged but re-saving | Check save cache — run EPM_ToggleLog to verify skip behavior |
+| Budget not visible in EPM_BUDGET | Not approved yet | Budget Input docs start as Draft — approve in Frappe Desk first |
 
 ## Next Steps
 
+- [Budget Layers Guide](budget-layers.md) — Full worked example of 4-layer collaborative budgeting
+- [Budgeting Guide](budgeting-guide.md) — Spread profiles, scenarios, budget data flow
 - [Report Catalog](report-catalog.md) — Pre-built report patterns for all 22 gold models
 - [Excel Task Pane Guide](excel-taskpane-guide.md) — Pipeline control from Excel
 - [API Reference](../api-reference/api-overview.md) — Raw API documentation
