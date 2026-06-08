@@ -31,6 +31,7 @@ Private pApiUrl As String
 Private pCache As Object  ' Scripting.Dictionary
 Private pLoggedIn As Boolean
 Private pSessionCookie As String
+Private Const LOG_SHEET_NAME As String = "_EPM_Log"
 
 Public Property Get API_BASE_URL() As String
     If pApiUrl = "" Then
@@ -72,10 +73,12 @@ Public Sub EPM_Login()
     pSessionCookie = ExtractCookies(headers)
     pLoggedIn = True
 
+    LogMsg "INFO", "Logged in as " & usr
     MsgBox "Logged in as " & usr & ". Press Ctrl+Shift+R to refresh.", vbInformation, "Open EPM"
     Exit Sub
 
 LoginFail:
+    LogMsg "ERROR", "Login failed: " & Err.Description
     MsgBox "Cannot connect to " & url & vbCrLf & Err.Description, vbExclamation, "Open EPM"
 End Sub
 
@@ -254,9 +257,11 @@ Private Function RefreshSheet(ws As Worksheet) As Long
     Next r
 
     If requests.Count = 0 Then
+        LogMsg "INFO", ws.Name & ": no EPM formulas found"
         Exit Function
     End If
 
+    LogMsg "INFO", ws.Name & ": found " & requests.Count & " EPM formulas"
     Application.StatusBar = "Open EPM: Fetching " & requests.Count & " values from " & ws.Name & "..."
     DoEvents
 
@@ -317,10 +322,13 @@ Private Function RefreshSheet(ws As Worksheet) As Long
     End If
 
     If http.Status <> 200 Then
+        LogMsg "ERROR", ws.Name & ": server returned HTTP " & http.Status
         MsgBox "EPM server returned error " & http.Status & ": " & http.responseText, _
                vbExclamation, "Open EPM"
         Exit Function
     End If
+
+    LogMsg "INFO", ws.Name & ": received " & Len(http.responseText) & " bytes"
 
     ' Parse response: {"message": {"values": [1.0, 2.0, ...]}}
     Dim response As String
@@ -353,6 +361,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
     Application.EnableEvents = True
     Application.ScreenUpdating = True
 
+    LogMsg "INFO", ws.Name & ": refreshed " & requests.Count & " cells"
     RefreshSheet = requests.Count
     Exit Function
 
@@ -364,6 +373,7 @@ FetchError:
     On Error Resume Next
     Application.Calculation = xlCalculationAutomatic
     On Error GoTo 0
+    LogMsg "ERROR", ws.Name & ": " & Err.Description
     MsgBox "Cannot connect to EPM server at " & url & vbCrLf & _
            "Error: " & Err.Description, vbExclamation, "Open EPM"
 End Function
@@ -587,6 +597,35 @@ EvalFail:
     EvalArg = arg
 End Function
 
+' ── Logging ─────────────────────────────────────────────────
+
+Private Sub LogMsg(level As String, msg As String)
+    Dim ws As Worksheet
+    Dim nextRow As Long
+
+    On Error Resume Next
+    Set ws = ActiveWorkbook.Sheets(LOG_SHEET_NAME)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        Set ws = ActiveWorkbook.Sheets.Add(After:=ActiveWorkbook.Sheets(ActiveWorkbook.Sheets.Count))
+        ws.Name = LOG_SHEET_NAME
+        ws.Visible = xlSheetVisible
+        ws.Cells(1, 1).Value = "Timestamp"
+        ws.Cells(1, 2).Value = "Level"
+        ws.Cells(1, 3).Value = "Message"
+        ws.Rows(1).Font.Bold = True
+        ws.Columns(1).ColumnWidth = 20
+        ws.Columns(2).ColumnWidth = 8
+        ws.Columns(3).ColumnWidth = 80
+    End If
+
+    nextRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+    ws.Cells(nextRow, 1).Value = Format(Now, "yyyy-mm-dd hh:nn:ss")
+    ws.Cells(nextRow, 2).Value = level
+    ws.Cells(nextRow, 3).Value = msg
+End Sub
+
 ' ── Helpers ───────────────────────────────────────────────────
 
 Private Function BuildKey(entity As String, yr As Long, per As Long, _
@@ -638,6 +677,7 @@ End Sub
 
 Public Sub Workbook_Open()
     EnsureCache
+    LogMsg "INFO", "Open EPM loaded (server: " & API_BASE_URL & ")"
     Application.OnKey "+^r", "EPM_Refresh"
     Application.StatusBar = "Open EPM loaded. Ctrl+Shift+R to refresh."
     Application.OnTime Now + TimeValue("00:00:03"), "ClearStatusBar"
