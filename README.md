@@ -1,22 +1,18 @@
-# Konsolidat
+# Open EPM
 
-Open-source Corporate Performance Management (CPM) for Dynamics 365 Finance & Operations. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and scenario modeling — at 3% of the cost of Tagetik or OneStream.
+Open-source Enterprise Performance Management for Dynamics 365 Finance & Operations. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and scenario modeling — at a fraction of commercial CPM cost.
 
 ## Architecture
 
-```
-D365 F&O (OData)
-    |
-    v
-Airbyte (ELT) ──> ClickHouse (Analytical DW)
-                        |
-                   dbt Core (Transform)
-                   Bronze → Silver → Gold
-                        |
-              ┌─────────┼──────────┐
-              v                    v
-           Excel               Frappe (Konsol)
-      (ODBC → ClickHouse)     Pipeline Control + UI
+```mermaid
+graph LR
+    D365[D365 F&O<br/>OData] -->|Airbyte ELT| CH[(ClickHouse<br/>Columnar DW)]
+    CH -->|dbt Core| Bronze[Bronze<br/>14 models]
+    Bronze --> Silver[Silver<br/>8 models]
+    Silver --> Gold[Gold<br/>22 models]
+    Gold -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
+    Frappe -->|HTTP JSON| Excel[Excel VBA<br/>=EPM&#40;&#41; formulas]
+    Frappe -->|Office.js| Taskpane[Excel Task Pane<br/>Pipeline Control]
 ```
 
 ### Data Flow (Medallion Architecture)
@@ -24,168 +20,141 @@ Airbyte (ELT) ──> ClickHouse (Analytical DW)
 | Layer | Schema | Purpose | Materialization |
 |-------|--------|---------|-----------------|
 | **Raw** | `epm_bronze` (Airbyte) | OData entities as-is from D365 | Airbyte-managed |
-| **Staging** | `staging` | Field renames, joins, JSON parsing, rate scaling | Views |
-| **Bronze** | `bronze` | Type-cast, snake_case, dimension mapping | Tables |
-| **Silver** | `silver` | Deduplicated, standardized trial balance | Tables |
-| **Gold** | `gold` | Business logic: consolidation, allocations, variance | Tables |
+| **Staging** | `epm_staging` | Field renames, joins, JSON parsing, rate scaling | Views |
+| **Bronze** | `epm_bronze` | Type-cast, snake_case, dimension mapping | Tables |
+| **Silver** | `epm_silver` | Deduplicated, standardized trial balance | Tables |
+| **Gold** | `epm_gold` | Business logic: consolidation, allocations, variance | Tables |
 
 ### Components
 
-| Component | Purpose | Port | Technology |
-|-----------|---------|------|------------|
-| **ClickHouse** | Columnar analytical warehouse | 8123 (HTTP), 9000 (native) | ClickHouse 24.8 |
-| **Airbyte** | D365 OData extraction (via abctl) | 8000 | Airbyte OSS |
-| **dbt Core** | SQL transformations (bronze→gold) | CLI | dbt-clickhouse |
-| **Frappe (Konsol)** | Pipeline control, settings, UI | 8069 | Frappe Framework |
-| **Excel** | Reporting via ODBC direct to ClickHouse | — | ClickHouse ODBC |
+| Component | Purpose | Port |
+|-----------|---------|------|
+| **ClickHouse** | Columnar analytical warehouse | 8123 (HTTP), 9000 (native) |
+| **Airbyte** | D365 OData extraction (via abctl) | 8000 |
+| **dbt Core** | SQL transformations (44 models, 26 tests) | CLI |
+| **Frappe (Konsol)** | API layer, auth, pipeline control, EPM Settings | 8069 |
+| **Excel VBA** | `=EPM()` formulas for financial reporting | — |
+| **Excel Task Pane** | Office.js add-in for pipeline orchestration | — |
 
 ---
 
 ## Features
+
+### Excel-Native Reporting
+
+Five VBA worksheet functions query financial data directly from ClickHouse via the Frappe API:
+
+```
+=EPM("USMF", 2024, "Q1", "401100")                    ' Actuals — net amount
+=EPM_BUDGET("USMF", 2025, "FY", "6100")               ' Budget — full year
+=EPM_VARIANCE("USMF", 2025, 5, "6100")                ' Variance — actual vs budget
+=EPM_DEBIT("USMF", 2024, 5, "1300")                   ' Period debits
+=EPM_CREDIT("USMF", 2024, 5, "1300")                  ' Period credits
+```
+
+Period ranges (`Q1`–`Q4`, `H1`/`H2`, `FY`) aggregate across constituent months. A batch refresh (Ctrl+Shift+R) sends all formulas in a single HTTP request.
 
 ### Multi-Entity Consolidation
 
 Full IFRS/GAAP consolidation pipeline:
 
 - **Currency translation** — Balance sheet at closing rate, P&L at average rate
-- **CTA calculation** — Automatic Currency Translation Adjustment as a balancing plug
-- **Minority interest (NCI)** — Group vs non-controlling interest split based on ownership %
+- **CTA calculation** — Automatic Currency Translation Adjustment
+- **NCI split** — Group vs non-controlling interest based on ownership %
 - **Intercompany elimination** — Rule-based IC receivable/payable and revenue/COGS netting
-- **Top-side adjustments** — Manual consolidation journal entries (goodwill, fair value, reclassifications)
-- **Fully consolidated TB** — Unions entity balances + IC eliminations + CTA + top-side into one view
-
-#### Consolidation Group Setup
-
-Edit `dbt_project/seeds/consolidation_groups.csv`:
-
-```csv
-consolidation_group,data_area_id,entity_name,ownership_pct,reporting_currency,consolidation_method
-GROUP_CORP,USMF,Contoso US,100.00,USD,full
-GROUP_CORP,DEMF,Contoso DE,100.00,USD,full
-GROUP_CORP,GBMF,Contoso UK,80.00,USD,full
-GROUP_CORP,JPMF,Contoso JP,51.00,USD,full
-```
+- **Top-side adjustments** — Manual consolidation journal entries
+- **Fully consolidated TB** — 4-layer union: entity + IC eliminations + CTA + topside
 
 ### Driver-Based Cost Allocations
 
 Multi-step cascading allocation engine:
 
 1. **Step 1**: IT costs allocated by headcount
-2. **Step 2**: Facility costs allocated by sqm
-3. **Step 3**: Management fee allocated by revenue
+2. **Step 2**: Facility costs allocated by square meters (includes Step 1 cascade)
+3. **Step 3**: Management fees allocated by revenue (includes Step 1+2 cascade)
 
-Each step's pool includes amounts allocated from all prior steps (cascading).
+### Budgeting & Variance
 
-### Budgeting & Scenarios
-
-- Annual budgets spread to 12 periods using configurable profiles
-- Actual vs budget variance analysis with favorable/unfavorable indicators
+- Annual budgets spread to 12 periods using configurable profiles (even, seasonal)
+- 5 variance measures: actual, budget, variance_abs, variance_pct, variance_favorable
 - Revenue: favorable when actual > budget; Expense: favorable when actual < budget
-
-### Excel Integration
-
-Excel connects directly to ClickHouse via ODBC driver (port 8123):
-
-1. Install ClickHouse ODBC driver (64-bit)
-2. DSN: `Host=localhost; Port=8123; Database=epm_gold; User=default; Password=<password>`
-3. Excel → Data → Get Data → From ODBC → Load tables → PivotTable
-
-**Available gold tables**: `gold_trial_balance`, `gold_pnl_by_period`, `gold_consolidated_tb`, `gold_allocation_results`, `gold_variance_analysis`
 
 ---
 
-## Setup Guide
-
-### Prerequisites
-
-- Docker & Docker Compose
-- Python 3.10+
-- Frappe bench (v15+)
-- Git
-
-### 1. Clone and Configure
+## Quick Start
 
 ```bash
-git clone https://github.com/grynn-in/konsolidat.git
-cd konsolidat
+# 1. Start ClickHouse
 cp .env.example .env
-# Edit .env with your D365 credentials and ClickHouse password
-```
-
-### 2. Start ClickHouse
-
-```bash
 docker compose up -d
-```
 
-### 3. Install Airbyte
-
-```bash
-curl -LsfS https://get.airbyte.com | bash -
-abctl local install
-abctl local credentials
-```
-
-Open http://localhost:8000, configure the D365 source, set ClickHouse as destination.
-
-### 4. Run dbt
-
-```bash
+# 2. Build dbt models
 cd dbt_project
-pip install dbt-clickhouse
-dbt deps
-dbt seed    # Load allocation rules, consolidation groups, spread profiles
-dbt build   # Build all models + run tests
+pip install dbt-core dbt-clickhouse
+dbt deps && dbt seed && dbt build
+
+# 3. Start Frappe (in your bench directory)
+bench start    # http://localhost:8069
+
+# 4. Configure EPM Settings in Frappe Desk
+# Setup → EPM Settings → ClickHouse: localhost:8123
+
+# 5. Import VBA into Excel
+# Alt+F11 → File → Import → excel/OpenEPM.bas
+# Run EPM_SetServer → http://localhost:8069
+# Run EPM_Login → enter Frappe credentials
+# Type =EPM("USMF", 2024, 5, "401100") → Ctrl+Shift+R
 ```
 
-### 5. Install Konsol (Frappe App)
+See the [full setup guide](docs/getting-started/setup-guide.md) for D365 integration, Airbyte configuration, and production deployment.
 
-```bash
-cd /home/pd/frappe-bench
-bench --site epm.local install-app konsol
-bench migrate
-```
+---
 
-Navigate to `http://localhost:8069/app/pipeline-run` to trigger extract + transform.
+## Documentation
 
-### 6. Connect Excel
+Comprehensive documentation is available in the [`docs/`](docs/index.md) directory:
 
-Install ClickHouse ODBC driver, create a DSN pointing to `localhost:8123`, database `epm_gold`. See [Excel User Guide](docs/excel-user-guide.md).
+- **[Quickstart](docs/getting-started/quickstart.md)** — Zero to first `=EPM()` in 15 minutes
+- **[Excel VBA Guide](docs/user-guide/excel-vba-guide.md)** — All formulas, macros, and report patterns
+- **[API Reference](docs/api-reference/api-overview.md)** — 3 endpoints, batch queries, auth
+- **[Data Dictionary](docs/data-dictionary/data-dictionary-overview.md)** — 44 models, 11 seeds
+- **[Consolidation Guide](docs/user-guide/consolidation-guide.md)** — FX translation, NCI, IC elimination
+- **[Developer Guide](docs/developer-guide/developer-overview.md)** — Extending models, macros, API
+- **[Deployment Guide](docs/admin-guide/deployment-guide.md)** — Production setup
+- **[Cost Comparison](docs/evaluation/cost-comparison-vs-commercial.md)** — vs Tagetik, OneStream, Anaplan
 
 ---
 
 ## Project Structure
 
 ```
-konsolidat/
+open_epm/
 ├── dbt_project/
-│   ├── models/
-│   │   ├── staging/           # D365 transform views (raw → clean)
-│   │   ├── bronze/            # Type-cast tables
-│   │   ├── silver/            # Standardized trial balance, dimensions
-│   │   └── gold/              # Consolidation, allocations, variance, budgets
-│   ├── seeds/                 # CSV config: rules, groups, profiles, drivers
-│   ├── macros/                # Allocation engine, dimension/measure helpers
-│   └── tests/                 # Data quality assertions
-├── source-d365-fno/           # Airbyte custom source connector (Python CDK)
-├── docker/                    # Dockerfiles
-├── scripts/                   # Utility scripts
-├── docs/                      # PRDs, guides
-├── tests/                     # Integration tests
-└── docker-compose.yml         # ClickHouse only
+│   ├── models/               # 44 dbt models (staging → bronze → silver → gold)
+│   ├── seeds/                # 11 CSV seeds (rules, groups, budgets, drivers)
+│   ├── macros/               # Dimension helpers, allocation engine, adapters
+│   └── tests/                # 26 data quality assertions
+├── excel/
+│   └── OpenEPM.bas           # VBA module (5 functions, 7 macros)
+├── excel-addin/              # Office.js task pane (pipeline control)
+├── clickhouse/               # Init SQL + config
+├── docs/                     # Full documentation suite
+└── docker-compose.yml        # ClickHouse container
 ```
 
-Frappe app lives at `/home/pd/frappe-bench/apps/konsol/`.
+Frappe app: `~/frappe-bench/apps/konsol/` (API, auth, EPM Settings, pipeline control)
 
 ---
 
 ## Roadmap
 
-- **Excel Online Add-in** — Browser-based Excel integration
+- **Excel Online Add-in** — Browser-based `=EPM.VALUE()` custom functions
 - **Entra ID SSO** — Azure AD authentication via Frappe Social Login
 - **Cash Flow Forecasting** — Direct/indirect method from GL data
 - **Intercompany Matching** — Pre-elimination IC balance reconciliation
 - **Audit Trail** — Full change tracking on consolidation adjustments
+- **Budget Write-Back** — Submit budgets from Excel to staging tables
+- **Rolling Forecasts** — Continuous forecast horizon
 
 ## License
 
