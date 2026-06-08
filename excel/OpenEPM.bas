@@ -15,7 +15,8 @@
 '   =EPM_VARIANCE(entity, year, period, account)
 '
 ' Macros:
-'   EPM_Refresh          Refresh active sheet   (Ctrl+Shift+R)
+'   EPM_Login             Log in to Frappe (prompted automatically on refresh)
+'   EPM_Refresh           Refresh active sheet   (Ctrl+Shift+R)
 '   EPM_RefreshAll        Refresh all sheets
 '   EPM_ClearCache        Clear cached values
 '   EPM_SetServer         Change API server URL
@@ -25,9 +26,11 @@
 Option Explicit
 
 ' ── Configuration ───────────────────────────────────────────
-Private Const DEFAULT_API_URL As String = "http://localhost:8000"
+Private Const DEFAULT_API_URL As String = "http://localhost:8069"
 Private pApiUrl As String
 Private pCache As Object  ' Scripting.Dictionary
+Private pLoggedIn As Boolean
+Private pSessionCookie As String
 
 Public Property Get API_BASE_URL() As String
     If pApiUrl = "" Then
@@ -38,6 +41,64 @@ Public Property Get API_BASE_URL() As String
     End If
     API_BASE_URL = pApiUrl
 End Property
+
+' ── Session cookie ──────────────────────────────────────────
+
+Public Sub EPM_Login()
+    Dim usr As String, pwd As String
+    usr = InputBox("Frappe email / username:", "Open EPM Login")
+    If usr = "" Then Exit Sub
+    pwd = InputBox("Password:", "Open EPM Login")
+    If pwd = "" Then Exit Sub
+
+    Dim http As Object
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    Dim url As String
+    url = API_BASE_URL & "/api/method/login"
+
+    On Error GoTo LoginFail
+    http.Open "POST", url, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.send "{""usr"":""" & JsonEscape(usr) & """,""pwd"":""" & JsonEscape(pwd) & """}"
+
+    If http.Status <> 200 Then
+        MsgBox "Login failed (HTTP " & http.Status & "): " & http.responseText, vbExclamation, "Open EPM"
+        Exit Sub
+    End If
+
+    ' Extract session cookies from Set-Cookie headers
+    Dim headers As String
+    headers = http.getAllResponseHeaders()
+    pSessionCookie = ExtractCookies(headers)
+    pLoggedIn = True
+
+    MsgBox "Logged in as " & usr & ". Press Ctrl+Shift+R to refresh.", vbInformation, "Open EPM"
+    Exit Sub
+
+LoginFail:
+    MsgBox "Cannot connect to " & url & vbCrLf & Err.Description, vbExclamation, "Open EPM"
+End Sub
+
+Private Function ExtractCookies(headers As String) As String
+    ' Parse Set-Cookie headers and build a Cookie string
+    Dim lines() As String
+    Dim i As Long
+    Dim cookies As String
+    lines = Split(headers, vbCrLf)
+    For i = 0 To UBound(lines)
+        If LCase(Left(lines(i), 11)) = "set-cookie:" Then
+            Dim val As String
+            val = Trim(Mid(lines(i), 12))
+            ' Take only the name=value part (before first ;)
+            Dim sc As Long
+            sc = InStr(val, ";")
+            If sc > 0 Then val = Left(val, sc - 1)
+            If cookies <> "" Then cookies = cookies & "; "
+            cookies = cookies & val
+        End If
+    Next i
+    ExtractCookies = cookies
+End Function
 
 ' ── Cache management ─────────────────────────────────────────
 
@@ -117,20 +178,36 @@ End Function
 ' ── REFRESH: scan sheet, batch fetch, populate ──────────────
 
 Public Sub EPM_Refresh()
-    RefreshSheet ActiveSheet
+    Dim n As Long
+    n = RefreshSheet(ActiveSheet)
+    Application.StatusBar = False
 End Sub
 
 Public Sub EPM_RefreshAll()
     Dim ws As Worksheet
+    Dim total As Long
+    Dim current As Long
+    Dim totalCells As Long
+
+    total = ActiveWorkbook.Worksheets.Count
+    current = 0
+
     For Each ws In ActiveWorkbook.Worksheets
-        RefreshSheet ws
+        current = current + 1
+        Application.StatusBar = "Open EPM: Sheet " & current & "/" & total & " — " & ws.Name
+        Dim n As Long
+        n = RefreshSheet(ws)
+        totalCells = totalCells + n
     Next ws
-    MsgBox "All sheets refreshed.", vbInformation, "Open EPM"
+
+    Application.StatusBar = False
+    MsgBox "Done — " & totalCells & " cells refreshed across " & total & " sheets.", _
+           vbInformation, "Open EPM"
 End Sub
 
-Private Sub RefreshSheet(ws As Worksheet)
+Private Function RefreshSheet(ws As Worksheet) As Long
     Dim cell As Range
-    Dim formulaCells As New Collection
+    Dim epmRange As Range  ' Union of all EPM cells for single recalc
     Dim requests As New Collection
     Dim keys As New Collection
     Dim usedRange As Range
@@ -139,13 +216,14 @@ Private Sub RefreshSheet(ws As Worksheet)
     Dim f As String
     Dim args As Object
     Dim i As Long
+    Dim prevCalc As Long
 
     EnsureCache
 
     Application.StatusBar = "Open EPM: Scanning " & ws.Name & "..."
 
     Set usedRange = ws.UsedRange
-    If usedRange Is Nothing Then Exit Sub
+    If usedRange Is Nothing Then Exit Function
 
     ' Scan all formula cells for EPM functions
     For r = 1 To usedRange.Rows.Count
@@ -160,7 +238,12 @@ Private Sub RefreshSheet(ws As Worksheet)
                     Set args = Nothing
                     Set args = ResolveEpmArgs(cell)
                     If Not args Is Nothing Then
-                        formulaCells.Add cell
+                        ' Build union range for single recalc later
+                        If epmRange Is Nothing Then
+                            Set epmRange = cell
+                        Else
+                            Set epmRange = Union(epmRange, cell)
+                        End If
                         requests.Add args
                         keys.Add args("key")
                     End If
@@ -170,11 +253,10 @@ Private Sub RefreshSheet(ws As Worksheet)
     Next r
 
     If requests.Count = 0 Then
-        Application.StatusBar = False
-        Exit Sub
+        Exit Function
     End If
 
-    Application.StatusBar = "Open EPM: Fetching " & requests.Count & " values..."
+    Application.StatusBar = "Open EPM: Fetching " & requests.Count & " values from " & ws.Name & "..."
 
     ' Build JSON batch request
     Dim json As String
@@ -200,34 +282,54 @@ Private Sub RefreshSheet(ws As Worksheet)
     Next i
     json = json & "]"
 
+    ' Ensure logged in
+    If Not pLoggedIn Or pSessionCookie = "" Then
+        EPM_Login
+        If Not pLoggedIn Then Exit Function
+    End If
+
     ' POST batch request
     Dim http As Object
     Dim url As String
     url = API_BASE_URL & "/api/method/konsol.api.epm_batch"
 
     On Error GoTo FetchError
-    Set http = CreateObject("MSXML2.XMLHTTP")
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setTimeouts 5000, 10000, 30000, 60000
     http.Open "POST", url, False
     http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "Cookie", pSessionCookie
     http.send json
 
+    ' If unauthorized, try login and retry
+    If http.Status = 401 Or http.Status = 403 Then
+        pLoggedIn = False
+        EPM_Login
+        If Not pLoggedIn Then Exit Function
+        Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+        http.setTimeouts 5000, 10000, 30000, 60000
+        http.Open "POST", url, False
+        http.setRequestHeader "Content-Type", "application/json"
+        http.setRequestHeader "Cookie", pSessionCookie
+        http.send json
+    End If
+
     If http.Status <> 200 Then
-        Application.StatusBar = False
         MsgBox "EPM server returned error " & http.Status & ": " & http.responseText, _
                vbExclamation, "Open EPM"
-        Exit Sub
+        Exit Function
     End If
 
     ' Parse response: {"message": {"values": [1.0, 2.0, ...]}}
-    ' Frappe wraps API responses in a "message" key
     Dim response As String
     response = http.responseText
+    Set http = Nothing
 
     Dim parsedValues() As Double
     parsedValues = ParseValuesArray(response, requests.Count)
 
     ' Populate cache
-    Application.StatusBar = "Open EPM: Populating " & requests.Count & " cells..."
+    Application.StatusBar = "Open EPM: " & ws.Name & " — populating " & requests.Count & " cells..."
     Dim cacheKey As String
     For i = 1 To requests.Count
         cacheKey = keys(i)
@@ -238,23 +340,30 @@ Private Sub RefreshSheet(ws As Worksheet)
         End If
     Next i
 
-    Set http = Nothing
-
-    ' Recalculate to pick up cached values
+    ' Recalculate all EPM cells in one shot (Union range)
+    prevCalc = Application.Calculation
     Application.ScreenUpdating = False
-    Application.CalculateFull
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+    If Not epmRange Is Nothing Then epmRange.Calculate
+    Application.Calculation = prevCalc
+    Application.EnableEvents = True
     Application.ScreenUpdating = True
 
-    MsgBox "Refreshed " & requests.Count & " cells. Cache has " & pCache.Count & " entries.", _
-           vbInformation, "Open EPM"
-    Application.StatusBar = False
-    Exit Sub
+    RefreshSheet = requests.Count
+    Exit Function
 
 FetchError:
+    ' Restore Application state on error
     Application.StatusBar = False
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    On Error Resume Next
+    Application.Calculation = xlCalculationAutomatic
+    On Error GoTo 0
     MsgBox "Cannot connect to EPM server at " & url & vbCrLf & _
            "Error: " & Err.Description, vbExclamation, "Open EPM"
-End Sub
+End Function
 
 ' ── Parse the values array from JSON response ────────────────
 
@@ -485,7 +594,12 @@ Private Function BuildKey(entity As String, yr As Long, per As Long, _
 End Function
 
 Private Function JsonEscape(s As String) As String
-    JsonEscape = Replace(Replace(s, "\", "\\"), """", "\""")
+    s = Replace(s, "\", "\\")
+    s = Replace(s, """", "\""")
+    s = Replace(s, vbCr, "")
+    s = Replace(s, vbLf, "")
+    s = Replace(s, vbTab, " ")
+    JsonEscape = s
 End Function
 
 ' ── Server configuration ────────────────────────────────────
@@ -546,7 +660,7 @@ Public Sub EPM_Debug()
     ' Test 2: HTTP connectivity
     Dim http As Object
     On Error Resume Next
-    Set http = CreateObject("MSXML2.XMLHTTP")
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
     If Err.Number <> 0 Then
         msg = msg & "HTTP object: FAILED - " & Err.Description & vbCrLf
         MsgBox msg, vbExclamation, "EPM Debug"
@@ -557,6 +671,7 @@ Public Sub EPM_Debug()
     Dim url As String
     url = API_BASE_URL & "/api/method/konsol.api.health"
     http.Open "GET", url, False
+    If pSessionCookie <> "" Then http.setRequestHeader "Cookie", pSessionCookie
     http.send
     If Err.Number <> 0 Then
         msg = msg & "GET " & url & ": FAILED - " & Err.Description & vbCrLf
@@ -610,10 +725,11 @@ Public Sub EPM_Debug()
         testJson = "[{""entity"":""USMF"",""year"":2024,""period"":5,""account"":""401100"",""measure"":""period_net_amount"",""scenario"":""actuals""}]"
 
         On Error Resume Next
-        Set http = CreateObject("MSXML2.XMLHTTP")
+        Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
         url = API_BASE_URL & "/api/method/konsol.api.epm_batch"
         http.Open "POST", url, False
         http.setRequestHeader "Content-Type", "application/json"
+        If pSessionCookie <> "" Then http.setRequestHeader "Cookie", pSessionCookie
         http.send testJson
         If Err.Number <> 0 Then
             msg = msg & "POST batch: FAILED - " & Err.Description & vbCrLf
