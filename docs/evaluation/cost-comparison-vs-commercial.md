@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document compares Konsolidat against the top 5 commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, Anaplan, Planful, and Prophix.
+This document compares Konsolidat against the three leading commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, and Anaplan.
 
 **Target market:** Private mid-market companies (2–50 entities) running D365 F&O. Konsolidat is not positioned for publicly listed companies requiring SOX certification or statutory regulatory reporting.
 
@@ -12,49 +12,47 @@ This document compares Konsolidat against the top 5 commercial Corporate Perform
 
 ## Feature Parity Matrix
 
-| Feature | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Konsolidat** |
-|---|---|---|---|---|---|---|
-| Multi-entity consolidation | Native | Native | Add-on | Native | Native | **Yes** (dbt gold layer) |
-| FX translation (closing/avg rate) | Native | Native | Manual | Native | Native | **Yes** (IFRS/GAAP compliant) |
-| CTA (equity plug) | Native | Native | Manual | Native | Native | **Yes** (PRD-2, tested) |
-| IC elimination | Native | Native | Manual | Native | Native | **Yes** (3 rules, nets to zero) |
-| Minority interest / NCI | Native | Native | Manual | Native | Native | **Yes** (ownership %, NCI columns) |
-| Top-side adjustments | Native | Native | Yes | Yes | Yes | **Yes** (CSV-driven) |
-| Multi-step allocations | Native | Native | Best-in-class | Yes | Yes | **Yes** (3-step cascade, driver-based) |
-| Budget write-back | Native | Native | Native | Native | Native | **Partial** (seed-driven; staging write-back on roadmap) |
-| Scenario management | Native | Native | Best-in-class | Yes | Yes | **Yes** (budget/forecast/what-if via API) |
-| Variance analysis | Native | Native | Native | Native | Native | **Yes** (favorable logic, actual vs budget) |
-| Budget spreading | Native | Native | Native | Native | Native | **Yes** (annual → monthly profiles) |
-| Excel-native UI | Plugin | Plugin | No (web) | No (web) | Plugin | **Yes** (VBA `=EPM()` formulas + batch API) |
-| Regulatory reporting | Strong | Growing | Weak | Moderate | Moderate | N/A (not targeted) |
-| ESG reporting | Yes | Yes | No | No | No | N/A (not targeted) |
-| Workflow/approvals | Native | Native | Native | Native | Native | **No** (roadmap) |
-| Audit trail | Certified (SOX) | Certified (SOX) | Certified (SOX) | Certified (SOX) | Certified (SOX) | **Column-level** (sufficient for private companies) |
-| User-facing web UI | Full | Full | Full | Full | Full | **Admin only** (Frappe Desk) |
-| D365 F&O integration | Connector | Connector | Via API | Via API | Via API | **Native** (Airbyte OData) |
-| Data quality tests | Internal | Internal | Internal | Internal | Internal | **26 dbt tests** |
+| Feature | **Tagetik** | **OneStream** | **Anaplan** | **Konsolidat** |
+|---|---|---|---|---|
+| Multi-entity consolidation | Native | Native | Add-on | **Yes** (dbt gold layer) |
+| FX translation (closing/avg rate) | Native | Native | Manual | **Yes** (IFRS/GAAP compliant) |
+| CTA (equity plug) | Native | Native | Manual | **Yes** (PRD-2, tested) |
+| IC elimination | Native | Native | Manual | **Yes** (3 rules, nets to zero) |
+| Minority interest / NCI | Native | Native | Manual | **Yes** (ownership %, NCI columns) |
+| Top-side adjustments | Native | Native | Yes | **Yes** (CSV-driven) |
+| Multi-step allocations | Native | Native | Best-in-class | **Yes** (3-step cascade, driver-based) |
+| Budget write-back | Native | Native | Native | **Yes** (EPMSAVE from Excel) |
+| Scenario management | Native | Native | Best-in-class | **Yes** (budget/forecast/what-if via API) |
+| Variance analysis | Native | Native | Native | **Yes** (favorable logic, actual vs budget) |
+| Budget spreading | Native | Native | Native | **Yes** (annual → monthly profiles) |
+| Excel-native UI | Plugin | Plugin | No (web only) | **Yes** (VBA `=EPM()` + batch API) |
+| Regulatory reporting | Strong | Growing | Weak | N/A (not targeted) |
+| ESG reporting | Yes | Yes | No | N/A (not targeted) |
+| Workflow/approvals | Native | Native | Native | **Yes** (4-state, role-based) |
+| Audit trail | Certified (SOX) | Certified (SOX) | Certified (SOX) | **Column-level** (sufficient for private companies) |
+| User-facing web UI | Full | Full | Full | **Admin only** (Frappe Desk) |
+| D365 F&O integration | Connector | Connector | Via API | **Native** (Airbyte OData) |
+| Data quality tests | Internal | Internal | Internal | **26 dbt tests** |
 
 ---
 
 ## Cost Comparison (3-Year TCO, ~50 Users)
 
-| Cost Item | **Tagetik** | **OneStream** | **Anaplan** | **Planful** | **Prophix** | **Konsolidat** |
-|---|---|---|---|---|---|---|
-| Year 1 license | $50K–100K | $80K–178K | $180K–350K | $240K | $170K–210K | **$0** |
-| Year 2 license | $50K–100K | $80K–178K | $180K–350K | $240K | $170K–210K | **$0** |
-| Year 3 license | $50K–100K | $80K–178K | $180K–350K | $240K | $170K–210K | **$0** |
-| Implementation | $50K–200K | $50K–200K | $150K–350K | ~$100K | ~$80K | **$10K–30K** (internal) |
-| Infra (hosting) | Included | Included | Included | Included | Included | **$3K–8K/yr** (VM + ClickHouse) |
-| **3-Year Total** | **$200K–500K** | **$300K–700K** | **$700K–1.4M** | **$820K** | **$600K** | **$20K–55K** |
-| **Savings vs. Konsolidat** | — | — | — | — | — | **90–97%** |
+| Cost Item | **Tagetik** | **OneStream** | **Anaplan** | **Konsolidat** |
+|---|---|---|---|---|
+| Year 1 license | $50K–100K | $80K–178K | $180K–350K | **$0** |
+| Year 2 license | $50K–100K | $80K–178K | $180K–350K | **$0** |
+| Year 3 license | $50K–100K | $80K–178K | $180K–350K | **$0** |
+| Implementation | $50K–200K | $50K–200K | $150K–350K | **$10K–30K** (internal) |
+| Infra (hosting) | Included | Included | Included | **$3K–8K/yr** (VM + ClickHouse) |
+| **3-Year Total** | **$200K–500K** | **$300K–700K** | **$700K–1.4M** | **$20K–55K** |
+| **Savings vs. Konsolidat** | — | — | — | **90–97%** |
 
 ### Commercial Pricing Sources
 
 - **CCH Tagetik**: ~$50K+/yr license, $10K–50K+ implementation ([PricingNow](https://pricingnow.com/question/tagetik-4-0-accounting-software-cost/))
 - **OneStream**: ~$50K–178K/yr avg, $50K–200K implementation ([ITQlick](https://www.itqlick.com/onestream-xf/pricing), [Dokka](https://dokka.com/onestream-pricing/))
 - **Anaplan**: ~$150K–350K/yr enterprise, implementation can equal Year 1 ([CheckThat.ai](https://checkthat.ai/brands/anaplan/pricing))
-- **Planful**: ~$240K/yr for 100 users, ~$800K 3-year TCO ([ITQlick](https://www.itqlick.com/planful/competitors))
-- **Prophix**: ~$170K–210K/yr, ~$600K 3-year TCO ([ITQlick](https://www.itqlick.com/planful/competitors))
 
 ---
 
@@ -87,6 +85,9 @@ This document compares Konsolidat against the top 5 commercial Corporate Perform
 | `konsol.api.health` | GET | Health check (guest access) |
 | `konsol.api.epm_value` | GET | Single value lookup (entity, year, period, account, measure, scenario) |
 | `konsol.api.epm_batch` | POST | Batch cell retrieval — up to 2,000 items per request |
+| `konsol.api.budget_save` | POST | Budget write-back (single line) |
+| `konsol.api.budget_save_batch` | POST | Budget write-back (batch) |
+| `konsol.api.budget_cell_save` | POST | Single cell upsert (period + layer) |
 
 ### Supporting Infrastructure
 
@@ -95,7 +96,7 @@ This document compares Konsolidat against the top 5 commercial Corporate Perform
 | ClickHouse | Columnar analytical warehouse | 8123 (HTTP), 9000 (native) |
 | Frappe (Konsol) | API layer, auth, EPM Settings, pipeline control | 8069 |
 | Airbyte | D365 OData extraction | 8000 |
-| Excel VBA | `=EPM()` formulas (5 functions, 7 macros) | — |
+| Excel VBA | `=EPM()` formula + batch API | — |
 | Excel Task Pane | Office.js pipeline orchestration | — |
 
 ### Test Coverage
@@ -152,7 +153,6 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 | **No cash flow statement** | High — CFOs need consolidated CF | Buildable: BS delta method in dbt (~2–3 days) |
 | **No multi-GAAP** | Medium — one consolidation path only | Buildable: reporting_standard dimension (~1 week) |
 | **No rolling forecasts** | Medium — annual scenarios only | Buildable: rolling window logic (~2–3 days) |
-| **No workflow/approvals** | Medium — no budget sign-off chain | Email/Teams-based process; on roadmap |
 | **No web UI for end users** | Medium — Excel-only for finance users | Frappe Desk for admin; EPM() for finance users |
 | **Allocation rules in CSV** | Low — works but not click-to-edit | Editable in any text editor or Excel |
 | **No real-time GL sync** | Low — batch is fine for most EPM | Airbyte schedule (hourly possible) |
