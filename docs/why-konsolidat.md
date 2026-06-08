@@ -1,6 +1,6 @@
 # Why Konsolidat?
 
-Konsolidat exists because financial consolidation shouldn't cost more than the finance team using it.
+Because excellent analysis thrives on Excel.
 
 ---
 
