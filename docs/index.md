@@ -33,7 +33,9 @@ hide:
 
 <div class="ic-pitch" markdown>
 
-Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and variance analysis — at a fraction of commercial CPM cost. Built on proven open-source infrastructure.
+For 27 years, CPM vendors have tried to move financial analysis out of Excel and into web browsers. We think they're wrong. Financial analysis lives in Excel — not on the web. Konsolidat keeps it there.
+
+Multi-entity consolidation, budgeting, allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
 
 <div class="ic-pills">
   <span class="ic-pill">Consolidation</span>
