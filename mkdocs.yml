@@ -1,19 +1,20 @@
 site_name: Open EPM
-site_description: Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB
-repo_url: https://github.com/pjdijxhoorn/open_epm
-repo_name: pjdijxhoorn/open_epm
+site_description: Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.
+repo_url: https://github.com/grynn-in/konsolidat
+repo_name: grynn-in/konsolidat
 
 theme:
   name: material
+  font: false
   palette:
     - scheme: default
-      primary: indigo
+      primary: white
       accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: indigo
+      primary: black
       accent: indigo
       toggle:
         icon: material/brightness-4
@@ -21,10 +22,12 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
-    - navigation.expand
+    - navigation.top
     - search.highlight
     - content.code.copy
-    - toc.integrate
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - tables
@@ -39,14 +42,16 @@ markdown_extensions:
       alternate_style: true
   - toc:
       permalink: true
+  - attr_list
+  - md_in_html
 
 nav:
   - Home: index.md
-  - Why Konsolidat?: why-konsolidat.md
+  - Features: features.md
   - Getting Started:
       - Quickstart: getting-started/quickstart.md
       - Setup Guide: getting-started/setup-guide.md
-      - Configuration Reference: getting-started/configuration-reference.md
+      - Configuration: getting-started/configuration-reference.md
   - User Guide:
       - Excel VBA Guide: user-guide/excel-vba-guide.md
       - Excel Task Pane: user-guide/excel-taskpane-guide.md
@@ -87,5 +92,6 @@ nav:
       - Cost Comparison: evaluation/cost-comparison-vs-commercial.md
       - Security Architecture: evaluation/security-architecture.md
   - Reference:
+      - Why Open EPM?: why-konsolidat.md
       - Roadmap: reference/roadmap.md
       - Glossary: reference/glossary.md
