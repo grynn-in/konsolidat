@@ -1,0 +1,91 @@
+site_name: Open EPM
+site_description: Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB
+repo_url: https://github.com/pjdijxhoorn/open_epm
+repo_name: pjdijxhoorn/open_epm
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Why Konsolidat?: why-konsolidat.md
+  - Getting Started:
+      - Quickstart: getting-started/quickstart.md
+      - Setup Guide: getting-started/setup-guide.md
+      - Configuration Reference: getting-started/configuration-reference.md
+  - User Guide:
+      - Excel VBA Guide: user-guide/excel-vba-guide.md
+      - Excel Task Pane: user-guide/excel-taskpane-guide.md
+      - Consolidation: user-guide/consolidation-guide.md
+      - Allocations: user-guide/allocation-guide.md
+      - Budgeting: user-guide/budgeting-guide.md
+      - Variance Analysis: user-guide/variance-analysis-guide.md
+      - Report Catalog: user-guide/report-catalog.md
+  - API Reference:
+      - Overview: api-reference/api-overview.md
+      - GET epm_value: api-reference/api-epm-value.md
+      - POST epm_batch: api-reference/api-epm-batch.md
+      - GET health: api-reference/api-health.md
+  - Data Dictionary:
+      - Overview: data-dictionary/data-dictionary-overview.md
+      - Gold Models: data-dictionary/gold-models.md
+      - Silver Models: data-dictionary/silver-models.md
+      - Bronze Models: data-dictionary/bronze-models.md
+      - Seeds: data-dictionary/seeds-reference.md
+      - Staging Tables: data-dictionary/staging-tables.md
+  - Admin Guide:
+      - Deployment: admin-guide/deployment-guide.md
+      - Operations Runbook: admin-guide/operations-runbook.md
+      - D365 Integration: admin-guide/d365-integration.md
+      - Monitoring: admin-guide/monitoring.md
+  - Developer Guide:
+      - Overview: developer-guide/developer-overview.md
+      - Macro Reference: developer-guide/macro-reference.md
+      - Extending Models: developer-guide/extending-dbt-models.md
+      - Testing Guide: developer-guide/testing-guide.md
+      - Adding Dimensions: developer-guide/adding-dimensions.md
+      - Extending API: developer-guide/extending-api.md
+      - Contributing: developer-guide/contributing.md
+  - Troubleshooting:
+      - Troubleshooting: troubleshooting/troubleshooting.md
+      - FAQ: troubleshooting/faq.md
+  - Evaluation:
+      - Cost Comparison: evaluation/cost-comparison-vs-commercial.md
+      - Security Architecture: evaluation/security-architecture.md
+  - Reference:
+      - Roadmap: reference/roadmap.md
+      - Glossary: reference/glossary.md
