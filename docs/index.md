@@ -142,6 +142,92 @@ graph LR
   <code>Office.js</code>
 </div>
 
+## vs. Commercial CPM
+
+| | **Tagetik** | **OneStream** | **Anaplan** | **Konsolidat** |
+|---|---|---|---|---|
+| Consolidation | Native | Native | Add-on | **Native** |
+| FX + CTA + IC elim | Native | Native | Manual | **Native** |
+| Budget write-back | Native | Native | Native | **Native** |
+| Variance analysis | Native | Native | Native | **Native** |
+| Excel-native | Plugin | Plugin | No | **=EPM()** |
+| D365 integration | Connector | Connector | Via API | **Native OData** |
+| Workflow/approvals | Native | Native | Native | **Native** |
+| SOX / regulatory | Yes | Yes | Yes | No (not targeted) |
+| Web UI | Full | Full | Full | Admin only |
+| **3-Year TCO (~50 users)** | **$200–500K** | **$300–700K** | **$700K–1.4M** | **$20–55K** |
+
+<p style="text-align: center; margin-top: 1rem;">
+  <a href="evaluation/cost-comparison-vs-commercial/" style="font-size: 0.85rem;">Full comparison with pricing sources and gap analysis →</a>
+</p>
+
+## Security
+
+<div class="ic-scenarios" markdown>
+
+<div class="ic-scenario" markdown>
+<div class="ic-scenario-header">
+  <span class="ic-badge ic-badge--finance">IDENTITY</span>
+  <h3>Authentication</h3>
+</div>
+
+```
+Microsoft Entra ID (Azure AD) SSO
+  → OAuth2 / OpenID Connect
+  → MSAL.js for Excel Add-in
+  → Frappe 2FA (TOTP) per role
+  → API key + Bearer token
+```
+
+</div>
+
+<div class="ic-scenario" markdown>
+<div class="ic-scenario-header">
+  <span class="ic-badge ic-badge--consolidation">ACCESS</span>
+  <h3>Role-Based Control</h3>
+</div>
+
+```
+Reader     → view reports only
+Planner    → submit budgets
+Controller → edit rules, approve
+Admin      → full config + users
+```
+
+</div>
+
+<div class="ic-scenario" markdown>
+<div class="ic-scenario-header">
+  <span class="ic-badge ic-badge--allocation">NETWORK</span>
+  <h3>Transport & Isolation</h3>
+</div>
+
+```
+TLS everywhere (auto Let's Encrypt)
+ClickHouse: private network only
+CORS whitelist for Office 365
+Rate limiting: 100 req/min/user
+```
+
+</div>
+
+<div class="ic-scenario" markdown>
+<div class="ic-scenario-header">
+  <span class="ic-badge ic-badge--budget">AUDIT</span>
+  <h3>Compliance & Logging</h3>
+</div>
+
+```
+Field-level change tracking
+Budget approval workflow trail
+API access logging per user
+Encryption at rest + in transit
+```
+
+</div>
+
+</div>
+
 ## Explore the Docs
 
 <div class="ic-nav-grid">
