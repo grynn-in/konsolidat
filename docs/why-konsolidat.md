@@ -1,7 +1,5 @@
 # Why Konsolidat?
 
-> **The CFO's question**: "We spend $300K/year on consolidation software and my team still exports everything to Excel. Why?"
-
 Konsolidat exists because financial consolidation shouldn't cost more than the finance team using it.
 
 ---
