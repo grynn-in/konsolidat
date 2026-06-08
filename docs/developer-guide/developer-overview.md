@@ -1,11 +1,11 @@
 # Developer Overview
 
-Repository structure, technology stack, and conventions for contributing to Open EPM.
+Repository structure, technology stack, and conventions for contributing to Konsolidat.
 
 ## Repository Structure
 
 ```
-open_epm/
+konsolidat/
 ├── dbt_project/
 │   ├── models/
 │   │   ├── staging/          # Views — field renames, joins

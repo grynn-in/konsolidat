@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Production deployment topology for Open EPM: ClickHouse, Frappe/Konsol, Airbyte, and Excel clients.
+Production deployment topology for Konsolidat: ClickHouse, Frappe/Konsol, Airbyte, and Excel clients.
 
 ## Production Architecture
 
@@ -74,7 +74,7 @@ Follow [Airbyte's deployment guide](https://docs.airbyte.com/deploying-airbyte/)
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
-    container_name: open_epm_clickhouse
+    container_name: konsolidat_clickhouse
     ports:
       - "127.0.0.1:8123:8123"    # Only bind to localhost
       - "127.0.0.1:9000:9000"
@@ -114,7 +114,7 @@ Follow the [Frappe production deployment guide](https://frappeframework.com/docs
 ```bash
 cd ~/frappe-bench
 sudo bench setup production $USER
-bench --site open-epm.local enable-scheduler
+bench --site konsolidat.local enable-scheduler
 ```
 
 This configures:
@@ -186,7 +186,7 @@ dbt runs are triggered either:
 
 ```cron
 # Run dbt build every day at 2 AM
-0 2 * * * cd /path/to/open_epm/dbt_project && dbt build --profiles-dir /home/deploy/.dbt >> /var/log/dbt-build.log 2>&1
+0 2 * * * cd /path/to/konsolidat/dbt_project && dbt build --profiles-dir /home/deploy/.dbt >> /var/log/dbt-build.log 2>&1
 ```
 
 ## Backup Strategy

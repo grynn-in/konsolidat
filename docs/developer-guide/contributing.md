@@ -1,6 +1,6 @@
 # Contributing
 
-Guidelines for contributing to Open EPM.
+Guidelines for contributing to Konsolidat.
 
 ## Git Workflow
 
@@ -104,6 +104,6 @@ See [Developer Overview](developer-overview.md) for the full directory layout.
 
 ## Getting Help
 
-- Open a [GitHub Issue](https://github.com/your-org/open_epm/issues) for bugs or feature requests
+- Open a [GitHub Issue](https://github.com/your-org/konsolidat/issues) for bugs or feature requests
 - Check existing [documentation](../index.md) before asking
 - Include reproduction steps and dbt/ClickHouse version info in bug reports

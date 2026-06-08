@@ -1,4 +1,4 @@
-# Open EPM — Roadmap
+# Konsolidat — Roadmap
 
 *Last updated: 2026-06-08*
 
@@ -98,12 +98,12 @@
 
 ### Phase 3: D365 Budget Write-Back (~1 day)
 
-Push approved budgets from Open EPM back into D365 F&O so that D365's native budget control (encumbrance checking, PO validation) works with Open EPM budgets.
+Push approved budgets from Konsolidat back into D365 F&O so that D365's native budget control (encumbrance checking, PO validation) works with Konsolidat budgets.
 
 **Flow:**
 
 ```
-Open EPM                              D365 F&O
+Konsolidat                              D365 F&O
 ────────                              ────────
 
 Budget Input (Approved)
@@ -125,7 +125,7 @@ Budget Input (Approved)
     - Create `BudgetRegisterEntryHeader` (journal number, budget model, date)
     - Create `BudgetRegisterEntryLines` (one per period — account, amount, financial dimensions)
 - [ ] Dimension mapping: translate `dim_cost_center = "SALES"` → D365 `DefaultDimension` format (dimension set with `CostCenter=SALES, Department=SALES`)
-- [ ] Budget Model mapping: map `scenario_id = "BUDGET_2025"` → D365 Budget Model (e.g., `"OPENEPM"`)
+- [ ] Budget Model mapping: map `scenario_id = "BUDGET_2025"` → D365 Budget Model (e.g., `"KONSOLIDAT"`)
 - [ ] Idempotency: store D365 journal number on Budget Input doc — don't double-post on retry
 - [ ] EPM Settings fields: D365 write-back URL, Budget Model name, enable/disable toggle
 
@@ -135,23 +135,23 @@ Budget Input (Approved)
 |------|-----|
 | OAuth app registration | Already exists (Airbyte uses it for reading D365) |
 | Write permission on Budget entities | Enable `BudgetRegisterEntryHeaders` and `BudgetRegisterEntryLines` data entities for the app registration in D365 |
-| Budget Model in D365 | Create a Budget Model (e.g., `"OPENEPM"`) in D365: Budgeting → Setup → Budget models |
-| Financial Dimension mapping | Configure in EPM Settings: map Open EPM dimension names to D365 financial dimension names |
+| Budget Model in D365 | Create a Budget Model (e.g., `"KONSOLIDAT"`) in D365: Budgeting → Setup → Budget models |
+| Financial Dimension mapping | Configure in EPM Settings: map Konsolidat dimension names to D365 financial dimension names |
 
 **D365 OData endpoints:**
 
 ```
 POST https://{d365-url}/data/BudgetRegisterEntryHeaders
 {
-  "EntryNumber": "OPENEPM-BUDGET_2025-6100",
-  "BudgetModelId": "OPENEPM",
+  "EntryNumber": "KONSOLIDAT-BUDGET_2025-6100",
+  "BudgetModelId": "KONSOLIDAT",
   "BudgetTransactionType": "Original",
   "DefaultLedgerDimensionDisplayValue": "6100-SALES-SALES"
 }
 
 POST https://{d365-url}/data/BudgetRegisterEntryLines
 {
-  "EntryNumber": "OPENEPM-BUDGET_2025-6100",
+  "EntryNumber": "KONSOLIDAT-BUDGET_2025-6100",
   "Date": "2025-01-01",
   "AccountStructure": "Manufacturing P&L",
   "LedgerDimensionDisplayValue": "6100-SALES-SALES",
@@ -159,7 +159,7 @@ POST https://{d365-url}/data/BudgetRegisterEntryLines
 }
 ```
 
-**When to build:** Only needed if D365 budget control (encumbrance checking on POs, budget validation on journals) must reflect Open EPM budgets. If budgets are only consumed in Excel reports, this is unnecessary.
+**When to build:** Only needed if D365 budget control (encumbrance checking on POs, budget validation on journals) must reflect Konsolidat budgets. If budgets are only consumed in Excel reports, this is unnecessary.
 
 ### Phase 4: Analytical Gaps (~2 weeks)
 

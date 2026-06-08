@@ -1,6 +1,6 @@
 # Monitoring
 
-Health checks, log monitoring, and alerting for Open EPM.
+Health checks, log monitoring, and alerting for Konsolidat.
 
 ## Health Endpoints
 
@@ -22,7 +22,7 @@ curl "http://localhost:8123/?query=SELECT+1"
 # 1
 
 # Or via Docker health check:
-docker inspect --format='{{.State.Health.Status}}' open_epm_clickhouse
+docker inspect --format='{{.State.Health.Status}}' konsolidat_clickhouse
 # healthy
 ```
 

@@ -1,4 +1,4 @@
-site_name: Open EPM
+site_name: Konsolidat
 site_url: https://grynn-in.github.io/konsolidat/
 site_description: Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.
 repo_url: https://github.com/grynn-in/konsolidat
@@ -49,7 +49,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - About:
-      - Why Open EPM?: why-konsolidat.md
+      - Why Konsolidat?: why-konsolidat.md
       - Features: features.md
       - Cost Comparison: evaluation/cost-comparison-vs-commercial.md
       - Security Architecture: evaluation/security-architecture.md

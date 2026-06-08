@@ -1,6 +1,6 @@
 # Adding Dimensions
 
-Open EPM's dimension system is defined once in `dbt_project.yml` and auto-propagates through all Gold models via Jinja macros.
+Konsolidat's dimension system is defined once in `dbt_project.yml` and auto-propagates through all Gold models via Jinja macros.
 
 ## How It Works
 

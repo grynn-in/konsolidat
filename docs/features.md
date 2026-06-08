@@ -1,6 +1,6 @@
 # Features
 
-Open EPM delivers full-cycle Enterprise Performance Management through a modular, open-source stack.
+Konsolidat delivers full-cycle Enterprise Performance Management through a modular, open-source stack.
 
 ## Excel-Native Reporting
 

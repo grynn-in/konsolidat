@@ -2,7 +2,7 @@
 
 ## Overview
 
-Open EPM consolidates multiple D365 legal entities into a group view with:
+Konsolidat consolidates multiple D365 legal entities into a group view with:
 - Currency translation (local → group reporting currency)
 - Ownership adjustment (minority interest)
 - Intercompany elimination

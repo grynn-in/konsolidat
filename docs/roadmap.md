@@ -30,7 +30,7 @@ Replace FastAPI + Streamlit + CSV seeds with Frappe. This closes the auth, workf
 
 ### 1.1 Frappe App Scaffold (1 day)
 
-- [ ] `bench init open-epm-bench`
+- [ ] `bench init konsolidat-bench`
 - [ ] `bench new-app konsol`
 - [ ] Add ClickHouse connection module (`clickhouse-connect`)
 - [ ] Add Frappe app to `docker-compose.yml` (Frappe + MariaDB + Redis + workers)

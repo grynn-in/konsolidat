@@ -1,6 +1,6 @@
 # Extending dbt Models
 
-Step-by-step guide to adding a new Gold model to Open EPM.
+Step-by-step guide to adding a new Gold model to Konsolidat.
 
 ## Adding a Gold Model
 
@@ -92,7 +92,7 @@ In `dbt_project.yml`, add type overrides:
 
 ```yaml
 seeds:
-  open_epm:
+  konsolidat:
     your_reference_data:
       +column_types:
         column_a: String

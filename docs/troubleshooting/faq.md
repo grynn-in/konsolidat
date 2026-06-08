@@ -55,7 +55,7 @@ Yes. Update the EPM Settings in Frappe with the cloud hostname, port, and creden
 
 **Q: How do I monitor system health?**
 - Frappe: `GET /api/method/konsol.api.health`
-- ClickHouse: `docker inspect --format='{{.State.Health.Status}}' open_epm_clickhouse`
+- ClickHouse: `docker inspect --format='{{.State.Health.Status}}' konsolidat_clickhouse`
 - See [Monitoring](../admin-guide/monitoring.md) for full setup.
 
 **Q: How do I rotate the D365 client secret?**
@@ -88,7 +88,7 @@ Add a row to `allocation_rules.csv`, create driver data, and update the multi-st
 
 ## Decision Makers
 
-**Q: How does Open EPM compare to commercial CPM tools?**
+**Q: How does Konsolidat compare to commercial CPM tools?**
 See [Cost Comparison vs Commercial](../evaluation/cost-comparison-vs-commercial.md) — detailed 26-row feature parity matrix and 3-year TCO analysis.
 
 **Q: What's the total cost of ownership?**

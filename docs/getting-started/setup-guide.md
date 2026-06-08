@@ -1,6 +1,6 @@
 # Setup Guide
 
-Complete deployment of Open EPM: ClickHouse, Airbyte, dbt, Frappe/Konsol, and Excel VBA.
+Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and Excel VBA.
 
 ## Prerequisites
 
@@ -15,8 +15,8 @@ Complete deployment of Open EPM: ClickHouse, Airbyte, dbt, Frappe/Konsol, and Ex
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/open_epm.git
-cd open_epm
+git clone https://github.com/your-org/konsolidat.git
+cd konsolidat
 cp .env.example .env
 ```
 
@@ -60,7 +60,7 @@ Airbyte UI will be available at `http://localhost:8000`.
 ### 3.2 Register a D365 App in Azure AD
 
 1. Go to [Azure Portal → App Registrations](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade)
-2. **New registration** → name: `Open EPM Airbyte`
+2. **New registration** → name: `Konsolidat Airbyte`
 3. Under **API permissions** → Add: `Dynamics 365 Finance and Operations → Ax.FullAccess`
 4. Under **Certificates & secrets** → New client secret → copy the value
 5. Note: `Tenant ID`, `Client ID`, `Client Secret`, `D365 Environment URL`
@@ -109,7 +109,7 @@ pip install dbt-core dbt-clickhouse
 Create `~/.dbt/profiles.yml` (if not present):
 
 ```yaml
-open_epm:
+konsolidat:
   target: dev
   outputs:
     dev:
@@ -160,8 +160,8 @@ cd frappe-bench
 
 ```bash
 bench get-app /path/to/konsol    # Or git URL
-bench new-site open-epm.local --db-type mariadb --admin-password admin
-bench --site open-epm.local install-app konsol
+bench new-site konsolidat.local --db-type mariadb --admin-password admin
+bench --site konsolidat.local install-app konsol
 bench start
 ```
 
@@ -181,7 +181,7 @@ Frappe is now running at `http://localhost:8069`.
 | ClickHouse Password | Your `.env` password |
 | Airbyte API URL | `http://localhost:8000` |
 | Airbyte Connection ID | From Airbyte UI |
-| dbt Project Path | `/path/to/open_epm/dbt_project` |
+| dbt Project Path | `/path/to/konsolidat/dbt_project` |
 
 4. Save
 
@@ -220,7 +220,7 @@ The Office.js task pane provides pipeline orchestration (trigger sync + dbt from
 
 1. Copy `excel-addin/manifest.xml`
 2. In Excel: **Insert → My Add-ins → Upload My Add-in** → select the manifest
-3. The task pane appears on the Home tab as "Open EPM"
+3. The task pane appears on the Home tab as "Konsolidat"
 
 The task pane connects to Frappe at `http://localhost:8069` and allows:
 - Login with Frappe credentials
@@ -229,7 +229,7 @@ The task pane connects to Frappe at `http://localhost:8069` and allows:
 
 ## Verification Checklist
 
-- [ ] `docker ps` shows `open_epm_clickhouse` healthy
+- [ ] `docker ps` shows `konsolidat_clickhouse` healthy
 - [ ] `curl http://localhost:8123/?query=SHOW+DATABASES` returns 4 databases
 - [ ] `dbt build` completes with 0 errors
 - [ ] Frappe Desk accessible at `http://localhost:8069`

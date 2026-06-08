@@ -1,6 +1,6 @@
 # Operations Runbook
 
-Day-to-day and monthly procedures for maintaining Open EPM.
+Day-to-day and monthly procedures for maintaining Konsolidat.
 
 ## Monthly Close Procedure
 
@@ -23,7 +23,7 @@ curl -X POST http://localhost:8000/api/v1/connections/sync \
 After Airbyte sync completes:
 
 ```bash
-cd /path/to/open_epm/dbt_project
+cd /path/to/konsolidat/dbt_project
 dbt build
 ```
 
@@ -136,15 +136,15 @@ ORDER BY elapsed DESC
 
 ```bash
 cd ~/frappe-bench
-bench --site open-epm.local backup
+bench --site konsolidat.local backup
 ```
 
-Backups are saved to `~/frappe-bench/sites/open-epm.local/private/backups/`.
+Backups are saved to `~/frappe-bench/sites/konsolidat.local/private/backups/`.
 
 ### Clear Cache
 
 ```bash
-bench --site open-epm.local clear-cache
+bench --site konsolidat.local clear-cache
 ```
 
 ### Restart Workers

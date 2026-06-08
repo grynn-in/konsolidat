@@ -1,6 +1,6 @@
 # Variance Analysis Guide
 
-Open EPM compares actual financial results against budget to produce variance measures with favorable/unfavorable classification.
+Konsolidat compares actual financial results against budget to produce variance measures with favorable/unfavorable classification.
 
 ## Variance Data Flow
 

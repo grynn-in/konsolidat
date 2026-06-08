@@ -1,6 +1,6 @@
 # Configuration Reference
 
-All configuration surfaces in Open EPM, from environment variables to dbt project settings to Excel workbook properties.
+All configuration surfaces in Konsolidat, from environment variables to dbt project settings to Excel workbook properties.
 
 ## Environment Variables (`.env`)
 
@@ -9,7 +9,7 @@ Used by `docker-compose.yml` and can be overridden at runtime.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLICKHOUSE_USER` | `default` | ClickHouse login user |
-| `CLICKHOUSE_PASSWORD` | `open_epm_dev` | ClickHouse login password |
+| `CLICKHOUSE_PASSWORD` | `konsolidat_dev` | ClickHouse login password |
 
 ## Frappe EPM Settings
 
@@ -25,7 +25,7 @@ A Single DocType at **Setup → EPM Settings** in the Frappe Desk UI. Stores con
 | `airbyte_connection_id` | Data | — | Airbyte connection UUID for D365 sync |
 | `airbyte_client_id` | Data | — | Airbyte API client ID |
 | `airbyte_client_secret` | Password | — | Airbyte API client secret |
-| `dbt_project_path` | Data | `/home/pd/open_epm/dbt_project` | Absolute path to dbt project directory |
+| `dbt_project_path` | Data | `/home/pd/konsolidat/dbt_project` | Absolute path to dbt project directory |
 
 **Permission**: System Manager role (read/write/create).
 

@@ -1,6 +1,6 @@
 # D365 F&O Integration
 
-How Open EPM extracts data from Dynamics 365 Finance & Operations via Airbyte and OData.
+How Konsolidat extracts data from Dynamics 365 Finance & Operations via Airbyte and OData.
 
 ## Azure AD App Registration
 
@@ -8,12 +8,12 @@ How Open EPM extracts data from Dynamics 365 Finance & Operations via Airbyte an
 
 1. Go to [Azure Portal → App Registrations](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade)
 2. Click **New registration**
-   - Name: `Open EPM Airbyte`
+   - Name: `Konsolidat Airbyte`
    - Supported account types: Single tenant
    - Redirect URI: Leave blank
 3. Note the **Application (client) ID** and **Directory (tenant) ID**
 4. Go to **Certificates & secrets** → **New client secret**
-   - Description: `Open EPM production`
+   - Description: `Konsolidat production`
    - Expiry: 24 months
    - Copy the secret value immediately (shown only once)
 5. Go to **API permissions** → **Add a permission**
@@ -34,7 +34,7 @@ The environment URL typically looks like: `https://yourorg.operations.dynamics.c
 
 ## OData Entities
 
-Open EPM extracts 15 D365 OData entities. All use `cross_company=true` to pull data across all legal entities in a single request.
+Konsolidat extracts 15 D365 OData entities. All use `cross_company=true` to pull data across all legal entities in a single request.
 
 ### General Ledger
 

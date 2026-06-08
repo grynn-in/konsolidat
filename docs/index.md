@@ -6,7 +6,7 @@ hide:
 
 <div class="ic-hero" markdown>
 
-# Open EPM
+# Konsolidat
 
 <p class="ic-tagline">Open-source Enterprise Performance Management for Dynamics 365 Finance & Operations</p>
 
@@ -148,7 +148,7 @@ graph LR
 
 <a class="ic-nav-card" href="features/">
   <strong>Features</strong>
-  <span>Everything Open EPM does — consolidation, allocations, budgeting, reporting</span>
+  <span>Everything Konsolidat does — consolidation, allocations, budgeting, reporting</span>
 </a>
 
 <a class="ic-nav-card" href="getting-started/quickstart/">

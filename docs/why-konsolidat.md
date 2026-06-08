@@ -191,8 +191,8 @@ These are on the [roadmap](reference/roadmap.md). The core consolidation, alloca
 ## Get Started
 
 ```bash
-git clone https://github.com/your-org/open_epm.git
-cd open_epm && docker compose up -d
+git clone https://github.com/your-org/konsolidat.git
+cd konsolidat && docker compose up -d
 cd dbt_project && dbt build
 # Import excel/OpenEPM.bas into Excel
 # =EPM("USMF", 2024, 5, "401100") → Ctrl+Shift+R

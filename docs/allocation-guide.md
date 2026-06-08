@@ -2,7 +2,7 @@
 
 ## How Allocations Work
 
-Open EPM uses a driver-based allocation engine. The process:
+Konsolidat uses a driver-based allocation engine. The process:
 
 1. **Define a rule** in `allocation_rules.csv` — specifies source account/cost center, driver type, and target account
 2. **Provide driver data** in CSV seeds (e.g., `allocation_drivers_headcount.csv`) — values per cost center/period

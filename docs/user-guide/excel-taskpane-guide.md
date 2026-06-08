@@ -1,6 +1,6 @@
 # Excel Task Pane Guide
 
-The Open EPM task pane is an Office.js add-in that provides pipeline orchestration directly from Excel — login, monitor sync status, and trigger data refreshes without leaving your workbook.
+The Konsolidat task pane is an Office.js add-in that provides pipeline orchestration directly from Excel — login, monitor sync status, and trigger data refreshes without leaving your workbook.
 
 ## Overview
 
@@ -15,10 +15,10 @@ The task pane appears as a sidebar panel in Excel, connected to your Frappe/Kons
 
 ### Sideloading for Development
 
-1. Locate `excel-addin/manifest.xml` in the Open EPM repository
+1. Locate `excel-addin/manifest.xml` in the Konsolidat repository
 2. In Excel: **Insert → My Add-ins → Upload My Add-in**
 3. Select the manifest file
-4. The "Open EPM" button appears on the **Home** tab
+4. The "Konsolidat" button appears on the **Home** tab
 
 ### Manifest Details
 
@@ -43,7 +43,7 @@ For production, update `manifest.xml`:
 
 ### Login
 
-1. Click "Open EPM" on the Home ribbon tab
+1. Click "Konsolidat" on the Home ribbon tab
 2. Enter your Frappe email and password
 3. Click **Login**
 
@@ -79,7 +79,7 @@ sequenceDiagram
     participant TaskPane as Task Pane (Office.js)
     participant Frappe as Frappe / Konsol
 
-    User->>TaskPane: Click "Open EPM"
+    User->>TaskPane: Click "Konsolidat"
     TaskPane->>Frappe: GET /api/method/frappe.auth.get_logged_user
     alt Not logged in
         TaskPane->>User: Show login form

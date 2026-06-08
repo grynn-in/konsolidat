@@ -1,6 +1,6 @@
 # API Overview
 
-Open EPM exposes a REST API through the Frappe/Konsol web framework. The API is consumed primarily by the Excel VBA module but can be called from any HTTP client.
+Konsolidat exposes a REST API through the Frappe/Konsol web framework. The API is consumed primarily by the Excel VBA module but can be called from any HTTP client.
 
 ## Base URL
 

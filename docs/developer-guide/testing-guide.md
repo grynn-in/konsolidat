@@ -1,6 +1,6 @@
 # Testing Guide
 
-Open EPM has 26 data quality assertion tests covering trial balance integrity, consolidation math, allocation completeness, budget spreading, and variance logic.
+Konsolidat has 26 data quality assertion tests covering trial balance integrity, consolidation math, allocation completeness, budget spreading, and variance logic.
 
 ## Test Philosophy
 

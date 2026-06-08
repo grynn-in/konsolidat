@@ -4,7 +4,7 @@
 
 Most budgeting tools give you one number per cell. If Finance cuts your budget, you lose the original. If the board adjusts it, you lose the Finance version. Nobody knows who changed what, when, or why.
 
-Open EPM stores **every stakeholder's contribution separately** and sums them at query time. The original submission, every adjustment, every override — all preserved, all auditable, all reversible.
+Konsolidat stores **every stakeholder's contribution separately** and sums them at query time. The original submission, every adjustment, every override — all preserved, all auditable, all reversible.
 
 ## The Four Layers
 

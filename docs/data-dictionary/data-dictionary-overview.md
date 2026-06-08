@@ -1,6 +1,6 @@
 # Data Dictionary Overview
 
-Open EPM uses a **medallion architecture** with 44 dbt models organized in four layers, plus 11 seed tables for reference data.
+Konsolidat uses a **medallion architecture** with 44 dbt models organized in four layers, plus 11 seed tables for reference data.
 
 ## Model Counts
 

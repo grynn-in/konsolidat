@@ -1,6 +1,6 @@
 # Macro Reference
 
-All dbt macros in Open EPM, organized by file.
+All dbt macros in Konsolidat, organized by file.
 
 ## dimension_helpers.sql
 

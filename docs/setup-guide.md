@@ -11,8 +11,8 @@
 ## Step 1: Clone and Configure
 
 ```bash
-git clone https://github.com/pyy3/open_epm.git
-cd open_epm
+git clone https://github.com/pyy3/konsolidat.git
+cd konsolidat
 cp .env.example .env
 ```
 
@@ -31,7 +31,7 @@ docker compose up -d clickhouse dagster_postgres
 
 Verify ClickHouse:
 ```bash
-docker exec open_epm_clickhouse clickhouse-client --password YOUR_PASSWORD --query "SHOW DATABASES"
+docker exec konsolidat_clickhouse clickhouse-client --password YOUR_PASSWORD --query "SHOW DATABASES"
 ```
 
 You should see: `epm`, `epm_bronze`, `epm_silver`, `epm_gold`, `epm_staging`.

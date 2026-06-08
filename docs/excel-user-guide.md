@@ -1,8 +1,8 @@
 # Excel User Guide
 
-## Connecting Excel to Open EPM
+## Connecting Excel to Konsolidat
 
-Open EPM exposes data through Cube's SQL API, which speaks PostgreSQL wire protocol. Excel connects via ODBC.
+Konsolidat exposes data through Cube's SQL API, which speaks PostgreSQL wire protocol. Excel connects via ODBC.
 
 ### Install PostgreSQL ODBC Driver
 
@@ -22,7 +22,7 @@ Open EPM exposes data through Cube's SQL API, which speaks PostgreSQL wire proto
 
 1. Open ODBC Data Source Administrator (64-bit)
 2. Add → PostgreSQL Unicode → Configure:
-   - Data Source: `Open EPM`
+   - Data Source: `Konsolidat`
    - Server: `localhost`
    - Port: `15432`
    - Database: `epm_gold`

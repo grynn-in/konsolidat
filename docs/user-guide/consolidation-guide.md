@@ -1,6 +1,6 @@
 # Consolidation Guide
 
-Open EPM consolidates financial data from multiple legal entities into a single group report. The process includes currency translation, intercompany elimination, CTA calculation, and top-side adjustments.
+Konsolidat consolidates financial data from multiple legal entities into a single group report. The process includes currency translation, intercompany elimination, CTA calculation, and top-side adjustments.
 
 ## Overview
 

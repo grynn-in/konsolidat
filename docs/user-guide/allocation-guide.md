@@ -1,6 +1,6 @@
 # Allocation Guide
 
-Open EPM supports driver-based cost allocation with multi-step cascading. Costs are distributed from source cost centers to targets based on measurable drivers (headcount, square meters, revenue).
+Konsolidat supports driver-based cost allocation with multi-step cascading. Costs are distributed from source cost centers to targets based on measurable drivers (headcount, square meters, revenue).
 
 ## Overview
 

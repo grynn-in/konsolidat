@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Symptom-based debugging guide for Open EPM.
+Symptom-based debugging guide for Konsolidat.
 
 ## Excel / VBA Issues
 
@@ -72,7 +72,7 @@ dbt build --full-refresh    # Drop all tables and rebuild
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Container unhealthy | Startup failure | `docker logs open_epm_clickhouse` |
+| Container unhealthy | Startup failure | `docker logs konsolidat_clickhouse` |
 | Port 8123 not responding | Container not running | `docker compose up -d` |
 | "Code: 60. DB::Exception: Table doesn't exist" | Tables not created | Run `dbt build` to create models |
 | Slow queries | Large table scans | Check ORDER BY keys match query filters |

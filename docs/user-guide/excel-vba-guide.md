@@ -1,6 +1,6 @@
 # Excel VBA Guide
 
-The Open EPM VBA module turns Excel into a live reporting and budgeting client. Six worksheet functions cover reading (`EPM`, `EPM_BUDGET`, `EPM_VARIANCE`, `EPM_DEBIT`, `EPM_CREDIT`) and writing (`EPMSAVE`). A batch refresh mechanism fetches all read values in a single HTTP round-trip. Budget writes happen immediately on recalc.
+The Konsolidat VBA module turns Excel into a live reporting and budgeting client. Six worksheet functions cover reading (`EPM`, `EPM_BUDGET`, `EPM_VARIANCE`, `EPM_DEBIT`, `EPM_CREDIT`) and writing (`EPMSAVE`). A batch refresh mechanism fetches all read values in a single HTTP round-trip. Budget writes happen immediately on recalc.
 
 ## Setup
 
@@ -288,7 +288,7 @@ Refreshes the **active sheet**:
 
 ### EPM_RefreshAll
 
-Refreshes **all sheets** in the workbook. Shows progress on the status bar: `"Open EPM: Sheet 3/12 — Income Statement"`.
+Refreshes **all sheets** in the workbook. Shows progress on the status bar: `"Konsolidat: Sheet 3/12 — Income Statement"`.
 
 ### EPM_Login
 

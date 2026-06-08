@@ -1,6 +1,6 @@
 # Quickstart: Zero to First =EPM() Value in 15 Minutes
 
-Get Open EPM running locally and pull your first financial value into Excel.
+Get Konsolidat running locally and pull your first financial value into Excel.
 
 ## Prerequisites
 
@@ -12,15 +12,15 @@ Get Open EPM running locally and pull your first financial value into Excel.
 ## Step 1: Start ClickHouse (2 min)
 
 ```bash
-cd open_epm
-cp .env.example .env          # Review defaults: CLICKHOUSE_PASSWORD=open_epm_dev
+cd konsolidat
+cp .env.example .env          # Review defaults: CLICKHOUSE_PASSWORD=konsolidat_dev
 docker compose up -d
 ```
 
 Verify:
 
 ```bash
-docker exec open_epm_clickhouse clickhouse-client --query "SELECT 1"
+docker exec konsolidat_clickhouse clickhouse-client --query "SELECT 1"
 # Should print: 1
 ```
 

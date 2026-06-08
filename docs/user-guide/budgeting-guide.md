@@ -1,9 +1,9 @@
 # Budgeting Guide
 
-Open EPM supports annual budget input with configurable spread profiles that distribute amounts across 12 fiscal periods.
+Konsolidat supports annual budget input with configurable spread profiles that distribute amounts across 12 fiscal periods.
 
 !!! tip "Budget Layers — Collaborative Budgeting"
-    Open EPM supports **additive budget layers** (base, challenge, management, board) where each stakeholder contributes adjustments tracked separately. The effective budget is always the sum of all layers. See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers are entered in Frappe, synced to ClickHouse, and retrieved via `=EPM()`.
+    Konsolidat supports **additive budget layers** (base, challenge, management, board) where each stakeholder contributes adjustments tracked separately. The effective budget is always the sum of all layers. See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers are entered in Frappe, synced to ClickHouse, and retrieved via `=EPM()`.
 
 ## Budget Data Flow
 
