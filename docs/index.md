@@ -1,6 +1,7 @@
 ---
 hide:
   - toc
+  - navigation
 ---
 
 <div class="ic-hero" markdown>
@@ -19,8 +20,8 @@ hide:
     <span class="ic-stat-label">Data Tests</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">6</span>
-    <span class="ic-stat-label">Excel Functions</span>
+    <span class="ic-stat-num">1</span>
+    <span class="ic-stat-label">Excel Function</span>
   </div>
   <div class="ic-stat">
     <span class="ic-stat-num">6</span>
@@ -58,10 +59,9 @@ Multi-entity consolidation, Excel-native budgeting, driver-based allocations, an
 </div>
 
 ```
-=EPM("USMF", 2024, "Q1", "401100")          → Revenue
-=EPM_BUDGET("USMF", 2025, "FY", "6100")     → Full-year budget
-=EPM_VARIANCE("USMF", 2025, 5, "6100")      → Actual vs budget
-Ctrl+Shift+R                                  → Batch refresh
+=EPM("USMF", 2024, "Q1", "401100")
+=EPM("USMF", 2024, "FY", "601100")
+=EPM("GRP", 2024, "Q1", "401100")
 ```
 
 </div>
@@ -74,11 +74,10 @@ Ctrl+Shift+R                                  → Batch refresh
 
 ```
 Entity trial balances
-  → FX translation (closing / average rate)
+  → FX translation (closing/average)
   → CTA calculation
   → NCI split (ownership %)
   → IC elimination
-  → Top-side adjustments
   → Consolidated TB
 ```
 
@@ -91,9 +90,9 @@ Entity trial balances
 </div>
 
 ```
-Step 1: IT costs     → by headcount
-Step 2: Facilities   → by sqm (+ Step 1 cascade)
-Step 3: Management   → by revenue (+ Step 1+2 cascade)
+Step 1: IT costs   → by headcount
+Step 2: Facilities → by sqm (+cascade)
+Step 3: Management → by revenue (+cascade)
 ```
 
 </div>
@@ -101,15 +100,15 @@ Step 3: Management   → by revenue (+ Step 1+2 cascade)
 <div class="ic-scenario" markdown>
 <div class="ic-scenario-header">
   <span class="ic-badge ic-badge--budget">BUDGET</span>
-  <h3>Budget Spreading & Variance</h3>
+  <h3>Layered Budgeting & Variance</h3>
 </div>
 
 ```
-Annual budget input
+base + challenge + management + board
   → Spread profiles (even, seasonal)
   → 12 monthly periods
-  → 5 variance measures
-  → Favorable/unfavorable logic
+  → Actual vs budget variance
+  → Write-back from Excel (EPMSAVE)
 ```
 
 </div>
@@ -169,7 +168,7 @@ graph LR
 
 <a class="ic-nav-card" href="user-guide/excel-vba-guide/">
   <strong>Excel VBA Guide</strong>
-  <span>5 formula functions, macros, report patterns</span>
+  <span>=EPM() function, macros, report patterns</span>
 </a>
 
 <a class="ic-nav-card" href="user-guide/consolidation-guide/">

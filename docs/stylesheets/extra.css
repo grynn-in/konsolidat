@@ -220,9 +220,10 @@ code,
 
 .ic-scenarios {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin: 2rem 0;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin: 2rem auto;
+  max-width: 720px;
 }
 
 .ic-scenario {
@@ -293,6 +294,14 @@ code,
   margin: 0;
   border: none;
   border-radius: 0;
+  overflow-x: auto;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.ic-scenario code {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .ic-scenario .highlight {
@@ -399,7 +408,4 @@ code,
     grid-template-columns: 1fr;
   }
 
-  .ic-scenarios {
-    grid-template-columns: 1fr;
-  }
 }
