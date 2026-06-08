@@ -45,6 +45,7 @@
 body,
 .md-typeset {
   font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.05rem;
   color: var(--ic-ink);
 }
 
