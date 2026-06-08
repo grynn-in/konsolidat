@@ -1,0 +1,3250 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB">
+      
+      
+      
+      
+        <link rel="prev" href="../../troubleshooting/faq/">
+      
+      
+        <link rel="next" href="../security-architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Cost Comparison - Open EPM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#open-epm-vs-commercial-cpm-cost-feature-comparison" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Open EPM" class="md-header__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Open EPM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cost Comparison
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../why-konsolidat/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Why Konsolidat?
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user-guide/excel-vba-guide/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api-reference/api-overview/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../data-dictionary/data-dictionary-overview/" class="md-tabs__link">
+          
+  
+  
+  Data Dictionary
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../admin-guide/deployment-guide/" class="md-tabs__link">
+          
+  
+  
+  Admin Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../developer-guide/developer-overview/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Troubleshooting
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Evaluation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/roadmap/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Open EPM" class="md-nav__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Open EPM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-konsolidat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/excel-vba-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel VBA Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/excel-taskpane-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel Task Pane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/consolidation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/allocation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/budgeting-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budgeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/variance-analysis-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/report-catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET epm_value
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST epm_batch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-health/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Dictionary
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Dictionary
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gold Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Silver Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bronze Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Staging Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Admin Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    D365 Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/developer-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/macro-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macro Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/extending-dbt-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/testing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/adding-dimensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Dimensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/extending-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Troubleshooting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evaluation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-parity-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Parity Matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-comparison-3-year-tco-50-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Comparison (3-Year TCO, ~50 Users)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cost Comparison (3-Year TCO, ~50 Users)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commercial-pricing-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commercial Pricing Sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-open-epm-actually-ships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Open EPM Actually Ships
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What Open EPM Actually Ships">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-pipeline-medallion-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Pipeline (Medallion Architecture)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consolidation-engine-gold-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consolidation Engine (Gold Layer)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-frappe-konsol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API (Frappe / Konsol)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supporting-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supporting Infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-world-gap-analysis-private-luxury-retailer-eg-multi-country-7-currencies-70-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World Gap Analysis: Private Luxury Retailer (e.g. multi-country, 7+ currencies, 70+ locations)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-World Gap Analysis: Private Luxury Retailer (e.g. multi-country, 7+ currencies, 70+ locations)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#already-covered-no-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Already Covered — No Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#genuine-gaps-3-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Genuine Gaps (3 items)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-gaps-commonly-assumed-but-wrong" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not Gaps (commonly assumed, but wrong)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#maintenance-org-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maintenance &amp; Org Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Maintenance &amp; Org Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#who-maintains-open-epm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who Maintains Open EPM?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-data-engineer-sits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the Data Engineer Sits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ongoing-maintenance-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ongoing Maintenance Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-commercial-cpm-org-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Commercial CPM Org Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ideal-customer-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ideal Customer Profile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bottom-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bottom Line
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="open-epm-vs-commercial-cpm-cost-feature-comparison">Open EPM vs. Commercial CPM: Cost &amp; Feature Comparison<a class="headerlink" href="#open-epm-vs-commercial-cpm-cost-feature-comparison" title="Permanent link">&para;</a></h1>
+<p><em>Last updated: 2026-06-08</em></p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This document compares Open EPM against the top 5 commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, Anaplan, Planful, and Prophix.</p>
+<p><strong>Target market:</strong> Private mid-market companies (2–50 entities) running D365 F&amp;O. Open EPM is not positioned for publicly listed companies requiring SOX certification or statutory regulatory reporting.</p>
+<hr />
+<h2 id="feature-parity-matrix">Feature Parity Matrix<a class="headerlink" href="#feature-parity-matrix" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th><strong>Tagetik</strong></th>
+<th><strong>OneStream</strong></th>
+<th><strong>Anaplan</strong></th>
+<th><strong>Planful</strong></th>
+<th><strong>Prophix</strong></th>
+<th><strong>Open EPM</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Multi-entity consolidation</td>
+<td>Native</td>
+<td>Native</td>
+<td>Add-on</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (dbt gold layer)</td>
+</tr>
+<tr>
+<td>FX translation (closing/avg rate)</td>
+<td>Native</td>
+<td>Native</td>
+<td>Manual</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (IFRS/GAAP compliant)</td>
+</tr>
+<tr>
+<td>CTA (equity plug)</td>
+<td>Native</td>
+<td>Native</td>
+<td>Manual</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (PRD-2, tested)</td>
+</tr>
+<tr>
+<td>IC elimination</td>
+<td>Native</td>
+<td>Native</td>
+<td>Manual</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (3 rules, nets to zero)</td>
+</tr>
+<tr>
+<td>Minority interest / NCI</td>
+<td>Native</td>
+<td>Native</td>
+<td>Manual</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (ownership %, NCI columns)</td>
+</tr>
+<tr>
+<td>Top-side adjustments</td>
+<td>Native</td>
+<td>Native</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>Yes</strong> (CSV-driven)</td>
+</tr>
+<tr>
+<td>Multi-step allocations</td>
+<td>Native</td>
+<td>Native</td>
+<td>Best-in-class</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>Yes</strong> (3-step cascade, driver-based)</td>
+</tr>
+<tr>
+<td>Budget write-back</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Partial</strong> (seed-driven; staging write-back on roadmap)</td>
+</tr>
+<tr>
+<td>Scenario management</td>
+<td>Native</td>
+<td>Native</td>
+<td>Best-in-class</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>Yes</strong> (budget/forecast/what-if via API)</td>
+</tr>
+<tr>
+<td>Variance analysis</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (favorable logic, actual vs budget)</td>
+</tr>
+<tr>
+<td>Budget spreading</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>Yes</strong> (annual → monthly profiles)</td>
+</tr>
+<tr>
+<td>Excel-native UI</td>
+<td>Plugin</td>
+<td>Plugin</td>
+<td>No (web)</td>
+<td>No (web)</td>
+<td>Plugin</td>
+<td><strong>Yes</strong> (VBA <code>=EPM()</code> formulas + batch API)</td>
+</tr>
+<tr>
+<td>Regulatory reporting</td>
+<td>Strong</td>
+<td>Growing</td>
+<td>Weak</td>
+<td>Moderate</td>
+<td>Moderate</td>
+<td>N/A (not targeted)</td>
+</tr>
+<tr>
+<td>ESG reporting</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>N/A (not targeted)</td>
+</tr>
+<tr>
+<td>Workflow/approvals</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td>Native</td>
+<td><strong>No</strong> (roadmap)</td>
+</tr>
+<tr>
+<td>Audit trail</td>
+<td>Certified (SOX)</td>
+<td>Certified (SOX)</td>
+<td>Certified (SOX)</td>
+<td>Certified (SOX)</td>
+<td>Certified (SOX)</td>
+<td><strong>Column-level</strong> (sufficient for private companies)</td>
+</tr>
+<tr>
+<td>User-facing web UI</td>
+<td>Full</td>
+<td>Full</td>
+<td>Full</td>
+<td>Full</td>
+<td>Full</td>
+<td><strong>Admin only</strong> (Frappe Desk)</td>
+</tr>
+<tr>
+<td>D365 F&amp;O integration</td>
+<td>Connector</td>
+<td>Connector</td>
+<td>Via API</td>
+<td>Via API</td>
+<td>Via API</td>
+<td><strong>Native</strong> (Airbyte OData)</td>
+</tr>
+<tr>
+<td>Data quality tests</td>
+<td>Internal</td>
+<td>Internal</td>
+<td>Internal</td>
+<td>Internal</td>
+<td>Internal</td>
+<td><strong>26 dbt tests</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cost-comparison-3-year-tco-50-users">Cost Comparison (3-Year TCO, ~50 Users)<a class="headerlink" href="#cost-comparison-3-year-tco-50-users" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Cost Item</th>
+<th><strong>Tagetik</strong></th>
+<th><strong>OneStream</strong></th>
+<th><strong>Anaplan</strong></th>
+<th><strong>Planful</strong></th>
+<th><strong>Prophix</strong></th>
+<th><strong>Open EPM</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Year 1 license</td>
+<td>$50K–100K</td>
+<td>$80K–178K</td>
+<td>$180K–350K</td>
+<td>$240K</td>
+<td>$170K–210K</td>
+<td><strong>$0</strong></td>
+</tr>
+<tr>
+<td>Year 2 license</td>
+<td>$50K–100K</td>
+<td>$80K–178K</td>
+<td>$180K–350K</td>
+<td>$240K</td>
+<td>$170K–210K</td>
+<td><strong>$0</strong></td>
+</tr>
+<tr>
+<td>Year 3 license</td>
+<td>$50K–100K</td>
+<td>$80K–178K</td>
+<td>$180K–350K</td>
+<td>$240K</td>
+<td>$170K–210K</td>
+<td><strong>$0</strong></td>
+</tr>
+<tr>
+<td>Implementation</td>
+<td>$50K–200K</td>
+<td>$50K–200K</td>
+<td>$150K–350K</td>
+<td>~$100K</td>
+<td>~$80K</td>
+<td><strong>$10K–30K</strong> (internal)</td>
+</tr>
+<tr>
+<td>Infra (hosting)</td>
+<td>Included</td>
+<td>Included</td>
+<td>Included</td>
+<td>Included</td>
+<td>Included</td>
+<td><strong>$3K–8K/yr</strong> (VM + ClickHouse)</td>
+</tr>
+<tr>
+<td><strong>3-Year Total</strong></td>
+<td><strong>$200K–500K</strong></td>
+<td><strong>$300K–700K</strong></td>
+<td><strong>$700K–1.4M</strong></td>
+<td><strong>$820K</strong></td>
+<td><strong>$600K</strong></td>
+<td><strong>$20K–55K</strong></td>
+</tr>
+<tr>
+<td><strong>Savings vs. Open EPM</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>90–97%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="commercial-pricing-sources">Commercial Pricing Sources<a class="headerlink" href="#commercial-pricing-sources" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CCH Tagetik</strong>: ~$50K+/yr license, $10K–50K+ implementation (<a href="https://pricingnow.com/question/tagetik-4-0-accounting-software-cost/">PricingNow</a>)</li>
+<li><strong>OneStream</strong>: ~$50K–178K/yr avg, $50K–200K implementation (<a href="https://www.itqlick.com/onestream-xf/pricing">ITQlick</a>, <a href="https://dokka.com/onestream-pricing/">Dokka</a>)</li>
+<li><strong>Anaplan</strong>: ~$150K–350K/yr enterprise, implementation can equal Year 1 (<a href="https://checkthat.ai/brands/anaplan/pricing">CheckThat.ai</a>)</li>
+<li><strong>Planful</strong>: ~$240K/yr for 100 users, ~$800K 3-year TCO (<a href="https://www.itqlick.com/planful/competitors">ITQlick</a>)</li>
+<li><strong>Prophix</strong>: ~$170K–210K/yr, ~$600K 3-year TCO (<a href="https://www.itqlick.com/planful/competitors">ITQlick</a>)</li>
+</ul>
+<hr />
+<h2 id="what-open-epm-actually-ships">What Open EPM Actually Ships<a class="headerlink" href="#what-open-epm-actually-ships" title="Permanent link">&para;</a></h2>
+<h3 id="data-pipeline-medallion-architecture">Data Pipeline (Medallion Architecture)<a class="headerlink" href="#data-pipeline-medallion-architecture" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Models</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bronze</td>
+<td>14</td>
+<td>Raw D365 OData extracts (GL, TB, budget, FX rates, dimensions, legal entities)</td>
+</tr>
+<tr>
+<td>Silver</td>
+<td>8</td>
+<td>Standardized GL entries, trial balance, exchange rates, fiscal periods, accounts</td>
+</tr>
+<tr>
+<td>Gold</td>
+<td>22</td>
+<td>Consolidated TB, IC elimination, CTA, allocations, variance, scenarios, P&amp;L, BS, YTD, quarterly, prior year</td>
+</tr>
+</tbody>
+</table>
+<h3 id="consolidation-engine-gold-layer">Consolidation Engine (Gold Layer)<a class="headerlink" href="#consolidation-engine-gold-layer" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>gold_consolidated_trial_balance</code></strong> — Multi-entity with closing rate (BS) and average rate (P&amp;L)</li>
+<li><strong><code>gold_ic_eliminations</code></strong> — Debit/credit matching across entities, conservative min-balance netting</li>
+<li><strong><code>gold_fx_revaluation</code></strong> — CTA equity plug: <code>PnL × (closing - average) × ownership%</code></li>
+<li><strong><code>gold_fully_consolidated_tb</code></strong> — 4-layer union: entity balances + IC eliminations + CTA + topside</li>
+<li><strong><code>gold_allocation_results</code></strong> — 3-step cascading allocations (IT/headcount → Facility/sqm → Mgmt/revenue)</li>
+<li><strong><code>gold_variance_analysis</code></strong> — Actual vs budget with favorable/unfavorable logic</li>
+<li><strong><code>gold_spread_budget</code></strong> — Annual budgets spread across 12 periods</li>
+<li><strong><code>gold_ytd_trial_balance</code></strong> — Year-to-date running totals</li>
+<li><strong><code>gold_prior_year_comparison</code></strong> — Current vs prior year with YoY variance</li>
+</ul>
+<h3 id="api-frappe-konsol">API (Frappe / Konsol)<a class="headerlink" href="#api-frappe-konsol" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>konsol.api.health</code></td>
+<td>GET</td>
+<td>Health check (guest access)</td>
+</tr>
+<tr>
+<td><code>konsol.api.epm_value</code></td>
+<td>GET</td>
+<td>Single value lookup (entity, year, period, account, measure, scenario)</td>
+</tr>
+<tr>
+<td><code>konsol.api.epm_batch</code></td>
+<td>POST</td>
+<td>Batch cell retrieval — up to 2,000 items per request</td>
+</tr>
+</tbody>
+</table>
+<h3 id="supporting-infrastructure">Supporting Infrastructure<a class="headerlink" href="#supporting-infrastructure" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse</td>
+<td>Columnar analytical warehouse</td>
+<td>8123 (HTTP), 9000 (native)</td>
+</tr>
+<tr>
+<td>Frappe (Konsol)</td>
+<td>API layer, auth, EPM Settings, pipeline control</td>
+<td>8069</td>
+</tr>
+<tr>
+<td>Airbyte</td>
+<td>D365 OData extraction</td>
+<td>8000</td>
+</tr>
+<tr>
+<td>Excel VBA</td>
+<td><code>=EPM()</code> formulas (5 functions, 7 macros)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Excel Task Pane</td>
+<td>Office.js pipeline orchestration</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="test-coverage">Test Coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h3>
+<p>26 dbt validation tests covering:
+- FX translation correctness (BS uses closing, P&amp;L uses average)
+- IC elimination nets to zero
+- NCI + group = translated amount
+- Each allocation step sums to pool
+- CTA = zero for same-currency entities
+- Variance formula correctness
+- Trial balance balances
+- Budget spread sums to annual total</p>
+<hr />
+<h2 id="real-world-gap-analysis-private-luxury-retailer-eg-multi-country-7-currencies-70-locations">Real-World Gap Analysis: Private Luxury Retailer (e.g. multi-country, 7+ currencies, 70+ locations)<a class="headerlink" href="#real-world-gap-analysis-private-luxury-retailer-eg-multi-country-7-currencies-70-locations" title="Permanent link">&para;</a></h2>
+<p>A company like a Swiss-headquartered luxury retailer with stores across CH, DE, AT, DK, FR, UK, and US illustrates what Open EPM covers vs. what's still missing.</p>
+<h3 id="already-covered-no-gaps">Already Covered — No Gaps<a class="headerlink" href="#already-covered-no-gaps" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Why It's Not a Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Store-level P&amp;L</strong></td>
+<td>D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Open EPM extracts these in bronze and flows them through to gold. Just configure the Cube schema to expose them.</td>
+</tr>
+<tr>
+<td><strong>Management reporting hierarchies</strong> (by region, brand, product category)</td>
+<td>Same — financial dimensions support arbitrary rollups. Add hierarchy mapping as a dbt seed and join in gold models.</td>
+</tr>
+<tr>
+<td><strong>Multi-currency consolidation</strong> (CHF, EUR, GBP, DKK, USD)</td>
+<td>Fully implemented — closing rate for BS, average rate for P&amp;L, CTA equity plug, all tested.</td>
+</tr>
+<tr>
+<td><strong>IC elimination</strong> (intercompany sales between country entities)</td>
+<td>Implemented with configurable rules (CSV seed).</td>
+</tr>
+<tr>
+<td><strong>Budget vs actual by store/country</strong></td>
+<td>gold_variance_analysis supports all dimensions from the GL.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="genuine-gaps-3-items">Genuine Gaps (3 items)<a class="headerlink" href="#genuine-gaps-3-items" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Impact</th>
+<th>Why It Matters</th>
+<th>Buildable?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cash flow statement</strong></td>
+<td>High</td>
+<td>CFOs need consolidated indirect cash flow. No CF model exists in dbt today.</td>
+<td>Yes — derive from GL movements (BS delta method). ~2–3 days of dbt work.</td>
+</tr>
+<tr>
+<td><strong>Multi-GAAP / dual reporting</strong></td>
+<td>Medium</td>
+<td>Swiss GAAP FER for local statutory + IFRS for group reporting. Open EPM runs one consolidation path.</td>
+<td>Yes — add a <code>reporting_standard</code> dimension to gold models and maintain two sets of adjustment rules. ~1 week.</td>
+</tr>
+<tr>
+<td><strong>Rolling forecasts</strong></td>
+<td>Medium</td>
+<td>Retail needs 12-month rolling forecasts updated monthly, not just annual budget vs actual.</td>
+<td>Yes — extend scenario management with a rolling window function and period-shift logic. ~2–3 days.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="not-gaps-commonly-assumed-but-wrong">Not Gaps (commonly assumed, but wrong)<a class="headerlink" href="#not-gaps-commonly-assumed-but-wrong" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Assumed Gap</th>
+<th>Why It's Wrong</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"No store/location dimension"</td>
+<td>D365 GL entries carry financial dimensions — store, cost center, department are already in the data</td>
+</tr>
+<tr>
+<td>"No inventory valuation"</td>
+<td>GL has inventory accounts with correct balances; item-level costing stays in D365 (where it belongs)</td>
+</tr>
+<tr>
+<td>"No headcount planning"</td>
+<td>Nice-to-have, not a CPM blocker — most mid-market companies do this in Excel anyway</td>
+</tr>
+<tr>
+<td>"No IFRS 16 lease accounting"</td>
+<td>Stays in D365 or a dedicated lease module; not a consolidation tool's job</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="current-limitations">Current Limitations<a class="headerlink" href="#current-limitations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Impact</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No cash flow statement</strong></td>
+<td>High — CFOs need consolidated CF</td>
+<td>Buildable: BS delta method in dbt (~2–3 days)</td>
+</tr>
+<tr>
+<td><strong>No multi-GAAP</strong></td>
+<td>Medium — one consolidation path only</td>
+<td>Buildable: reporting_standard dimension (~1 week)</td>
+</tr>
+<tr>
+<td><strong>No rolling forecasts</strong></td>
+<td>Medium — annual scenarios only</td>
+<td>Buildable: rolling window logic (~2–3 days)</td>
+</tr>
+<tr>
+<td><strong>No workflow/approvals</strong></td>
+<td>Medium — no budget sign-off chain</td>
+<td>Email/Teams-based process; on roadmap</td>
+</tr>
+<tr>
+<td><strong>No web UI for end users</strong></td>
+<td>Medium — Excel-only for finance users</td>
+<td>Frappe Desk for admin; EPM() for finance users</td>
+</tr>
+<tr>
+<td><strong>Allocation rules in CSV</strong></td>
+<td>Low — works but not click-to-edit</td>
+<td>Editable in any text editor or Excel</td>
+</tr>
+<tr>
+<td><strong>No real-time GL sync</strong></td>
+<td>Low — batch is fine for most EPM</td>
+<td>Airbyte schedule (hourly possible)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="maintenance-org-model">Maintenance &amp; Org Model<a class="headerlink" href="#maintenance-org-model" title="Permanent link">&para;</a></h2>
+<h3 id="who-maintains-open-epm">Who Maintains Open EPM?<a class="headerlink" href="#who-maintains-open-epm" title="Permanent link">&para;</a></h3>
+<p>In a mid-market company ($100M–$1B revenue, 2–50 entities), Open EPM is maintained by a small team — typically 2.5–3.5 FTE touching the system, of which only 1 is technical.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>FTE</th>
+<th>Team</th>
+<th>Responsibilities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Group Controller</strong></td>
+<td>1</td>
+<td>Finance</td>
+<td>Owns consolidation rules, IC elimination logic, group reporting. Edits CSV seeds (consolidation groups, IC rules, ownership %). Runs Excel reports.</td>
+</tr>
+<tr>
+<td><strong>FP&amp;A Analyst</strong></td>
+<td>1–2</td>
+<td>Finance</td>
+<td>Budget input via Excel write-back, variance analysis, scenario management. Power user of PivotTables via Cube SQL.</td>
+</tr>
+<tr>
+<td><strong>Data/Analytics Engineer</strong></td>
+<td>1</td>
+<td>IT or Finance</td>
+<td>Maintains dbt models, Airbyte connections, Frappe config, ClickHouse. Owns the <code>docker compose</code> stack. The "platform owner."</td>
+</tr>
+<tr>
+<td><strong>IT Ops</strong></td>
+<td>0.2</td>
+<td>IT</td>
+<td>VM/server, backups, monitoring. Minimal — it's Docker containers.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="where-the-data-engineer-sits">Where the Data Engineer Sits<a class="headerlink" href="#where-the-data-engineer-sits" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Org Model</th>
+<th>Reports To</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Finance team</strong> ("Finance Engineer")</td>
+<td>CFO / Head of Controlling</td>
+<td>Understands the business, fast iteration</td>
+<td>May lack infra skills (Docker, SQL optimization)</td>
+</tr>
+<tr>
+<td><strong>IT team</strong></td>
+<td>CIO / IT Manager</td>
+<td>Strong on infra, security, backups</td>
+<td>Doesn't understand consolidation accounting</td>
+</tr>
+<tr>
+<td><strong>Hybrid / Analytics team</strong></td>
+<td>CFO with IT dotted line</td>
+<td>Best of both worlds</td>
+<td>Harder to hire — needs both dbt and accounting knowledge</td>
+</tr>
+</tbody>
+</table>
+<p>Most common in Swiss/DACH mid-market: the Group Controller hires a "Finance Data Analyst" or "FP&amp;A Engineer" who knows SQL/dbt and sits in the finance team. IT provides the VM and backups.</p>
+<h3 id="ongoing-maintenance-effort">Ongoing Maintenance Effort<a class="headerlink" href="#ongoing-maintenance-effort" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Frequency</th>
+<th>Effort</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monthly close (run pipeline, verify consolidation)</td>
+<td>Monthly</td>
+<td>2–4 hours</td>
+<td>Controller + data engineer</td>
+</tr>
+<tr>
+<td>Budget cycle (collect inputs, load scenarios)</td>
+<td>Quarterly</td>
+<td>1–2 days</td>
+<td>FP&amp;A + data engineer</td>
+</tr>
+<tr>
+<td>Add new entity or change ownership %</td>
+<td>Rare</td>
+<td>30 min (edit CSV seed)</td>
+<td>Controller</td>
+</tr>
+<tr>
+<td>Add/change IC elimination rules</td>
+<td>Rare</td>
+<td>30 min (edit CSV seed)</td>
+<td>Controller</td>
+</tr>
+<tr>
+<td>dbt model changes (new report, new dimension)</td>
+<td>Quarterly</td>
+<td>1–2 days</td>
+<td>Data engineer</td>
+</tr>
+<tr>
+<td>Infrastructure (updates, backups, monitoring)</td>
+<td>Monthly</td>
+<td>2–3 hours</td>
+<td>IT ops / data engineer</td>
+</tr>
+<tr>
+<td>Airbyte connector maintenance (D365 API changes)</td>
+<td>Rare</td>
+<td>Half day</td>
+<td>Data engineer</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Annual maintenance cost estimate:</strong> ~$30K–50K of allocated time (0.3 FTE data engineer + 0.1 FTE controller overhead). Compare to $150K–350K/yr in commercial license fees alone — before implementation partner retainers.</p>
+<h3 id="comparison-commercial-cpm-org-requirements">Comparison: Commercial CPM Org Requirements<a class="headerlink" href="#comparison-commercial-cpm-org-requirements" title="Permanent link">&para;</a></h3>
+<p>A company running Tagetik or OneStream at similar scale typically needs:</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>FTE</th>
+<th>Why More?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EPM Admin / CoE Lead</td>
+<td>1</td>
+<td>Vendor-specific skills (Tagetik scripting, OneStream XF rules)</td>
+</tr>
+<tr>
+<td>Implementation partner</td>
+<td>0.5 (retainer)</td>
+<td>Upgrades, patches, custom reports — vendor lock-in</td>
+</tr>
+<tr>
+<td>Same finance roles</td>
+<td>2–3</td>
+<td>Controller + FP&amp;A still needed regardless</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total CPM cost with commercial:</strong> $200K–400K/yr (license + partner + admin). With Open EPM: <strong>$30K–50K/yr</strong> (data engineer time + hosting).</p>
+<hr />
+<h2 id="ideal-customer-profile">Ideal Customer Profile<a class="headerlink" href="#ideal-customer-profile" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Fit</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Private mid-market, 2–10 entities</strong></td>
+<td><strong>Best fit</strong></td>
+<td>Saves $200K–600K over 3 years, covers all core CPM functions</td>
+</tr>
+<tr>
+<td><strong>D365 F&amp;O shop wanting fast EPM</strong></td>
+<td><strong>Best fit</strong></td>
+<td>Native OData integration, <code>docker compose up</code> and go</td>
+</tr>
+<tr>
+<td><strong>Budget-conscious with internal dbt/analytics team</strong></td>
+<td><strong>Best fit</strong></td>
+<td>Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible</td>
+</tr>
+<tr>
+<td><strong>Private group, 10–50 entities</strong></td>
+<td><strong>Good fit</strong></td>
+<td>Handles NCI and multi-currency; validate at scale during PoC</td>
+</tr>
+<tr>
+<td><strong>Planning-heavy (500+ planners)</strong></td>
+<td>Consider commercial</td>
+<td>Open EPM write-back is functional but basic vs. Anaplan</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="bottom-line">Bottom Line<a class="headerlink" href="#bottom-line" title="Permanent link">&para;</a></h2>
+<p>Open EPM implements the three features traditionally cited as having "no open-source solution": financial consolidation, intercompany elimination, and FX translation with CTA. For a private mid-market D365 F&amp;O company, it replaces ~80% of what commercial CPM platforms deliver at 3–10% of the cost — saving $200K–600K over three years.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.highlight", "content.code.copy", "toc.integrate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

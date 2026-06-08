@@ -1,0 +1,2885 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB">
+      
+      
+      
+      
+        <link rel="prev" href="../developer-overview/">
+      
+      
+        <link rel="next" href="../extending-dbt-models/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Macro Reference - Open EPM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#macro-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Open EPM" class="md-header__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Open EPM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Macro Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../why-konsolidat/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Why Konsolidat?
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user-guide/excel-vba-guide/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api-reference/api-overview/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../data-dictionary/data-dictionary-overview/" class="md-tabs__link">
+          
+  
+  
+  Data Dictionary
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../admin-guide/deployment-guide/" class="md-tabs__link">
+          
+  
+  
+  Admin Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../developer-overview/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Troubleshooting
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-tabs__link">
+          
+  
+  
+  Evaluation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/roadmap/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Open EPM" class="md-nav__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Open EPM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-konsolidat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/excel-vba-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel VBA Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/excel-taskpane-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel Task Pane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/consolidation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/allocation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/budgeting-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budgeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/variance-analysis-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/report-catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET epm_value
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST epm_batch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-health/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Dictionary
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Dictionary
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gold Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Silver Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bronze Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Staging Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Admin Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    D365 Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macro Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macro Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dimension_helperssql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dimension_helpers.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="dimension_helpers.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get_dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_dimensions()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_budget_dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_budget_dimensions()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_allocation_cost_center_dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_allocation_cost_center_dim()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_selectprefix-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_select(prefix='', dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_group_byprefix-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_group_by(prefix='', dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_join_onleft-right-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_join_on(left, right, dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_coalesceleft-right-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_coalesce(left, right, dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_partition_byprefix-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_partition_by(prefix='', dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_empty_stringsdimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_empty_strings(dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dim_select_from_sourceprefix-dimsnone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dim_select_from_source(prefix='', dims=none)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#measure_helperssql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        measure_helpers.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="measure_helpers.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#measure_select" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        measure_select()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measure_passthroughprefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        measure_passthrough(prefix='')
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#db_adaptersql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        db_adapter.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="db_adapter.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-casting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Casting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#date-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Utility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epm_config-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        epm_config() Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#currency_conversionsql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        currency_conversion.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="currency_conversion.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#convert_currencyamount_column-from_currency_column-to_currency-rate_date_column-rate_typedefault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        convert_currency(amount_column, from_currency_column, to_currency, rate_date_column, rate_type='Default')
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_enginesql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allocation_engine.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="allocation_engine.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allocation_enginerule_id-driver_seed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allocation_engine(rule_id, driver_seed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_engine_multistepsql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allocation_engine_multistep.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="allocation_engine_multistep.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allocation_engine_multistep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allocation_engine_multistep()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source_adaptersd365_account_typessql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        source_adapters/d365_account_types.sql
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="source_adapters/d365_account_types.sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#map_account_typecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        map_account_type(column)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending-dbt-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adding-dimensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Dimensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extending-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Troubleshooting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evaluation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluation/security-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="macro-reference">Macro Reference<a class="headerlink" href="#macro-reference" title="Permanent link">&para;</a></h1>
+<p>All dbt macros in Open EPM, organized by file.</p>
+<h2 id="dimension_helperssql">dimension_helpers.sql<a class="headerlink" href="#dimension_helperssql" title="Permanent link">&para;</a></h2>
+<p>Macros driven by <code>var('dimensions')</code> in <code>dbt_project.yml</code>. Each dimension is a dict with keys: <code>name</code>, <code>source_column</code>, <code>label</code>, <code>cube_type</code>, <code>in_budget</code>, <code>allocation_role</code>.</p>
+<h3 id="get_dimensions">get_dimensions()<a class="headerlink" href="#get_dimensions" title="Permanent link">&para;</a></h3>
+<p>Returns the full <code>var('dimensions')</code> list.</p>
+<div class="highlight"><pre><span></span><code><span class="err">{</span><span class="o">%</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">dims</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_dimensions</span><span class="p">()</span><span class="w"> </span><span class="o">%</span><span class="err">}</span>
+<span class="err">{</span><span class="o">#</span><span class="w"> </span><span class="k">Returns</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">{</span><span class="n">name</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;dim_cost_center&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">source_column</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;CostCenter&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="err">}</span><span class="p">,</span><span class="w"> </span><span class="p">...]</span><span class="w"> </span><span class="o">#</span><span class="err">}</span>
+</code></pre></div>
+<h3 id="get_budget_dimensions">get_budget_dimensions()<a class="headerlink" href="#get_budget_dimensions" title="Permanent link">&para;</a></h3>
+<p>Returns only dimensions where <code>in_budget: true</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="err">{</span><span class="o">%</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">budget_dims</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_budget_dimensions</span><span class="p">()</span><span class="w"> </span><span class="o">%</span><span class="err">}</span>
+<span class="err">{</span><span class="o">#</span><span class="w"> </span><span class="k">Returns</span><span class="w"> </span><span class="n">dims</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">dim_cost_center</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">dim_department</span><span class="w"> </span><span class="p">(</span><span class="k">not</span><span class="w"> </span><span class="n">dim_business_unit</span><span class="p">)</span><span class="w"> </span><span class="o">#</span><span class="err">}</span>
+</code></pre></div>
+<h3 id="get_allocation_cost_center_dim">get_allocation_cost_center_dim()<a class="headerlink" href="#get_allocation_cost_center_dim" title="Permanent link">&para;</a></h3>
+<p>Returns the <code>name</code> of the dimension with <code>allocation_role: 'cost_center'</code>. Falls back to <code>'dim_cost_center'</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="err">{</span><span class="o">%</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">cc_dim</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">get_allocation_cost_center_dim</span><span class="p">()</span><span class="w"> </span><span class="o">%</span><span class="err">}</span>
+<span class="err">{</span><span class="o">#</span><span class="w"> </span><span class="k">Returns</span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;dim_cost_center&#39;</span><span class="w"> </span><span class="o">#</span><span class="err">}</span>
+</code></pre></div>
+<h3 id="dim_selectprefix-dimsnone">dim_select(prefix='', dims=none)<a class="headerlink" href="#dim_selectprefix-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates a comma-separated SELECT list of dimension columns.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_select</span><span class="p">(</span><span class="s1">&#39;gl.&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: gl.dim_cost_center, gl.dim_department, gl.dim_business_unit</span>
+</code></pre></div>
+<h3 id="dim_group_byprefix-dimsnone">dim_group_by(prefix='', dims=none)<a class="headerlink" href="#dim_group_byprefix-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates a comma-separated GROUP BY list.</p>
+<div class="highlight"><pre><span></span><code><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_group_by</span><span class="p">(</span><span class="s1">&#39;gl.&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: gl.dim_cost_center, gl.dim_department, gl.dim_business_unit</span>
+</code></pre></div>
+<h3 id="dim_join_onleft-right-dimsnone">dim_join_on(left, right, dims=none)<a class="headerlink" href="#dim_join_onleft-right-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates <code>AND</code> join conditions for all dimensions.</p>
+<div class="highlight"><pre><span></span><code><span class="k">on</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">data_area_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">data_area_id</span>
+<span class="err">{{</span><span class="w"> </span><span class="n">dim_join_on</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: and a.dim_cost_center = b.dim_cost_center</span>
+<span class="c1">--         and a.dim_department = b.dim_department</span>
+<span class="c1">--         and a.dim_business_unit = b.dim_business_unit</span>
+</code></pre></div>
+<h3 id="dim_coalesceleft-right-dimsnone">dim_coalesce(left, right, dims=none)<a class="headerlink" href="#dim_coalesceleft-right-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates <code>COALESCE</code> expressions for FULL OUTER JOIN results.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_coalesce</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: coalesce(a.dim_cost_center, b.dim_cost_center) as dim_cost_center,</span>
+<span class="c1">--         coalesce(a.dim_department, b.dim_department) as dim_department, ...</span>
+</code></pre></div>
+<h3 id="dim_partition_byprefix-dimsnone">dim_partition_by(prefix='', dims=none)<a class="headerlink" href="#dim_partition_byprefix-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates a PARTITION BY clause for window functions.</p>
+<div class="highlight"><pre><span></span><code><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">over</span><span class="w"> </span><span class="p">(</span><span class="n">partition</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_partition_by</span><span class="p">(</span><span class="s1">&#39;t.&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span><span class="p">)</span>
+<span class="c1">-- Output: t.dim_cost_center, t.dim_department, t.dim_business_unit</span>
+</code></pre></div>
+<h3 id="dim_empty_stringsdimsnone">dim_empty_strings(dims=none)<a class="headerlink" href="#dim_empty_stringsdimsnone" title="Permanent link">&para;</a></h3>
+<p>Generates <code>'' AS dim_name</code> for layers that don't have dimension data (IC eliminations, CTA, etc.).</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_empty_strings</span><span class="p">()</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: &#39;&#39; as dim_cost_center, &#39;&#39; as dim_department, &#39;&#39; as dim_business_unit</span>
+</code></pre></div>
+<h3 id="dim_select_from_sourceprefix-dimsnone">dim_select_from_source(prefix='', dims=none)<a class="headerlink" href="#dim_select_from_sourceprefix-dimsnone" title="Permanent link">&para;</a></h3>
+<p>Maps source columns (D365 OData names) to dimension columns with null-safe casting.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">dim_select_from_source</span><span class="p">(</span><span class="s1">&#39;raw.&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: toString(assumeNotNull(coalesce(raw.CostCenter, &#39;&#39;))) as dim_cost_center,</span>
+<span class="c1">--         toString(assumeNotNull(coalesce(raw.Department, &#39;&#39;))) as dim_department, ...</span>
+</code></pre></div>
+<h2 id="measure_helperssql">measure_helpers.sql<a class="headerlink" href="#measure_helperssql" title="Permanent link">&para;</a></h2>
+<p>Macros driven by <code>var('base_measures')</code> in <code>dbt_project.yml</code>. Each measure has keys: <code>name</code>, <code>expression</code>, <code>label</code>, <code>cube_type</code>.</p>
+<h3 id="measure_select">measure_select()<a class="headerlink" href="#measure_select" title="Permanent link">&para;</a></h3>
+<p>Generates aggregate expressions for <code>gold_trial_balance</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">measure_select</span><span class="p">()</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: sum(debit_amount) as period_debit,</span>
+<span class="c1">--         sum(credit_amount) as period_credit,</span>
+<span class="c1">--         sum(accounting_currency_amount) as period_net_amount,</span>
+<span class="c1">--         count(*) as transaction_count</span>
+</code></pre></div>
+<h3 id="measure_passthroughprefix">measure_passthrough(prefix='')<a class="headerlink" href="#measure_passthroughprefix" title="Permanent link">&para;</a></h3>
+<p>Generates column references for downstream models.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">measure_passthrough</span><span class="p">(</span><span class="s1">&#39;tb.&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+<span class="c1">-- Output: tb.period_debit, tb.period_credit, tb.period_net_amount, tb.transaction_count</span>
+</code></pre></div>
+<h2 id="db_adaptersql">db_adapter.sql<a class="headerlink" href="#db_adaptersql" title="Permanent link">&para;</a></h2>
+<p>ClickHouse-specific adapter macros. All wrap <code>assumeNotNull()</code> for null safety.</p>
+<h3 id="type-casting">Type Casting<a class="headerlink" href="#type-casting" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Macro</th>
+<th>Signature</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cast_to_string(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toString(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_int64(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toInt64(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_int8(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toInt8(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_uint16(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toUInt16(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_uint8(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toUInt8(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_float64(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toFloat64(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_date(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toDate(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_datetime(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toDateTime(assumeNotNull(expr))</code></td>
+</tr>
+<tr>
+<td><code>cast_to_decimal128(expr, scale)</code></td>
+<td><code>(expr, scale)</code></td>
+<td><code>toDecimal128(assumeNotNull(expr), scale)</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="date-functions">Date Functions<a class="headerlink" href="#date-functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Macro</th>
+<th>Signature</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>extract_year(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toYear(expr)</code></td>
+</tr>
+<tr>
+<td><code>extract_month(expr)</code></td>
+<td><code>(expr)</code></td>
+<td><code>toMonth(expr)</code></td>
+</tr>
+<tr>
+<td><code>build_date_from_year_period(year_expr, period_expr)</code></td>
+<td><code>(year, period)</code></td>
+<td><code>toDate(concat(toString(greatest(year,1900)), '-', lpad(toString(greatest(period,1)),2,'0'), '-01'))</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="utility">Utility<a class="headerlink" href="#utility" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Macro</th>
+<th>Signature</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>latest_value_by(val_expr, key_expr)</code></td>
+<td><code>(val, key)</code></td>
+<td><code>argMax(val, key)</code> — ClickHouse function returning val at max key</td>
+</tr>
+<tr>
+<td><code>string_pad_left(expr, len, ch)</code></td>
+<td><code>(expr, len, ch)</code></td>
+<td><code>lpad(expr, len, ch)</code></td>
+</tr>
+<tr>
+<td><code>epm_config(order_by='tuple()')</code></td>
+<td><code>(order_by)</code></td>
+<td>Returns <code>{'engine': 'MergeTree()', 'order_by': order_by}</code> for ClickHouse, <code>{}</code> otherwise</td>
+</tr>
+</tbody>
+</table>
+<h3 id="epm_config-usage">epm_config() Usage<a class="headerlink" href="#epm_config-usage" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">{{</span>
+<span class="w">    </span><span class="n">config</span><span class="p">(</span>
+<span class="w">        </span><span class="n">materialized</span><span class="o">=</span><span class="s1">&#39;table&#39;</span><span class="p">,</span>
+<span class="w">        </span><span class="o">**</span><span class="n">epm_config</span><span class="p">(</span><span class="n">order_by</span><span class="o">=</span><span class="s1">&#39;(data_area_id, fiscal_year, fiscal_period, main_account)&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span>
+<span class="err">}}</span>
+</code></pre></div>
+<h2 id="currency_conversionsql">currency_conversion.sql<a class="headerlink" href="#currency_conversionsql" title="Permanent link">&para;</a></h2>
+<h3 id="convert_currencyamount_column-from_currency_column-to_currency-rate_date_column-rate_typedefault">convert_currency(amount_column, from_currency_column, to_currency, rate_date_column, rate_type='Default')<a class="headerlink" href="#convert_currencyamount_column-from_currency_column-to_currency-rate_date_column-rate_typedefault" title="Permanent link">&para;</a></h3>
+<p>Generates a correlated subquery against <code>silver_exchange_rates</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span>
+<span class="w">    </span><span class="err">{{</span><span class="w"> </span><span class="n">convert_currency</span><span class="p">(</span><span class="s1">&#39;local_amount&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;accounting_currency&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;USD&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;period_date&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">translated_amount</span>
+</code></pre></div>
+<p>Expands to:</p>
+<div class="highlight"><pre><span></span><code><span class="n">local_amount</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span>
+<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">exchange_rate</span>
+<span class="w">     </span><span class="k">from</span><span class="w"> </span><span class="n">silver_exchange_rates</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">er</span>
+<span class="w">     </span><span class="k">where</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">from_currency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">accounting_currency</span>
+<span class="w">       </span><span class="k">and</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">to_currency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;USD&#39;</span>
+<span class="w">       </span><span class="k">and</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">valid_from</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">period_date</span>
+<span class="w">       </span><span class="k">and</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">valid_to</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">period_date</span>
+<span class="w">     </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">er</span><span class="p">.</span><span class="n">valid_from</span><span class="w"> </span><span class="k">desc</span>
+<span class="w">     </span><span class="k">limit</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span>
+<span class="w">    </span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="w">  </span><span class="c1">-- Default: same-currency assumption</span>
+<span class="p">)</span>
+</code></pre></div>
+<p><strong>Parameters:</strong>
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| <code>amount_column</code> | SQL expression | The amount to convert |
+| <code>from_currency_column</code> | SQL expression | Column containing source currency code |
+| <code>to_currency</code> | String literal | Target currency (e.g., <code>'USD'</code>) |
+| <code>rate_date_column</code> | SQL expression | Date for rate lookup |
+| <code>rate_type</code> | String | Exchange rate type (default: <code>'Default'</code>) |</p>
+<h2 id="allocation_enginesql">allocation_engine.sql<a class="headerlink" href="#allocation_enginesql" title="Permanent link">&para;</a></h2>
+<h3 id="allocation_enginerule_id-driver_seed">allocation_engine(rule_id, driver_seed)<a class="headerlink" href="#allocation_enginerule_id-driver_seed" title="Permanent link">&para;</a></h3>
+<p>Single-step allocation for one rule.</p>
+<div class="highlight"><pre><span></span><code><span class="err">{{</span><span class="w"> </span><span class="n">allocation_engine</span><span class="p">(</span><span class="s1">&#39;ALLOC_001&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;allocation_drivers_headcount&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span>
+</code></pre></div>
+<p><strong>CTE chain:</strong>
+1. <code>rule</code> — Reads rule definition from <code>allocation_rules</code> seed
+2. <code>source_pool</code> — Sums <code>period_net_amount</code> from <code>gold_trial_balance</code> matching rule's source account/cost center
+3. <code>drivers</code> — Computes <code>driver_weight = driver_value / SUM(driver_value) OVER (PARTITION BY entity, year, period)</code>
+4. <code>allocated</code> — Cross-joins pool × rule, inner joins drivers, excludes self-allocation</p>
+<p><strong>Output columns:</strong> <code>allocation_rule_id</code>, <code>data_area_id</code>, <code>fiscal_year</code>, <code>fiscal_period</code>, <code>source_account</code>, <code>target_cost_center</code>, <code>target_account</code>, <code>driver_type</code>, <code>pool_amount</code>, <code>driver_weight</code>, <code>allocated_amount</code></p>
+<h2 id="allocation_engine_multistepsql">allocation_engine_multistep.sql<a class="headerlink" href="#allocation_engine_multistepsql" title="Permanent link">&para;</a></h2>
+<h3 id="allocation_engine_multistep">allocation_engine_multistep()<a class="headerlink" href="#allocation_engine_multistep" title="Permanent link">&para;</a></h3>
+<p>Three-step cascading allocation. No parameters — reads all rules from the <code>allocation_rules</code> seed.</p>
+<div class="highlight"><pre><span></span><code><span class="err">{{</span><span class="w"> </span><span class="n">allocation_engine_multistep</span><span class="p">()</span><span class="w"> </span><span class="err">}}</span>
+</code></pre></div>
+<p><strong>Steps:</strong>
+1. <strong>Step 1 (ALLOC_001)</strong>: IT costs → headcount driver
+2. <strong>Step 2 (ALLOC_002)</strong>: Facility costs + Step 1 cascade → sqm driver
+3. <strong>Step 3 (ALLOC_003)</strong>: Management fees + Step 1+2 cascade → revenue driver</p>
+<p>Revenue driver filters <code>driver_value &gt; 0</code> to avoid division issues.</p>
+<p><strong>Output:</strong> <code>UNION ALL</code> of all three steps with columns: <code>allocation_rule_id</code>, <code>step_order</code>, <code>data_area_id</code>, <code>fiscal_year</code>, <code>fiscal_period</code>, <code>source_account</code>, <code>source_cost_center</code>, <code>target_cost_center</code>, <code>target_account</code>, <code>driver_type</code>, <code>pool_amount</code>, <code>driver_weight</code>, <code>allocated_amount</code></p>
+<p>See <a href="../../user-guide/allocation-guide/">Allocation Guide</a> for a worked example.</p>
+<h2 id="source_adaptersd365_account_typessql">source_adapters/d365_account_types.sql<a class="headerlink" href="#source_adaptersd365_account_typessql" title="Permanent link">&para;</a></h2>
+<h3 id="map_account_typecolumn">map_account_type(column)<a class="headerlink" href="#map_account_typecolumn" title="Permanent link">&para;</a></h3>
+<p>Maps D365 <code>MainAccountType</code> values to readable labels.</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="err">{{</span><span class="w"> </span><span class="n">map_account_type</span><span class="p">(</span><span class="s1">&#39;raw.Type&#39;</span><span class="p">)</span><span class="w"> </span><span class="err">}}</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">account_type</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>D365 Value</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>'0'</code> / <code>'ProfitAndLoss'</code></td>
+<td><code>'Profit and loss'</code></td>
+</tr>
+<tr>
+<td><code>'1'</code> / <code>'Revenue'</code></td>
+<td><code>'Revenue'</code></td>
+</tr>
+<tr>
+<td><code>'2'</code> / <code>'Expense'</code></td>
+<td><code>'Expense'</code></td>
+</tr>
+<tr>
+<td><code>'3'</code> / <code>'BalanceSheet'</code></td>
+<td><code>'Balance sheet'</code></td>
+</tr>
+<tr>
+<td><code>'4'</code> / <code>'Asset'</code></td>
+<td><code>'Asset'</code></td>
+</tr>
+<tr>
+<td><code>'5'</code> / <code>'Liability'</code></td>
+<td><code>'Liability'</code></td>
+</tr>
+<tr>
+<td><code>'6'</code> / <code>'Equity'</code></td>
+<td><code>'Equity'</code></td>
+</tr>
+<tr>
+<td><code>'7'</code> / <code>'Total'</code></td>
+<td><code>'Total'</code></td>
+</tr>
+<tr>
+<td>Other</td>
+<td>Passthrough</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.highlight", "content.code.copy", "toc.integrate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

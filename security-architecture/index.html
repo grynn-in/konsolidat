@@ -1,0 +1,2755 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Konsol — Security Architecture & Excel Online Integration - Open EPM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#konsol-security-architecture-excel-online-integration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Open EPM" class="md-header__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Open EPM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Konsol — Security Architecture &amp; Excel Online Integration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../why-konsolidat/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Why Konsolidat?
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/excel-vba-guide/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api-reference/api-overview/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../data-dictionary/data-dictionary-overview/" class="md-tabs__link">
+          
+  
+  
+  Data Dictionary
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../admin-guide/deployment-guide/" class="md-tabs__link">
+          
+  
+  
+  Admin Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../developer-guide/developer-overview/" class="md-tabs__link">
+          
+  
+  
+  Developer Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../troubleshooting/troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Troubleshooting
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../evaluation/cost-comparison-vs-commercial/" class="md-tabs__link">
+          
+  
+  
+  Evaluation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference/roadmap/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Open EPM" class="md-nav__button md-logo" aria-label="Open EPM" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Open EPM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pjdijxhoorn/open_epm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-konsolidat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/setup-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/configuration-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/excel-vba-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel VBA Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/excel-taskpane-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel Task Pane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/consolidation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/allocation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/budgeting-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budgeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/variance-analysis-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/report-catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-epm-value/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET epm_value
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-epm-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST epm_batch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-health/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Dictionary
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Dictionary
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/gold-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gold Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/silver-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Silver Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/bronze-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bronze Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/seeds-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-dictionary/staging-tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Staging Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Admin Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Admin Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/deployment-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/d365-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    D365 Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/developer-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/macro-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macro Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/extending-dbt-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/testing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/adding-dimensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Dimensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/extending-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Troubleshooting
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Evaluation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/security-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="konsol-security-architecture-excel-online-integration">Konsol — Security Architecture &amp; Excel Online Integration<a class="headerlink" href="#konsol-security-architecture-excel-online-integration" title="Permanent link">&para;</a></h1>
+<p><em>Last updated: 2026-06-06</em></p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This document describes the security architecture for exposing Konsol to Excel Online and web users, using Frappe as the application layer and ClickHouse (cloud-hosted) as the analytical backend.</p>
+<p><strong>Design principles:</strong>
+- Frappe owns <strong>application concerns</strong> (users, config, workflows, write-back, audit)
+- ClickHouse owns <strong>analytical concerns</strong> (GL data, consolidation, reporting)
+- ClickHouse is never exposed to the internet — all access goes through Frappe or Cube
+- Excel users get <code>=EPM.VALUE(...)</code> custom functions that work in Online, Desktop, and iPad</p>
+<hr />
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────┐
+│  Users                                                │
+│  ┌──────────┐  ┌──────────────┐  ┌────────────────┐  │
+│  │ Excel    │  │ Excel Online │  │ Frappe Desk    │  │
+│  │ Desktop  │  │ / iPad       │  │ (Web UI)       │  │
+│  │ (ODBC)   │  │ (Add-in)     │  │                │  │
+│  └────┬─────┘  └──────┬───────┘  └───────┬────────┘  │
+└───────┼───────────────┼──────────────────┼────────────┘
+        │               │                  │
+        │          HTTPS + Entra SSO       │
+        ▼               ▼                  ▼
+┌──────────────────────────────────────────────────────┐
+│  Frappe (Application Layer)                           │
+│                                                       │
+│  DocTypes:                                            │
+│  ├─ Budget Entry        (write-back, workflow)        │
+│  ├─ Scenario            (budget/forecast/whatif)      │
+│  ├─ Consolidation Group (entities, ownership %)       │
+│  ├─ IC Elimination Rule (debit/credit pairs)          │
+│  ├─ Allocation Rule     (step, driver, accounts)      │
+│  └─ EPM Report          (saved report definitions)    │
+│                                                       │
+│  Built-in: Auth, RBAC, Workflows, Audit, REST API     │
+│  DB: MariaDB/PostgreSQL (metadata + config only)      │
+└──────────────────┬───────────────────────────────────┘
+                   │ clickhouse-connect (Python)
+                   ▼
+┌──────────────────────────────────────────────────────┐
+│  ClickHouse (Azure / AWS — managed or self-hosted)    │
+│                                                       │
+│  epm_bronze  ← Airbyte (D365 OData extraction)       │
+│  epm_silver  ← dbt (standardized)                    │
+│  epm_gold    ← dbt (consolidated TB, IC elim, CTA)   │
+│  epm_staging ← Frappe writes budget data here         │
+│                                                       │
+│  Cube SQL API (port 15432) → Excel ODBC / Add-in     │
+└──────────────────────────────────────────────────────┘
+</code></pre></div>
+<hr />
+<h2 id="security-layers">Security Layers<a class="headerlink" href="#security-layers" title="Permanent link">&para;</a></h2>
+<h3 id="1-identity-authentication">1. Identity &amp; Authentication<a class="headerlink" href="#1-identity-authentication" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Identity provider</strong></td>
+<td>Microsoft Entra ID (Azure AD) — same tenant as D365 F&amp;O</td>
+</tr>
+<tr>
+<td><strong>SSO</strong></td>
+<td>Users authenticate via Entra; Frappe validates JWT tokens</td>
+</tr>
+<tr>
+<td><strong>Excel Add-in auth</strong></td>
+<td>MSAL.js in the add-in acquires token from Entra, passes as Bearer header</td>
+</tr>
+<tr>
+<td><strong>Frappe native auth</strong></td>
+<td>Token-based or OAuth2 for API access; session-based for Desk UI</td>
+</tr>
+<tr>
+<td><strong>2FA</strong></td>
+<td>Frappe built-in — configurable per role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-authorization-role-based-access">2. Authorization (Role-Based Access)<a class="headerlink" href="#2-authorization-role-based-access" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Desk UI</th>
+<th>Excel Read</th>
+<th>Excel Write</th>
+<th>Config Edit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reader</strong></td>
+<td>View reports, dashboards</td>
+<td><code>=EPM.VALUE(...)</code> queries</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Planner</strong></td>
+<td>View + submit budgets</td>
+<td>Full read</td>
+<td><code>=EPM.SUBMIT(...)</code> budget write-back</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Controller</strong></td>
+<td>Full access</td>
+<td>Full read</td>
+<td>Full write</td>
+<td>Edit consolidation groups, IC rules, allocations</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Full access</td>
+<td>Full read</td>
+<td>Full write</td>
+<td>All config + user management</td>
+</tr>
+</tbody>
+</table>
+<p>Frappe RBAC enforces this on every DocType and API endpoint automatically.</p>
+<h3 id="3-transport-network">3. Transport &amp; Network<a class="headerlink" href="#3-transport-network" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TLS</strong></td>
+<td>Caddy reverse proxy with automatic Let's Encrypt certificates</td>
+</tr>
+<tr>
+<td><strong>CORS</strong></td>
+<td>Whitelist <code>*.officeapps.live.com</code> + company tenant domain</td>
+</tr>
+<tr>
+<td><strong>Rate limiting</strong></td>
+<td>100 requests/min per user (prevents runaway Excel refresh loops)</td>
+</tr>
+<tr>
+<td><strong>ClickHouse isolation</strong></td>
+<td>Private network only — no public endpoint. All access via Frappe or Cube.</td>
+</tr>
+<tr>
+<td><strong>Cube SQL API</strong></td>
+<td>Internal network only, or VPN for desktop Excel ODBC users</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-audit-trail">4. Audit Trail<a class="headerlink" href="#4-audit-trail" title="Permanent link">&para;</a></h3>
+<p>Frappe provides automatic audit logging on every DocType:
+- Every create, update, delete is logged with user, timestamp, and field-level diff
+- Budget submissions tracked: who submitted, when, what values, approval chain
+- API access logged: which user queried which dimensions
+- Configuration changes tracked: who changed consolidation groups, IC rules, ownership %</p>
+<p>No custom code needed — this is Frappe's built-in behavior.</p>
+<h3 id="5-data-protection">5. Data Protection<a class="headerlink" href="#5-data-protection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PII in GL data</strong></td>
+<td>ClickHouse stores account-level aggregates, not transactional PII. Personal data stays in D365.</td>
+</tr>
+<tr>
+<td><strong>Budget confidentiality</strong></td>
+<td>Role-based: planners see only their entity/cost center (Frappe user permissions)</td>
+</tr>
+<tr>
+<td><strong>Encryption at rest</strong></td>
+<td>ClickHouse Cloud and Azure/AWS managed disks provide this by default</td>
+</tr>
+<tr>
+<td><strong>Encryption in transit</strong></td>
+<td>TLS everywhere (Frappe ↔ browser, Frappe ↔ ClickHouse, Airbyte ↔ D365)</td>
+</tr>
+<tr>
+<td><strong>Backup</strong></td>
+<td>ClickHouse Cloud: automatic. Self-hosted: scheduled snapshots to blob storage.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="excel-online-integration-epmvalue-custom-function">Excel Online Integration: EPM.VALUE() Custom Function<a class="headerlink" href="#excel-online-integration-epmvalue-custom-function" title="Permanent link">&para;</a></h2>
+<h3 id="the-hsgetvalue-equivalent">The HSGETVALUE Equivalent<a class="headerlink" href="#the-hsgetvalue-equivalent" title="Permanent link">&para;</a></h3>
+<p>Konsol provides an Excel Custom Functions Add-in that registers cell formulas working in Excel Online, Desktop, and iPad:</p>
+<table>
+<thead>
+<tr>
+<th>Formula</th>
+<th>Purpose</th>
+<th>API Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>=EPM.VALUE(entity, year, period, account, scenario, [cost_center], [dept])</code></td>
+<td>Single cell value (HSGETVALUE equivalent)</td>
+<td><code>GET /api/method/konsol.api.get_value</code></td>
+</tr>
+<tr>
+<td><code>=EPM.CONSOLIDATED(entity, year, period, account, measure)</code></td>
+<td>Consolidated group amount (after IC elim + CTA)</td>
+<td><code>GET /api/method/konsol.api.get_consolidated</code></td>
+</tr>
+<tr>
+<td><code>=EPM.VARIANCE(entity, year, period, account)</code></td>
+<td>Actual vs budget variance</td>
+<td><code>GET /api/method/konsol.api.get_variance</code></td>
+</tr>
+<tr>
+<td><code>=EPM.MEMBERS(dimension)</code></td>
+<td>Populate dropdown lists (entities, accounts, periods)</td>
+<td><code>GET /api/method/konsol.api.get_members</code></td>
+</tr>
+<tr>
+<td><code>=EPM.SUBMIT(range, scenario_id)</code></td>
+<td>Write budget data back (planner role only)</td>
+<td><code>POST /api/method/konsol.api.submit_budget</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-usage-in-a-spreadsheet">Example Usage in a Spreadsheet<a class="headerlink" href="#example-usage-in-a-spreadsheet" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>       A              B          C           D            E
+1   Entity         Account    Actuals     Budget       Variance
+2   USMF           4000       =EPM.VALUE( =EPM.VALUE(  =EPM.VARIANCE(
+                               &quot;USMF&quot;,     &quot;USMF&quot;,      &quot;USMF&quot;,
+                               2026,1,     2026,1,      2026,1,
+                               &quot;4000&quot;,     &quot;4000&quot;,      &quot;4000&quot;)
+                               &quot;actuals&quot;)  &quot;budget&quot;)
+3   GBMF           4000       125,340     130,000      (4,660)
+4   DKMF           5100        45,200      42,000       3,200
+</code></pre></div>
+<h3 id="how-it-compares-to-hyperion-smartview">How It Compares to Hyperion SmartView<a class="headerlink" href="#how-it-compares-to-hyperion-smartview" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Hyperion SmartView</strong></th>
+<th><strong>Konsol Add-in</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell formula</td>
+<td><code>=HsGetValue(...)</code></td>
+<td><code>=EPM.VALUE(...)</code></td>
+</tr>
+<tr>
+<td>Bulk refresh</td>
+<td>Ad hoc retrieve</td>
+<td>Auto-recalc or ribbon refresh button</td>
+</tr>
+<tr>
+<td>Submit data</td>
+<td>SmartView submit</td>
+<td><code>=EPM.SUBMIT(range, scenario)</code></td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>EPM workspace login</td>
+<td>Entra ID SSO (automatic)</td>
+</tr>
+<tr>
+<td>Install</td>
+<td>SmartView plugin (desktop only)</td>
+<td>Office Add-in (web + desktop + iPad)</td>
+</tr>
+<tr>
+<td>Works in Excel Online</td>
+<td><strong>No</strong></td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td>Works on iPad</td>
+<td><strong>No</strong></td>
+<td><strong>Yes</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="add-in-technical-details">Add-in Technical Details<a class="headerlink" href="#add-in-technical-details" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Technology:</strong> TypeScript, Office.js Custom Functions API</li>
+<li><strong>Auth:</strong> MSAL.js acquires Entra ID token; passed as Bearer header on every API call</li>
+<li><strong>Caching:</strong> Results cached for 5 minutes per dimension combination (configurable)</li>
+<li><strong>Batch optimization:</strong> Multiple <code>=EPM.VALUE(...)</code> calls in a sheet are batched into a single <code>/api/method/konsol.api.batch</code> request during recalc</li>
+<li><strong>Deployment:</strong> Upload to Microsoft 365 admin center for org-wide availability</li>
+<li><strong>Scaffold:</strong> <code>npx yo office --type excel-functions-shared</code> generates the project skeleton</li>
+</ul>
+<hr />
+<h2 id="frappe-doctypes-replace-csv-seeds">Frappe DocTypes (Replace CSV Seeds)<a class="headerlink" href="#frappe-doctypes-replace-csv-seeds" title="Permanent link">&para;</a></h2>
+<p>Configuration that was previously managed as CSV seed files in dbt is now managed as Frappe DocTypes — web-editable, versioned, audited, and role-protected.</p>
+<table>
+<thead>
+<tr>
+<th>DocType</th>
+<th>Replaces</th>
+<th>Key Fields</th>
+<th>Workflow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Budget Entry</strong></td>
+<td><code>epm_staging.budget_input</code></td>
+<td>entity, year, period, account, cost_center, amount, scenario, submitted_by</td>
+<td>Draft → Submitted → Approved</td>
+</tr>
+<tr>
+<td><strong>Scenario</strong></td>
+<td><code>scenario_definitions.csv</code></td>
+<td>scenario_id, name, type (budget/forecast/whatif), base_scenario, status</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Consolidation Group</strong></td>
+<td><code>consolidation_groups.csv</code></td>
+<td>group_name, entity, ownership_pct, reporting_currency</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>IC Elimination Rule</strong></td>
+<td><code>ic_elimination_rules.csv</code></td>
+<td>debit_account, credit_account, description</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Allocation Rule</strong></td>
+<td><code>allocation_rules.csv</code></td>
+<td>step_order, source_account, target_account, driver_type, source_cost_center</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Allocation Driver</strong></td>
+<td><code>allocation_drivers_*.csv</code></td>
+<td>cost_center, fiscal_period, driver_value, driver_type</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h3 id="config-sync-flow">Config Sync Flow<a class="headerlink" href="#config-sync-flow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Controller edits Consolidation Group in Frappe Desk
+  → Frappe saves to MariaDB (audited)
+  → Frappe server script writes to ClickHouse epm_staging.consolidation_groups
+  → Dagster detects change → triggers dbt build
+  → Gold layer regenerated with new ownership %
+  → Excel users see updated consolidated numbers on next refresh
+</code></pre></div>
+<hr />
+<h2 id="budget-approval-workflow-frappe-built-in">Budget Approval Workflow (Frappe Built-in)<a class="headerlink" href="#budget-approval-workflow-frappe-built-in" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>Planner submits budget in Excel
+  → =EPM.SUBMIT(B2:H50, &quot;BUDGET_2026_Q2&quot;)
+  → Frappe creates Budget Entry DocType records (status: Draft)
+  → Planner clicks &quot;Submit&quot; in Frappe Desk (or auto-submits via API)
+  → Workflow transitions to &quot;Pending Approval&quot;
+  → Controller receives email notification
+  → Controller reviews in Frappe Desk → Approves or Rejects
+  → On Approve: data written to ClickHouse epm_staging.budget_input
+  → dbt unions into gold_scenario_trial_balance
+  → Variance analysis updates automatically
+</code></pre></div>
+<p>No custom workflow engine needed — this is Frappe's standard DocType workflow feature.</p>
+<hr />
+<h2 id="clickhouse-hosting-options">ClickHouse Hosting Options<a class="headerlink" href="#clickhouse-hosting-options" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Service</th>
+<th>Cost (~50GB GL data)</th>
+<th>Managed?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ClickHouse Cloud</strong></td>
+<td>clickhouse.com (on Azure/AWS)</td>
+<td>~$200–400/mo</td>
+<td>Yes — auto-scaling, backups, monitoring</td>
+</tr>
+<tr>
+<td><strong>Azure VM</strong></td>
+<td>D4s_v5 + managed disk</td>
+<td>~$150–250/mo</td>
+<td>Self-hosted — you manage ClickHouse</td>
+</tr>
+<tr>
+<td><strong>AWS EC2</strong></td>
+<td>m6i.xlarge + EBS</td>
+<td>~$150–250/mo</td>
+<td>Self-hosted — you manage ClickHouse</td>
+</tr>
+<tr>
+<td><strong>Aiven for ClickHouse</strong></td>
+<td>Managed on Azure/AWS</td>
+<td>~$300–500/mo</td>
+<td>Yes — managed, multi-cloud</td>
+</tr>
+</tbody>
+</table>
+<p>For mid-market EPM workloads (a few GB of GL data, monthly refresh cycles), the smallest ClickHouse Cloud tier is sufficient.</p>
+<hr />
+<h2 id="what-frappe-closes-vs-fastapi">What Frappe Closes vs. FastAPI<a class="headerlink" href="#what-frappe-closes-vs-fastapi" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>FastAPI (current)</th>
+<th>Frappe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User management &amp; SSO</td>
+<td>Build from scratch</td>
+<td><strong>Built-in</strong> — users, roles, 2FA, OAuth, LDAP</td>
+</tr>
+<tr>
+<td>Role-based access</td>
+<td>Build from scratch</td>
+<td><strong>Built-in</strong> — RBAC on every DocType</td>
+</tr>
+<tr>
+<td>Workflow/approvals</td>
+<td>Not implemented</td>
+<td><strong>Built-in</strong> — multi-step with email notifications</td>
+</tr>
+<tr>
+<td>Audit trail</td>
+<td>Build from scratch</td>
+<td><strong>Built-in</strong> — every change logged with field-level diff</td>
+</tr>
+<tr>
+<td>Web UI for end users</td>
+<td>Streamlit (admin only)</td>
+<td><strong>Built-in</strong> — Desk UI, list views, forms, reports</td>
+</tr>
+<tr>
+<td>REST API</td>
+<td>Manual endpoint coding</td>
+<td><strong>Built-in</strong> — auto-generated for every DocType</td>
+</tr>
+<tr>
+<td>Report builder</td>
+<td>None</td>
+<td><strong>Built-in</strong> — query builder + chart views</td>
+</tr>
+<tr>
+<td>Real-time updates</td>
+<td>None</td>
+<td><strong>Built-in</strong> — Socket.io</td>
+</tr>
+<tr>
+<td>Config management</td>
+<td>CSV seeds in git</td>
+<td><strong>Built-in</strong> — DocTypes (web-editable, versioned)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="remaining-gaps-dbt-analytical-layer-not-frappes-job">Remaining Gaps (dbt analytical layer — not Frappe's job)<a class="headerlink" href="#remaining-gaps-dbt-analytical-layer-not-frappes-job" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Effort</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cash flow statement</td>
+<td>~2–3 days dbt work</td>
+<td>Data engineer</td>
+</tr>
+<tr>
+<td>Multi-GAAP / dual reporting</td>
+<td>~1 week dbt work</td>
+<td>Data engineer</td>
+</tr>
+<tr>
+<td>Rolling forecasts</td>
+<td>~2–3 days dbt work</td>
+<td>Data engineer</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="build-effort-summary">Build Effort Summary<a class="headerlink" href="#build-effort-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Effort</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frappe app scaffold + DocTypes</td>
+<td>2–3 days</td>
+<td><code>bench new-app konsol</code>, define 6 DocTypes</td>
+</tr>
+<tr>
+<td>ClickHouse integration (server scripts)</td>
+<td>1–2 days</td>
+<td><code>clickhouse-connect</code> from Frappe to read/write</td>
+</tr>
+<tr>
+<td>Entra ID SSO configuration</td>
+<td>1 day</td>
+<td>Frappe Social Login + Entra app registration</td>
+</tr>
+<tr>
+<td>Budget approval workflow</td>
+<td>Half day</td>
+<td>Frappe workflow builder (configuration, not code)</td>
+</tr>
+<tr>
+<td>Caddy reverse proxy + TLS</td>
+<td>Half day</td>
+<td>~20 lines of Caddyfile</td>
+</tr>
+<tr>
+<td>CORS configuration</td>
+<td>2 hours</td>
+<td>Frappe <code>site_config.json</code></td>
+</tr>
+<tr>
+<td>Excel Custom Functions Add-in</td>
+<td>2–3 days</td>
+<td>TypeScript, MSAL.js, Office.js scaffold</td>
+</tr>
+<tr>
+<td>Add-in deployment (org-wide)</td>
+<td>Half day</td>
+<td>Upload to Microsoft 365 admin center</td>
+</tr>
+<tr>
+<td>Migrate CSV seeds → DocTypes</td>
+<td>1 day</td>
+<td>One-time data migration</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>~10–12 days</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.highlight", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
