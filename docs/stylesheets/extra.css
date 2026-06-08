@@ -392,6 +392,36 @@ code,
   line-height: 1.4;
 }
 
+/* ---------- CTA Button ---------- */
+
+.ic-cta {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background: var(--ic-accent);
+  color: #fff !important;
+  text-decoration: none !important;
+  border: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-top: 1rem;
+}
+
+.ic-cta:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ic-ink);
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+.ic-cta--lg {
+  font-size: 1.05rem;
+  padding: 1rem 2.5rem;
+}
+
 /* ---------- Hide TOC on index page ---------- */
 
 .md-typeset [hidden] {
