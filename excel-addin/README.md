@@ -95,10 +95,12 @@ bench --site epm.local clear-cache
 
 ### Prerequisites
 
-- Frappe must be serving HTTPS (Office.js requires it). The standard
-  `bench setup production` nginx config handles this, or use a reverse proxy
-  with a valid certificate for `epm.local`.
-- The manifest points to `https://epm.local/assets/konsol/excel-addin/index.html`.
+- For local dev, the manifest uses `http://localhost:8069` (Office.js allows
+  HTTP on localhost). No HTTPS or certs needed.
+- For production, set up HTTPS via `bench setup production` (nginx) and update
+  the manifest URLs to `https://your-domain/assets/konsol/excel-addin/...`.
+- **Admin-managed orgs**: sideloading may be blocked. Ask IT to either enable
+  "Upload My Add-in" or deploy the manifest via Microsoft 365 Admin Center.
 
 ### Windows (Excel Desktop)
 
