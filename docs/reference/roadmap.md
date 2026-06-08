@@ -10,21 +10,24 @@
 | Consolidation (FX, IC elim, CTA, NCI) | **Done** — IFRS/GAAP compliant, fully tested |
 | Allocations (multi-step cascade) | **Done** — 3-step with headcount/sqm/revenue drivers |
 | Budgeting & spreading | **Done** — Annual input, configurable profiles, 12-period spread |
+| Budget layers (collaborative) | **Done** — 4 additive layers (base/challenge/management/board) |
+| Budget write-back from Excel | **Done** — EPMSAVE() immediate write, EPM_BUDGET_SAVE macro |
 | Variance analysis | **Done** — Actual vs budget with favorable logic, YTD, quarterly |
-| Scenario management | **Done** — Actuals/budget/forecast/whatif via seeds |
-| Excel VBA integration | **Done** — 5 functions, 7 macros, batch API, period ranges |
-| Frappe API (Konsol) | **Done** — 3 endpoints (health, epm_value, epm_batch) |
+| Scenario management | **Done** — Actuals/budget/forecast/whatif, scenario_id filter |
+| Excel VBA integration | **Done** — 6 functions (EPM, EPM_BUDGET, EPM_VARIANCE, EPM_DEBIT, EPM_CREDIT, EPMSAVE), 7 macros, batch API, period ranges |
+| Frappe API (Konsol) | **Done** — 6 endpoints (health, epm_value, epm_batch, budget_save, budget_save_batch, budget_cell_save) |
+| Frappe EPM Module | **Done** — 12 doctypes, budget workflow, 4 roles, 158 tests |
 | Frappe EPM Settings | **Done** — ClickHouse, Airbyte, dbt config |
 | Excel Task Pane (pipeline control) | **Done** — Office.js add-in, login, trigger, status |
 | Prior year comparison | **Done** — YoY variance model |
 | BS movement schedule | **Done** — Opening/movement/closing model |
-| Documentation | **Done** — 31-file doc suite |
+| Documentation | **Done** — 31-file doc suite + budget layers guide |
+| D365 budget write-back | Not started |
 | Entra ID SSO | Not started |
 | Excel Online custom functions | Not started |
 | Cash flow statement | Not started |
 | Multi-GAAP | Not started |
 | Rolling forecasts | Not started |
-| Budget write-back from Excel | Not started |
 
 ---
 
@@ -48,18 +51,29 @@
 - Fully consolidated TB (4-layer union)
 - Multi-step cascading cost allocations (3 steps)
 - Budget spreading with configurable profiles
+- Budget layers: base + challenge + management + board (additive, role-flexible)
 - Actual vs budget variance with favorable/unfavorable logic
 - YTD running totals (trial balance and consolidated)
 - Quarterly and half-yearly aggregations
 - Prior year comparison with YoY variance
 - Balance sheet movement schedule
 
-### Integration
-- Frappe/Konsol API: health, single value, batch query
-- EPM Settings DocType (ClickHouse, Airbyte, dbt config)
-- VBA module: EPM, EPM_BUDGET, EPM_VARIANCE, EPM_DEBIT, EPM_CREDIT
+### Frappe / Konsol App ([grynn-in/konsol](https://github.com/grynn-in/konsol))
+- EPM module: 12 doctypes (Scenario Definition, Dimension, Measure, Fiscal Period, Spread Profile, Allocation Rule, Allocation Driver, Consolidation Group, IC Elimination Rule, Consolidation Adjustment, Budget Input, Budget Input Child)
+- Budget workflow: Draft → Submitted → Approved → Rejected (4 roles)
+- ClickHouse sync: on_update hooks → TRUNCATE + INSERT
+- dbt config regeneration: Dimension/Measure/Fiscal Period doctypes → dbt_project.yml vars
+- API: epm_value, epm_batch (read), budget_save, budget_save_batch, budget_cell_save (write)
+- scenario_id optional filter for multi-scenario queries
+- 166 TDD tests across 10 test files
+
+### Excel Integration
+- VBA module: EPM, EPM_BUDGET, EPM_VARIANCE, EPM_DEBIT, EPM_CREDIT (read)
+- EPMSAVE: immediate write-back per cell (skips unchanged values)
+- EPM_BUDGET_SAVE: batch macro for budget template sheets
+- Batch refresh: Ctrl+Shift+R (all EPM cells in one HTTP round-trip)
+- Period ranges: Q1–Q4, H1/H2, FY
 - Office.js task pane for pipeline orchestration
-- Period range support (Q1–Q4, H1/H2, FY)
 
 ---
 
@@ -82,7 +96,72 @@
 - [ ] 5-minute result cache TTL
 - [ ] Microsoft 365 Admin Center deployment
 
-### Phase 3: Analytical Gaps (~2 weeks)
+### Phase 3: D365 Budget Write-Back (~1 day)
+
+Push approved budgets from Open EPM back into D365 F&O so that D365's native budget control (encumbrance checking, PO validation) works with Open EPM budgets.
+
+**Flow:**
+
+```
+Open EPM                              D365 F&O
+────────                              ────────
+
+Budget Input (Approved)
+  ↓ on_update hook
+  ├──→ ClickHouse sync (existing)
+  └──→ D365 OData POST (new)
+         ↓
+       Budget Register Entry
+         ↓
+       Budget Control (encumbrance)
+       PO validation against budget
+       D365 native budget reports
+```
+
+**Implementation:**
+
+- [ ] New module: `konsol/d365_writeback.py`
+    - On Budget Input approval → POST to D365 OData API
+    - Create `BudgetRegisterEntryHeader` (journal number, budget model, date)
+    - Create `BudgetRegisterEntryLines` (one per period — account, amount, financial dimensions)
+- [ ] Dimension mapping: translate `dim_cost_center = "SALES"` → D365 `DefaultDimension` format (dimension set with `CostCenter=SALES, Department=SALES`)
+- [ ] Budget Model mapping: map `scenario_id = "BUDGET_2025"` → D365 Budget Model (e.g., `"OPENEPM"`)
+- [ ] Idempotency: store D365 journal number on Budget Input doc — don't double-post on retry
+- [ ] EPM Settings fields: D365 write-back URL, Budget Model name, enable/disable toggle
+
+**Prerequisites:**
+
+| Item | How |
+|------|-----|
+| OAuth app registration | Already exists (Airbyte uses it for reading D365) |
+| Write permission on Budget entities | Enable `BudgetRegisterEntryHeaders` and `BudgetRegisterEntryLines` data entities for the app registration in D365 |
+| Budget Model in D365 | Create a Budget Model (e.g., `"OPENEPM"`) in D365: Budgeting → Setup → Budget models |
+| Financial Dimension mapping | Configure in EPM Settings: map Open EPM dimension names to D365 financial dimension names |
+
+**D365 OData endpoints:**
+
+```
+POST https://{d365-url}/data/BudgetRegisterEntryHeaders
+{
+  "EntryNumber": "OPENEPM-BUDGET_2025-6100",
+  "BudgetModelId": "OPENEPM",
+  "BudgetTransactionType": "Original",
+  "DefaultLedgerDimensionDisplayValue": "6100-SALES-SALES"
+}
+
+POST https://{d365-url}/data/BudgetRegisterEntryLines
+{
+  "EntryNumber": "OPENEPM-BUDGET_2025-6100",
+  "Date": "2025-01-01",
+  "AccountStructure": "Manufacturing P&L",
+  "LedgerDimensionDisplayValue": "6100-SALES-SALES",
+  "TransactionCurrencyAmount": 95000
+}
+```
+
+**When to build:** Only needed if D365 budget control (encumbrance checking on POs, budget validation on journals) must reflect Open EPM budgets. If budgets are only consumed in Excel reports, this is unnecessary.
+
+### Phase 4: Analytical Gaps (~2 weeks)
 
 **Cash Flow Statement (2–3 days)**
 - [ ] `gold_cash_flow_indirect.sql` — derive from BS delta method
@@ -101,13 +180,6 @@
 - [ ] Actual for closed periods + forecast for open
 - [ ] Scenario type `rolling`
 
-### Phase 4: Budget Write-Back (~2 days)
-
-- [ ] Budget Entry DocType with workflow: Draft → Submitted → Approved
-- [ ] On Approve: write to `epm_staging.budget_input`
-- [ ] `=EPM.SUBMIT()` from Excel to staging tables
-- [ ] dbt picks up approved rows on next build
-
 ### Phase 5: Production Hardening (~3 days)
 
 - [ ] ClickHouse backup automation
@@ -124,7 +196,7 @@
 |-------|--------|-------------|
 | Phase 1: Security & SSO | ~2 days | None |
 | Phase 2: Excel Online | ~3 days | Phase 1 |
-| Phase 3: Analytical gaps | ~2 weeks | None |
-| Phase 4: Budget write-back | ~2 days | Phase 1 |
+| Phase 3: D365 Budget Write-Back | ~1 day | Phase 1, D365 admin config |
+| Phase 4: Analytical gaps | ~2 weeks | None |
 | Phase 5: Production hardening | ~3 days | Phase 1–2 |
 | **Total** | **~4 weeks** | |
