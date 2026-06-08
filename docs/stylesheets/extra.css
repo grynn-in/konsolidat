@@ -1,0 +1,405 @@
+/* ==========================================================================
+   Grynn Brand — Swiss-inspired design system for Open EPM
+   Fonts: Archivo (body), Archivo Black (hero), Space Mono (labels/badges)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;900&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap');
+
+/* ---------- CSS Custom Properties ---------- */
+
+:root,
+[data-md-color-scheme="default"] {
+  --ic-bg: #EFEBE0;
+  --ic-ink: #15140F;
+  --ic-soft: #3a382f;
+  --ic-accent: #2422DA;
+  --ic-red: #E8431F;
+  --ic-border: rgba(21, 20, 15, 0.18);
+  --ic-border-strong: rgba(21, 20, 15, 0.35);
+  --md-default-bg-color: #EFEBE0;
+  --md-default-fg-color: #15140F;
+  --md-primary-fg-color: #EFEBE0;
+  --md-primary-bg-color: #15140F;
+  --md-accent-fg-color: #2422DA;
+  --md-typeset-a-color: #2422DA;
+}
+
+[data-md-color-scheme="slate"] {
+  --ic-bg: #1a1a2e;
+  --ic-ink: #e8e6df;
+  --ic-soft: #a8a69e;
+  --ic-accent: #6c6bff;
+  --ic-red: #ff7043;
+  --ic-border: rgba(232, 230, 223, 0.15);
+  --ic-border-strong: rgba(232, 230, 223, 0.3);
+  --md-default-bg-color: #1a1a2e;
+  --md-default-fg-color: #e8e6df;
+  --md-primary-fg-color: #1a1a2e;
+  --md-primary-bg-color: #e8e6df;
+  --md-accent-fg-color: #6c6bff;
+  --md-typeset-a-color: #6c6bff;
+}
+
+/* ---------- Base Typography ---------- */
+
+body,
+.md-typeset {
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ic-ink);
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  color: var(--ic-ink);
+}
+
+.md-typeset h2 {
+  border-bottom: 1.5px solid var(--ic-border-strong);
+  padding-bottom: 0.4em;
+}
+
+code,
+.md-typeset code {
+  font-family: 'Space Mono', monospace;
+}
+
+/* ---------- Swiss: sharp corners everywhere ---------- */
+
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset .md-button,
+.md-typeset .tabbed-labels > label,
+.md-typeset .highlight > pre,
+.md-typeset code {
+  border-radius: 0;
+}
+
+.md-search__form {
+  border-radius: 0;
+}
+
+/* ---------- Header / Nav ---------- */
+
+.md-header {
+  background: var(--md-primary-fg-color);
+  border-bottom: 1.5px solid var(--ic-border);
+}
+
+.md-header__title {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.md-tabs {
+  background: var(--md-primary-fg-color);
+  border-bottom: 1.5px solid var(--ic-border);
+}
+
+/* ---------- Tables ---------- */
+
+.md-typeset table:not([class]) th {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--ic-border);
+}
+
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  border: 1.5px solid var(--ic-border);
+}
+
+/* ==========================================================================
+   INDEX PAGE — Hero, Stats, Pills, Scenarios, Nav Grid
+   ========================================================================== */
+
+/* ---------- Hero ---------- */
+
+.ic-hero {
+  text-align: center;
+  padding: 3rem 1rem 2.5rem;
+  border-bottom: 1.5px solid var(--ic-border-strong);
+  margin-bottom: 2.5rem;
+}
+
+.ic-hero h1 {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 0.3rem;
+  line-height: 1.05;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ic-tagline {
+  font-family: 'Archivo', sans-serif;
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  font-weight: 400;
+  color: var(--ic-soft);
+  margin: 0 0 2rem;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Stats ---------- */
+
+.ic-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.ic-stat {
+  text-align: center;
+}
+
+.ic-stat-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ic-accent);
+  display: block;
+  line-height: 1;
+}
+
+.ic-stat-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ic-soft);
+  display: block;
+  margin-top: 0.3rem;
+}
+
+/* ---------- Pitch + Pills ---------- */
+
+.ic-pitch {
+  max-width: 720px;
+  margin: 2.5rem auto;
+  text-align: center;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--ic-soft);
+}
+
+.ic-pills {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.ic-pill {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1.5px solid var(--ic-border-strong);
+  padding: 0.25rem 0.75rem;
+  display: inline-block;
+  color: var(--ic-ink);
+  background: transparent;
+}
+
+/* ---------- Scenario Cards ---------- */
+
+.ic-scenarios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.ic-scenario {
+  border: 1.5px solid var(--ic-border-strong);
+  background: transparent;
+}
+
+.ic-scenario-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1.5px solid var(--ic-border);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ic-scenario-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ic-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.5rem;
+  border: 1.5px solid;
+  display: inline-block;
+  background: transparent;
+  line-height: 1.4;
+}
+
+.ic-badge--finance {
+  border-color: var(--ic-accent);
+  color: var(--ic-accent);
+}
+
+.ic-badge--consolidation {
+  border-color: var(--ic-red);
+  color: var(--ic-red);
+}
+
+.ic-badge--budget {
+  border-color: #2e7d32;
+  color: #2e7d32;
+}
+
+[data-md-color-scheme="slate"] .ic-badge--budget {
+  border-color: #66bb6a;
+  color: #66bb6a;
+}
+
+.ic-badge--allocation {
+  border-color: #e65100;
+  color: #e65100;
+}
+
+[data-md-color-scheme="slate"] .ic-badge--allocation {
+  border-color: #ffa726;
+  color: #ffa726;
+}
+
+.ic-scenario .md-typeset pre,
+.ic-scenario pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.ic-scenario .highlight {
+  margin: 0;
+}
+
+/* ---------- Architecture ---------- */
+
+.ic-arch {
+  margin: 2rem 0;
+  border: 1.5px solid var(--ic-border);
+  padding: 1.5rem;
+}
+
+.ic-arch h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* ---------- Tech Stack Pills ---------- */
+
+.ic-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  justify-content: center;
+}
+
+.ic-stack code {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1.5px solid var(--ic-border-strong);
+  padding: 0.3rem 0.8rem;
+  background: transparent;
+  color: var(--ic-ink);
+}
+
+/* ---------- Nav Grid ---------- */
+
+.ic-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin: 2rem 0;
+}
+
+.ic-nav-card {
+  border: 1.5px solid var(--ic-border-strong);
+  padding: 1.2rem;
+  text-decoration: none;
+  color: var(--ic-ink);
+  display: block;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* Collapse borders between adjacent cards */
+  margin-top: -1.5px;
+  margin-left: -1.5px;
+}
+
+.ic-nav-card:first-child {
+  margin-top: 0;
+  margin-left: 0;
+}
+
+.ic-nav-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ic-accent);
+  z-index: 1;
+  position: relative;
+  text-decoration: none;
+  color: var(--ic-ink);
+}
+
+.ic-nav-card strong {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.ic-nav-card span {
+  font-size: 0.8rem;
+  color: var(--ic-soft);
+  display: block;
+  line-height: 1.4;
+}
+
+/* ---------- Hide TOC on index page ---------- */
+
+.md-typeset [hidden] {
+  display: none;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 600px) {
+  .ic-stats {
+    gap: 1.5rem;
+  }
+
+  .ic-nav-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ic-scenarios {
+    grid-template-columns: 1fr;
+  }
+}

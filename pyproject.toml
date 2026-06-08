@@ -1,0 +1,13 @@
+[project]
+name = "open-epm"
+version = "0.1.0"
+description = "Open-source Enterprise Performance Management for D365 F&O"
+requires-python = ">=3.10"
+license = "MIT"
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.0",
+]
