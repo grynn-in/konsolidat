@@ -1,0 +1,13 @@
+{
+  "name": "open-epm-excel-addin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Office.js Task Pane add-in for Open EPM pipeline orchestration",
+  "scripts": {
+    "start": "npx http-server src -p 3000 --cors -S -C cert.pem -K key.pem",
+    "generate-cert": "openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
