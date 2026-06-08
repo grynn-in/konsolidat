@@ -8,11 +8,15 @@
 '   3. VBA scans the sheet, collects ALL EPM cells, sends ONE batch
 '      request to the server, and populates every cell at once
 '
-' Functions:
+' Functions (read):
 '   =EPM(entity, year, period, account)
 '   =EPM(entity, year, period, account, measure, scenario, cost_center, dept, scenario_id)
 '   =EPM_BUDGET(entity, year, period, account)
 '   =EPM_VARIANCE(entity, year, period, account)
+'
+' Functions (write — immediate on recalc):
+'   =EPMSAVE(amount, entity, year, period, account, scenario_id, layer)
+'   =EPMSAVE(amount, entity, year, period, account, scenario_id, layer, cost_center, dept)
 '
 ' Macros:
 '   EPM_Login             Log in to Frappe (prompted automatically on refresh)
@@ -162,6 +166,101 @@ Public Function EPM_VARIANCE( _
 ) As Variant
     EPM_VARIANCE = EPM(entity, fiscal_year, fiscal_period, account, _
                        "variance_abs", "variance", cost_center, department, scenario_id)
+End Function
+
+' ── EPMSAVE: immediate write-back to Frappe ────────────────
+'
+' Writes a single budget cell on recalc. Skips if value unchanged.
+' Layer is required — any authorized user can write to any layer.
+
+Private pSaveCache As Object  ' tracks last-saved values to skip no-ops
+
+Private Sub EnsureSaveCache()
+    If pSaveCache Is Nothing Then
+        Set pSaveCache = CreateObject("Scripting.Dictionary")
+    End If
+End Sub
+
+Public Function EPMSAVE( _
+    amount As Variant, _
+    entity As String, _
+    fiscal_year As Variant, _
+    fiscal_period As Variant, _
+    account As String, _
+    scenario_id As String, _
+    layer As String, _
+    Optional cost_center As String = "", _
+    Optional department As String = "" _
+) As Variant
+    ' Always return the amount so the cell displays the value
+    EPMSAVE = amount
+
+    ' Don't fire during batch refresh or if not logged in
+    If Not pLoggedIn Or pSessionCookie = "" Then Exit Function
+
+    ' Skip non-numeric
+    If Not IsNumeric(amount) Then Exit Function
+
+    Dim amt As Double
+    amt = CDbl(amount)
+
+    ' Build cache key to skip unchanged values
+    EnsureSaveCache
+    Dim cacheKey As String
+    cacheKey = entity & "|" & CLng(fiscal_year) & "|" & CStr(fiscal_period) & "|" & _
+               account & "|" & scenario_id & "|" & layer & "|" & cost_center & "|" & department
+    If pSaveCache.Exists(cacheKey) Then
+        If pSaveCache(cacheKey) = amt Then Exit Function
+    End If
+
+    ' POST to budget_cell_save
+    Dim http As Object
+    Dim url As String
+    Dim json As String
+
+    url = API_BASE_URL & "/api/method/konsol.api.budget_cell_save"
+    json = "{" & _
+        """scenario_id"":""" & JsonEscape(scenario_id) & """," & _
+        """data_area_id"":""" & JsonEscape(entity) & """," & _
+        """fiscal_year"":" & CLng(fiscal_year) & "," & _
+        """main_account"":""" & JsonEscape(account) & """," & _
+        """fiscal_period"":" & CLng(fiscal_period) & "," & _
+        """amount"":" & amt & "," & _
+        """layer"":""" & JsonEscape(layer) & """"
+    If cost_center <> "" Then
+        json = json & ",""dim_cost_center"":""" & JsonEscape(cost_center) & """"
+    End If
+    If department <> "" Then
+        json = json & ",""dim_department"":""" & JsonEscape(department) & """"
+    End If
+    json = json & "}"
+
+    On Error GoTo SaveFail
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setTimeouts 5000, 5000, 10000, 10000
+    http.Open "POST", url, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "Cookie", pSessionCookie
+    http.send json
+
+    If http.Status = 200 Then
+        ' Update cache on success
+        If pSaveCache.Exists(cacheKey) Then
+            pSaveCache(cacheKey) = amt
+        Else
+            pSaveCache.Add cacheKey, amt
+        End If
+        LogMsg "INFO", "EPMSAVE: " & cacheKey & " = " & amt
+    ElseIf http.Status = 401 Or http.Status = 403 Then
+        pLoggedIn = False
+        LogMsg "WARN", "EPMSAVE: session expired, login required"
+    Else
+        LogMsg "ERROR", "EPMSAVE: HTTP " & http.Status & " " & Left(http.responseText, 200)
+    End If
+    Exit Function
+
+SaveFail:
+    LogMsg "ERROR", "EPMSAVE: " & Err.Description
 End Function
 
 Public Function EPM_DEBIT( _
