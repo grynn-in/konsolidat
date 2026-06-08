@@ -7,6 +7,8 @@ repo_name: grynn-in/konsolidat
 theme:
   name: material
   font: false
+  icon:
+    logo: material/consolidate
   palette:
     - scheme: default
       primary: white
