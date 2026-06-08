@@ -131,7 +131,7 @@ Public Function EPM( _
     Optional department As String = "" _
 ) As Variant
     Dim Key As String
-    Key = BuildKey(CStr(entity), CLng(fiscal_year), CLng(fiscal_period), CStr(account), _
+    Key = BuildKey(CStr(entity), CLng(fiscal_year), CStr(fiscal_period), CStr(account), _
                    measure, scenario, cost_center, department)
 
     If pCache Is Nothing Then
@@ -149,7 +149,7 @@ Public Function EPM_BUDGET( _
     Optional cost_center As String = "", Optional department As String = "" _
 ) As Variant
     EPM_BUDGET = EPM(entity, fiscal_year, fiscal_period, account, _
-                     "budget_amount", "budget", cost_center, department)
+                     "period_amount", "budget", cost_center, department)
 End Function
 
 Public Function EPM_VARIANCE( _
@@ -276,7 +276,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
         json = json & "{"
         json = json & """entity"":""" & JsonEscape(CStr(req("entity"))) & """"
         json = json & ",""year"":" & req("year")
-        json = json & ",""period"":" & req("period")
+        json = json & ",""period"":""" & JsonEscape(CStr(req("period"))) & """"
         json = json & ",""account"":""" & JsonEscape(CStr(req("account"))) & """"
         json = json & ",""measure"":""" & JsonEscape(CStr(req("measure"))) & """"
         json = json & ",""scenario"":""" & JsonEscape(CStr(req("scenario"))) & """"
@@ -457,7 +457,7 @@ Private Function ResolveEpmArgs(cell As Range) As Object
 
     If InStr(uf, "EPM_BUDGET(") > 0 Then
         funcName = "EPM_BUDGET"
-        defaultMeasure = "budget_amount"
+        defaultMeasure = "period_amount"
         defaultScenario = "budget"
     ElseIf InStr(uf, "EPM_VARIANCE(") > 0 Then
         funcName = "EPM_VARIANCE"
@@ -524,7 +524,7 @@ Private Function ResolveEpmArgs(cell As Range) As Object
     ' Evaluate each argument (resolves cell references like $B$5)
     Dim entity As String
     Dim yr As Long
-    Dim per As Long
+    Dim per As String
     Dim account As String
     Dim measure As String
     Dim scenario As String
@@ -533,7 +533,7 @@ Private Function ResolveEpmArgs(cell As Range) As Object
 
     entity = CStr(EvalArg(cell, argList(0)))
     yr = CLng(EvalArg(cell, argList(1)))
-    per = CLng(EvalArg(cell, argList(2)))
+    per = CStr(EvalArg(cell, argList(2)))
     account = CStr(EvalArg(cell, argList(3)))
 
     If funcName = "EPM" Then
@@ -639,7 +639,7 @@ End Sub
 
 ' ── Helpers ───────────────────────────────────────────────────
 
-Private Function BuildKey(entity As String, yr As Long, per As Long, _
+Private Function BuildKey(entity As String, yr As Long, per As String, _
     account As String, measure As String, scenario As String, _
     costCenter As String, department As String) As String
     BuildKey = entity & "|" & yr & "|" & per & "|" & account & "|" & _

@@ -10,6 +10,7 @@
    the fiscal calendar into a date-level lookup table. #}
 with fiscal_dates as (
     select
+        calendar_id,
         {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(period_start_date, x), range(toUInt32(dateDiff(\'day\', period_start_date, period_end_date) + 1))))') }} as calendar_date,
         {{ extract_year('year_start_date') }} as fiscal_year,
         calendar_month as fiscal_period
@@ -53,5 +54,8 @@ left join {{ ref('bronze_general_journal_entries') }} as gje
     and gae.data_area_id = gje.data_area_id
 left join {{ ref('silver_main_accounts') }} as ma
     on gae.main_account = ma.main_account_id
+left join {{ ref('entity_fiscal_calendars') }} as efc
+    on gae.data_area_id = efc.data_area_id
 left join fiscal_dates as fp
     on gae.accounting_date = fp.calendar_date
+    and fp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')

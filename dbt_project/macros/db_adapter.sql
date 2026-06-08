@@ -50,7 +50,7 @@
 {% endmacro %}
 
 {% macro build_date_from_year_period(year_expr, period_expr) %}
-    toDate(concat(toString({{ year_expr }}), '-', lpad(toString({{ period_expr }}), 2, '0'), '-01'))
+    toDate(concat(toString(greatest({{ year_expr }}, 1900)), '-', lpad(toString(greatest({{ period_expr }}, 1)), 2, '0'), '-01'))
 {% endmacro %}
 
 {% macro latest_value_by(val_expr, key_expr) %}
