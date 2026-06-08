@@ -48,7 +48,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - About:
+  - Why Konsolidat?:
       - Why Konsolidat?: why-konsolidat.md
       - Features: features.md
       - Cost Comparison: evaluation/cost-comparison-vs-commercial.md
