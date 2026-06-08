@@ -24,6 +24,7 @@ All parameters are passed as query string arguments.
 | `scenario` | string | No | `actuals` | Scenario: `actuals`, `budget`, `variance` |
 | `cost_center` | string | No | `""` | Cost center filter |
 | `department` | string | No | `""` | Department filter |
+| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to tables with a `scenario_id` column (currently `gold_spread_budget`). When empty, returns the sum across all scenario IDs. |
 
 ## Period Resolution
 
@@ -75,6 +76,15 @@ measure=period_amount&scenario=budget" \
 curl "http://localhost:8069/api/method/konsol.api.epm_value?\
 entity=USMF&year=2024&period=FY&account=401100&\
 cost_center=SALES&department=SALES" \
+  -b "cookies.txt"
+```
+
+### With scenario_id filter
+
+```bash
+curl "http://localhost:8069/api/method/konsol.api.epm_value?\
+entity=USMF&year=2025&period=Q1&account=6100&\
+measure=period_amount&scenario=budget&scenario_id=BUDGET_2025" \
   -b "cookies.txt"
 ```
 
