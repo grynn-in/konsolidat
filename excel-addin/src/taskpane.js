@@ -1,6 +1,7 @@
 /* global Office */
 
-const FRAPPE_URL = "http://localhost:8069";
+// Same-origin: taskpane is served by Frappe, so no base URL needed
+const FRAPPE_URL = "";
 let pollTimer = null;
 
 // ── Office init ──────────────────────────────────────────────────────
