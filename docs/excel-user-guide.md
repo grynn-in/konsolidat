@@ -76,6 +76,5 @@ Use Power Query M formula to POST budget data:
 ### Budget Validation
 
 After submitting, verify your data:
-1. Open Streamlit Admin UI (http://localhost:8501)
-2. Go to Scenario Manager → Budget Data Preview
-3. Or query directly: `SELECT * FROM v_budget_vs_actual WHERE fiscal_year = 2024`
+1. Open Frappe Desk (http://epm.local:8069) and check Budget Input records
+2. Or query directly: `SELECT * FROM v_budget_vs_actual WHERE fiscal_year = 2024`

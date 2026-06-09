@@ -26,7 +26,7 @@ Edit `.env` with your credentials:
 ## Step 2: Start Infrastructure
 
 ```bash
-docker compose up -d clickhouse dagster_postgres
+docker compose up -d
 ```
 
 Verify ClickHouse:
@@ -98,10 +98,7 @@ docker compose up -d
 ```
 
 This starts:
-- Cube (SQL API on port 15432)
-- Dagster webserver (port 3000)
-- FastAPI write-back (port 8080)
-- Streamlit admin UI (port 8501)
+- ClickHouse (analytics warehouse, ports 8123/9000)
 
 ## Step 6: Connect Excel
 

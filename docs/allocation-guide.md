@@ -10,7 +10,7 @@ Konsolidat uses a driver-based allocation engine. The process:
 
 ## Allocation Rules
 
-Edit `dbt_project/seeds/allocation_rules.csv` or use the Streamlit Allocation Rule Editor.
+Edit `dbt_project/seeds/allocation_rules.csv` or use the Allocation Rule doctype in Frappe Desk.
 
 | Field | Description | Example |
 |-------|-------------|---------|

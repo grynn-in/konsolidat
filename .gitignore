@@ -27,10 +27,6 @@ dbt_project/dbt_packages/
 cube/node_modules/
 cube/.cubestore/
 
-# Dagster
-dagster/storage/
-dagster/logs/
-
 # Python
 *.egg-info/
 dist/
