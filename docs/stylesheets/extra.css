@@ -92,24 +92,16 @@ code,
   border-bottom: 1.5px solid var(--ic-border);
 }
 
-/* Logo icon — teal, sits inside the title box visually */
-.md-header .md-logo {
-  margin-right: 0;
-  padding-right: 0;
+/* Hide separate logo icons — icon goes inside title box */
+.md-header .md-logo,
+.md-nav__button.md-logo {
+  display: none;
 }
 
-.md-header .md-logo svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  fill: #00BFA5;
-  vertical-align: middle;
-}
+/* ---- Shared KNSLDT box style (icon inside) ---- */
 
-.md-header__title {
-  margin-left: -0.1rem;
-}
-
-.md-header__title .md-ellipsis {
+.md-header__title .md-ellipsis,
+.ic-hero-mark {
   font-family: 'Archivo Black', sans-serif;
   font-weight: 900;
   font-size: 0.75rem;
@@ -124,11 +116,34 @@ code,
   vertical-align: middle;
 }
 
-[data-md-color-scheme="slate"] .md-header .md-logo svg {
-  fill: #64FFDA;
+/* Consolidate icon via CSS mask — inherits currentColor */
+.md-header__title .md-ellipsis::before,
+.ic-hero-mark::before {
+  content: "";
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.35rem;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-[data-md-color-scheme="slate"] .md-header__title .md-ellipsis {
+/* Hero mark — larger for hero context */
+.ic-hero-mark {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.ic-hero-mark::before {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+[data-md-color-scheme="slate"] .md-header__title .md-ellipsis,
+[data-md-color-scheme="slate"] .ic-hero-mark {
   color: #64FFDA;
   border-color: #64FFDA;
 }
@@ -166,25 +181,7 @@ code,
   margin-bottom: 2.5rem;
 }
 
-/* ---------- Hero Logo Mark ---------- */
-
-.ic-hero-mark {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #00BFA5;
-  display: inline-block;
-  border: 2px solid #00BFA5;
-  padding: 0.25rem 0.8rem;
-  margin-bottom: 0.8rem;
-}
-
-[data-md-color-scheme="slate"] .ic-hero-mark {
-  color: #64FFDA;
-  border-color: #64FFDA;
-}
+/* (Hero mark styles merged into shared KNSLDT box above) */
 
 /* ---------- Hero Animation ---------- */
 
