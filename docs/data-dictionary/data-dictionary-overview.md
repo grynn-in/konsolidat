@@ -15,73 +15,49 @@ Konsolidat uses a **medallion architecture** with 44 dbt models organized in fou
 ## Data Lineage
 
 ```mermaid
-graph TD
-    subgraph "D365 F&O (OData)"
-        OD[15 OData Entities]
+graph LR
+    ERP[ERP Source<br/>15 OData Entities] --> Bronze
+
+    subgraph Bronze["Bronze (14 models)"]
+        direction TB
+        B1[GL Entries & Journals]
+        B2[Accounts & Categories]
+        B3[Entities, FX Rates, Fiscal Cal]
+        B4[Budget & Consolidation]
     end
 
-    subgraph "Bronze Layer (14 models)"
-        B_GL[bronze_general_journal_account_entries]
-        B_JE[bronze_general_journal_entries]
-        B_MA[bronze_main_accounts]
-        B_MC[bronze_main_account_categories]
-        B_LE[bronze_legal_entities]
-        B_FC[bronze_fiscal_calendars]
-        B_FY[bronze_fiscal_calendar_years]
-        B_FD[bronze_financial_dimensions]
-        B_FV[bronze_financial_dimension_values]
-        B_ER[bronze_exchange_rate_currency_pairs]
-        B_ET[bronze_exchange_rate_types]
-        B_BR[bronze_budget_register_entries]
-        B_BT[bronze_budget_transaction_lines]
-        B_CG[bronze_consolidation_account_groups]
-        B_TB[bronze_trial_balance_snapshot]
+    Bronze --> Silver
+
+    subgraph Silver["Silver (8 models)"]
+        direction TB
+        S1[silver_gl_entries]
+        S2[silver_main_accounts]
+        S3[silver_exchange_rates<br/>silver_fiscal_periods]
+        S4[silver_budget_entries]
     end
 
-    subgraph "Silver Layer (8 models)"
-        S_GL[silver_gl_entries]
-        S_MA[silver_main_accounts]
-        S_LE[silver_legal_entities]
-        S_FP[silver_fiscal_periods]
-        S_FD[silver_financial_dimensions]
-        S_ER[silver_exchange_rates]
-        S_BE[silver_budget_entries]
-        S_TB[silver_trial_balance]
+    Silver --> Gold
+
+    subgraph Gold["Gold (22 models)"]
+        direction TB
+        G1[Trial Balance / P&L / BS / YTD]
+        G2[Consolidated TB → IC Elim → FX → FCTB]
+        G3[Allocations & Budgets]
+        G4[Variance Analysis]
     end
 
-    subgraph "Gold Layer (22 models)"
-        G_TB[gold_trial_balance]
-        G_PNL[gold_pnl_by_period]
-        G_BS[gold_balance_sheet]
-        G_ALLOC[gold_allocation_results]
-        G_CTB[gold_consolidated_trial_balance]
-        G_IC[gold_ic_eliminations]
-        G_FX[gold_fx_revaluation]
-        G_FCTB[gold_fully_consolidated_tb]
-        G_VAR[gold_variance_analysis]
-        G_BUD[gold_spread_budget]
-        G_YTD[gold_ytd_trial_balance]
-    end
-
-    OD --> B_GL & B_JE & B_MA & B_LE & B_FC & B_ER & B_BR & B_BT
-
-    B_GL & B_JE --> S_GL
-    B_MA & B_MC --> S_MA
-    B_LE --> S_LE
-    B_FC & B_FY --> S_FP
-    B_FD & B_FV --> S_FD
-    B_ER & B_ET --> S_ER
-    B_BR & B_BT --> S_BE
-    B_TB --> S_TB
-
-    S_GL & S_MA & S_FP --> G_TB
-    G_TB --> G_PNL & G_BS & G_YTD & G_ALLOC
-    G_TB & S_ER --> G_CTB
-    G_CTB --> G_IC & G_FX
-    G_CTB & G_IC & G_FX --> G_FCTB
-    G_TB & G_BUD --> G_VAR
-    S_BE --> G_BUD
+    Gold --> API[Frappe API<br/>=EPM in Excel]
 ```
+
+### Key Lineage Paths
+
+| Path | Flow |
+|------|------|
+| **Reporting** | GL Entries → silver_gl_entries → gold_trial_balance → P&L, BS, YTD |
+| **Consolidation** | Trial Balance + FX Rates → Consolidated TB → IC Elimination → FX Reval → Fully Consolidated TB |
+| **Budgeting** | Budget Entries → silver_budget_entries → gold_spread_budget |
+| **Variance** | Trial Balance + Spread Budget → gold_variance_analysis |
+| **Allocations** | Trial Balance + Allocation Rules (seed) → gold_allocation_results |
 
 ## Layer Descriptions
 
