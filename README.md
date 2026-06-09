@@ -23,6 +23,31 @@ ERP (D365 / SAP / ERPNext)
             → Excel (=EPM formulas)
 ```
 
+## Why Konsolidat?
+
+- **Excel is the interface** — No new software to learn. One formula connects Excel to the analytical warehouse.
+- **Transparent and auditable** — Every transformation is version-controlled SQL. 44 dbt models, 26 automated tests. The code is the documentation.
+- **Open source** — MIT licensed. No vendor lock-in. Full access to every line of code.
+
+## 3-Year Cost of Ownership (~50 users)
+
+| Solution | 3-Year Total |
+|---|---|
+| Tagetik | $200,000 – $500,000 |
+| OneStream | $300,000 – $700,000 |
+| Anaplan | $700,000 – $1,400,000 |
+| **Konsolidat** | **$20,000 – $55,000** |
+
+## Built on Open Source Stack
+
+| Technology | Role |
+|---|---|
+| **ClickHouse** | Columnar analytics warehouse |
+| **Airbyte** | ELT data integration |
+| **dbt Core** | SQL transformations (Medallion Architecture) |
+| **Frappe** | Web framework, API, auth, workflow |
+| **Cube.js** | Semantic layer for metrics and dimensions |
+
 ## Quick Start
 
 ```bash
