@@ -6,12 +6,12 @@ hide:
 
 <div class="ic-hero">
 
-<div class="ic-hero-mark">knsltd</div>
+<div class="ic-hero-mark">KNSLDT</div>
 
 <div class="ic-hero-anim">
   <span class="ic-word ic-word-1">Konsolidat</span>
   <span class="ic-word ic-word-2">Konsolid.at</span>
-  <span class="ic-word ic-word-3">knsdt</span>
+  <span class="ic-word ic-word-3">knsldt</span>
 </div>
 
 <p class="ic-tagline">Open-source Enterprise Performance Management</p>
