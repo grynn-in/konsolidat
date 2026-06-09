@@ -39,7 +39,7 @@ hide:
 
 <div class="ic-pitch" markdown>
 
-For 27 years, CPM vendors have tried to move financial analysis out of Excel and into web browsers. We think they're wrong. Excellent analysis thrives on Excel — not on the web. Konsolidat keeps it there.
+For 27 years, EPM/CPM vendors have tried to move financial analysis out of Excel and into web browsers. We think they're wrong. Excellent analysis thrives on Excel — not on the web. Konsolidat keeps it there.
 
 Multi-entity consolidation, budgeting, allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
 
