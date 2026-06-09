@@ -166,8 +166,8 @@ services:
       CUBEJS_DB_USER: ${CLICKHOUSE_USER:-default}
       CUBEJS_DB_PASS: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
       CUBEJS_DB_NAME: epm_gold
-      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-konsolidat-dev-secret}
-      CUBEJS_DEV_MODE: ${CUBEJS_DEV_MODE:-true}
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:?Run ./deploy.sh to generate CUBEJS_API_SECRET}
+      CUBEJS_DEV_MODE: ${CUBEJS_DEV_MODE:-false}
       CUBEJS_SCHEMA_PATH: /cube/schema
     volumes:
       - ./cube/schema:/cube/schema:ro

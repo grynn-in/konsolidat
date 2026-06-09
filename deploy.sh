@@ -273,7 +273,7 @@ cat > .credentials <<EOF
 Frappe Admin:     Administrator / ${ADMIN_PASSWORD:-admin123}
 MariaDB Root:     root / ${DB_ROOT_PASSWORD:-rootpassword}
 ClickHouse:       ${CLICKHOUSE_USER:-default} / ${CLICKHOUSE_PASSWORD:-open_epm_dev}
-Cube.js Secret:   ${CUBEJS_API_SECRET:-konsolidat-dev-secret}
+Cube.js Secret:   ${CUBEJS_API_SECRET}
 
 URLs:
   Frappe:     http://localhost:${FRAPPE_PORT:-8069}
