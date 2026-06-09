@@ -16,7 +16,6 @@ x-frappe-common: &frappe-common
   environment: &frappe-env
     DB_HOST: mariadb
     DB_PORT: "3306"
-    DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
     REDIS_CACHE_HOST: redis_cache
     REDIS_QUEUE_HOST: redis_queue
     SITE_NAME: ${SITE_NAME:-konsolidat.local}
@@ -117,6 +116,7 @@ services:
     environment:
       <<: *frappe-env
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
     volumes:
       - frappe_sites:/home/frappe/frappe-bench/sites
       - frappe_logs:/home/frappe/frappe-bench/logs
@@ -134,6 +134,12 @@ services:
     command: ["web"]
     ports:
       - "${FRAPPE_PORT:-8069}:8069"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/api/method/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   frappe_worker:
@@ -149,7 +155,7 @@ services:
     restart: unless-stopped
 
   cubejs:
-    image: cubejs/cube:latest
+    image: cubejs/cube:v0.36
     container_name: konsolidat_cubejs
     ports:
       - "${CUBEJS_PORT:-4000}:4000"
@@ -185,7 +191,7 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
     volumes:
-      - ./dbt_project:/dbt_project:ro
+      - ./dbt_project:/dbt_project
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -222,6 +228,7 @@ services:
     entrypoint: ["bash", "/home/frappe/backup/backup.sh"]
     environment:
       <<: *frappe-env
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       BACKUP_DIR: /backups
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
       BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}

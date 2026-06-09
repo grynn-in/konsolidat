@@ -67,10 +67,12 @@ case "${1:-}" in
       info "Restoring ClickHouse tables..."
       for file in "${RESTORE_PATH}/clickhouse/"*.native.gz; do
         basename_noext=$(basename "$file" .native.gz)
-        db=$(echo "$basename_noext" | cut -d'_' -f1-2)
-        table=$(echo "$basename_noext" | cut -d'_' -f3-)
+        # Filename format: db__table.native.gz (double-underscore separator)
+        db="${basename_noext%%__*}"
+        table="${basename_noext#*__}"
         info "  Restoring ${db}.${table}..."
-        gunzip -c "$file" | curl -sf "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/?user=${CLICKHOUSE_USER:-default}&password=${CLICKHOUSE_PASSWORD:-open_epm_dev}" \
+        gunzip -c "$file" | curl -sf "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/" \
+          -u "${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-open_epm_dev}" \
           --data-binary @- -H "X-ClickHouse-Query: INSERT INTO ${db}.${table} FORMAT Native" || true
       done
       ok "ClickHouse restored."

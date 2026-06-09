@@ -1,7 +1,7 @@
 #!/bin/bash
 # Nightly backup script for Konsolidat
 # Backs up: MariaDB, ClickHouse, Frappe files
-set -e
+set -eo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 DATE=$(date +%Y-%m-%d_%H%M)
@@ -11,6 +11,12 @@ RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 mkdir -p "$BACKUP_PATH"
 
 echo "=== Konsolidat Backup — ${DATE} ==="
+
+# Validate required env vars
+if [ -z "${DB_ROOT_PASSWORD:-}" ]; then
+    echo "ERROR: DB_ROOT_PASSWORD is not set. Cannot backup MariaDB."
+    exit 1
+fi
 
 # 1. MariaDB dump
 echo "[1/3] Backing up MariaDB..."
@@ -34,13 +40,15 @@ CH_PASS="${CLICKHOUSE_PASSWORD:-open_epm_dev}"
 
 for db in epm epm_staging epm_bronze epm_silver epm_gold; do
     # Get list of tables
-    tables=$(curl -sf "http://${CH_HOST}:${CH_PORT}/?user=${CH_USER}&password=${CH_PASS}" \
+    tables=$(curl -sf "http://${CH_HOST}:${CH_PORT}/" \
+        -u "${CH_USER}:${CH_PASS}" \
         --data-binary "SELECT name FROM system.tables WHERE database='${db}' FORMAT TabSeparated" 2>/dev/null || echo "")
 
     if [ -n "$tables" ]; then
         mkdir -p "${BACKUP_PATH}/clickhouse"
         for table in $tables; do
-            curl -sf "http://${CH_HOST}:${CH_PORT}/?user=${CH_USER}&password=${CH_PASS}" \
+            curl -sf "http://${CH_HOST}:${CH_PORT}/" \
+                -u "${CH_USER}:${CH_PASS}" \
                 --data-binary "SELECT * FROM ${db}.${table} FORMAT Native" \
                 | gzip > "${BACKUP_PATH}/clickhouse/${db}__${table}.native.gz" 2>/dev/null || true
         done

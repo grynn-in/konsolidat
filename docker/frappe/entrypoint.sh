@@ -13,7 +13,13 @@ MODE="${1:-web}"
 case "$MODE" in
   web)
     echo "Starting Frappe web server on port 8069..."
-    bench serve --port 8069
+    /home/frappe/frappe-bench/env/bin/gunicorn \
+      --bind 0.0.0.0:8069 \
+      --workers ${GUNICORN_WORKERS:-4} \
+      --timeout 120 \
+      --graceful-timeout 30 \
+      --chdir /home/frappe/frappe-bench/sites \
+      frappe.app:application
     ;;
   worker)
     echo "Starting Frappe background worker..."
