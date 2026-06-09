@@ -33,6 +33,10 @@ hide:
     <span class="ic-stat-num">$0</span>
     <span class="ic-stat-label">Vendor Lock-in</span>
   </div>
+  <div class="ic-stat">
+    <span class="ic-stat-num">3</span>
+    <span class="ic-stat-label">Sources (D365/SAP/ERPNext)</span>
+  </div>
 </div>
 
 </div>
