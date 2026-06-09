@@ -134,15 +134,16 @@ code,
 /* ---------- Hero Logo Mark ---------- */
 
 .ic-hero-mark {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: clamp(1.4rem, 3vw, 1.8rem);
-  letter-spacing: 0.15em;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #00BFA5;
   display: inline-block;
-  border: 2.5px solid #00BFA5;
-  padding: 0.3rem 1rem;
-  margin-bottom: 1rem;
+  border: 2px solid #00BFA5;
+  padding: 0.25rem 0.8rem;
+  margin-bottom: 0.8rem;
 }
 
 [data-md-color-scheme="slate"] .ic-hero-mark {
