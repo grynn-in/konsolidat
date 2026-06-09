@@ -1,5 +1,5 @@
 consolidation_group,data_area_id,entity_name,ownership_pct,reporting_currency,consolidation_method
-GROUP_CORP,USMF,Contoso US,100.00,USD,full
-GROUP_CORP,DEMF,Contoso DE,100.00,USD,full
-GROUP_CORP,GBMF,Contoso UK,80.00,USD,full
-GROUP_CORP,JPMF,Contoso JP,51.00,USD,full
+GROUP_CORP,USMF,Contoso US,100,USD,full
+GROUP_CORP,DEMF,Contoso DE,100,USD,full
+GROUP_CORP,GBMF,Contoso UK,80,USD,full
+GROUP_CORP,JPMF,Contoso JP,51,USD,full

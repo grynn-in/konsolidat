@@ -3,12 +3,32 @@ version: 2
 sources:
   - name: epm_staging
     schema: epm_staging
-    description: "Write-back staging tables populated by the FastAPI budget input API"
+    description: "Write-back staging tables populated by the FastAPI budget input API and Frappe konsol app"
     tables:
       - name: budget_input
         description: "Budget/forecast line items submitted via the API"
       - name: scenario_definitions
         description: "Scenario metadata created via the API"
+      - name: consolidation_hierarchy
+        description: "PRD-8: Multi-level consolidation group hierarchy with effective ownership"
+      - name: historical_equity_rates
+        description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
+      - name: ownership_periods
+        description: "PRD-9/11/12: Temporal ownership periods with acquisition and disposal fields"
+      - name: consolidation_adjustments
+        description: "PRD-16: Top-side adjustments with workflow status and auto-reversal"
+      - name: allocation_rules
+        description: "PRD-17/18/19: Allocation rules with method, driver formula fields"
+      - name: allocation_drivers
+        description: "PRD-17: Unified allocation driver values by type, cost center, period"
+      - name: allocation_tiers
+        description: "PRD-20: Tiered allocation rate bands with cap/floor"
+      - name: ic_elimination_rules
+        description: "PRD-15: IC elimination rules with unrealized profit support"
+      - name: ic_balances
+        description: "PRD-15: IC sales and inventory balances between entity pairs"
+      - name: allocation_runs
+        description: "PRD-21: Allocation run metadata for traceability and reversal"
 
   - name: d365_raw
     description: "Raw D365 F&O OData entities landed by Airbyte connector"

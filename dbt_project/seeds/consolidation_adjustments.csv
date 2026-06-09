@@ -1,0 +1,7 @@
+consolidation_group,adjustment_type,journal_id,data_area_id,fiscal_year,fiscal_period,main_account,debit_amount,credit_amount,description,posted_by
+GLOBAL,topside,ADJ-001,GROUP,2024,1,5100,50000.00,0.00,Goodwill amortization - debit,admin
+GLOBAL,topside,ADJ-001,GROUP,2024,1,1800,0.00,50000.00,Goodwill amortization - credit,admin
+GLOBAL,reclassification,ADJ-002,GROUP,2024,1,4200,25000.00,0.00,Reclassify other income to revenue,admin
+GLOBAL,reclassification,ADJ-002,GROUP,2024,1,4100,0.00,25000.00,Reclassify other income to revenue,admin
+GLOBAL,topside,ADJ-003,GROUP,2024,2,5100,50000.00,0.00,Goodwill amortization period 2 - debit,admin
+GLOBAL,topside,ADJ-003,GROUP,2024,2,1800,0.00,50000.00,Goodwill amortization period 2 - credit,admin

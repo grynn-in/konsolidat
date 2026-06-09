@@ -243,3 +243,94 @@ models:
           - not_null
       - name: ytd_amount
         description: "Cumulative sum of amount through fiscal_period"
+
+  # --- PRD-8 through PRD-22 models ---
+
+  - name: gold_consolidation_hierarchy
+    description: "PRD-8: Multi-level consolidation group hierarchy with effective ownership"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: effective_ownership_pct
+        description: "Effective ownership percentage through hierarchy chain"
+
+  - name: gold_equity_method_associates
+    description: "PRD-14: Equity method entries for associates (20-50% ownership)"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: main_account
+        description: "EQ_INCOME or EQ_INVEST"
+      - name: amount
+        description: "Equity income or investment movement amount"
+
+  - name: gold_acquisition_adjustments
+    description: "PRD-11: Step acquisition adjustments — P&L proration and goodwill"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: adjustment_type
+        description: "pnl_proration, goodwill, or fair_value_adjustment"
+      - name: adjustment_amount
+        description: "Amount of the acquisition adjustment"
+
+  - name: gold_disposal_adjustments
+    description: "PRD-12: Disposal gain/loss and CTA recycling"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: adjustment_type
+        description: "disposal_gain_loss or cta_recycling"
+      - name: gain_loss_amount
+        description: "Disposal gain/loss or recycled CTA amount"
+
+  - name: gold_nci_movement_schedule
+    description: "PRD-13: NCI movement schedule with opening/closing reconciliation"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: share_of_profit
+        description: "NCI share of profit for the period"
+
+  - name: gold_ic_reconciliation
+    description: "PRD-15: IC reconciliation — matched vs unmatched balances per entity pair"
+    columns:
+      - name: entity_a
+        tests:
+          - not_null
+      - name: match_status
+        description: "matched or unmatched"
+
+  - name: gold_allocation_audit_trail
+    description: "PRD-21: Allocation audit trail — all runs including reversed"
+    columns:
+      - name: allocation_run_id
+        description: "Run identifier for traceability"
+      - name: run_status
+        description: "Active or Reversed"
+
+  - name: gold_consolidation_waterfall
+    description: "PRD-22: Consolidation waterfall — step-by-step build-up from entity to final"
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: final_amount
+        description: "Sum of all consolidation layers"
+
+  - name: gold_consolidation_journal
+    description: "PRD-22: Unified audit trail of all consolidation journal entries"
+    columns:
+      - name: adjustment_type
+        tests:
+          - not_null
+      - name: journal_id
+        description: "Journal identifier linking to source adjustment"

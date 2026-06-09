@@ -1,0 +1,5 @@
+scenario_id,data_area_id,fiscal_year,main_account,dim_cost_center,dim_department,annual_amount,spread_profile_id,submitted_by
+BUDGET_2025,USMF,2025,6100,SALES,SALES,1200000,EVEN,admin
+BUDGET_2025,USMF,2025,6200,MARKETING,MARKETING,600000,SEASONAL_RETAIL,admin
+BUDGET_2025,USMF,2025,7100,IT,IT,360000,EVEN,admin
+BUDGET_2025,USMF,2025,4100,SALES,SALES,2400000,SEASONAL_RETAIL,admin

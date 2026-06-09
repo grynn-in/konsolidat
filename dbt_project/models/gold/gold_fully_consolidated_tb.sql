@@ -6,7 +6,9 @@
 }}
 
 {# PRD-5 R4: Unified consolidated trial balance
-   Unions: entity balances + IC eliminations + CTA + topside adjustments #}
+   Unions: entity balances + IC eliminations + CTA + topside adjustments
+   PRD-14: + Layer 5: equity method entries
+   PRD-11/12: + Layer 6: acquisition/disposal adjustments #}
 
 {# Layer 1: Entity translated balances #}
 with entity_balances as (
@@ -92,6 +94,56 @@ topside as (
     from {{ ref('gold_consolidation_adjustments') }}
 ),
 
+{# Layer 5: Equity method entries (PRD-14) #}
+equity_method as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings() }},
+        reporting_currency,
+        amount,
+        'equity_method' as adjustment_type,
+        journal_id
+    from {{ ref('gold_equity_method_associates') }}
+),
+
+{# Layer 6: Acquisition & disposal adjustments (PRD-11/12) #}
+acquisition_disposal as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        adjustment_amount as amount,
+        adjustment_type,
+        concat('ACQ_', data_area_id) as journal_id
+    from {{ ref('gold_acquisition_adjustments') }}
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        'DISPOSAL' as main_account,
+        'Disposal gain/loss' as account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        gain_loss_amount as amount,
+        adjustment_type,
+        concat('DSP_', data_area_id) as journal_id
+    from {{ ref('gold_disposal_adjustments') }}
+),
+
 {# Union all layers #}
 all_layers as (
     select * from entity_balances
@@ -101,6 +153,10 @@ all_layers as (
     select * from cta_entries
     union all
     select * from topside
+    union all
+    select * from equity_method
+    union all
+    select * from acquisition_disposal
 )
 
 select * from all_layers

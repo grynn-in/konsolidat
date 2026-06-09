@@ -21,6 +21,8 @@ select
     -- Classification flags for filtering
     account_type in ('0', '1', '2', 'ProfitAndLoss', 'Revenue', 'Expense') as is_pnl,
     account_type in ('3', '4', '5', '6', 'BalanceSheet', 'Asset', 'Liability', 'Equity') as is_balance_sheet,
+    -- PRD-10: Equity flag for historical rate translation (IAS 21)
+    account_type in ('6', 'Equity') as is_equity,
     main_account_category,
     debit_credit_default,
     chart_of_accounts,

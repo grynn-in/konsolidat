@@ -1,0 +1,25 @@
+profile_id,profile_name,fiscal_period,weight
+EVEN,Even Spread,1,1.0
+EVEN,Even Spread,2,1.0
+EVEN,Even Spread,3,1.0
+EVEN,Even Spread,4,1.0
+EVEN,Even Spread,5,1.0
+EVEN,Even Spread,6,1.0
+EVEN,Even Spread,7,1.0
+EVEN,Even Spread,8,1.0
+EVEN,Even Spread,9,1.0
+EVEN,Even Spread,10,1.0
+EVEN,Even Spread,11,1.0
+EVEN,Even Spread,12,1.0
+SEASONAL_RETAIL,Retail Seasonal,1,0.6
+SEASONAL_RETAIL,Retail Seasonal,2,0.5
+SEASONAL_RETAIL,Retail Seasonal,3,0.7
+SEASONAL_RETAIL,Retail Seasonal,4,0.8
+SEASONAL_RETAIL,Retail Seasonal,5,0.9
+SEASONAL_RETAIL,Retail Seasonal,6,1.0
+SEASONAL_RETAIL,Retail Seasonal,7,0.8
+SEASONAL_RETAIL,Retail Seasonal,8,0.9
+SEASONAL_RETAIL,Retail Seasonal,9,1.1
+SEASONAL_RETAIL,Retail Seasonal,10,1.2
+SEASONAL_RETAIL,Retail Seasonal,11,1.8
+SEASONAL_RETAIL,Retail Seasonal,12,2.5

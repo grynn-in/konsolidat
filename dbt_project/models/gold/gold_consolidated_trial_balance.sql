@@ -6,7 +6,10 @@
 }}
 
 {# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL
-   PRD-4: Minority interest — nci_amount column for partial ownership #}
+   PRD-4: Minority interest — nci_amount column for partial ownership
+   PRD-8: Multi-level hierarchy — effective_ownership from hierarchy or seed fallback
+   PRD-9: Temporal ownership — period-level ownership from ownership_periods staging
+   PRD-10: Historical equity rates — equity accounts use historical rate (IAS 21) #}
 
 with entity_tb as (
     select
@@ -18,6 +21,8 @@ with entity_tb as (
         tb.account_type_name as account_type_name,
         tb.is_balance_sheet as is_balance_sheet,
         tb.is_pnl as is_pnl,
+        {# PRD-10: Equity classification for historical rate lookup #}
+        case when tb.account_type_name in ('Equity', 'Stockholders equity') then 1 else 0 end as is_equity,
         {{ dim_select(prefix='tb.') }},
         tb.period_net_amount as local_amount,
         le.accounting_currency as accounting_currency,
@@ -27,15 +32,62 @@ with entity_tb as (
         on tb.data_area_id = le.data_area
 ),
 
+{# PRD-9: Temporal ownership periods from staging — range lookup per entity per period #}
+ownership_staging as (
+    select
+        consolidation_group,
+        data_area_id,
+        effective_date,
+        end_date,
+        ownership_pct,
+        consolidation_method
+    from {{ source('epm_staging', 'ownership_periods') }}
+),
+
+{# PRD-8: Hierarchy-based ownership — prefer hierarchy, fall back to seed #}
+hierarchy_ownership as (
+    select
+        h.consolidation_group,
+        h.data_area_id,
+        h.effective_ownership_pct as hierarchy_ownership_pct
+    from {{ ref('gold_consolidation_hierarchy') }} as h
+),
+
+{# Resolve ownership: temporal staging → hierarchy → seed fallback #}
+entity_ownership as (
+    select
+        cg.consolidation_group as consolidation_group,
+        cg.data_area_id as data_area_id,
+        cg.reporting_currency as reporting_currency,
+        cg.consolidation_method as seed_method,
+        cg.ownership_pct as seed_ownership_pct,
+        coalesce(ho.hierarchy_ownership_pct, cg.ownership_pct) as base_ownership_pct
+    from {{ ref('consolidation_groups') }} as cg
+    left join hierarchy_ownership as ho
+        on cg.consolidation_group = ho.consolidation_group
+        and cg.data_area_id = ho.data_area_id
+),
+
+{# PRD-10: Historical equity rates from staging #}
+historical_rates as (
+    select
+        consolidation_group,
+        data_area_id,
+        main_account,
+        rate_date,
+        historical_rate
+    from {{ source('epm_staging', 'historical_equity_rates') }}
+),
+
 {# Distinct currency-pair × period combos we need rates for #}
 rate_keys as (
     select distinct
         etb.accounting_currency as from_currency,
-        cg.reporting_currency as to_currency,
+        eo.reporting_currency as to_currency,
         etb.period_date
     from entity_tb as etb
-    inner join {{ ref('consolidation_groups') }} as cg
-        on etb.data_area_id = cg.data_area_id
+    inner join entity_ownership as eo
+        on etb.data_area_id = eo.data_area_id
 ),
 
 all_rates as (
@@ -121,7 +173,7 @@ rate_lookup as (
 
 consolidated as (
     select
-        cg.consolidation_group as consolidation_group,
+        eo.consolidation_group as consolidation_group,
         etb.data_area_id as data_area_id,
         etb.fiscal_year as fiscal_year,
         etb.fiscal_period as fiscal_period,
@@ -130,45 +182,83 @@ consolidated as (
         etb.account_type_name as account_type_name,
         etb.is_balance_sheet as is_balance_sheet,
         etb.is_pnl as is_pnl,
+        etb.is_equity as is_equity,
         {{ dim_select(prefix='etb.') }},
         etb.local_amount as local_amount,
         etb.accounting_currency as accounting_currency,
-        cg.reporting_currency as reporting_currency,
-        cg.ownership_pct / 100.0 as ownership_pct,
-        cg.consolidation_method as consolidation_method,
+        eo.reporting_currency as reporting_currency,
+        {# PRD-9: Temporal ownership — use staging period match, else hierarchy/seed #}
+        coalesce(
+            os.ownership_pct,
+            eo.base_ownership_pct
+        ) / 100.0 as ownership_pct,
+        coalesce(os.consolidation_method, eo.seed_method) as consolidation_method,
         rl.closing_rate as closing_rate,
         rl.average_rate as average_rate,
-        {# PRD-1: Translation rate depends on account type #}
+        {# PRD-10: Historical equity rate lookup #}
+        hr.historical_rate as historical_equity_rate,
+        {# PRD-1 + PRD-10: Translation rate depends on account type
+           Equity → historical rate (fallback closing), BS → closing, PnL → average #}
         case
+            when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
             when etb.is_balance_sheet = 1 then rl.closing_rate
             when etb.is_pnl = 1 then rl.average_rate
             else rl.closing_rate
         end as translation_rate,
         {# Translated amount = local x translation_rate #}
         etb.local_amount * case
+            when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
             when etb.is_balance_sheet = 1 then rl.closing_rate
             when etb.is_pnl = 1 then rl.average_rate
             else rl.closing_rate
         end as translated_amount,
         {# PRD-4: Group amount = translated x ownership_pct #}
         etb.local_amount * case
+            when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
             when etb.is_balance_sheet = 1 then rl.closing_rate
             when etb.is_pnl = 1 then rl.average_rate
             else rl.closing_rate
-        end * (cg.ownership_pct / 100.0) as group_amount,
+        end * (coalesce(os.ownership_pct, eo.base_ownership_pct) / 100.0) as group_amount,
         {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
         etb.local_amount * case
+            when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
             when etb.is_balance_sheet = 1 then rl.closing_rate
             when etb.is_pnl = 1 then rl.average_rate
             else rl.closing_rate
-        end * (1.0 - cg.ownership_pct / 100.0) as nci_amount
+        end * (1.0 - coalesce(os.ownership_pct, eo.base_ownership_pct) / 100.0) as nci_amount
     from entity_tb as etb
-    inner join {{ ref('consolidation_groups') }} as cg
-        on etb.data_area_id = cg.data_area_id
+    inner join entity_ownership as eo
+        on etb.data_area_id = eo.data_area_id
+    {# PRD-9: Temporal ownership — period_date falls within [effective_date, end_date] #}
+    left join ownership_staging as os
+        on eo.consolidation_group = os.consolidation_group
+        and etb.data_area_id = os.data_area_id
+        and etb.period_date >= os.effective_date
+        and etb.period_date <= os.end_date
     left join rate_lookup as rl
         on etb.accounting_currency = rl.from_currency
-        and cg.reporting_currency = rl.to_currency
+        and eo.reporting_currency = rl.to_currency
         and etb.period_date = rl.period_date
+    {# PRD-10: Historical equity rate — latest rate_date <= period_date #}
+    left join (
+        select
+            consolidation_group,
+            data_area_id,
+            main_account,
+            rate_date,
+            historical_rate,
+            row_number() over (
+                partition by consolidation_group, data_area_id, main_account
+                order by rate_date desc
+            ) as rn
+        from {{ source('epm_staging', 'historical_equity_rates') }}
+    ) as hr
+        on eo.consolidation_group = hr.consolidation_group
+        and etb.data_area_id = hr.data_area_id
+        and etb.main_account = hr.main_account
+        and hr.rn = 1
+    {# PRD-14: Exclude equity-method entities — handled in separate model #}
+    where coalesce(os.consolidation_method, eo.seed_method) != 'equity'
 )
 
 select * from consolidated

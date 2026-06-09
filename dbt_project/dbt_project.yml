@@ -129,3 +129,11 @@ seeds:
         credit_amount: "Decimal(18,2)"
         description: "String"
         posted_by: "String"
+    test_consolidation_hierarchy:
+      +column_types:
+        consolidation_group: "String"
+        data_area_id: "String"
+        parent_group: "String"
+        hierarchy_level: "UInt8"
+        effective_ownership_pct: "Decimal(5,2)"
+        path: "String"

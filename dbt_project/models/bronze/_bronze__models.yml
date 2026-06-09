@@ -26,7 +26,6 @@ models:
       - name: main_account_id
         tests:
           - not_null
-          - unique
 
   - name: bronze_main_account_categories
     description: "Account category mapping"

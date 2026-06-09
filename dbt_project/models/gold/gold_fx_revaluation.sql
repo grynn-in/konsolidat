@@ -23,6 +23,7 @@ with pnl_cta as (
         any(average_rate) as sample_average_rate
     from {{ ref('gold_consolidated_trial_balance') }}
     where is_pnl = 1
+      and is_equity = 0  {# PRD-10: Exclude equity-at-historical-rate from CTA #}
     group by
         consolidation_group,
         data_area_id,

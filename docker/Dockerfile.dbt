@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    dbt-core \
+    dbt-clickhouse
+
+COPY dbt_project/ /app/
+COPY scripts/dbt-init.sh /app/dbt-init.sh
+RUN chmod +x /app/dbt-init.sh
+
+ENTRYPOINT ["/app/dbt-init.sh"]

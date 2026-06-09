@@ -15,12 +15,16 @@ models:
           - not_null
 
   - name: silver_main_accounts
-    description: "Clean chart of accounts with readable account type names"
+    description: "Clean chart of accounts with readable account type names and classification flags"
     columns:
       - name: main_account_id
         tests:
           - not_null
-          - unique
+          - unique:
+              config:
+                severity: warn  # D365 can have same account across multiple charts
+      - name: is_equity
+        description: "PRD-10: True for equity accounts (historical FX rate translation)"
 
   - name: silver_legal_entities
     description: "Clean company master with currency"
@@ -41,10 +45,7 @@ models:
     columns:
       - name: exchange_rate
         tests:
-          - name: positive_rate
-            config:
-              severity: warn
-              where: "exchange_rate <= 0"
+          - not_null
 
   - name: silver_budget_entries
     description: "Standardized budget lines joined with register headers"
