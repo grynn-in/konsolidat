@@ -128,15 +128,35 @@ Total ongoing: **~$33K–58K/year** vs. $150K–350K/year for license fees alone
 
 No proprietary runtimes. No vendor SDK. No Java applets from 2008. Just tools your engineers already know:
 
-```mermaid
-graph LR
-    D365[D365 F&O] -->|OData| Airbyte[Airbyte]
-    Airbyte -->|ELT| CH[(ClickHouse)]
-    CH -->|SQL| dbt[dbt Core]
-    dbt --> Gold[22 Gold Models]
-    Gold --> Frappe[Frappe API]
-    Frappe --> Excel[Excel =EPM]
-```
+<div class="ic-built-on" style="border-top: none;">
+  <div class="ic-logo-track">
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FADB14;">CH</div>
+      <strong>ClickHouse</strong>
+      <span>Columnar Analytics</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #615EFF;">ab</div>
+      <strong>Airbyte</strong>
+      <span>ELT Data Integration</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF694A;">dbt</div>
+      <strong>dbt Core</strong>
+      <span>SQL Transformations</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #0089FF;">F</div>
+      <strong>Frappe</strong>
+      <span>Web Framework & API</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
+      <strong>Cube</strong>
+      <span>Semantic Layer</span>
+    </div>
+  </div>
+</div>
 
 | Component | Why This One |
 |-----------|-------------|
@@ -144,6 +164,7 @@ graph LR
 | **dbt** | SQL transformations as code. Version-controlled, testable, reviewable. Your consolidation logic is in Git, not a vendor black box. |
 | **Frappe** | Python web framework with built-in auth, roles, and REST API. No separate auth service, no API gateway, no token server. |
 | **Airbyte** | Open-source ELT. D365 OData connector with `cross_company=true`. Full extraction in one sync. |
+| **Cube** | Semantic layer for metrics and dimensions. Consistent definitions across Excel, API, and dashboards. |
 | **Excel + VBA** | The interface your finance team chose for themselves 30 years ago. We're not fighting it — we're powering it. |
 
 Every component is replaceable. Don't like Frappe? The API is 200 lines of Python. Don't like Airbyte? Any tool that writes to ClickHouse works. Don't like VBA? The REST API is standard HTTP JSON.
