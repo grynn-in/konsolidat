@@ -35,6 +35,10 @@ build/
 # Docker
 docker/volumes/
 
+# Deployment
+.credentials
+backups/
+
 # Claude memory (keep structure, ignore logs)
 .claude/memory/lossless/
 .claude/memory/cache/

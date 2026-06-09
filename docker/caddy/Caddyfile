@@ -1,0 +1,13 @@
+{$SITE_DOMAIN:localhost} {
+    reverse_proxy frappe_backend:8069
+    encode gzip
+
+    handle /api/method/konsol.cube_proxy/* {
+        reverse_proxy cubejs:4000
+    }
+}
+
+# Cube.js playground (optional, disable in production)
+{$SITE_DOMAIN:localhost}:4443 {
+    reverse_proxy cubejs:4000
+}

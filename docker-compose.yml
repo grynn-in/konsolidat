@@ -1,11 +1,91 @@
+# =============================================================================
+# Konsolidat — One-Click Deployment
+# =============================================================================
+# Usage:  ./deploy.sh              (first time)
+#         docker compose up -d     (subsequent starts)
+#         docker compose down      (stop all)
+# =============================================================================
+
+x-frappe-common: &frappe-common
+  build:
+    context: ./docker/frappe
+    args:
+      FRAPPE_BRANCH: ${FRAPPE_BRANCH:-version-15}
+      KONSOL_REPO: ${KONSOL_REPO:-https://github.com/grynn-in/konsol.git}
+      KONSOL_BRANCH: ${KONSOL_BRANCH:-main}
+  environment: &frappe-env
+    DB_HOST: mariadb
+    DB_PORT: "3306"
+    REDIS_CACHE_HOST: redis_cache
+    REDIS_QUEUE_HOST: redis_queue
+    SITE_NAME: ${SITE_NAME:-konsolidat.local}
+    CLICKHOUSE_HOST: clickhouse
+    CLICKHOUSE_PORT: "8123"
+    CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+    # dbt config (for pipeline runner)
+    DBT_PROJECT_DIR: /home/frappe/dbt_project
+  volumes:
+    - frappe_sites:/home/frappe/frappe-bench/sites
+    - frappe_logs:/home/frappe/frappe-bench/logs
+    - ./dbt_project:/home/frappe/dbt_project:ro
+  depends_on:
+    mariadb:
+      condition: service_healthy
+    redis_cache:
+      condition: service_healthy
+    redis_queue:
+      condition: service_healthy
+    clickhouse:
+      condition: service_healthy
+
 services:
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+  mariadb:
+    image: mariadb:10.11
+    container_name: konsolidat_mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis_cache:
+    image: redis:7-alpine
+    container_name: konsolidat_redis_cache
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis_queue:
+    image: redis:7-alpine
+    container_name: konsolidat_redis_queue
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
-    container_name: open_epm_clickhouse
+    container_name: konsolidat_clickhouse
     ports:
-      - "8123:8123"   # HTTP
-      - "9000:9000"   # Native
-      - "15432:15432" # PostgreSQL wire protocol (Excel/ODBC)
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"    # HTTP API
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"  # Native protocol
+      - "${EXCEL_ODBC_PORT:-15432}:15432"       # PostgreSQL wire (Excel/ODBC)
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
@@ -24,7 +104,147 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # One-shot: Site setup (runs once, then exits)
+  # ---------------------------------------------------------------------------
+  configurator:
+    <<: *frappe-common
+    container_name: konsolidat_configurator
+    entrypoint: ["bash", "/home/frappe/configurator/init.sh"]
+    environment:
+      <<: *frappe-env
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      - frappe_sites:/home/frappe/frappe-bench/sites
+      - frappe_logs:/home/frappe/frappe-bench/logs
+      - ./docker/configurator/init.sh:/home/frappe/configurator/init.sh:ro
+    restart: "no"
+    profiles:
+      - setup
+
+  # ---------------------------------------------------------------------------
+  # Application
+  # ---------------------------------------------------------------------------
+  frappe_backend:
+    <<: *frappe-common
+    container_name: konsolidat_backend
+    command: ["web"]
+    ports:
+      - "${FRAPPE_PORT:-8069}:8069"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069/api/method/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  frappe_worker:
+    <<: *frappe-common
+    container_name: konsolidat_worker
+    command: ["worker"]
+    restart: unless-stopped
+
+  frappe_scheduler:
+    <<: *frappe-common
+    container_name: konsolidat_scheduler
+    command: ["scheduler"]
+    restart: unless-stopped
+
+  cubejs:
+    image: cubejs/cube:v0.36
+    container_name: konsolidat_cubejs
+    ports:
+      - "${CUBEJS_PORT:-4000}:4000"
+    environment:
+      CUBEJS_DB_TYPE: clickhouse
+      CUBEJS_DB_HOST: clickhouse
+      CUBEJS_DB_PORT: "8123"
+      CUBEJS_DB_USER: ${CLICKHOUSE_USER:-default}
+      CUBEJS_DB_PASS: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+      CUBEJS_DB_NAME: epm_gold
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:?Run ./deploy.sh to generate CUBEJS_API_SECRET}
+      CUBEJS_DEV_MODE: ${CUBEJS_DEV_MODE:-false}
+      CUBEJS_SCHEMA_PATH: /cube/schema
+    volumes:
+      - ./cube/schema:/cube/schema:ro
+      - ./cube/views:/cube/views:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # One-shot: dbt seed + build (runs once after setup, then exits)
+  # ---------------------------------------------------------------------------
+  dbt_init:
+    image: ghcr.io/dbt-labs/dbt-clickhouse:latest
+    container_name: konsolidat_dbt_init
+    working_dir: /dbt_project
+    command: ["build", "--profiles-dir", "/dbt_project", "--project-dir", "/dbt_project"]
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+    volumes:
+      - ./dbt_project:/dbt_project
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - setup
+
+  # ---------------------------------------------------------------------------
+  # Reverse proxy (auto-SSL when domain is set)
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: konsolidat_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frappe_backend
+      - cubejs
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Nightly backup (runs via cron label or docker compose run)
+  # ---------------------------------------------------------------------------
+  backup:
+    <<: *frappe-common
+    container_name: konsolidat_backup
+    entrypoint: ["bash", "/home/frappe/backup/backup.sh"]
+    environment:
+      <<: *frappe-env
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+    volumes:
+      - frappe_sites:/home/frappe/frappe-bench/sites:ro
+      - ./docker/backup/backup.sh:/home/frappe/backup/backup.sh:ro
+      - ${BACKUP_PATH:-./backups}:/backups
+    restart: "no"
+    profiles:
+      - backup
 
 volumes:
+  mariadb_data:
   clickhouse_data:
   clickhouse_logs:
+  frappe_sites:
+  frappe_logs:
+  caddy_data:
+  caddy_config:
