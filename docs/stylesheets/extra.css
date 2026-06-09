@@ -599,6 +599,55 @@ code,
   padding: 1rem 2.5rem;
 }
 
+/* ---------- Footer ---------- */
+
+.md-footer {
+  background: var(--ic-ink);
+  color: var(--ic-bg);
+  border-top: 2.5px solid var(--ic-accent);
+}
+
+.md-footer-meta {
+  background: transparent;
+}
+
+.md-footer-meta__inner {
+  padding: 1.5rem 1rem;
+}
+
+.md-copyright {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: rgba(239, 235, 224, 0.6);
+}
+
+.md-copyright a {
+  color: #00BFA5;
+}
+
+.md-copyright a:hover {
+  color: #64FFDA;
+}
+
+.md-social {
+  margin: 0;
+  padding: 0;
+}
+
+.md-social__link svg {
+  fill: rgba(239, 235, 224, 0.6);
+  transition: fill 0.15s ease;
+}
+
+.md-social__link:hover svg {
+  fill: #00BFA5;
+}
+
+[data-md-color-scheme="slate"] .md-footer {
+  background: #0f0f1e;
+}
+
 /* ---------- Hide TOC on index page ---------- */
 
 .md-typeset [hidden] {

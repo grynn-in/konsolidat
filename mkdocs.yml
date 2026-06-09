@@ -29,6 +29,17 @@ theme:
     - search.highlight
     - content.code.copy
 
+copyright: >
+  MIT License &copy; 2024 <a href="https://github.com/grynn-in">grynn-in</a>.
+  All rights reserved. Built with <a href="https://claude.ai">Claude Code</a>.
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/grynn-in/konsolidat
+    - icon: fontawesome/solid/globe
+      link: https://konsolid.at
+
 extra_css:
   - stylesheets/extra.css
 
