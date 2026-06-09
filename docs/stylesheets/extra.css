@@ -109,7 +109,7 @@ code,
   text-transform: uppercase;
   color: #00BFA5;
   border: 2.5px solid #00BFA5;
-  padding: 0.25rem 0.6rem;
+  padding: 0.35rem 0.6rem;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -121,8 +121,8 @@ code,
 .ic-hero-mark::before {
   content: "";
   display: inline-block;
-  width: 1rem;
-  height: 1rem;
+  width: 0.85rem;
+  height: 0.85rem;
   margin-right: 0.35rem;
   flex-shrink: 0;
   background: currentColor;
