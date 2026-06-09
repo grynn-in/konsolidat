@@ -1,4 +1,4 @@
-# Konsolidat [konsolid.at](https://konsolid.at)
+# [konsolid.at](https://konsolid.at)
 
 Open-source Enterprise Performance Management. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
 
