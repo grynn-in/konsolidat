@@ -136,14 +136,35 @@ graph LR
 
 </div>
 
-<div class="ic-stack">
-  <code>D365 F&O</code>
-  <code>Airbyte</code>
-  <code>ClickHouse</code>
-  <code>dbt Core</code>
-  <code>Frappe</code>
-  <code>Excel VBA</code>
-  <code>Office.js</code>
+<div class="ic-built-on">
+  <p class="ic-built-on-label">Built On</p>
+  <div class="ic-logo-track">
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FADB14;">CH</div>
+      <strong>ClickHouse</strong>
+      <span>Columnar Analytics</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #615EFF;">ab</div>
+      <strong>Airbyte</strong>
+      <span>ELT Data Integration</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF694A;">dbt</div>
+      <strong>dbt Core</strong>
+      <span>SQL Transformations</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #0089FF;">F</div>
+      <strong>Frappe</strong>
+      <span>Web Framework & API</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
+      <strong>Cube</strong>
+      <span>Semantic Layer</span>
+    </div>
+  </div>
 </div>
 
 ## vs. Commercial CPM

@@ -343,6 +343,71 @@ code,
   color: var(--ic-ink);
 }
 
+/* ---------- Built On — Logo Slider ---------- */
+
+.ic-built-on {
+  text-align: center;
+  padding: 2rem 1rem;
+  border-top: 1.5px solid var(--ic-border);
+  border-bottom: 1.5px solid var(--ic-border);
+  margin: 2rem 0;
+  overflow: hidden;
+}
+
+.ic-built-on-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--ic-soft);
+  margin: 0 0 1.5rem;
+}
+
+.ic-logo-track {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.ic-logo-card {
+  text-align: center;
+  padding: 1rem 1.2rem;
+  border: 1.5px solid var(--ic-border-strong);
+  min-width: 140px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ic-logo-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ic-accent);
+}
+
+.ic-logo-mark {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.ic-logo-card strong {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--ic-ink);
+}
+
+.ic-logo-card span {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ic-soft);
+  display: block;
+}
+
 /* ---------- Nav Grid ---------- */
 
 .ic-nav-grid {
