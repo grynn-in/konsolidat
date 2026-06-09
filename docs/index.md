@@ -6,7 +6,7 @@ hide:
 
 <div class="ic-hero">
 
-<div class="ic-hero-mark">kons</div>
+<div class="ic-hero-mark">knsltd</div>
 
 <div class="ic-hero-anim">
   <span class="ic-word ic-word-1">Konsolidat</span>
