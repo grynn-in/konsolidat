@@ -31,6 +31,17 @@ konsolidat/
 
 The Frappe/Konsol app lives in a separate repository, typically at `~/frappe-bench/apps/konsol/`.
 
+## Architecture
+
+```mermaid
+graph LR
+    ERP[ERP System<br/>D365 / SAP / ERPNext] -->|Airbyte| CH[(ClickHouse<br/>Columnar DW)]
+    CH -->|dbt Core| Medal[Medallion Architecture<br/>Bronze → Silver → Gold]
+    Medal -->|Cube.js| Cube[Semantic Layer<br/>Metrics & Dimensions]
+    Cube -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
+    Frappe -->|HTTP JSON| Excel[Excel<br/>=EPM formulas]
+```
+
 ## Technology Stack
 
 | Layer | Technology | Version |

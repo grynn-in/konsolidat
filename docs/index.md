@@ -4,9 +4,15 @@ hide:
   - navigation
 ---
 
-<div class="ic-hero" markdown>
+<div class="ic-hero">
 
-# Konsolidat
+<div class="ic-hero-mark">kons</div>
+
+<div class="ic-hero-anim">
+  <span class="ic-word ic-word-1">Konsolidat</span>
+  <span class="ic-word ic-word-2">Konsolid.at</span>
+  <span class="ic-word ic-word-3">knsdt</span>
+</div>
 
 <p class="ic-tagline">Open-source Enterprise Performance Management</p>
 

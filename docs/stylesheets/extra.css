@@ -131,6 +131,83 @@ code,
   margin-bottom: 2.5rem;
 }
 
+/* ---------- Hero Logo Mark ---------- */
+
+.ic-hero-mark {
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #00BFA5;
+  display: inline-block;
+  border: 2.5px solid #00BFA5;
+  padding: 0.3rem 1rem;
+  margin-bottom: 1rem;
+}
+
+[data-md-color-scheme="slate"] .ic-hero-mark {
+  color: #64FFDA;
+  border-color: #64FFDA;
+}
+
+/* ---------- Hero Animation ---------- */
+
+.ic-hero-anim {
+  position: relative;
+  height: clamp(3rem, 7vw, 4.5rem);
+  margin: 0 0 0.3rem;
+  overflow: hidden;
+}
+
+.ic-word {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ic-ink);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.ic-word-1 {
+  animation: heroWord1 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.ic-word-2 {
+  animation: heroWord2 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.ic-word-3 {
+  animation: heroWord3 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes heroWord1 {
+  0%       { opacity: 0; transform: translate(-50%, -30%); }
+  4%       { opacity: 1; transform: translate(-50%, -50%); }
+  30%      { opacity: 1; transform: translate(-50%, -50%); }
+  35%      { opacity: 0; transform: translate(-50%, -70%); }
+  100%     { opacity: 0; }
+}
+
+@keyframes heroWord2 {
+  0%, 33%  { opacity: 0; transform: translate(-50%, -30%); }
+  37%      { opacity: 1; transform: translate(-50%, -50%); }
+  63%      { opacity: 1; transform: translate(-50%, -50%); }
+  68%      { opacity: 0; transform: translate(-50%, -70%); }
+  100%     { opacity: 0; }
+}
+
+@keyframes heroWord3 {
+  0%, 66%  { opacity: 0; transform: translate(-50%, -30%); }
+  70%      { opacity: 1; transform: translate(-50%, -50%); }
+  96%      { opacity: 1; transform: translate(-50%, -50%); }
+  100%     { opacity: 0; transform: translate(-50%, -70%); }
+}
+
 .ic-hero h1 {
   font-family: 'Archivo Black', sans-serif;
   font-size: clamp(2.4rem, 6vw, 4rem);
