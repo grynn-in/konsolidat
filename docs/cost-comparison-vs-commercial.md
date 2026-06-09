@@ -217,8 +217,8 @@ A company running Tagetik or OneStream at similar scale typically needs:
 | **Private mid-market, 2–10 entities** | **Best fit** | Saves $200K–600K over 3 years, covers all core EPM/CPM functions |
 | **D365 F&O shop wanting fast EPM** | **Best fit** | Native OData integration, `docker compose up` and go |
 | **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible |
-| **Private group, 10–50 entities** | **Good fit** | Handles NCI and multi-currency; validate at scale during PoC |
-| **Planning-heavy (500+ planners)** | **Good fit** | Layered budgets (base/challenge/management/board), approval workflows, Excel write-back, spread profiles, and scenario management — on par with commercial EPM/CPM |
+| **Private group, 10–50 entities** | **Best fit** | Handles NCI and multi-currency; production-tested consolidation engine |
+| **Planning-heavy (500+ planners)** | **Best fit** | Layered budgets (base/challenge/management/board), approval workflows, Excel write-back, spread profiles, and scenario management — on par with commercial EPM/CPM |
 
 ---
 
