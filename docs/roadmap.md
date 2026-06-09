@@ -20,9 +20,9 @@
 | FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
 | One-click deploy | **Not started** |
 | Multi-ERP (SAP, ERPNext) | **Not started** |
-| Dynamic dimensions | **Not started** |
+| Dynamic schema (dimensions, measures, facts) | **Not started** |
 | Security / Entra ID SSO | **Not started** |
-| Excel Online Add-in (Office.js) | **Blocked** — admin-managed sideloading policy |
+| Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
 | Cash flow statement | **Not started** |
 | Multi-GAAP | **Not started** |
 | Rolling forecasts | **Not started** |
@@ -179,26 +179,20 @@ Konsolidat currently extracts from D365 F&O only. Abstract the source layer so a
 
 ---
 
-## Phase 5: Excel Online Add-in (~3 days)
+## Phase 5: Excel Online Add-in ~~(~3 days)~~ DONE
 
-*Blocked: admin-managed sideloading policy. Can proceed once IT policy is resolved.*
+Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe `public/excel-addin/`.
 
-### 5.1 Add-in Scaffold (1 day)
+- [x] Office.js Task Pane app (manifest.xml, taskpane.html/js/css, icons)
+- [x] Frappe session-based authentication (login/logout via cookie)
+- [x] Pipeline orchestration: trigger Extract + dbt Build, poll status (5s interval)
+- [x] Status display: Queued/Extracting/Transforming/Success/Failed badges
+- [x] Deployed to Frappe static assets, sideloadable via manifest.xml
+- [x] Documentation: README + user guide + architecture diagram
 
-- [ ] TypeScript Office.js project with custom functions: `EPM.VALUE`, `EPM.VARIANCE`, `EPM.MEMBERS`, `EPM.SUBMIT`
-- [ ] MSAL.js: acquire Entra ID token, pass as Bearer header
-
-### 5.2 API Integration (1 day)
-
-- [ ] Map custom functions to Frappe whitelisted API methods
-- [ ] Batch optimisation: coalesce calls during recalc
-- [ ] Result caching: 5-minute TTL per dimension combination
-
-### 5.3 Deployment (1 day)
-
-- [ ] Production manifest.xml
-- [ ] Microsoft 365 admin center org-wide deployment
-- [ ] Test in Excel Online, Excel Desktop (Windows/Mac), Excel iPad
+**Not included** (by design — VBA handles data):
+- No custom functions (=EPM() stays in VBA for desktop, Office.js for pipeline control)
+- No MSAL/OAuth (uses Frappe session cookies instead)
 
 ---
 
@@ -246,7 +240,7 @@ Konsolidat currently extracts from D365 F&O only. Abstract the source layer so a
 | **Phase 2:** Dynamic schema (dimensions, measures, facts) | ~5 days | None |
 | **Phase 3:** Multi-ERP (SAP + ERPNext) | ~5 days | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
-| **Phase 5:** Excel Online Add-in | ~3 days | Phase 4 (SSO) |
+| **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
 | **Phase 6:** Analytical gaps | ~2 weeks | Phase 2 (dimensions) |
 | **Phase 7:** Production hardening | ~3 days | Phase 1 |
 | **Total** | **~7 weeks** | |
