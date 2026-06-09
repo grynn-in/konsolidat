@@ -218,7 +218,7 @@ A company running Tagetik or OneStream at similar scale typically needs:
 | **D365 F&O shop wanting fast EPM** | **Best fit** | Native OData integration, `docker compose up` and go |
 | **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible |
 | **Private group, 10–50 entities** | **Good fit** | Handles NCI and multi-currency; validate at scale during PoC |
-| **Planning-heavy (500+ planners)** | Consider commercial | Konsolidat has layered budgets, approval workflows, and Excel write-back — but lacks cell locking and multi-step approvals needed at scale |
+| **Planning-heavy (500+ planners)** | **Good fit** | Layered budgets (base/challenge/management/board), approval workflows, Excel write-back, spread profiles, and scenario management — on par with commercial EPM/CPM |
 
 ---
 

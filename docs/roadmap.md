@@ -219,6 +219,20 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 - [ ] Actual for closed periods + forecast for open periods
 - [ ] Scenario type `rolling`
 
+### 6.4 Budget Cell Locking (1–2 days)
+
+- [ ] Optimistic locking: check `modified` timestamp on `budget_cell_save()` — reject if stale
+- [ ] Conflict response with latest value so Excel can prompt user
+- [ ] Optional pessimistic locking: `Budget Lock` doctype with auto-expiry (5 min)
+- [ ] VBA retry logic on conflict (refresh cell, re-prompt)
+
+### 6.5 Multi-Step Budget Approval Chain (0.5 day)
+
+- [ ] Extend `budget_input_workflow.json`: Draft → Submitted → Dept Manager Approved → Controller Approved → CFO Approved
+- [ ] Each transition gated by a separate Frappe role
+- [ ] Use Frappe `docstatus = 1` (Submit) on final approval to permanently lock document
+- [ ] Email notifications on workflow state changes (Frappe Notification doctype)
+
 ---
 
 ## Phase 7: Production Hardening (~3 days)
@@ -241,7 +255,7 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 | **Phase 3:** Multi-ERP (SAP + ERPNext) | ~5 days | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
 | **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
-| **Phase 6:** Analytical gaps | ~2 weeks | Phase 2 (dimensions) |
+| **Phase 6:** Analytical gaps + budget hardening | ~2.5 weeks | Phase 2 (dimensions) |
 | **Phase 7:** Production hardening | ~3 days | Phase 1 |
 | **Total** | **~7 weeks** | |
 
