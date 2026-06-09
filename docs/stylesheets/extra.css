@@ -98,50 +98,80 @@ code,
   display: none;
 }
 
-/* ---- Shared KNSLDT box style (icon inside) ---- */
+/* Kill the scroll-swap that replaces KNSLDT with page title */
+.md-header__topic[data-md-component="header-topic"] {
+  display: none !important;
+}
 
-.md-header__title .md-ellipsis,
-.ic-hero-mark {
+.md-header__topic {
+  position: static !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+.md-header__ellipsis {
+  overflow: visible;
+}
+
+/* ---- Header KNSLDT box ---- */
+
+.md-header__title {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.md-header__title .md-ellipsis {
   font-family: 'Archivo Black', sans-serif;
   font-weight: 900;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #00BFA5;
   border: 2.5px solid #00BFA5;
-  padding: 0.35rem 0.6rem;
+  padding: 0.3em 0.6em;
   line-height: 1;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  vertical-align: middle;
+  gap: 0.3em;
 }
 
-/* Consolidate icon via CSS mask — inherits currentColor */
-.md-header__title .md-ellipsis::before,
-.ic-hero-mark::before {
+.md-header__title .md-ellipsis::before {
   content: "";
-  display: inline-block;
-  width: 0.85rem;
-  height: 0.85rem;
-  margin-right: 0.35rem;
-  position: relative;
-  top: 0.05rem;
+  width: 0.9em;
+  height: 0.9em;
   flex-shrink: 0;
   background: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* Hero mark — larger for hero context */
+/* ---- Hero KNSLDT box ---- */
+
 .ic-hero-mark {
+  font-family: 'Archivo Black', sans-serif;
+  font-weight: 900;
   font-size: 0.85rem;
-  padding: 0.3rem 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #00BFA5;
+  border: 2.5px solid #00BFA5;
+  padding: 0.3em 0.7em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
   margin-bottom: 0.8rem;
 }
 
 .ic-hero-mark::before {
-  width: 1.15rem;
-  height: 1.15rem;
+  content: "";
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 [data-md-color-scheme="slate"] .md-header__title .md-ellipsis,
