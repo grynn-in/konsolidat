@@ -53,11 +53,37 @@ sequenceDiagram
 
 ## Endpoints
 
+### Data Retrieval
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | [`konsol.api.health`](api-health.md) | Guest | Health check |
-| GET | [`konsol.api.epm_value`](api-epm-value.md) | Session | Single value query |
-| POST | [`konsol.api.epm_batch`](api-epm-batch.md) | Session | Batch query (up to 2000 items) |
+| GET | [`health`](api-health.md) | Guest | Health check |
+| GET | [`epm_value`](api-epm-value.md) | Session | Single value query |
+| POST | [`epm_batch`](api-epm-batch.md) | Session | Batch query (up to 2000 items) |
+
+### Budget Write-Back
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | [`budget_save`](api-budget-save.md) | Session | Save full budget line |
+| POST | [`budget_cell_save`](api-budget-cell-save.md) | Session | Save single cell (EPMSAVE) |
+| POST | [`budget_save_batch`](api-budget-save-batch.md) | Session | Save multiple budget lines |
+
+### Consolidation (PRD-8, PRD-16)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | [`get_hierarchy_tree`](api-hierarchy.md) | Session | Consolidation hierarchy as nested JSON |
+| POST | [`approve_adjustment`](api-approve-adjustment.md) | Session | Approve topside journal |
+| POST | [`reverse_adjustment`](api-reverse-adjustment.md) | Session | Reverse approved journal |
+
+### Allocation (PRD-21)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | [`run_allocation`](api-run-allocation.md) | Session | Create and execute allocation run |
+| POST | [`reverse_allocation`](api-reverse-allocation.md) | Session | Reverse active allocation run |
+| GET | [`allocation_history`](api-allocation-history.md) | Session | List runs with filters |
 
 ## Error Handling
 
@@ -105,6 +131,26 @@ The batch endpoint groups requests by `(scenario, measure, period_tuple, has_cos
 
 ## Next Steps
 
+**Data Retrieval:**
+
 - [GET epm_value](api-epm-value.md) — Single value endpoint
 - [POST epm_batch](api-epm-batch.md) — Batch endpoint
 - [GET health](api-health.md) — Health check
+
+**Budget Write-Back:**
+
+- [POST budget_save](api-budget-save.md) — Save full budget line
+- [POST budget_cell_save](api-budget-cell-save.md) — Save single cell (EPMSAVE)
+- [POST budget_save_batch](api-budget-save-batch.md) — Save multiple lines
+
+**Consolidation:**
+
+- [GET get_hierarchy_tree](api-hierarchy.md) — Hierarchy as nested JSON
+- [POST approve_adjustment](api-approve-adjustment.md) — Approve topside journal
+- [POST reverse_adjustment](api-reverse-adjustment.md) — Reverse approved journal
+
+**Allocation:**
+
+- [POST run_allocation](api-run-allocation.md) — Create and execute run
+- [POST reverse_allocation](api-reverse-allocation.md) — Reverse active run
+- [GET allocation_history](api-allocation-history.md) — Run history

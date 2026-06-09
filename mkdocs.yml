@@ -81,9 +81,22 @@ nav:
       - Overview: developer-guide/developer-overview.md
       - API Reference:
           - Overview: api-reference/api-overview.md
-          - GET epm_value: api-reference/api-epm-value.md
-          - POST epm_batch: api-reference/api-epm-batch.md
-          - GET health: api-reference/api-health.md
+          - Data Retrieval:
+              - GET health: api-reference/api-health.md
+              - GET epm_value: api-reference/api-epm-value.md
+              - POST epm_batch: api-reference/api-epm-batch.md
+          - Budget Write-Back:
+              - POST budget_save: api-reference/api-budget-save.md
+              - POST budget_cell_save: api-reference/api-budget-cell-save.md
+              - POST budget_save_batch: api-reference/api-budget-save-batch.md
+          - Consolidation:
+              - GET get_hierarchy_tree: api-reference/api-hierarchy.md
+              - POST approve_adjustment: api-reference/api-approve-adjustment.md
+              - POST reverse_adjustment: api-reference/api-reverse-adjustment.md
+          - Allocation:
+              - POST run_allocation: api-reference/api-run-allocation.md
+              - POST reverse_allocation: api-reference/api-reverse-allocation.md
+              - GET allocation_history: api-reference/api-allocation-history.md
       - Data Dictionary:
           - Overview: data-dictionary/data-dictionary-overview.md
           - Gold Models: data-dictionary/gold-models.md
