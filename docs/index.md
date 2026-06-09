@@ -137,7 +137,7 @@ graph LR
 </div>
 
 <div class="ic-built-on">
-  <p class="ic-built-on-label">Built On</p>
+  <p class="ic-built-on-label">Built on Open Source Stack</p>
   <div class="ic-logo-track">
     <div class="ic-logo-card">
       <div class="ic-logo-mark" style="color: #FADB14;">CH</div>
