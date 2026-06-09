@@ -15,38 +15,40 @@ Konsolidat uses a **medallion architecture** with 44 dbt models organized in fou
 ## Data Lineage
 
 ```mermaid
-graph LR
-    ERP[ERP Source<br/>15 OData Entities] --> Bronze
+graph TD
+    ERP["<b>ERP Source</b><br/><br/>D365 / SAP / ERPNext<br/>15 OData Entities"]
 
-    subgraph Bronze["Bronze (14 models)"]
-        direction TB
-        B1[GL Entries & Journals]
-        B2[Accounts & Categories]
-        B3[Entities, FX Rates, Fiscal Cal]
-        B4[Budget & Consolidation]
-    end
+    ERP --> B1 & B2 & B3 & B4
 
-    Bronze --> Silver
+    B1["<b>GL Entries & Journals</b><br/>bronze_general_journal_*"]
+    B2["<b>Accounts & Categories</b><br/>bronze_main_accounts"]
+    B3["<b>Entities, FX, Fiscal</b><br/>bronze_legal_entities, rates, calendars"]
+    B4["<b>Budget & Consolidation</b><br/>bronze_budget_*, bronze_consolidation_*"]
 
-    subgraph Silver["Silver (8 models)"]
-        direction TB
-        S1[silver_gl_entries]
-        S2[silver_main_accounts]
-        S3[silver_exchange_rates<br/>silver_fiscal_periods]
-        S4[silver_budget_entries]
-    end
+    B1 & B2 & B3 --> S1
+    B2 --> S2
+    B3 --> S3
+    B4 --> S4
 
-    Silver --> Gold
+    S1["<b>silver_gl_entries</b><br/>Cleaned GL with dimensions"]
+    S2["<b>silver_main_accounts</b><br/>Account types & categories"]
+    S3["<b>silver_exchange_rates</b><br/>silver_fiscal_periods"]
+    S4["<b>silver_budget_entries</b><br/>Validated budget lines"]
 
-    subgraph Gold["Gold (22 models)"]
-        direction TB
-        G1[Trial Balance / P&L / BS / YTD]
-        G2[Consolidated TB → IC Elim → FX → FCTB]
-        G3[Allocations & Budgets]
-        G4[Variance Analysis]
-    end
+    S1 & S2 & S3 --> G1
+    G1 --> G2
+    G1 --> G3
+    S4 --> G3
+    G1 & G3 --> G4
 
-    Gold --> API[Frappe API<br/>=EPM in Excel]
+    G1["<b>Trial Balance / P&L / BS / YTD</b><br/>Core financial statements"]
+    G2["<b>Consolidation Pipeline</b><br/>Consolidated TB → IC Elim → FX Reval → FCTB"]
+    G3["<b>Allocations & Budgets</b><br/>Cost allocation + spread budget"]
+    G4["<b>Variance Analysis</b><br/>Actual vs budget with favorable logic"]
+
+    G1 & G2 & G3 & G4 --> API
+
+    API["<b>Frappe API → Cube.js → Excel</b><br/><br/>=EPM() formulas in your spreadsheet"]
 ```
 
 ### Key Lineage Paths
