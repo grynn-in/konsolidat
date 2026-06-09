@@ -35,11 +35,21 @@ The Frappe/Konsol app lives in a separate repository, typically at `~/frappe-ben
 
 ```mermaid
 graph LR
-    ERP[ERP System<br/>D365 / SAP / ERPNext] -->|Airbyte| CH[(ClickHouse<br/>Columnar DW)]
-    CH -->|dbt Core| Medal[Medallion Architecture<br/>Bronze → Silver → Gold]
-    Medal -->|Cube.js| Cube[Semantic Layer<br/>Metrics & Dimensions]
-    Cube -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
-    Frappe -->|HTTP JSON| Excel[Excel<br/>=EPM formulas]
+    ERP["<b>ERP System</b><br/><br/>D365 Finance & Operations<br/>SAP S/4HANA<br/>ERPNext"]
+
+    AIR["<b>Airbyte</b><br/><br/>ELT Data Integration<br/>OData / API Connectors"]
+
+    CH["<b>ClickHouse</b><br/><br/>Columnar Data Warehouse<br/>Sub-second OLAP Queries"]
+
+    DBT["<b>dbt Core</b><br/><br/>Medallion Architecture<br/>Bronze → Silver → Gold"]
+
+    CUBE["<b>Cube.js</b><br/><br/>Semantic Layer<br/>Metrics & Dimensions"]
+
+    FRAPPE["<b>Frappe / Konsol</b><br/><br/>REST API & Auth<br/>Workflow & Settings"]
+
+    EXCEL["<b>Excel</b><br/><br/>=EPM() Formulas<br/>VBA + Office.js"]
+
+    ERP --> AIR --> CH --> DBT --> CUBE --> FRAPPE --> EXCEL
 ```
 
 ## Technology Stack
