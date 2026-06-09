@@ -8,24 +8,24 @@ hide:
 
 # Konsolidat
 
-<p class="ic-tagline">Open-source Enterprise Performance Management for Dynamics 365 Finance & Operations</p>
+<p class="ic-tagline">Open-source Enterprise Performance Management</p>
 
 <div class="ic-stats">
   <div class="ic-stat">
-    <span class="ic-stat-num">44</span>
-    <span class="ic-stat-label">dbt Models</span>
+    <span class="ic-stat-num">=EPM()</span>
+    <span class="ic-stat-label">Excel Native</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">26</span>
-    <span class="ic-stat-label">Data Tests</span>
+    <span class="ic-stat-num">90%</span>
+    <span class="ic-stat-label">Cost Savings</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">1</span>
-    <span class="ic-stat-label">Excel Function</span>
+    <span class="ic-stat-num">100%</span>
+    <span class="ic-stat-label">SQL Auditable</span>
   </div>
   <div class="ic-stat">
-    <span class="ic-stat-num">6</span>
-    <span class="ic-stat-label">API Endpoints</span>
+    <span class="ic-stat-num">$0</span>
+    <span class="ic-stat-label">Vendor Lock-in</span>
   </div>
 </div>
 
@@ -50,6 +50,37 @@ Multi-entity consolidation, budgeting, allocations, and variance analysis — po
 
 <a class="ic-cta" href="https://calendly.com/vinayak-nayak/30min" target="_blank">Book a Demo</a>
 
+</div>
+
+<div class="ic-built-on">
+  <p class="ic-built-on-label">Built on Open Source Stack</p>
+  <div class="ic-logo-track">
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FADB14;">CH</div>
+      <strong>ClickHouse</strong>
+      <span>Columnar Analytics</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #615EFF;">ab</div>
+      <strong>Airbyte</strong>
+      <span>ELT Data Integration</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF694A;">dbt</div>
+      <strong>dbt Core</strong>
+      <span>SQL Transformations</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #0089FF;">F</div>
+      <strong>Frappe</strong>
+      <span>Web Framework & API</span>
+    </div>
+    <div class="ic-logo-card">
+      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
+      <strong>Cube</strong>
+      <span>Semantic Layer</span>
+    </div>
+  </div>
 </div>
 
 ## How It Works
@@ -119,52 +150,6 @@ base + challenge + management + board
 
 </div>
 
-<div class="ic-arch" markdown>
-
-## Architecture
-
-```mermaid
-graph LR
-    ERP[ERP System<br/>D365 / SAP / ERPNext] -->|Airbyte| CH[(ClickHouse<br/>Columnar DW)]
-    CH -->|dbt Core| Medal[Medallion Architecture<br/>Bronze → Silver → Gold]
-    Medal -->|Cube.js| Cube[Semantic Layer<br/>Metrics & Dimensions]
-    Cube -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
-    Frappe -->|HTTP JSON| Excel[Excel<br/>=EPM formulas]
-```
-
-</div>
-
-<div class="ic-built-on">
-  <p class="ic-built-on-label">Built on Open Source Stack</p>
-  <div class="ic-logo-track">
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #FADB14;">CH</div>
-      <strong>ClickHouse</strong>
-      <span>Columnar Analytics</span>
-    </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #615EFF;">ab</div>
-      <strong>Airbyte</strong>
-      <span>ELT Data Integration</span>
-    </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #FF694A;">dbt</div>
-      <strong>dbt Core</strong>
-      <span>SQL Transformations</span>
-    </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #0089FF;">F</div>
-      <strong>Frappe</strong>
-      <span>Web Framework & API</span>
-    </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
-      <strong>Cube</strong>
-      <span>Semantic Layer</span>
-    </div>
-  </div>
-</div>
-
 ## vs. Commercial CPM
 
 | | **Tagetik** | **OneStream** | **Anaplan** | **Konsolidat** |
@@ -174,7 +159,7 @@ graph LR
 | Budget write-back | Native | Native | Native | **Native** |
 | Variance analysis | Native | Native | Native | **Native** |
 | Excel-native | Plugin | Plugin | No | **=EPM()** |
-| D365 integration | Connector | Connector | Via API | **Native OData** |
+| ERP integration | Connector | Connector | Via API | **Native OData** |
 | Workflow/approvals | Native | Native | Native | **Native** |
 | SOX / regulatory | Yes | Yes | Yes | No (not targeted) |
 | Web UI | Full | Full | Full | Admin only |
@@ -275,7 +260,7 @@ Encryption at rest + in transit
 
 <a class="ic-nav-card" href="getting-started/setup-guide/">
   <strong>Setup Guide</strong>
-  <span>Full deployment with D365, Airbyte, dbt, Frappe</span>
+  <span>Full deployment with Airbyte, dbt, Frappe</span>
 </a>
 
 <a class="ic-nav-card" href="getting-started/configuration-reference/">
