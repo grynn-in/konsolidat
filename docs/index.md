@@ -125,13 +125,11 @@ base + challenge + management + board
 
 ```mermaid
 graph LR
-    D365[D365 F&O<br/>OData] -->|Airbyte ELT| CH[(ClickHouse<br/>Columnar DW)]
-    CH -->|dbt Core| Bronze[Bronze<br/>14 models]
-    Bronze --> Silver[Silver<br/>8 models]
-    Silver --> Gold[Gold<br/>22 models]
-    Gold -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
-    Frappe -->|HTTP JSON| Excel[Excel VBA<br/>=EPM formulas]
-    Frappe -->|Office.js| Taskpane[Excel Task Pane<br/>Pipeline Control]
+    ERP[ERP System<br/>D365 / SAP / ERPNext] -->|Airbyte| CH[(ClickHouse<br/>Columnar DW)]
+    CH -->|dbt Core| Medal[Medallion Architecture<br/>Bronze → Silver → Gold]
+    Medal -->|Cube.js| Cube[Semantic Layer<br/>Metrics & Dimensions]
+    Cube -->|Frappe API| Frappe[Frappe / Konsol<br/>Settings & Auth]
+    Frappe -->|HTTP JSON| Excel[Excel<br/>=EPM formulas]
 ```
 
 </div>
