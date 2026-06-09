@@ -29,7 +29,7 @@ What if the spreadsheet *was* the interface?
 
 One formula. Entity, year, period, account. The value appears. No portal, no training, no "EPM workbench." Just Excel — the tool your finance team already knows, already trusts, already lives in 8 hours a day.
 
-Behind that formula: a modern open-source data stack that's faster, cheaper, and more transparent than any commercial CPM.
+Behind that formula: a modern open-source data stack that's faster, cheaper, and more transparent than any commercial EPM/CPM.
 
 ## What You Get
 

@@ -1,6 +1,6 @@
 # Glossary
 
-## Finance & CPM Terms
+## Finance & EPM/CPM Terms
 
 | Term | Definition |
 |------|-----------|
@@ -63,7 +63,7 @@
 | TB | Trial Balance |
 | GL | General Ledger |
 | FCTB | Fully Consolidated Trial Balance |
-| CPM | Corporate Performance Management |
+| EPM/CPM | Corporate Performance Management |
 | EPM | Enterprise Performance Management |
 | ELT | Extract, Load, Transform |
 | OLAP | Online Analytical Processing |

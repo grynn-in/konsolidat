@@ -2,7 +2,7 @@
 
 Open-source Enterprise Performance Management. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
 
-**90% cheaper than commercial CPM tools. MIT Licensed.**
+**90% cheaper than commercial EPM/CPM tools. MIT Licensed.**
 
 ## What It Does
 

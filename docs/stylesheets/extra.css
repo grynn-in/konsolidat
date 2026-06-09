@@ -92,19 +92,45 @@ code,
   border-bottom: 1.5px solid var(--ic-border);
 }
 
+/* Logo icon — teal, sits inside the title box visually */
+.md-header .md-logo {
+  margin-right: 0;
+  padding-right: 0;
+}
+
+.md-header .md-logo svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: #00BFA5;
+  vertical-align: middle;
+}
+
+.md-header__title {
+  margin-left: -0.1rem;
+}
+
 .md-header__title .md-ellipsis {
   font-family: 'Archivo Black', sans-serif;
   font-weight: 900;
   font-size: 0.75rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  border: 2.5px solid var(--ic-ink);
-  padding: 0.2rem 0.6rem;
+  color: #00BFA5;
+  border: 2.5px solid #00BFA5;
+  padding: 0.25rem 0.6rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+[data-md-color-scheme="slate"] .md-header .md-logo svg {
+  fill: #64FFDA;
 }
 
 [data-md-color-scheme="slate"] .md-header__title .md-ellipsis {
-  border-color: var(--ic-ink);
+  color: #64FFDA;
+  border-color: #64FFDA;
 }
 
 .md-tabs {

@@ -156,7 +156,7 @@ base + challenge + management + board
 
 </div>
 
-## vs. Commercial CPM
+## vs. Commercial EPM/CPM
 
 | | **Tagetik** | **OneStream** | **Anaplan** | **Konsolidat** |
 |---|---|---|---|---|
@@ -317,7 +317,7 @@ Encryption at rest + in transit
 </div>
 
 <div style="text-align: center; padding: 3rem 1rem; border-top: 1.5px solid var(--ic-border-strong); margin-top: 2.5rem;">
-  <p style="font-family: 'Archivo', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">Ready to cut your CPM costs by 90%?</p>
+  <p style="font-family: 'Archivo', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">Ready to cut your EPM/CPM costs by 90%?</p>
   <p style="color: var(--ic-soft); margin-bottom: 1.5rem;">30-minute call. No slides. We'll show you the live stack.</p>
   <a class="ic-cta ic-cta--lg" href="https://calendly.com/vinayak-nayak/30min" target="_blank">Book Your Demo Now</a>
 </div>

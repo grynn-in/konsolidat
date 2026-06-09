@@ -1,10 +1,10 @@
-# Konsolidat vs. Commercial CPM: Cost & Feature Comparison
+# Konsolidat vs. Commercial EPM/CPM: Cost & Feature Comparison
 
 *Last updated: 2026-06-08*
 
 ## Overview
 
-This document compares Konsolidat against the three leading commercial Corporate Performance Management (CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, and Anaplan.
+This document compares Konsolidat against the three leading commercial Corporate Performance Management (EPM/CPM) platforms: CCH Tagetik (Wolters Kluwer), OneStream, and Anaplan.
 
 **Target market:** Private mid-market companies (2–50 entities) running D365 F&O. Konsolidat is not positioned for publicly listed companies requiring SOX certification or statutory regulatory reporting.
 
@@ -141,7 +141,7 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 |---|---|
 | "No store/location dimension" | D365 GL entries carry financial dimensions — store, cost center, department are already in the data |
 | "No inventory valuation" | GL has inventory accounts with correct balances; item-level costing stays in D365 (where it belongs) |
-| "No headcount planning" | Nice-to-have, not a CPM blocker — most mid-market companies do this in Excel anyway |
+| "No headcount planning" | Nice-to-have, not a EPM/CPM blocker — most mid-market companies do this in Excel anyway |
 | "No IFRS 16 lease accounting" | Stays in D365 or a dedicated lease module; not a consolidation tool's job |
 
 ---
@@ -196,7 +196,7 @@ Most common in Swiss/DACH mid-market: the Group Controller hires a "Finance Data
 
 **Annual maintenance cost estimate:** ~$30K–50K of allocated time (0.3 FTE data engineer + 0.1 FTE controller overhead). Compare to $150K–350K/yr in commercial license fees alone — before implementation partner retainers.
 
-### Comparison: Commercial CPM Org Requirements
+### Comparison: Commercial EPM/CPM Org Requirements
 
 A company running Tagetik or OneStream at similar scale typically needs:
 
@@ -206,7 +206,7 @@ A company running Tagetik or OneStream at similar scale typically needs:
 | Implementation partner | 0.5 (retainer) | Upgrades, patches, custom reports — vendor lock-in |
 | Same finance roles | 2–3 | Controller + FP&A still needed regardless |
 
-**Total CPM cost with commercial:** $200K–400K/yr (license + partner + admin). With Konsolidat: **$30K–50K/yr** (data engineer time + hosting).
+**Total EPM/CPM cost with commercial:** $200K–400K/yr (license + partner + admin). With Konsolidat: **$30K–50K/yr** (data engineer time + hosting).
 
 ---
 
@@ -214,7 +214,7 @@ A company running Tagetik or OneStream at similar scale typically needs:
 
 | Profile | Fit | Why |
 |---|---|---|
-| **Private mid-market, 2–10 entities** | **Best fit** | Saves $200K–600K over 3 years, covers all core CPM functions |
+| **Private mid-market, 2–10 entities** | **Best fit** | Saves $200K–600K over 3 years, covers all core EPM/CPM functions |
 | **D365 F&O shop wanting fast EPM** | **Best fit** | Native OData integration, `docker compose up` and go |
 | **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible |
 | **Private group, 10–50 entities** | **Good fit** | Handles NCI and multi-currency; validate at scale during PoC |
@@ -224,4 +224,4 @@ A company running Tagetik or OneStream at similar scale typically needs:
 
 ## Bottom Line
 
-Konsolidat implements the three features traditionally cited as having "no open-source solution": financial consolidation, intercompany elimination, and FX translation with CTA. For a private mid-market D365 F&O company, it replaces ~80% of what commercial CPM platforms deliver at 3–10% of the cost — saving $200K–600K over three years.
+Konsolidat implements the three features traditionally cited as having "no open-source solution": financial consolidation, intercompany elimination, and FX translation with CTA. For a private mid-market D365 F&O company, it replaces ~80% of what commercial EPM/CPM platforms deliver at 3–10% of the cost — saving $200K–600K over three years.

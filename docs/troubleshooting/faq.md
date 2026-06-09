@@ -88,7 +88,7 @@ Add a row to `allocation_rules.csv`, create driver data, and update the multi-st
 
 ## Decision Makers
 
-**Q: How does Konsolidat compare to commercial CPM tools?**
+**Q: How does Konsolidat compare to commercial EPM/CPM tools?**
 See [Cost Comparison vs Commercial](../evaluation/cost-comparison-vs-commercial.md) — detailed 26-row feature parity matrix and 3-year TCO analysis.
 
 **Q: What's the total cost of ownership?**
