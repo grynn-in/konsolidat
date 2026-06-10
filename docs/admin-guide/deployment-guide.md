@@ -164,14 +164,32 @@ After deployment:
 
 The template includes pre-built reports for Trial Balance, P&L, Balance Sheet, and Budget vs Actual.
 
+## Demo Data
+
+A fresh deploy includes synthetic data for a fictional **Alpine Manufacturing Group** — 3 legal entities across CHF, USD, and EUR with 12 months of GL entries, budgets, exchange rates, and trial balance data. This lets you explore consolidation, FX translation, variance analysis, and Excel reports immediately.
+
+| Entity | Currency | Country | Role |
+|--------|----------|---------|------|
+| AMHQ | CHF | Switzerland | Parent / HQ |
+| AMUS | USD | United States | Subsidiary |
+| AMDE | EUR | Germany | Subsidiary |
+
+The demo data is loaded from `clickhouse/demo-data.sql` on first container start. To reset to demo data, delete the ClickHouse volume and restart:
+
+```bash
+./deploy.sh down
+docker volume rm open_epm_clickhouse_data
+./deploy.sh
+```
+
 ## Connecting Real ERP Data
 
-The system works with demo data out of the box. To connect a real D365 Finance & Operations instance:
+To replace demo data with a real D365 Finance & Operations instance:
 
 1. Log into Frappe: `http://your-server:8069`
 2. Go to **EPM Settings**
 3. Enter your D365 credentials (Tenant ID, Client ID, Client Secret, Environment URL)
-4. Click **Run Pipeline** to sync data
+4. Click **Run Pipeline** to sync data — this replaces the demo data with your real ERP data
 
 Konsolidat supports any ERP via [Airbyte connectors](https://docs.airbyte.com/integrations/). See [D365 Integration](d365-integration.md) for detailed setup.
 
