@@ -1,0 +1,4480 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.">
+      
+      
+      
+        <link rel="canonical" href="https://konsolid.at/user-guide/initial-setup-guide/">
+      
+      
+        <link rel="prev" href="../excel-taskpane-guide/">
+      
+      
+        <link rel="next" href="../consolidation-guide/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Initial Setup - KNSLDT</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#initial-setup-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            KNSLDT
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Initial Setup
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/grynn-in/konsolidat" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    grynn-in/konsolidat
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../why-konsolidat/" class="md-tabs__link">
+          
+  
+  
+  Why Konsolidat?
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../developer-guide/developer-overview/" class="md-tabs__link">
+          
+  
+  
+  Developer
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Help
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
+
+    </a>
+    KNSLDT
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/grynn-in/konsolidat" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    grynn-in/konsolidat
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Why Konsolidat?
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-konsolidat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../evaluation/security-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Excel
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Excel
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../excel-vba-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VBA Add-in
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../excel-taskpane-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Pane
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Initial Setup
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Initial Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-epm-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: EPM Settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 1: EPM Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clickhouse-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClickHouse Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#airbyte-connection-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Airbyte Connection (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dbt-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dbt Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-dimensional-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Dimensional Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 2: Dimensional Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fiscal-periods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fiscal Periods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-consolidation-multi-entity-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Consolidation (multi-entity only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 4: Consolidation (multi-entity only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entity-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entity Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic-elimination-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC Elimination Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ownership-periods-step-acquisitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership Periods (step acquisitions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-cost-allocation-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Cost Allocation (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 5: Cost Allocation (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allocation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#allocation-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation Drivers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-budgeting-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Budgeting (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 6: Budgeting (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#spread-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spread Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#budget-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budget Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-airbyte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Connect Your ERP via Airbyte
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 7: Connect Your ERP via Airbyte">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-airbyte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install Airbyte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-destination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Destination
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-8-run-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Run the Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference-configuration-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference: Configuration Checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Financial Processes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Financial Processes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../consolidation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../allocation-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../budgeting-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budgeting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../budget-layers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Layers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../variance-analysis-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../report-catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report Catalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Administration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    D365 Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/developer-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_2" id="__nav_4_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retrieval
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Retrieval
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-health/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET health
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET epm_value
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST epm_batch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_3" id="__nav_4_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Write-Back
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Budget Write-Back
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-budget-save/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST budget_save
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-budget-cell-save/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST budget_cell_save
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-budget-save-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST budget_save_batch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_4" id="__nav_4_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Consolidation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET get_hierarchy_tree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-approve-adjustment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST approve_adjustment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-reverse-adjustment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST reverse_adjustment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_5" id="__nav_4_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Allocation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-run-allocation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST run_allocation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-reverse-allocation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST reverse_allocation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/api-allocation-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET allocation_history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Dictionary
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Dictionary
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gold Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Silver Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bronze Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Staging Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extending
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/macro-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    dbt Macro Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/extending-dbt-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/adding-dimensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding Dimensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/extending-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/testing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer-guide/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Help
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Help
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-epm-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: EPM Settings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 1: EPM Settings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clickhouse-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClickHouse Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#airbyte-connection-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Airbyte Connection (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dbt-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dbt Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-dimensional-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Dimensional Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 2: Dimensional Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fiscal-periods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fiscal Periods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measures
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-consolidation-multi-entity-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Consolidation (multi-entity only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 4: Consolidation (multi-entity only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#entity-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entity Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic-elimination-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC Elimination Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ownership-periods-step-acquisitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership Periods (step acquisitions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-cost-allocation-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Cost Allocation (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 5: Cost Allocation (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allocation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#allocation-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Allocation Drivers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-budgeting-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Budgeting (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 6: Budgeting (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#spread-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spread Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#budget-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Budget Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-airbyte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Connect Your ERP via Airbyte
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 7: Connect Your ERP via Airbyte">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-airbyte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install Airbyte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-destination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Destination
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-8-run-the-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Run the Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference-configuration-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference: Configuration Checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="initial-setup-guide">Initial Setup Guide<a class="headerlink" href="#initial-setup-guide" title="Permanent link">&para;</a></h1>
+<p>After deployment, Konsolidat needs configuration before it can process financial data. This guide walks through each step — from connecting infrastructure to entering your first budget line.</p>
+<h2 id="configuration-flow">Configuration Flow<a class="headerlink" href="#configuration-flow" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>graph TD
+    EPM[1. EPM Settings&lt;br/&gt;ClickHouse + Airbyte + dbt] --&gt; DIM[2. Dimensional Model&lt;br/&gt;Periods, Dimensions, Measures]
+    DIM --&gt; SCEN[3. Scenarios&lt;br/&gt;Actual, Budget, Forecast]
+    SCEN --&gt; CONSOL[4. Consolidation&lt;br/&gt;Entity hierarchy + rules]
+    SCEN --&gt; ALLOC[5. Allocations&lt;br/&gt;Rules + drivers]
+    SCEN --&gt; BUDGET[6. Budgeting&lt;br/&gt;Spread profiles + input]
+    CONSOL --&gt; PIPE[7. Pipeline Run&lt;br/&gt;Sync + transform]
+    ALLOC --&gt; PIPE
+    BUDGET --&gt; PIPE
+    PIPE --&gt; EXCEL[8. Excel&lt;br/&gt;First =EPM formula]
+
+    style EPM fill:#4051b5,color:#fff
+    style PIPE fill:#4051b5,color:#fff</code></pre>
+<p>Steps 4–6 are independent — configure only what you need.</p>
+<hr />
+<h2 id="step-1-epm-settings">Step 1: EPM Settings<a class="headerlink" href="#step-1-epm-settings" title="Permanent link">&para;</a></h2>
+<p><strong>Frappe Desk → Setup → EPM Settings</strong></p>
+<p>This is the foundation — all connections to infrastructure are configured here.</p>
+<h3 id="clickhouse-connection">ClickHouse Connection<a class="headerlink" href="#clickhouse-connection" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse Host</td>
+<td><code>clickhouse</code></td>
+<td>Docker service name. Use <code>localhost</code> for bare-metal installs</td>
+</tr>
+<tr>
+<td>ClickHouse Port</td>
+<td><code>8123</code></td>
+<td>HTTP API port</td>
+</tr>
+<tr>
+<td>ClickHouse User</td>
+<td><code>default</code></td>
+<td>From <code>.credentials</code> file</td>
+</tr>
+<tr>
+<td>ClickHouse Password</td>
+<td><em>(from deploy)</em></td>
+<td>From <code>.credentials</code> file</td>
+</tr>
+</tbody>
+</table>
+<p>Verify the connection after saving:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-sf<span class="w"> </span><span class="s2">&quot;http://localhost:8123/?query=SHOW+DATABASES&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-u<span class="w"> </span><span class="s2">&quot;default:YOUR_PASSWORD&quot;</span>
+</code></pre></div>
+<p>You should see <code>epm_staging</code>, <code>epm_bronze</code>, <code>epm_silver</code>, <code>epm_gold</code> in the output.</p>
+<h3 id="airbyte-connection-optional">Airbyte Connection (optional)<a class="headerlink" href="#airbyte-connection-optional" title="Permanent link">&para;</a></h3>
+<p>Only needed if you're syncing live data from D365, SAP, or ERPNext. Skip this if you're using seed/demo data.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Airbyte API URL</td>
+<td><code>http://localhost:8000</code></td>
+<td>Default Airbyte API</td>
+</tr>
+<tr>
+<td>Connection ID</td>
+<td><em>(from Airbyte UI)</em></td>
+<td>UUID of your source → ClickHouse connection</td>
+</tr>
+<tr>
+<td>Client ID</td>
+<td><em>(from Airbyte)</em></td>
+<td>OAuth credentials for API access</td>
+</tr>
+<tr>
+<td>Client Secret</td>
+<td><em>(from Airbyte)</em></td>
+<td>OAuth credentials for API access</td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="#setting-up-airbyte">Setting up Airbyte</a> below for how to get these values.</p>
+<h3 id="dbt-configuration">dbt Configuration<a class="headerlink" href="#dbt-configuration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dbt Project Path</td>
+<td><code>/home/frappe/dbt_project</code></td>
+<td>Docker default. Adjust for bare-metal</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-2-dimensional-model">Step 2: Dimensional Model<a class="headerlink" href="#step-2-dimensional-model" title="Permanent link">&para;</a></h2>
+<p>Define the structure of your financial reporting. Do these in order — later items reference earlier ones.</p>
+<h3 id="fiscal-periods">Fiscal Periods<a class="headerlink" href="#fiscal-periods" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → EPM → Fiscal Period</strong></p>
+<p>Create 14 periods for a standard fiscal year:</p>
+<table>
+<thead>
+<tr>
+<th>Period</th>
+<th>Label</th>
+<th>Quarter</th>
+<th>Half</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>OPN</td>
+<td>OPN</td>
+<td>OPN</td>
+<td>Opening balances</td>
+</tr>
+<tr>
+<td>1</td>
+<td>P1</td>
+<td>Q1</td>
+<td>H1</td>
+<td>January</td>
+</tr>
+<tr>
+<td>2</td>
+<td>P2</td>
+<td>Q1</td>
+<td>H1</td>
+<td>February</td>
+</tr>
+<tr>
+<td>3</td>
+<td>P3</td>
+<td>Q1</td>
+<td>H1</td>
+<td>March</td>
+</tr>
+<tr>
+<td>4</td>
+<td>P4</td>
+<td>Q2</td>
+<td>H1</td>
+<td>April</td>
+</tr>
+<tr>
+<td>5</td>
+<td>P5</td>
+<td>Q2</td>
+<td>H1</td>
+<td>May</td>
+</tr>
+<tr>
+<td>6</td>
+<td>P6</td>
+<td>Q2</td>
+<td>H1</td>
+<td>June</td>
+</tr>
+<tr>
+<td>7</td>
+<td>P7</td>
+<td>Q3</td>
+<td>H2</td>
+<td>July</td>
+</tr>
+<tr>
+<td>8</td>
+<td>P8</td>
+<td>Q3</td>
+<td>H2</td>
+<td>August</td>
+</tr>
+<tr>
+<td>9</td>
+<td>P9</td>
+<td>Q3</td>
+<td>H2</td>
+<td>September</td>
+</tr>
+<tr>
+<td>10</td>
+<td>P10</td>
+<td>Q4</td>
+<td>H2</td>
+<td>October</td>
+</tr>
+<tr>
+<td>11</td>
+<td>P11</td>
+<td>Q4</td>
+<td>H2</td>
+<td>November</td>
+</tr>
+<tr>
+<td>12</td>
+<td>P12</td>
+<td>Q4</td>
+<td>H2</td>
+<td>December</td>
+</tr>
+<tr>
+<td>13</td>
+<td>CLS</td>
+<td>CLS</td>
+<td>CLS</td>
+<td>Closing adjustments</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dimensions">Dimensions<a class="headerlink" href="#dimensions" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → EPM → Dimension</strong></p>
+<p>Dimensions define the axes of your financial cube. Create one for each reporting dimension you need:</p>
+<table>
+<thead>
+<tr>
+<th>Dimension Name</th>
+<th>Source Column</th>
+<th>Label</th>
+<th>In Budget</th>
+<th>Allocation Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dim_cost_center</code></td>
+<td><code>CostCenter</code></td>
+<td>Cost Center</td>
+<td>Yes</td>
+<td><code>cost_center</code></td>
+</tr>
+<tr>
+<td><code>dim_department</code></td>
+<td><code>Department</code></td>
+<td>Department</td>
+<td>Yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dim_business_unit</code></td>
+<td><code>BusinessUnit</code></td>
+<td>Business Unit</td>
+<td>No</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Source Column</strong> maps to the OData field name in your ERP</li>
+<li><strong>In Budget</strong> includes this dimension in budget entry forms</li>
+<li><strong>Allocation Role</strong> links the dimension to cost allocation drivers</li>
+</ul>
+<h3 id="measures">Measures<a class="headerlink" href="#measures" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → EPM → Measure</strong></p>
+<p>Measures define the aggregations available in Excel and the API:</p>
+<table>
+<thead>
+<tr>
+<th>Measure Name</th>
+<th>Expression</th>
+<th>Label</th>
+<th>Cube Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>period_net_amount</code></td>
+<td><code>sum(accounting_currency_amount)</code></td>
+<td>Net Amount</td>
+<td>sum</td>
+</tr>
+<tr>
+<td><code>period_debit</code></td>
+<td><code>sum(debit_amount)</code></td>
+<td>Debit</td>
+<td>sum</td>
+</tr>
+<tr>
+<td><code>period_credit</code></td>
+<td><code>sum(credit_amount)</code></td>
+<td>Credit</td>
+<td>sum</td>
+</tr>
+<tr>
+<td><code>ytd_net_amount</code></td>
+<td><code>sum(accounting_currency_amount)</code></td>
+<td>YTD Net</td>
+<td>sum</td>
+</tr>
+<tr>
+<td><code>transaction_count</code></td>
+<td><code>count(*)</code></td>
+<td>Transactions</td>
+<td>count</td>
+</tr>
+</tbody>
+</table>
+<p>These become available as the <code>measure</code> parameter in <code>=EPM()</code> formulas and the API.</p>
+<hr />
+<h2 id="step-3-scenarios">Step 3: Scenarios<a class="headerlink" href="#step-3-scenarios" title="Permanent link">&para;</a></h2>
+<p><strong>Lists → EPM → Scenario Definition</strong></p>
+<p>Scenarios tag data by its purpose — actual vs. budget vs. forecast:</p>
+<table>
+<thead>
+<tr>
+<th>Scenario ID</th>
+<th>Name</th>
+<th>Type</th>
+<th>Active</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>actual_2024</code></td>
+<td>Actual 2024</td>
+<td>actual</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>budget_2025</code></td>
+<td>Budget 2025</td>
+<td>budget</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>forecast_2025</code></td>
+<td>Forecast 2025</td>
+<td>forecast</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>Scenario type determines how the data flows through the pipeline. Actuals come from ERP sync, budgets from manual input.</p>
+<hr />
+<h2 id="step-4-consolidation-multi-entity-only">Step 4: Consolidation (multi-entity only)<a class="headerlink" href="#step-4-consolidation-multi-entity-only" title="Permanent link">&para;</a></h2>
+<p>Skip this section if you have a single legal entity.</p>
+<h3 id="entity-hierarchy">Entity Hierarchy<a class="headerlink" href="#entity-hierarchy" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → Consolidation → Consolidation Group</strong></p>
+<p>Build a tree of legal entities with ownership and consolidation method:</p>
+<div class="highlight"><pre><span></span><code>HOLDING (is_group=true, ownership=100%)
+├── USMF (data_area_id=USMF, ownership=100%, method=full)
+├── EMEA (is_group=true)
+│   ├── FR01 (data_area_id=FRAX, ownership=100%, method=full)
+│   └── DE01 (data_area_id=DEAX, ownership=75%, method=full)
+└── APAC (is_group=true)
+    └── JP01 (data_area_id=JPAX, ownership=51%, method=full)
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data_area_id</code></td>
+<td>Legal entity code from your ERP</td>
+</tr>
+<tr>
+<td><code>ownership_pct</code></td>
+<td>Parent's ownership percentage (0–100)</td>
+</tr>
+<tr>
+<td><code>reporting_currency</code></td>
+<td>Group reporting currency (e.g., USD)</td>
+</tr>
+<tr>
+<td><code>consolidation_method</code></td>
+<td><code>full</code>, <code>proportional</code>, or <code>equity</code></td>
+</tr>
+<tr>
+<td><code>goodwill_method</code></td>
+<td><code>partial</code> (NCI at proportional NA) or <code>full</code> (NCI at fair value)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ic-elimination-rules">IC Elimination Rules<a class="headerlink" href="#ic-elimination-rules" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → Consolidation → IC Elimination Rule</strong></p>
+<p>Define rules to eliminate intercompany balances and unrealized profit:</p>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Type</th>
+<th>Debit Account</th>
+<th>Credit Account</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IC-AR-AP-01</code></td>
+<td>balance</td>
+<td>210200 (AP)</td>
+<td>112000 (AR)</td>
+<td>Eliminates IC receivables/payables</td>
+</tr>
+<tr>
+<td><code>IC-INV-01</code></td>
+<td>unrealized_profit</td>
+<td>312000</td>
+<td>114500</td>
+<td>Eliminates IC inventory margin (25%)</td>
+</tr>
+</tbody>
+</table>
+<p>For unrealized profit rules, set <code>margin_pct</code> to the intercompany gross margin percentage.</p>
+<h3 id="ownership-periods-step-acquisitions">Ownership Periods (step acquisitions)<a class="headerlink" href="#ownership-periods-step-acquisitions" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → Consolidation → Ownership Period</strong></p>
+<p>Track ownership changes over time — needed for step acquisitions and disposals:</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Effective Date</th>
+<th>Ownership</th>
+<th>Method</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DE01</td>
+<td>2024-01-01</td>
+<td>50%</td>
+<td>equity</td>
+<td>Initial stake</td>
+</tr>
+<tr>
+<td>DE01</td>
+<td>2024-07-01</td>
+<td>75%</td>
+<td>full</td>
+<td>Step acquisition</td>
+</tr>
+</tbody>
+</table>
+<p>See the <a href="../consolidation-guide/">Consolidation Guide</a> for formulas, translation rules, and worked examples.</p>
+<hr />
+<h2 id="step-5-cost-allocation-optional">Step 5: Cost Allocation (optional)<a class="headerlink" href="#step-5-cost-allocation-optional" title="Permanent link">&para;</a></h2>
+<h3 id="allocation-rules">Allocation Rules<a class="headerlink" href="#allocation-rules" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → Allocation → Allocation Rule</strong></p>
+<p>Define cost pools and how they're distributed. Rules execute in <code>step_order</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Rule</th>
+<th>Source</th>
+<th>Driver</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>IT Cost Allocation</td>
+<td>Account 7100, CC: IT</td>
+<td>headcount</td>
+<td>step_down</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Facility Allocation</td>
+<td>Account 7200, CC: FACILITY</td>
+<td>sqm</td>
+<td>step_down</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Management Fees</td>
+<td>Account 7300, CC: MGMT</td>
+<td>revenue</td>
+<td>step_down</td>
+</tr>
+</tbody>
+</table>
+<p>Driver types: <code>headcount</code>, <code>revenue</code>, <code>sqm</code>, <code>composite</code>, <code>conditional</code>, <code>tiered</code>.</p>
+<h3 id="allocation-drivers">Allocation Drivers<a class="headerlink" href="#allocation-drivers" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → Allocation → Allocation Driver</strong></p>
+<p>Populate driver values for each entity, cost center, and period:</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Cost Center</th>
+<th>Driver Type</th>
+<th>Value</th>
+<th>Year</th>
+<th>Period</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>USMF</td>
+<td>SALES</td>
+<td>headcount</td>
+<td>50</td>
+<td>2024</td>
+<td>5</td>
+</tr>
+<tr>
+<td>USMF</td>
+<td>MARKETING</td>
+<td>headcount</td>
+<td>25</td>
+<td>2024</td>
+<td>5</td>
+</tr>
+<tr>
+<td>USMF</td>
+<td>SALES</td>
+<td>sqm</td>
+<td>2000</td>
+<td>2024</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<p>See the <a href="../allocation-guide/">Allocation Guide</a> for cascade logic, reciprocal allocation, and composite drivers.</p>
+<hr />
+<h2 id="step-6-budgeting-optional">Step 6: Budgeting (optional)<a class="headerlink" href="#step-6-budgeting-optional" title="Permanent link">&para;</a></h2>
+<h3 id="spread-profiles">Spread Profiles<a class="headerlink" href="#spread-profiles" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → EPM → Spread Profile</strong></p>
+<p>Define how annual amounts distribute across 12 months:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Pattern</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EVEN</code></td>
+<td>Equal weights (1.0 each)</td>
+<td>$1.2M annual → $100K/month</td>
+</tr>
+<tr>
+<td><code>SEASONAL_RETAIL</code></td>
+<td>Q4-heavy (0.5–2.5)</td>
+<td>$600K annual → $23K low / $117K peak</td>
+</tr>
+</tbody>
+</table>
+<h3 id="budget-input">Budget Input<a class="headerlink" href="#budget-input" title="Permanent link">&para;</a></h3>
+<p><strong>Lists → EPM → Budget Input</strong></p>
+<p>Enter budget lines with monthly amounts or spread profiles:</p>
+<ol>
+<li>Select <strong>Scenario</strong> (e.g., Budget 2025)</li>
+<li>Set <strong>Entity</strong>, <strong>Account</strong>, and <strong>Dimensions</strong></li>
+<li>Either enter monthly amounts directly, or select a <strong>Spread Profile</strong> and enter an annual total</li>
+<li>Optionally set a <strong>Layer</strong> (base, challenge, management, board) for collaborative budgeting</li>
+</ol>
+<p>See the <a href="../budgeting-guide/">Budgeting Guide</a> and <a href="../budget-layers/">Budget Layers</a> for details.</p>
+<hr />
+<h2 id="setting-up-airbyte">Step 7: Connect Your ERP via Airbyte<a class="headerlink" href="#setting-up-airbyte" title="Permanent link">&para;</a></h2>
+<p>Airbyte syncs live data from your ERP into ClickHouse. It runs as a separate service.</p>
+<h3 id="install-airbyte">Install Airbyte<a class="headerlink" href="#install-airbyte" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://get.airbyte.com<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+abctl<span class="w"> </span><span class="nb">local</span><span class="w"> </span>install
+</code></pre></div>
+<p>Open the Airbyte UI at <a href="http://localhost:8000">http://localhost:8000</a>.</p>
+<h3 id="configure-source">Configure Source<a class="headerlink" href="#configure-source" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">D365 Finance &amp; Operations</label><label for="__tabbed_1_2">SAP</label><label for="__tabbed_1_3">ERPNext</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<ol>
+<li><strong>Sources → Add Source → Microsoft Dynamics 365 F&amp;O (OData)</strong></li>
+<li>Enter your Azure AD credentials:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Where to find it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Environment URL</td>
+<td><code>https://your-env.operations.dynamics.com</code></td>
+</tr>
+<tr>
+<td>Tenant ID</td>
+<td>Azure Portal → Azure AD → Properties</td>
+</tr>
+<tr>
+<td>Client ID</td>
+<td>Azure Portal → App Registrations → your app</td>
+</tr>
+<tr>
+<td>Client Secret</td>
+<td>Azure Portal → App Registrations → Certificates &amp; secrets</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Select streams: <code>GeneralJournalAccountEntries</code>, <code>MainAccounts</code>, <code>LedgerParameters</code>, <code>ExchangeRates</code>, <code>FiscalCalendars</code></li>
+</ol>
+</div>
+<div class="tabbed-block">
+<p>Use the SAP OData or SAP HANA connector. Map GL journal entries to the same staging schema.</p>
+</div>
+<div class="tabbed-block">
+<p>Use the ERPNext API connector. Map GL Entry and Account doctypes.</p>
+</div>
+</div>
+</div>
+<h3 id="configure-destination">Configure Destination<a class="headerlink" href="#configure-destination" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Destinations → Add Destination → ClickHouse</strong></li>
+<li>Connection details:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host</td>
+<td><code>localhost</code></td>
+</tr>
+<tr>
+<td>Port</td>
+<td><code>8123</code></td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>epm_staging</code></td>
+</tr>
+<tr>
+<td>User</td>
+<td>from <code>.credentials</code></td>
+</tr>
+<tr>
+<td>Password</td>
+<td>from <code>.credentials</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="create-connection">Create Connection<a class="headerlink" href="#create-connection" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Connections → New Connection</strong></li>
+<li>Wire your source → ClickHouse destination</li>
+<li>Set sync mode to <strong>Incremental (Append)</strong></li>
+<li>Run a test sync</li>
+<li><strong>Copy the Connection ID</strong> from the URL bar (UUID format) and paste it into <strong>EPM Settings → Airbyte Connection ID</strong></li>
+</ol>
+<hr />
+<h2 id="step-8-run-the-pipeline">Step 8: Run the Pipeline<a class="headerlink" href="#step-8-run-the-pipeline" title="Permanent link">&para;</a></h2>
+<p><strong>Lists → Pipeline → Pipeline Run → New → Submit</strong></p>
+<p>The pipeline executes two phases:</p>
+<pre class="mermaid"><code>graph LR
+    SYNC[Phase 1: Airbyte Sync&lt;br/&gt;ERP → ClickHouse staging] --&gt; DBT[Phase 2: dbt Build&lt;br/&gt;staging → bronze → silver → gold]
+    DBT --&gt; READY[Data ready in&lt;br/&gt;Cube.js + Excel]</code></pre>
+<p>Monitor progress in the Pipeline Run document — status updates automatically:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>What's happening</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Queued</td>
+<td>Waiting for background worker</td>
+</tr>
+<tr>
+<td>Extracting</td>
+<td>Airbyte is syncing ERP data to staging</td>
+</tr>
+<tr>
+<td>Transforming</td>
+<td>dbt is building bronze → silver → gold models</td>
+</tr>
+<tr>
+<td>Completed</td>
+<td>Data is ready to query</td>
+</tr>
+<tr>
+<td>Failed</td>
+<td>Check the error log field for details</td>
+</tr>
+</tbody>
+</table>
+<p>After the first successful run, your data is available in:</p>
+<ul>
+<li><strong>Excel</strong>: <code>=EPM("USMF", 2024, 5, "401100", "period_net_amount")</code></li>
+<li><strong>Cube.js</strong>: <a href="https://localhost:4443">https://localhost:4443</a> (query playground)</li>
+<li><strong>API</strong>: <code>GET /api/method/konsol.api.epm_value?entity=USMF&amp;year=2024&amp;period=5&amp;account=401100&amp;measure=period_net_amount</code></li>
+</ul>
+<hr />
+<h2 id="quick-reference-configuration-checklist">Quick Reference: Configuration Checklist<a class="headerlink" href="#quick-reference-configuration-checklist" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Location</th>
+<th>Required</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>EPM Settings</td>
+<td>Setup → EPM Settings</td>
+<td>Yes</td>
+<td>2 min</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Fiscal Periods</td>
+<td>Lists → EPM → Fiscal Period</td>
+<td>Yes</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Dimensions</td>
+<td>Lists → EPM → Dimension</td>
+<td>Yes</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Measures</td>
+<td>Lists → EPM → Measure</td>
+<td>Yes</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Scenarios</td>
+<td>Lists → EPM → Scenario Definition</td>
+<td>Yes</td>
+<td>2 min</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Consolidation Groups</td>
+<td>Lists → Consolidation → Consolidation Group</td>
+<td>Multi-entity only</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>7</td>
+<td>IC Elimination Rules</td>
+<td>Lists → Consolidation → IC Elimination Rule</td>
+<td>Multi-entity only</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Allocation Rules</td>
+<td>Lists → Allocation → Allocation Rule</td>
+<td>If allocating costs</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Allocation Drivers</td>
+<td>Lists → Allocation → Allocation Driver</td>
+<td>If allocating costs</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Spread Profiles</td>
+<td>Lists → EPM → Spread Profile</td>
+<td>If budgeting</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Budget Input</td>
+<td>Lists → EPM → Budget Input</td>
+<td>If budgeting</td>
+<td>varies</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Airbyte Connection</td>
+<td>Airbyte UI + EPM Settings</td>
+<td>For live ERP data</td>
+<td>15 min</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Pipeline Run</td>
+<td>Lists → Pipeline → Pipeline Run</td>
+<td>Yes</td>
+<td>5 min</td>
+</tr>
+</tbody>
+</table>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../excel-vba-guide/">Excel VBA Add-in</a> — install the Excel add-in and write your first <code>=EPM()</code> formula</li>
+<li><a href="../consolidation-guide/">Consolidation Guide</a> — currency translation, IC elimination, and CTA calculation</li>
+<li><a href="../allocation-guide/">Allocation Guide</a> — multi-step cost allocation with driver cascading</li>
+<li><a href="../budgeting-guide/">Budgeting Guide</a> — spread profiles, budget layers, and variance analysis</li>
+<li><a href="../../api-reference/api-overview/">API Reference</a> — all available endpoints for programmatic access</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      MIT License &copy; 2024 <a href="https://github.com/grynn-in">grynn-in</a>. All rights reserved. Built with <a href="https://claude.ai">Claude Code</a>.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/grynn-in/konsolidat" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://konsolid.at" target="_blank" rel="noopener" title="konsolid.at" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

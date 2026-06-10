@@ -6,9 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Open-source Enterprise Performance Management built on dbt, Dagster & DuckDB">
+        <meta name="description" content="Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.">
       
       
+      
+        <link rel="canonical" href="https://konsolid.at/roadmap/">
       
       
       
@@ -21,7 +23,7 @@
     
     
       
-        <title>Konsol — Roadmap & Remaining Activities - Open EPM</title>
+        <title>Konsolidat — Roadmap - KNSLDT</title>
       
     
     
@@ -39,13 +41,9 @@
     
     
       
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
     
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -63,7 +61,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -72,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#konsol-roadmap-remaining-activities" class="md-skip">
+        <a href="#konsolidat-roadmap" class="md-skip">
           Skip to content
         </a>
       
@@ -86,10 +84,10 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Open EPM" class="md-header__button md-logo" aria-label="Open EPM" data-md-component="logo">
+    <a href=".." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -100,13 +98,13 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Open EPM
+            KNSLDT
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Konsol — Roadmap &amp; Remaining Activities
+              Konsolidat — Roadmap
             
           </span>
         </div>
@@ -119,7 +117,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -129,7 +127,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -186,13 +184,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/grynn-in/konsolidat" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    pjdijxhoorn/open_epm
+    grynn-in/konsolidat
   </div>
 </a>
       </div>
@@ -235,21 +233,29 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../why-konsolidat/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../why-konsolidat/" class="md-tabs__link">
+          
+  
   
   Why Konsolidat?
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
         
+  
+  
+  
+  
+    
+    
+      
   
   
   
@@ -261,90 +267,13 @@
           
   
   
-  Getting Started
+  Guides
 
         </a>
       </li>
     
   
 
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../user-guide/excel-vba-guide/" class="md-tabs__link">
-          
-  
-  
-  User Guide
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../api-reference/api-overview/" class="md-tabs__link">
-          
-  
-  
-  API Reference
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../data-dictionary/data-dictionary-overview/" class="md-tabs__link">
-          
-  
-  
-  Data Dictionary
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../admin-guide/deployment-guide/" class="md-tabs__link">
-          
-  
-  
-  Admin Guide
-
-        </a>
-      </li>
     
   
 
@@ -361,7 +290,7 @@
           
   
   
-  Developer Guide
+  Developer
 
         </a>
       </li>
@@ -381,47 +310,7 @@
           
   
   
-  Troubleshooting
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../evaluation/cost-comparison-vs-commercial/" class="md-tabs__link">
-          
-  
-  
-  Evaluation
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../reference/roadmap/" class="md-tabs__link">
-          
-  
-  
-  Reference
+  Help
 
         </a>
       </li>
@@ -449,27 +338,25 @@
   
 
 
-  
-
-<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Open EPM" class="md-nav__button md-logo" aria-label="Open EPM" data-md-component="logo">
+    <a href=".." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
 
     </a>
-    Open EPM
+    KNSLDT
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/pjdijxhoorn/open_epm" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/grynn-in/konsolidat" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    pjdijxhoorn/open_epm
+    grynn-in/konsolidat
   </div>
 </a>
     </div>
@@ -509,6 +396,58 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why Konsolidat?
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Why Konsolidat?
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../why-konsolidat/" class="md-nav__link">
         
@@ -526,6 +465,126 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/security-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -550,12 +609,62 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
             
   
   
@@ -573,8 +682,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -654,7 +763,7 @@
   <span class="md-ellipsis">
     
   
-    Configuration Reference
+    Configuration
   
 
     
@@ -674,9 +783,10 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -695,19 +805,17 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    User Guide
+    Excel
   
 
     
@@ -718,12 +826,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             
   
-    User Guide
+    Excel
   
 
           </label>
@@ -743,7 +851,7 @@
   <span class="md-ellipsis">
     
   
-    Excel VBA Guide
+    VBA Add-in
   
 
     
@@ -771,7 +879,7 @@
   <span class="md-ellipsis">
     
   
-    Excel Task Pane
+    Task Pane
   
 
     
@@ -784,6 +892,94 @@
   
 
               
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/initial-setup-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Initial Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Financial Processes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Financial Processes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
             
               
                 
@@ -876,6 +1072,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user-guide/budget-layers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Layers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user-guide/variance-analysis-guide/" class="md-nav__link">
         
   
@@ -896,6 +1120,66 @@
   
 
               
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reports
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reports
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
             
               
                 
@@ -931,6 +1215,186 @@
     </li>
   
 
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Administration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/deployment-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/d365-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    D365 Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-guide/monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
     
       
       
@@ -952,12 +1416,90 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Developer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/developer-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
             
   
   
@@ -975,8 +1517,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1001,6 +1543,86 @@
     
   
     Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_2" id="__nav_4_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retrieval
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Retrieval
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-health/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET health
   
 
     
@@ -1070,6 +1692,66 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_3" id="__nav_4_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Write-Back
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Budget Write-Back
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
               
                 
   
@@ -1077,14 +1759,70 @@
   
   
     <li class="md-nav__item">
-      <a href="../api-reference/api-health/" class="md-nav__link">
+      <a href="../api-reference/api-budget-save/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    GET health
+    POST budget_save
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-budget-cell-save/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST budget_cell_save
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-budget-save-batch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST budget_save_batch
   
 
     
@@ -1104,9 +1842,10 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -1125,12 +1864,306 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_4" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_2_4" id="__nav_4_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consolidation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Consolidation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-hierarchy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET get_hierarchy_tree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-approve-adjustment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST approve_adjustment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-reverse-adjustment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST reverse_adjustment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2_5" id="__nav_4_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allocation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Allocation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-run-allocation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST run_allocation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-reverse-allocation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    POST reverse_allocation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/api-allocation-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET allocation_history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
             
   
   
@@ -1148,8 +2181,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_3">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1333,9 +2366,10 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -1354,19 +2388,17 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Admin Guide
+    Extending
   
 
     
@@ -1377,217 +2409,16 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Admin Guide
+    Extending
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../admin-guide/deployment-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Deployment
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../admin-guide/operations-runbook/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Operations Runbook
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../admin-guide/d365-integration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    D365 Integration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../admin-guide/monitoring/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Monitoring
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developer Guide
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Developer Guide
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../developer-guide/developer-overview/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1603,7 +2434,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Reference
+    dbt Macro Reference
   
 
     
@@ -1632,34 +2463,6 @@
     
   
     Extending Models
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../developer-guide/testing-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Testing Guide
   
 
     
@@ -1729,6 +2532,42 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer-guide/testing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
               
                 
   
@@ -1784,19 +2623,17 @@
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Troubleshooting
+    Help
   
 
     
@@ -1807,12 +2644,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Troubleshooting
+    Help
   
 
           </label>
@@ -1874,212 +2711,6 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
-        
-          
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Evaluation
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Evaluation
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Cost Comparison
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../evaluation/security-architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Security Architecture
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
-        
-          
-          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_11">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Reference
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/roadmap/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
               
                 
   
@@ -2122,6 +2753,392 @@
               </div>
             
             
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-one-click-deploy-3-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: One-Click Deploy (~3 days)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1: One-Click Deploy (~3 days)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-full-docker-compose-15-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Full Docker Compose (1.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-deploy-script-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Deploy Script (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-documentation-05-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Documentation (0.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-dynamic-schema-dimensions-measures-facts-5-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Dynamic Schema — Dimensions, Measures &amp; Facts (~5 days)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Dynamic Schema — Dimensions, Measures &amp; Facts (~5 days)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-state-hardcoded" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current state (hardcoded)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-dimension-registry-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Dimension Registry (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-measure-registry-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Measure Registry (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-fact-registry-15-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Fact Registry (1.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-api-generalisation-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 API Generalisation (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-source-layer-abstraction-05-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Source Layer Abstraction (0.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-multi-erp-support-sap-erpnext-5-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Multi-ERP Support — SAP + ERPNext (~5 days)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: Multi-ERP Support — SAP + ERPNext (~5 days)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-erp-agnostic-bronze-schema-2-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ERP-Agnostic Bronze Schema (2 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-connector-abstraction-15-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Connector Abstraction (1.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-erpnext-native-integration-05-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 ERPNext Native Integration (0.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-docs-landing-page-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Docs &amp; Landing Page (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-security-entra-id-sso-2-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Security &amp; Entra ID SSO (~2 days)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4: Security &amp; Entra ID SSO (~2 days)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-entra-id-integration-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Entra ID Integration (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-reverse-proxy-tls-05-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Reverse Proxy &amp; TLS (0.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-clickhouse-network-isolation-05-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 ClickHouse Network Isolation (0.5 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-excel-online-add-in-3-days-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Excel Online Add-in ~~(~3 days)~~ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-analytical-gaps-2-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Analytical Gaps (~2 weeks)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 6: Analytical Gaps (~2 weeks)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-cash-flow-statement-23-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Cash Flow Statement (2–3 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-multi-gaap-dual-reporting-1-week" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Multi-GAAP / Dual Reporting (1 week)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-rolling-forecasts-23-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Rolling Forecasts (2–3 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-budget-cell-locking-12-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Budget Cell Locking (1–2 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-multi-step-budget-approval-chain-05-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 Multi-Step Budget Approval Chain (0.5 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-7-production-hardening-3-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 7: Production Hardening (~3 days)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effort-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
           
           
             <div class="md-content" data-md-component="content">
@@ -2135,8 +3152,8 @@
   
 
 
-<h1 id="konsol-roadmap-remaining-activities">Konsol — Roadmap &amp; Remaining Activities<a class="headerlink" href="#konsol-roadmap-remaining-activities" title="Permanent link">&para;</a></h1>
-<p><em>Last updated: 2026-06-07</em></p>
+<h1 id="konsolidat-roadmap">Konsolidat — Roadmap<a class="headerlink" href="#konsolidat-roadmap" title="Permanent link">&para;</a></h1>
+<p><em>Last updated: 2026-06-09</em></p>
 <h2 id="status-summary">Status Summary<a class="headerlink" href="#status-summary" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2148,19 +3165,23 @@
 <tbody>
 <tr>
 <td>Data pipeline (Bronze → Silver → Gold)</td>
-<td><strong>Done</strong> — 37 dbt models, 21 tests</td>
+<td><strong>Done</strong> — 44 dbt models, 26 tests</td>
 </tr>
 <tr>
-<td>Consolidation (FX, IC elim, CTA, NCI)</td>
-<td><strong>Done</strong> — IFRS/GAAP compliant, tested</td>
+<td>Consolidation (FX, IC elimination, CTA, NCI)</td>
+<td><strong>Done</strong> — IFRS/GAAP compliant</td>
 </tr>
 <tr>
-<td>Allocations (multi-step cascade)</td>
-<td><strong>Done</strong> — 3-step with driver support</td>
+<td>Hierarchy, equity method, acquisition/disposal</td>
+<td><strong>Done</strong> — PRD-8 through PRD-22</td>
 </tr>
 <tr>
-<td>Budget write-back (FastAPI)</td>
-<td><strong>Done</strong> — 11 endpoints, staging tables</td>
+<td>Allocations (multi-step cascade, reciprocal, tiered)</td>
+<td><strong>Done</strong> — dynamic N-step engine</td>
+</tr>
+<tr>
+<td>Budget write-back</td>
+<td><strong>Done</strong> — EPMSAVE() from Excel + Frappe API</td>
 </tr>
 <tr>
 <td>Scenario management</td>
@@ -2171,28 +3192,44 @@
 <td><strong>Done</strong> — actual vs budget with favorable logic</td>
 </tr>
 <tr>
-<td>Excel integration (desktop ODBC)</td>
-<td><strong>Done</strong> — Cube SQL + VBA macros</td>
+<td>Excel VBA integration</td>
+<td><strong>Done</strong> — =EPM() + 5 functions, ODBC + REST</td>
 </tr>
 <tr>
-<td>Admin UI (Streamlit)</td>
-<td><strong>Done</strong> — 4 pages</td>
+<td>Frappe app (konsol)</td>
+<td><strong>Done</strong> — DocTypes, ClickHouse sync, background jobs</td>
 </tr>
 <tr>
-<td>Orchestration (Dagster)</td>
-<td><strong>Done</strong> — Airbyte + dbt asset graph</td>
+<td>Docs site (MkDocs Material)</td>
+<td><strong>Done</strong> — konsolid.at, 31+ pages</td>
 </tr>
 <tr>
-<td>Security / auth / RBAC</td>
+<td>Custom domain</td>
+<td><strong>Done</strong> — konsolid.at on GitHub Pages</td>
+</tr>
+<tr>
+<td>FastAPI / Streamlit / Dagster</td>
+<td><strong>Retired</strong> — replaced by Frappe konsol app</td>
+</tr>
+<tr>
+<td>One-click deploy</td>
 <td><strong>Not started</strong></td>
 </tr>
 <tr>
-<td>Frappe migration</td>
+<td>Multi-ERP (SAP, ERPNext)</td>
 <td><strong>Not started</strong></td>
 </tr>
 <tr>
-<td>Excel Online Add-in</td>
+<td>Dynamic schema (dimensions, measures, facts)</td>
 <td><strong>Not started</strong></td>
+</tr>
+<tr>
+<td>Security / Entra ID SSO</td>
+<td><strong>Not started</strong></td>
+</tr>
+<tr>
+<td>Excel Online Add-in (Office.js)</td>
+<td><strong>Done</strong> — Task pane add-in, pipeline orchestration, Frappe session auth</td>
 </tr>
 <tr>
 <td>Cash flow statement</td>
@@ -2209,133 +3246,227 @@
 </tbody>
 </table>
 <hr />
-<h2 id="phase-1-frappe-migration-5-days">Phase 1: Frappe Migration (~5 days)<a class="headerlink" href="#phase-1-frappe-migration-5-days" title="Permanent link">&para;</a></h2>
-<p>Replace FastAPI + Streamlit + CSV seeds with Frappe. This closes the auth, workflow, audit, and web UI gaps in one move.</p>
-<h3 id="11-frappe-app-scaffold-1-day">1.1 Frappe App Scaffold (1 day)<a class="headerlink" href="#11-frappe-app-scaffold-1-day" title="Permanent link">&para;</a></h3>
+<h2 id="phase-1-one-click-deploy-3-days">Phase 1: One-Click Deploy (~3 days)<a class="headerlink" href="#phase-1-one-click-deploy-3-days" title="Permanent link">&para;</a></h2>
+<p>Full docker-compose stack + single deploy script. Goal: <code>git clone &amp;&amp; ./deploy.sh</code> gets a working instance.</p>
+<h3 id="11-full-docker-compose-15-days">1.1 Full Docker Compose (1.5 days)<a class="headerlink" href="#11-full-docker-compose-15-days" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <code>bench init open-epm-bench</code></li>
-<li>[ ] <code>bench new-app konsol</code></li>
-<li>[ ] Add ClickHouse connection module (<code>clickhouse-connect</code>)</li>
-<li>[ ] Add Frappe app to <code>docker-compose.yml</code> (Frappe + MariaDB + Redis + workers)</li>
-<li>[ ] Verify Frappe Desk loads at <code>localhost:8000</code></li>
+<li>[ ] Add services: Frappe (bench), PostgreSQL/MariaDB, Redis (cache + queue), Frappe worker</li>
+<li>[ ] ClickHouse already containerised — wire into same compose network</li>
+<li>[ ] Airbyte via <code>abctl</code> or optional compose profile</li>
+<li>[ ] Init containers: ClickHouse schema (<code>init-db.sql</code>), Frappe site creation, dbt seed + build</li>
+<li>[ ] Volume management for persistent data (ClickHouse, database, Redis)</li>
+<li>[ ] Health checks for all services</li>
 </ul>
-<h3 id="12-doctypes-config-12-days">1.2 DocTypes — Config (1–2 days)<a class="headerlink" href="#12-doctypes-config-12-days" title="Permanent link">&para;</a></h3>
-<p>Replace CSV seeds with Frappe DocTypes. Each DocType gets auto-generated REST API, list/form views, versioning, and audit trail.</p>
+<h3 id="12-deploy-script-1-day">1.2 Deploy Script (1 day)<a class="headerlink" href="#12-deploy-script-1-day" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <strong>Scenario</strong> — scenario_id, name, type (budget/forecast/whatif), base_scenario, is_active, created_by</li>
-<li>[ ] <strong>Consolidation Group</strong> — group_name, entity_id, ownership_pct, reporting_currency, is_active</li>
-<li>[ ] <strong>IC Elimination Rule</strong> — rule_id, debit_account, credit_account, description</li>
-<li>[ ] <strong>Allocation Rule</strong> — step_order, rule_id, source_account, target_account, driver_type, source_cost_center</li>
-<li>[ ] <strong>Allocation Driver</strong> — driver_type, cost_center, fiscal_period, fiscal_year, driver_value</li>
-<li>[ ] One-time migration: load existing CSV seed data into DocTypes</li>
+<li>[ ] <code>deploy.sh</code> — copies <code>.env.example</code>, prompts for passwords, runs compose up, waits for health, runs init</li>
+<li>[ ] First-run detection: seed data vs. upgrade (dbt build only)</li>
+<li>[ ] TLS via Caddy reverse proxy (auto-cert or self-signed for local)</li>
 </ul>
-<h3 id="13-doctypes-budget-write-back-1-day">1.3 DocTypes — Budget Write-back (1 day)<a class="headerlink" href="#13-doctypes-budget-write-back-1-day" title="Permanent link">&para;</a></h3>
+<h3 id="13-documentation-05-days">1.3 Documentation (0.5 days)<a class="headerlink" href="#13-documentation-05-days" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <strong>Budget Entry</strong> — entity, year, period, account, cost_center, department, amount, scenario_id, submitted_by</li>
-<li>[ ] Workflow: Draft → Submitted → Approved (controller approves)</li>
-<li>[ ] On Approve: server script writes approved rows to ClickHouse <code>epm_staging.budget_input</code></li>
-<li>[ ] Port <code>/api/v1/epm/value</code>, <code>/api/v1/epm/batch</code>, <code>/api/v1/epm/members</code> to Frappe whitelisted API methods</li>
-</ul>
-<h3 id="14-config-sync-to-clickhouse-05-days">1.4 Config Sync to ClickHouse (0.5 days)<a class="headerlink" href="#14-config-sync-to-clickhouse-05-days" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] Server script on Consolidation Group save → write to <code>epm_staging.consolidation_groups</code></li>
-<li>[ ] Server script on IC Rule save → write to <code>epm_staging.ic_elimination_rules</code></li>
-<li>[ ] Server script on Allocation Rule/Driver save → write to <code>epm_staging.allocation_rules</code> / <code>allocation_drivers</code></li>
-<li>[ ] Trigger Dagster dbt rebuild after config change (webhook or Dagster sensor)</li>
-</ul>
-<h3 id="15-retire-fastapi-streamlit-05-days">1.5 Retire FastAPI + Streamlit (0.5 days)<a class="headerlink" href="#15-retire-fastapi-streamlit-05-days" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] Remove <code>api/</code> directory</li>
-<li>[ ] Remove <code>streamlit/</code> directory</li>
-<li>[ ] Remove FastAPI and Streamlit from <code>docker-compose.yml</code></li>
-<li>[ ] Update <code>Makefile</code> targets</li>
-<li>[ ] Update <code>README.md</code></li>
+<li>[ ] Update <code>docs/admin-guide/deployment-guide.md</code> with one-click path</li>
+<li>[ ] Quick-start README section: 3 commands to running instance</li>
+<li>[ ] Environment variable reference</li>
 </ul>
 <hr />
-<h2 id="phase-2-security-entra-id-sso-2-days">Phase 2: Security &amp; Entra ID SSO (~2 days)<a class="headerlink" href="#phase-2-security-entra-id-sso-2-days" title="Permanent link">&para;</a></h2>
-<h3 id="21-entra-id-integration-1-day">2.1 Entra ID Integration (1 day)<a class="headerlink" href="#21-entra-id-integration-1-day" title="Permanent link">&para;</a></h3>
+<h2 id="phase-2-dynamic-schema-dimensions-measures-facts-5-days">Phase 2: Dynamic Schema — Dimensions, Measures &amp; Facts (~5 days)<a class="headerlink" href="#phase-2-dynamic-schema-dimensions-measures-facts-5-days" title="Permanent link">&para;</a></h2>
+<p>Make the data model fully registry-driven from Frappe. Adding a dimension, measure, or fact table should be a UI operation in Frappe Desk, not a code change across 6 files.</p>
+<h3 id="current-state-hardcoded">Current state (hardcoded)<a class="headerlink" href="#current-state-hardcoded" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it is</th>
+<th>Example</th>
+<th>Where hardcoded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dimension</strong></td>
+<td>Attribute to slice by</td>
+<td>Cost Center, Department, Project</td>
+<td>ClickHouse columns, API params, Budget Input doctype, dbt macros</td>
+</tr>
+<tr>
+<td><strong>Measure</strong></td>
+<td>Numeric value to aggregate</td>
+<td>period_net_amount, opening_balance, ytd_amount</td>
+<td>dbt macros, API column mapping, Excel function <code>measure</code> param</td>
+</tr>
+<tr>
+<td><strong>Fact</strong></td>
+<td>Transactional grain / source table</td>
+<td>GL Journal Entries, Budget Input, Allocation Results</td>
+<td>dbt models, ClickHouse staging tables, Airbyte sync config</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-dimension-registry-1-day">2.1 Dimension Registry (1 day)<a class="headerlink" href="#21-dimension-registry-1-day" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Register Konsol as an app in Microsoft Entra ID (same tenant as D365)</li>
-<li>[ ] Configure Frappe Social Login Key for Entra ID (OAuth2 / OpenID Connect)</li>
-<li>[ ] Map Entra ID groups to Frappe roles (Reader, Planner, Controller, Admin)</li>
-<li>[ ] Test SSO login flow from browser</li>
+<li>[ ] Frappe <code>Dimension</code> doctype becomes authoritative — on save, auto-generates:</li>
+<li>ClickHouse <code>ALTER TABLE ADD COLUMN</code> for all staging/reporting tables</li>
+<li>Entry in <code>dbt_project.yml</code> <code>vars.dimensions</code> (or dbt vars override)</li>
+<li>Budget Input doctype field (dynamic via Frappe custom fields API)</li>
+<li>[ ] Validation: dimension name must be <code>dim_*</code>, unique, no reserved words</li>
+<li>[ ] Source mapping per ERP: D365 JSON path, SAP field name, ERPNext fieldname</li>
+<li>[ ] Allocation engine uses <code>allocation_role</code> from dimension config, not hardcoded column names</li>
 </ul>
-<h3 id="22-reverse-proxy-tls-05-days">2.2 Reverse Proxy &amp; TLS (0.5 days)<a class="headerlink" href="#22-reverse-proxy-tls-05-days" title="Permanent link">&para;</a></h3>
+<h3 id="22-measure-registry-1-day">2.2 Measure Registry (1 day)<a class="headerlink" href="#22-measure-registry-1-day" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Add Caddy to <code>docker-compose.yml</code></li>
-<li>[ ] Configure Caddyfile: TLS auto-cert, reverse proxy to Frappe, CORS headers</li>
-<li>[ ] Whitelist <code>*.officeapps.live.com</code> for Excel Online</li>
+<li>[ ] Frappe <code>Measure</code> doctype: <code>name</code>, <code>column_name</code>, <code>aggregation</code> (sum/avg/last), <code>label</code>, <code>favorable_direction</code> (debit/credit)</li>
+<li>[ ] On save, auto-generates:</li>
+<li>dbt <code>vars.measures</code> entries (drives <code>{{ measure_select() }}</code> macros)</li>
+<li>ClickHouse columns on gold tables</li>
+<li>API response includes only active measures</li>
+<li>[ ] Default measures pre-seeded: <code>period_net_amount</code>, <code>opening_balance</code>, <code>closing_balance</code>, <code>ytd_amount</code>, <code>debit_amount</code>, <code>credit_amount</code></li>
+<li>[ ] Custom measures: e.g. <code>headcount</code>, <code>revenue_per_sqm</code> — derived via SQL expression field on the doctype</li>
+</ul>
+<h3 id="23-fact-registry-15-days">2.3 Fact Registry (1.5 days)<a class="headerlink" href="#23-fact-registry-15-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Frappe <code>Fact Table</code> doctype: <code>name</code>, <code>source_type</code> (ERP GL / Budget / Statistical / Sub-ledger), <code>grain</code> description, <code>refresh_frequency</code></li>
+<li>[ ] Core facts (pre-seeded, always present):</li>
+<li><strong>GL Journal Entries</strong> — debits/credits by account/period/entity (the universal financial fact)</li>
+<li><strong>Budget Input</strong> — budget submissions per cell</li>
+<li><strong>Allocation Results</strong> — derived output from allocation engine</li>
+<li>[ ] Statistical facts (customer-configurable):</li>
+<li><strong>Headcount</strong> — employees per cost center per period (for allocation drivers)</li>
+<li><strong>Area (sqm)</strong> — square metres per cost center (for facilities allocation)</li>
+<li><strong>Revenue by Product</strong> — for revenue-based allocation</li>
+<li>[ ] Sub-ledger facts (for detailed reporting):</li>
+<li><strong>Accounts Payable</strong> — invoice-level detail for cash flow</li>
+<li><strong>Fixed Assets</strong> — asset register for depreciation / investing cash flow</li>
+<li><strong>Accounts Receivable</strong> — aging for working capital analysis</li>
+<li>[ ] Each Fact Table defines: required dimensions, required measures, ClickHouse table name, dbt model name</li>
+<li>[ ] On save: generates ClickHouse staging table DDL + dbt source definition</li>
+<li>[ ] Statistical facts replace the current <code>allocation_drivers</code> seed with a proper queryable fact table</li>
+</ul>
+<h3 id="24-api-generalisation-1-day">2.4 API Generalisation (1 day)<a class="headerlink" href="#24-api-generalisation-1-day" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Replace hardcoded <code>cost_center</code>, <code>department</code> params with generic <code>dimensions</code> dict</li>
+<li>[ ] <code>=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})</code></li>
+<li>[ ] <code>measure</code> parameter validates against active Measure registry</li>
+<li>[ ] New <code>fact</code> parameter: defaults to GL, but can query budget or statistical facts</li>
+<li>[ ] Backward-compatible: old named params still work, mapped internally</li>
+<li>[ ] ClickHouse query builder reads active dimensions/measures/facts from registry</li>
+</ul>
+<h3 id="25-source-layer-abstraction-05-days">2.5 Source Layer Abstraction (0.5 days)<a class="headerlink" href="#25-source-layer-abstraction-05-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] dbt macro <code>{{ dim_extract_from_source() }}</code> reads dimension list and generates extraction SQL per ERP</li>
+<li>[ ] D365: auto-extract from <code>LedgerDimensionValuesJson</code> by <code>source_column</code> name</li>
+<li>[ ] SAP/ERPNext: each connector provides its own dimension mapping (see Phase 3)</li>
+<li>[ ] Fact-specific source macros: GL extraction vs. budget extraction vs. statistical extraction</li>
+</ul>
+<hr />
+<h2 id="phase-3-multi-erp-support-sap-erpnext-5-days">Phase 3: Multi-ERP Support — SAP + ERPNext (~5 days)<a class="headerlink" href="#phase-3-multi-erp-support-sap-erpnext-5-days" title="Permanent link">&para;</a></h2>
+<p>Konsolidat currently extracts from D365 F&amp;O only. Abstract the source layer so any ERP can feed the same silver/gold models.</p>
+<h3 id="31-erp-agnostic-bronze-schema-2-days">3.1 ERP-Agnostic Bronze Schema (2 days)<a class="headerlink" href="#31-erp-agnostic-bronze-schema-2-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Define canonical bronze interface: <code>entity_id</code>, <code>fiscal_year</code>, <code>fiscal_period</code>, <code>main_account</code>, <code>debit</code>, <code>credit</code>, <code>currency</code>, <code>dimensions[]</code></li>
+<li>[ ] D365 connector (existing): map <code>GeneralJournalAccountEntry</code> → canonical schema</li>
+<li>[ ] SAP connector: map FI line items (BSEG/BKPF or S/4HANA CDS views) → canonical schema</li>
+<li>[ ] ERPNext connector: map <code>GL Entry</code> doctype → canonical schema</li>
+<li>[ ] Each connector is an Airbyte source + one dbt staging model</li>
+</ul>
+<h3 id="32-connector-abstraction-15-days">3.2 Connector Abstraction (1.5 days)<a class="headerlink" href="#32-connector-abstraction-15-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Frappe <code>ERP Connection</code> doctype: type (D365/SAP/ERPNext), credentials, entity mapping</li>
+<li>[ ] Airbyte connection auto-provisioning from ERP Connection config</li>
+<li>[ ] dbt source selector: <code>{{ source('bronze_' ~ erp_type, 'gl_entries') }}</code></li>
+<li>[ ] Silver layer is ERP-agnostic — all connectors produce identical output</li>
+</ul>
+<h3 id="33-erpnext-native-integration-05-days">3.3 ERPNext Native Integration (0.5 days)<a class="headerlink" href="#33-erpnext-native-integration-05-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] ERPNext bonus: direct Frappe-to-Frappe API (no Airbyte needed)</li>
+<li>[ ] <code>hooks.py</code> event on GL Entry submit → write to ClickHouse bronze directly</li>
+<li>[ ] Real-time consolidation for ERPNext customers</li>
+</ul>
+<h3 id="34-docs-landing-page-1-day">3.4 Docs &amp; Landing Page (1 day)<a class="headerlink" href="#34-docs-landing-page-1-day" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Update konsolid.at: "Works with D365, SAP, and ERPNext"</li>
+<li>[ ] Connector setup guides for each ERP</li>
+<li>[ ] Update marketing blurb (PPTX) with multi-ERP positioning</li>
+<li>[ ] Architecture diagram showing pluggable source layer</li>
+</ul>
+<hr />
+<h2 id="phase-4-security-entra-id-sso-2-days">Phase 4: Security &amp; Entra ID SSO (~2 days)<a class="headerlink" href="#phase-4-security-entra-id-sso-2-days" title="Permanent link">&para;</a></h2>
+<h3 id="41-entra-id-integration-1-day">4.1 Entra ID Integration (1 day)<a class="headerlink" href="#41-entra-id-integration-1-day" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Register Konsol in Microsoft Entra ID (OAuth2 / OpenID Connect)</li>
+<li>[ ] Map Entra ID groups to Frappe roles (Reader, Planner, Controller, Admin)</li>
+<li>[ ] Test SSO login flow</li>
+</ul>
+<h3 id="42-reverse-proxy-tls-05-days">4.2 Reverse Proxy &amp; TLS (0.5 days)<a class="headerlink" href="#42-reverse-proxy-tls-05-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Caddy in docker-compose: auto-cert TLS, CORS for Excel Online</li>
 <li>[ ] Rate limiting: 100 req/min per user</li>
 </ul>
-<h3 id="23-clickhouse-network-isolation-05-days">2.3 ClickHouse Network Isolation (0.5 days)<a class="headerlink" href="#23-clickhouse-network-isolation-05-days" title="Permanent link">&para;</a></h3>
+<h3 id="43-clickhouse-network-isolation-05-days">4.3 ClickHouse Network Isolation (0.5 days)<a class="headerlink" href="#43-clickhouse-network-isolation-05-days" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] ClickHouse listens on Docker internal network only (remove host port bindings)</li>
-<li>[ ] Cube SQL API: internal network or VPN-only for desktop ODBC users</li>
+<li>[ ] ClickHouse on Docker internal network only (no host port bindings in production)</li>
 <li>[ ] Verify: no ClickHouse ports reachable from public internet</li>
 </ul>
 <hr />
-<h2 id="phase-3-excel-online-add-in-3-days">Phase 3: Excel Online Add-in (~3 days)<a class="headerlink" href="#phase-3-excel-online-add-in-3-days" title="Permanent link">&para;</a></h2>
-<h3 id="31-add-in-scaffold-1-day">3.1 Add-in Scaffold (1 day)<a class="headerlink" href="#31-add-in-scaffold-1-day" title="Permanent link">&para;</a></h3>
+<h2 id="phase-5-excel-online-add-in-3-days-done">Phase 5: Excel Online Add-in ~~(~3 days)~~ DONE<a class="headerlink" href="#phase-5-excel-online-add-in-3-days-done" title="Permanent link">&para;</a></h2>
+<p>Task pane add-in built and deployed. Source: <code>excel-addin/</code>, served from Frappe <code>public/excel-addin/</code>.</p>
 <ul>
-<li>[ ] <code>npx yo office --type excel-functions-shared</code> → TypeScript project</li>
-<li>[ ] Register custom functions: <code>EPM.VALUE</code>, <code>EPM.CONSOLIDATED</code>, <code>EPM.VARIANCE</code>, <code>EPM.MEMBERS</code>, <code>EPM.SUBMIT</code></li>
-<li>[ ] MSAL.js integration: acquire Entra ID token, pass as Bearer header</li>
-<li>[ ] Test locally with <code>npm start</code> → Excel sideload</li>
+<li>[x] Office.js Task Pane app (manifest.xml, taskpane.html/js/css, icons)</li>
+<li>[x] Frappe session-based authentication (login/logout via cookie)</li>
+<li>[x] Pipeline orchestration: trigger Extract + dbt Build, poll status (5s interval)</li>
+<li>[x] Status display: Queued/Extracting/Transforming/Success/Failed badges</li>
+<li>[x] Deployed to Frappe static assets, sideloadable via manifest.xml</li>
+<li>[x] Documentation: README + user guide + architecture diagram</li>
 </ul>
-<h3 id="32-api-integration-1-day">3.2 API Integration (1 day)<a class="headerlink" href="#32-api-integration-1-day" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] <code>EPM.VALUE()</code> → <code>GET /api/method/konsol.api.get_value</code></li>
-<li>[ ] <code>EPM.CONSOLIDATED()</code> → <code>GET /api/method/konsol.api.get_consolidated</code></li>
-<li>[ ] <code>EPM.VARIANCE()</code> → <code>GET /api/method/konsol.api.get_variance</code></li>
-<li>[ ] <code>EPM.MEMBERS()</code> → <code>GET /api/method/konsol.api.get_members</code></li>
-<li>[ ] <code>EPM.SUBMIT()</code> → <code>POST /api/method/konsol.api.submit_budget</code></li>
-<li>[ ] Batch optimization: coalesce multiple <code>EPM.VALUE()</code> calls into single batch request during recalc</li>
-<li>[ ] Result caching: 5-minute TTL per dimension combination</li>
-</ul>
-<h3 id="33-deployment-1-day">3.3 Deployment (1 day)<a class="headerlink" href="#33-deployment-1-day" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] Build production add-in manifest (manifest.xml)</li>
-<li>[ ] Upload to Microsoft 365 admin center for org-wide deployment</li>
-<li>[ ] Test in Excel Online (browser), Excel Desktop (Windows/Mac), Excel iPad</li>
-<li>[ ] Write user guide: <code>docs/excel-online-guide.md</code></li>
-</ul>
+<p><strong>Not included</strong> (by design — VBA handles data):
+- No custom functions (=EPM() stays in VBA for desktop, Office.js for pipeline control)
+- No MSAL/OAuth (uses Frappe session cookies instead)</p>
 <hr />
-<h2 id="phase-4-analytical-gaps-2-weeks">Phase 4: Analytical Gaps (~2 weeks)<a class="headerlink" href="#phase-4-analytical-gaps-2-weeks" title="Permanent link">&para;</a></h2>
-<h3 id="41-cash-flow-statement-23-days">4.1 Cash Flow Statement (2–3 days)<a class="headerlink" href="#41-cash-flow-statement-23-days" title="Permanent link">&para;</a></h3>
+<h2 id="phase-6-analytical-gaps-2-weeks">Phase 6: Analytical Gaps (~2 weeks)<a class="headerlink" href="#phase-6-analytical-gaps-2-weeks" title="Permanent link">&para;</a></h2>
+<h3 id="61-cash-flow-statement-23-days">6.1 Cash Flow Statement (2–3 days)<a class="headerlink" href="#61-cash-flow-statement-23-days" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <code>gold_cash_flow_indirect.sql</code> — derive from BS delta method (period-over-period balance changes)</li>
-<li>[ ] Categories: Operating (P&amp;L adjustments), Investing (fixed asset changes), Financing (debt/equity changes)</li>
-<li>[ ] Account mapping seed: <code>cash_flow_categories.csv</code> — maps main accounts to CF categories</li>
+<li>[ ] <code>gold_cash_flow_indirect.sql</code> — derive from balance sheet delta method</li>
+<li>[ ] Categories: Operating, Investing, Financing</li>
+<li>[ ] Account mapping seed: <code>cash_flow_categories.csv</code></li>
 <li>[ ] Consolidated cash flow (after FX translation)</li>
-<li>[ ] Add Cube schema + Excel table endpoint</li>
-<li>[ ] Tests: CF operating + investing + financing = net change in cash</li>
+<li>[ ] Tests: operating + investing + financing = net change in cash</li>
 </ul>
-<h3 id="42-multi-gaap-dual-reporting-1-week">4.2 Multi-GAAP / Dual Reporting (1 week)<a class="headerlink" href="#42-multi-gaap-dual-reporting-1-week" title="Permanent link">&para;</a></h3>
+<h3 id="62-multi-gaap-dual-reporting-1-week">6.2 Multi-GAAP / Dual Reporting (1 week)<a class="headerlink" href="#62-multi-gaap-dual-reporting-1-week" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Add <code>reporting_standard</code> dimension to gold models (e.g. <code>LOCAL_GAAP</code>, <code>IFRS</code>)</li>
-<li>[ ] Separate adjustment rules per standard (e.g. different depreciation, lease treatment)</li>
-<li>[ ] <code>consolidation_adjustments</code> seed gets <code>reporting_standard</code> column</li>
-<li>[ ] <code>gold_consolidated_trial_balance</code> produces one output per standard</li>
-<li>[ ] Cube schema + Excel function support <code>=EPM.VALUE(..., "IFRS")</code> vs <code>=EPM.VALUE(..., "LOCAL")</code></li>
+<li>[ ] <code>reporting_standard</code> dimension (LOCAL_GAAP, IFRS)</li>
+<li>[ ] Separate adjustment rules per standard</li>
+<li>[ ] Gold models produce one output per standard</li>
 <li>[ ] Tests: each standard balances independently</li>
 </ul>
-<h3 id="43-rolling-forecasts-23-days">4.3 Rolling Forecasts (2–3 days)<a class="headerlink" href="#43-rolling-forecasts-23-days" title="Permanent link">&para;</a></h3>
+<h3 id="63-rolling-forecasts-23-days">6.3 Rolling Forecasts (2–3 days)<a class="headerlink" href="#63-rolling-forecasts-23-days" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <code>gold_rolling_forecast.sql</code> — 12-month forward window, shifts monthly</li>
-<li>[ ] Logic: actual for closed periods + forecast for open periods</li>
-<li>[ ] Forecast version management: auto-create next month's forecast from prior + actuals</li>
-<li>[ ] Scenario type <code>rolling</code> in addition to <code>budget</code>/<code>forecast</code>/<code>whatif</code></li>
-<li>[ ] Tests: rolling window always covers exactly 12 periods</li>
+<li>[ ] 12-month forward window, shifts monthly</li>
+<li>[ ] Actual for closed periods + forecast for open periods</li>
+<li>[ ] Scenario type <code>rolling</code></li>
+</ul>
+<h3 id="64-budget-cell-locking-12-days">6.4 Budget Cell Locking (1–2 days)<a class="headerlink" href="#64-budget-cell-locking-12-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Optimistic locking: check <code>modified</code> timestamp on <code>budget_cell_save()</code> — reject if stale</li>
+<li>[ ] Conflict response with latest value so Excel can prompt user</li>
+<li>[ ] Optional pessimistic locking: <code>Budget Lock</code> doctype with auto-expiry (5 min)</li>
+<li>[ ] VBA retry logic on conflict (refresh cell, re-prompt)</li>
+</ul>
+<h3 id="65-multi-step-budget-approval-chain-05-day">6.5 Multi-Step Budget Approval Chain (0.5 day)<a class="headerlink" href="#65-multi-step-budget-approval-chain-05-day" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Extend <code>budget_input_workflow.json</code>: Draft → Submitted → Dept Manager Approved → Controller Approved → CFO Approved</li>
+<li>[ ] Each transition gated by a separate Frappe role</li>
+<li>[ ] Use Frappe <code>docstatus = 1</code> (Submit) on final approval to permanently lock document</li>
+<li>[ ] Email notifications on workflow state changes (Frappe Notification doctype)</li>
 </ul>
 <hr />
-<h2 id="phase-5-production-hardening-3-days">Phase 5: Production Hardening (~3 days)<a class="headerlink" href="#phase-5-production-hardening-3-days" title="Permanent link">&para;</a></h2>
+<h2 id="phase-7-production-hardening-3-days">Phase 7: Production Hardening (~3 days)<a class="headerlink" href="#phase-7-production-hardening-3-days" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] ClickHouse backup automation (scheduled snapshots to Azure Blob / S3)</li>
-<li>[ ] Dagster alerting: email on pipeline failure</li>
-<li>[ ] Monitoring: ClickHouse query latency + Frappe response times (Prometheus + Grafana or Frappe's built-in)</li>
-<li>[ ] Load testing: simulate 50 concurrent Excel users with <code>EPM.VALUE()</code> calls</li>
-<li>[ ] Documentation: runbook for monthly close process</li>
-<li>[ ] Documentation: disaster recovery procedure</li>
+<li>[ ] Monitoring: ClickHouse query latency + Frappe response times (Prometheus + Grafana)</li>
+<li>[ ] Alerting: email/Slack on pipeline failure or dbt test failure</li>
+<li>[ ] Load testing: simulate 50 concurrent Excel users</li>
+<li>[ ] Runbook: monthly close process</li>
+<li>[ ] Disaster recovery procedure</li>
 </ul>
 <hr />
 <h2 id="effort-summary">Effort Summary<a class="headerlink" href="#effort-summary" title="Permanent link">&para;</a></h2>
@@ -2349,38 +3480,48 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Phase 1:</strong> Frappe migration</td>
+<td><strong>Phase 1:</strong> One-click deploy</td>
+<td>~3 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Phase 2:</strong> Dynamic schema (dimensions, measures, facts)</td>
 <td>~5 days</td>
 <td>None</td>
 </tr>
 <tr>
-<td><strong>Phase 2:</strong> Security &amp; SSO</td>
+<td><strong>Phase 3:</strong> Multi-ERP (SAP + ERPNext)</td>
+<td>~5 days</td>
+<td>Phase 2 (dimension abstraction)</td>
+</tr>
+<tr>
+<td><strong>Phase 4:</strong> Security &amp; SSO</td>
 <td>~2 days</td>
 <td>Phase 1</td>
 </tr>
 <tr>
-<td><strong>Phase 3:</strong> Excel Online Add-in</td>
-<td>~3 days</td>
-<td>Phase 1 + 2</td>
+<td><strong>Phase 5:</strong> Excel Online Add-in</td>
+<td>~~3 days~~ <strong>Done</strong></td>
+<td>—</td>
 </tr>
 <tr>
-<td><strong>Phase 4:</strong> Analytical gaps</td>
-<td>~2 weeks</td>
-<td>Phase 1 (config sync)</td>
+<td><strong>Phase 6:</strong> Analytical gaps + budget hardening</td>
+<td>~2.5 weeks</td>
+<td>Phase 2 (dimensions)</td>
 </tr>
 <tr>
-<td><strong>Phase 5:</strong> Production hardening</td>
+<td><strong>Phase 7:</strong> Production hardening</td>
 <td>~3 days</td>
-<td>Phase 1–3</td>
+<td>Phase 1</td>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td><strong>~5 weeks</strong></td>
+<td><strong>~7 weeks</strong></td>
 <td></td>
 </tr>
 </tbody>
 </table>
-<p>Phases 1–3 can be done sequentially in ~2 weeks. Phase 4 can run in parallel with Phase 3. Phase 5 follows all others.</p>
+<p>Phases 1 and 2 can run in parallel. Phase 3 depends on Phase 2 (schema abstraction). Phases 4–7 can overlap.</p>
 
 
 
@@ -2401,6 +3542,12 @@
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
         
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
       </main>
       
         <footer class="md-footer">
@@ -2409,10 +3556,42 @@
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
   
+    <div class="md-copyright__highlight">
+      MIT License &copy; 2024 <a href="https://github.com/grynn-in">grynn-in</a>. All rights reserved. Built with <a href="https://claude.ai">Claude Code</a>.
+
+    </div>
+  
   
     Made with
     <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
       Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/grynn-in/konsolidat" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://konsolid.at" target="_blank" rel="noopener" title="konsolid.at" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
     </a>
   
 </div>
@@ -2430,7 +3609,7 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "search.highlight", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
