@@ -117,6 +117,76 @@ models:
       +materialized: table
       +tags: ['gold']
 
+      # --- Domain: staging (safe — no epm_raw dependency) ---
+      gold_period_hierarchy:
+        +tags: ['gold', 'domain:staging']
+      gold_scenario_versions:
+        +tags: ['gold', 'domain:staging']
+      gold_consolidation_hierarchy:
+        +tags: ['gold', 'domain:staging']
+      gold_consolidation_adjustments:
+        +tags: ['gold', 'domain:staging']
+      gold_spread_budget:
+        +tags: ['gold', 'domain:staging']
+
+      # --- Domain: actuals (needs epm_raw — GL data from D365) ---
+      gold_trial_balance:
+        +tags: ['gold', 'domain:actuals']
+      gold_ytd_trial_balance:
+        +tags: ['gold', 'domain:actuals']
+      gold_pnl_by_period:
+        +tags: ['gold', 'domain:actuals']
+      gold_pnl_quarterly:
+        +tags: ['gold', 'domain:actuals']
+      gold_pnl_half_yearly:
+        +tags: ['gold', 'domain:actuals']
+      gold_balance_sheet:
+        +tags: ['gold', 'domain:actuals']
+      gold_bs_movement:
+        +tags: ['gold', 'domain:actuals']
+      gold_prior_year_comparison:
+        +tags: ['gold', 'domain:actuals']
+      gold_consolidated_trial_balance:
+        +tags: ['gold', 'domain:actuals']
+      gold_fx_revaluation:
+        +tags: ['gold', 'domain:actuals']
+
+      # --- Domain: scenarios (needs epm_raw — unions actuals + budget) ---
+      gold_scenario_trial_balance:
+        +tags: ['gold', 'domain:scenarios']
+      gold_variance_analysis:
+        +tags: ['gold', 'domain:scenarios']
+      gold_variance_ytd:
+        +tags: ['gold', 'domain:scenarios']
+      gold_variance_quarterly:
+        +tags: ['gold', 'domain:scenarios']
+
+      # --- Domain: consolidation (needs epm_raw transitively) ---
+      gold_acquisition_adjustments:
+        +tags: ['gold', 'domain:consolidation']
+      gold_disposal_adjustments:
+        +tags: ['gold', 'domain:consolidation']
+      gold_ic_eliminations:
+        +tags: ['gold', 'domain:consolidation']
+      gold_ic_reconciliation:
+        +tags: ['gold', 'domain:consolidation']
+      gold_nci_movement_schedule:
+        +tags: ['gold', 'domain:consolidation']
+      gold_equity_method_associates:
+        +tags: ['gold', 'domain:consolidation']
+      gold_fully_consolidated_tb:
+        +tags: ['gold', 'domain:consolidation']
+      gold_consolidation_waterfall:
+        +tags: ['gold', 'domain:consolidation']
+      gold_consolidation_journal:
+        +tags: ['gold', 'domain:consolidation']
+      gold_consolidated_ytd:
+        +tags: ['gold', 'domain:consolidation']
+      gold_allocation_results:
+        +tags: ['gold', 'domain:consolidation']
+      gold_allocation_audit_trail:
+        +tags: ['gold', 'domain:consolidation']
+
 seeds:
   open_epm:
     +schema: gold
