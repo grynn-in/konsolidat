@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  # --- Canonical adapter models (feed into stg_gl_entries, stg_accounts, etc.) ---
+  - name: stg_d365_fo__gl_entries
+    description: "D365 F&O GL entries adapter — canonical schema output"
+    columns:
+      - name: record_id
+        tests:
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+
+  - name: stg_d365_fo__trial_balance
+    description: "D365 F&O trial balance adapter — canonical schema output"
+
+  - name: stg_d365_fo__accounts
+    description: "D365 F&O chart of accounts adapter — canonical schema output"
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+
+  - name: stg_d365_fo__legal_entities
+    description: "D365 F&O legal entities adapter — canonical schema output"
+    columns:
+      - name: entity_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_d365_fo__exchange_rates
+    description: "D365 F&O exchange rates adapter — canonical schema output"
+
+  - name: stg_d365_fo__budget_entries
+    description: "D365 F&O budget entries adapter — canonical schema output"
+
+  - name: stg_d365_fo__fiscal_periods
+    description: "D365 F&O fiscal periods adapter — canonical schema output"
+
+  # --- D365-specific internal helper models (not part of canonical interface) ---
+  - name: stg_d365_fo__gl_journal_entries
+    description: "GL journal entry headers from D365 BI entities"
+    columns:
+      - name: RecId
+        tests:
+          - not_null
+
+  - name: stg_d365_fo__main_account_categories
+    description: "Account categories with field renames from OData names"
+    columns:
+      - name: RecId
+        tests:
+          - not_null
+
+  - name: stg_d365_fo__fiscal_calendar_years
+    description: "Fiscal calendar years with Calendar mapped to FiscalCalendar"
+
+  - name: stg_d365_fo__fiscal_calendars
+    description: "Fiscal calendar definitions derived from FiscalCalendarYears"
+
+  - name: stg_d365_fo__financial_dimensions
+    description: "Financial dimension definitions from DimensionAttributes"
+
+  - name: stg_d365_fo__financial_dimension_values
+    description: "Financial dimension values with FinancialDimension mapped to FinancialDimensionName"
+
+  - name: stg_d365_fo__exchange_rate_types
+    description: "Exchange rate type definitions"
+
+  - name: stg_d365_fo__budget_register_entries
+    description: "Budget register headers deduplicated by EntryNumber"
+
+  - name: stg_d365_fo__consolidation_groups
+    description: "Consolidation account groups deduplicated"

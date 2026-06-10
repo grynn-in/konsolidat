@@ -13,4 +13,4 @@ select
     {{ cast_to_int64('RecId') }} as recid,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ ref('stg_d365__fiscal_calendar_years') }}
+from {{ ref('stg_d365_fo__fiscal_calendar_years') }}

@@ -1,0 +1,83 @@
+version: 2
+
+sources:
+  - name: d365_raw
+    description: "Raw D365 F&O OData entities landed by Airbyte connector"
+    database: epm_raw
+    schema: ""
+    tables:
+      - name: GeneralJournalAccountEntryBiEntities
+        identifier: GeneralJournalAccountEntryBiEntities
+        description: "GL account entry lines from D365 GeneralJournalAccountEntryBiEntities"
+        loaded_at_field: _airbyte_extracted_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: GeneralJournalEntryBiEntities
+        identifier: GeneralJournalEntryBiEntities
+        description: "GL journal entry headers from D365 GeneralJournalEntryBiEntities"
+        loaded_at_field: _airbyte_extracted_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: MainAccounts
+        identifier: MainAccounts
+        description: "Chart of accounts from D365 MainAccounts"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: MainAccountCategories
+        identifier: MainAccountCategories
+        description: "Account categories from D365 MainAccountCategories"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: LegalEntities
+        identifier: LegalEntities
+        description: "Legal entity master from D365 LegalEntities"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: Ledgers
+        identifier: Ledgers
+        description: "Ledger configuration from D365 Ledgers"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: FiscalCalendarYears
+        identifier: FiscalCalendarYears
+        description: "Fiscal calendar years from D365 FiscalCalendarYears"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: DimensionAttributes
+        identifier: DimensionAttributes
+        description: "Financial dimension definitions from D365 DimensionAttributes"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: FinancialDimensionValues
+        identifier: FinancialDimensionValues
+        description: "Dimension values from D365 FinancialDimensionValues"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: ExchangeRates
+        identifier: ExchangeRates
+        description: "Exchange rates from D365 ExchangeRates"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: ExchangeRateTypes
+        identifier: ExchangeRateTypes
+        description: "Exchange rate types from D365 ExchangeRateTypes"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: BudgetRegisterEntries
+        identifier: BudgetRegisterEntries
+        description: "Budget register entries (combined header+line) from D365 BudgetRegisterEntries"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: ConsolidateAccountGroups
+        identifier: ConsolidateAccountGroups
+        description: "Consolidation account groups from D365 ConsolidateAccountGroups"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: TrialBalanceFiscalYearSnapshots
+        identifier: TrialBalanceFiscalYearSnapshots
+        description: "Trial balance snapshots from D365 TrialBalanceFiscalYearSnapshots"
+        loaded_at_field: _airbyte_extracted_at

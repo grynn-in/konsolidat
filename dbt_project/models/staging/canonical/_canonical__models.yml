@@ -1,0 +1,81 @@
+version: 2
+
+models:
+  - name: stg_gl_entries
+    description: "Canonical GL entries — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['d365_fo', 'd365_bc', 'sap_s4', 'sap_ecc', 'sap_b1', 'erpnext']
+      - name: record_id
+        tests:
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+      - name: posting_date
+        tests:
+          - not_null
+
+  - name: stg_trial_balance
+    description: "Canonical trial balance — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+
+  - name: stg_accounts
+    description: "Canonical chart of accounts — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+
+  - name: stg_legal_entities
+    description: "Canonical legal entities — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+
+  - name: stg_exchange_rates
+    description: "Canonical exchange rates — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+      - name: from_currency
+        tests:
+          - not_null
+      - name: to_currency
+        tests:
+          - not_null
+
+  - name: stg_budget_entries
+    description: "Canonical budget entries — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null
+
+  - name: stg_fiscal_periods
+    description: "Canonical fiscal periods — UNION ALL from per-ERP adapters"
+    columns:
+      - name: erp_source
+        tests:
+          - not_null

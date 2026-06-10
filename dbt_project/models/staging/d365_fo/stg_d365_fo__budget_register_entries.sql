@@ -1,6 +1,7 @@
 {#
     Budget Register Entries staging model.
     Deduplicates by EntryNumber to produce header-level rows.
+    D365-specific helper — not part of canonical interface.
 #}
 
 with numbered as (

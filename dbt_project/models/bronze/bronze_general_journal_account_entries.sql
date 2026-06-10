@@ -6,21 +6,30 @@
     )
 }}
 
+{#
+    Consumes canonical stg_gl_entries for ERP-agnostic columns.
+    Joins D365 F&O adapter directly for reporting_currency_amount
+    and general_journal_entry_recid (D365-specific fields).
+#}
+
 select
-    {{ cast_to_int64('RecId') }} as recid,
-    {{ cast_to_string('dataAreaId') }} as data_area_id,
-    {{ cast_to_date('AccountingDate') }} as accounting_date,
-    {{ cast_to_string('MainAccount') }} as main_account,
-    {{ cast_to_decimal128('AccountingCurrencyAmount', 2) }} as accounting_currency_amount,
-    {{ cast_to_decimal128('ReportingCurrencyAmount', 2) }} as reporting_currency_amount,
-    {{ cast_to_decimal128('TransactionCurrencyAmount', 2) }} as transaction_currency_amount,
-    {{ cast_to_string('TransactionCurrencyCode') }} as transaction_currency_code,
-    {{ cast_to_string('PostingType') }} as posting_type,
-    {{ cast_to_int64('GeneralJournalEntry') }} as general_journal_entry_recid,
-    {{ cast_to_string('LedgerAccount') }} as ledger_account,
-    {{ cast_to_string('Text') }} as description,
-    {{ dim_select_from_source() }},
-    {{ cast_to_int8('IsCredit') }} as is_credit,
-    {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
-    {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ ref('stg_d365__gl_account_entries') }}
+    {{ cast_to_int64('gl.record_id') }} as recid,
+    {{ cast_to_string('gl.entity_id') }} as data_area_id,
+    {{ cast_to_date('gl.posting_date') }} as accounting_date,
+    {{ cast_to_string('gl.main_account') }} as main_account,
+    {{ cast_to_decimal128('gl.amount', 2) }} as accounting_currency_amount,
+    {{ cast_to_decimal128('coalesce(d365.reporting_currency_amount, 0)', 2) }} as reporting_currency_amount,
+    {{ cast_to_decimal128('gl.transaction_currency_amount', 2) }} as transaction_currency_amount,
+    {{ cast_to_string('gl.transaction_currency') }} as transaction_currency_code,
+    {{ cast_to_string('gl.posting_type') }} as posting_type,
+    {{ cast_to_int64('coalesce(d365.general_journal_entry_recid, 0)') }} as general_journal_entry_recid,
+    {{ cast_to_string('gl.ledger_account') }} as ledger_account,
+    {{ cast_to_string('gl.description') }} as description,
+    {{ dim_select_from_source(prefix='gl.') }},
+    {{ cast_to_int8('gl.is_credit') }} as is_credit,
+    {{ cast_to_datetime('gl._loaded_at') }} as _airbyte_extracted_at,
+    {{ cast_to_string('gl._raw_id') }} as _airbyte_raw_id
+from {{ ref('stg_gl_entries') }} gl
+left join {{ ref('stg_d365_fo__gl_entries') }} d365
+    on gl.record_id = d365.record_id
+    and gl.erp_source = 'd365_fo'

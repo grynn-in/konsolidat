@@ -20,4 +20,4 @@ select
     {{ cast_to_int64('FiscalCalendarYear') }} as fiscal_calendar_year_recid,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ ref('stg_d365__gl_journal_entries') }}
+from {{ ref('stg_d365_fo__gl_journal_entries') }}

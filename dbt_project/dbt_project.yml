@@ -16,20 +16,23 @@ clean-targets:
   - "dbt_packages"
 
 vars:
+  erp_sources:
+    - d365_fo
+
   dimensions:
     - name: dim_cost_center
-      source_column: CostCenter
+      source_column: dim_cost_center
       label: "Cost Center"
       cube_type: string
       in_budget: true
       allocation_role: cost_center
     - name: dim_department
-      source_column: Department
+      source_column: dim_department
       label: "Department"
       cube_type: string
       in_budget: true
     - name: dim_business_unit
-      source_column: BusinessUnit
+      source_column: dim_business_unit
       label: "Business Unit"
       cube_type: string
       in_budget: false
@@ -97,6 +100,10 @@ models:
       +schema: staging
       +materialized: view
       +tags: ['staging']
+      d365_fo:
+        +tags: ['staging', 'd365_fo']
+      canonical:
+        +tags: ['staging', 'canonical']
     bronze:
       +schema: bronze
       +materialized: table
