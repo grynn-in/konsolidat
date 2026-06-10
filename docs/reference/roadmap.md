@@ -27,6 +27,10 @@
 | Cash flow statement | **Not started** |
 | Multi-GAAP | **Not started** |
 | Rolling forecasts | **Not started** |
+| Consolidation enhancements (goodwill CTA, NCI in combos, disposal recycling) | **Not started** |
+| Allocation enhancements (circular, reciprocal) | **Not started** |
+| Planning enhancements (driver-based, recurring journals) | **Not started** |
+| Reporting enhancements (waterfall, trend, commentary) | **Not started** |
 
 ---
 
@@ -271,6 +275,33 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 - [ ] Use Frappe `docstatus = 1` (Submit) on final approval to permanently lock document
 - [ ] Email notifications on workflow state changes (Frappe Notification doctype)
 
+### 6.6 Consolidation Enhancements (1–2 weeks)
+
+- [ ] Historical (temporal) rate for equity line items — IAS 21 equity translation at acquisition-date rates
+- [ ] Remeasurement vs translation distinction (separate functional currency handling)
+- [ ] Goodwill CTA — CTA on goodwill arising from acquisition accounting
+- [ ] Recycling CTA to P&L on disposal of a foreign operation
+- [ ] NCI in business combinations — goodwill allocation to NCI (full vs partial goodwill methods)
+- [ ] Changes in ownership without loss of control — equity transactions between parent and NCI
+
+### 6.7 Allocation Enhancements (3–5 days)
+
+- [ ] Circular (iterative) allocations — convergence-based solving for reciprocal cost pools
+- [ ] Reciprocal allocation method — simultaneous equations approach (alternative to iteration)
+
+### 6.8 Planning Enhancements (1 week)
+
+- [ ] Driver-based planning — revenue × price × volume decomposition
+- [ ] Phasing templates at account-group level (apply seasonal patterns by account type)
+- [ ] Recurring journal templates — auto-generate topside journals on schedule
+- [ ] Topside journal approval workflow (separate from budget approval)
+
+### 6.9 Reporting Enhancements (3–5 days)
+
+- [ ] Waterfall / bridge analysis — price, volume, mix decomposition of variances
+- [ ] Trend analysis — period-over-period and rolling averages
+- [ ] Commentary / annotation on variances — attach narrative to variance cells
+
 ---
 
 ## Phase 7: Production Hardening (~3 days)
@@ -293,7 +324,7 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 | **Phase 3:** Multi-ERP (6 connectors + scale) | ~8 weeks | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
 | **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
-| **Phase 6:** Analytical gaps + budget hardening | ~2.5 weeks | Phase 2 (dimensions) |
+| **Phase 6:** Analytical gaps, consolidation/allocation/planning/reporting enhancements | ~6 weeks | Phase 2 (dimensions) |
 | **Phase 7:** Production hardening | ~3 days | Phase 1 |
 | **Total** | **~7 weeks** | |
 
