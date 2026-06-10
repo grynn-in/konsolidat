@@ -1,191 +1,285 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-10*
 
 ## Status Summary
 
 | Area | Status |
-|------|--------|
-| Data pipeline (Bronze → Silver → Gold) | **Done** — 44 dbt models, 26 tests, 11 seeds |
-| Consolidation (FX, IC elim, CTA, NCI) | **Done** — IFRS/GAAP compliant, fully tested |
-| Allocations (multi-step cascade) | **Done** — 3-step with headcount/sqm/revenue drivers |
-| Budgeting & spreading | **Done** — Annual input, configurable profiles, 12-period spread |
-| Budget layers (collaborative) | **Done** — 4 additive layers (base/challenge/management/board) |
-| Budget write-back from Excel | **Done** — EPMSAVE() immediate write, EPM_BUDGET_SAVE macro |
-| Variance analysis | **Done** — Actual vs budget with favorable logic, YTD, quarterly |
-| Scenario management | **Done** — Actuals/budget/forecast/whatif, scenario_id filter |
-| Excel VBA integration | **Done** — 6 functions (EPM, EPM_BUDGET, EPM_VARIANCE, EPM_DEBIT, EPM_CREDIT, EPMSAVE), 7 macros, batch API, period ranges |
-| Frappe API (Konsol) | **Done** — 6 endpoints (health, epm_value, epm_batch, budget_save, budget_save_batch, budget_cell_save) |
-| Frappe EPM Module | **Done** — 12 doctypes, budget workflow, 4 roles, 158 tests |
-| Frappe EPM Settings | **Done** — ClickHouse, Airbyte, dbt config |
-| Excel Task Pane (pipeline control) | **Done** — Office.js add-in, login, trigger, status |
-| Prior year comparison | **Done** — YoY variance model |
-| BS movement schedule | **Done** — Opening/movement/closing model |
-| Documentation | **Done** — 31-file doc suite + budget layers guide |
-| D365 budget write-back | Not started |
-| Entra ID SSO | Not started |
-| Excel Online custom functions | Not started |
-| Cash flow statement | Not started |
-| Multi-GAAP | Not started |
-| Rolling forecasts | Not started |
+|---|---|
+| Data pipeline (Bronze → Silver → Gold) | **Done** — 77 dbt models, 144 tests |
+| Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
+| Hierarchy, equity method, acquisition/disposal | **Done** — PRD-8 through PRD-22 |
+| Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
+| Budget write-back | **Done** — EPMSAVE() from Excel + Frappe API |
+| Scenario management | **Done** — budget/forecast/whatif via API |
+| Variance analysis | **Done** — actual vs budget with favorable logic |
+| Excel VBA integration | **Done** — =EPM() + 5 functions, ODBC + REST |
+| Frappe app (konsol) | **Done** — DocTypes, ClickHouse sync, background jobs |
+| Docs site (MkDocs Material) | **Done** — konsolid.at, 40+ pages |
+| Custom domain | **Done** — konsolid.at on GitHub Pages |
+| One-click deploy | **Done** — `git clone && ./deploy.sh`, 9 Docker services |
+| Multi-ERP canonical staging | **Done** — PRD-30, 7 canonical models, UNION ALL adapters |
+| Multi-ERP connectors (SAP, D365 BC, ERPNext) | **Not started** — PRD-31..36 |
+| FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
+| Dynamic schema (dimensions, measures, facts) | **Not started** |
+| Security / Entra ID SSO | **Not started** |
+| Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
+| Cash flow statement | **Not started** |
+| Multi-GAAP | **Not started** |
+| Rolling forecasts | **Not started** |
 
 ---
 
-## Completed
+## Phase 1: One-Click Deploy ~~(~3 days)~~ DONE
 
-### Core Pipeline
-- 14 Bronze models (D365 OData via Airbyte)
-- 8 Silver models (cleaned, standardized)
-- 22 Gold models (business logic)
-- 26 data quality assertion tests
-- 11 seed tables for reference data
-- Dimension auto-propagation system (3 dimensions, extensible)
-- ClickHouse adapter macros for portable SQL
+Full docker-compose stack + single deploy script. Completed in PRs #7 and #9.
 
-### Financial Logic
-- Multi-entity consolidation with FX translation (closing/average rates)
-- CTA calculation and posting
-- NCI/Group amount split by ownership %
-- Intercompany elimination (3 rules)
-- Top-side consolidation adjustments
-- Fully consolidated TB (4-layer union)
-- Multi-step cascading cost allocations (3 steps)
-- Budget spreading with configurable profiles
-- Budget layers: base + challenge + management + board (additive, role-flexible)
-- Actual vs budget variance with favorable/unfavorable logic
-- YTD running totals (trial balance and consolidated)
-- Quarterly and half-yearly aggregations
-- Prior year comparison with YoY variance
-- Balance sheet movement schedule
-
-### Frappe / Konsol App ([grynn-in/konsol](https://github.com/grynn-in/konsol))
-- EPM module: 12 doctypes (Scenario Definition, Dimension, Measure, Fiscal Period, Spread Profile, Allocation Rule, Allocation Driver, Consolidation Group, IC Elimination Rule, Consolidation Adjustment, Budget Input, Budget Input Child)
-- Budget workflow: Draft → Submitted → Approved → Rejected (4 roles)
-- ClickHouse sync: on_update hooks → TRUNCATE + INSERT
-- dbt config regeneration: Dimension/Measure/Fiscal Period doctypes → dbt_project.yml vars
-- API: epm_value, epm_batch (read), budget_save, budget_save_batch, budget_cell_save (write)
-- scenario_id optional filter for multi-scenario queries
-- 166 TDD tests across 10 test files
-
-### Excel Integration
-- VBA module: EPM, EPM_BUDGET, EPM_VARIANCE, EPM_DEBIT, EPM_CREDIT (read)
-- EPMSAVE: immediate write-back per cell (skips unchanged values)
-- EPM_BUDGET_SAVE: batch macro for budget template sheets
-- Batch refresh: Ctrl+Shift+R (all EPM cells in one HTTP round-trip)
-- Period ranges: Q1–Q4, H1/H2, FY
-- Office.js task pane for pipeline orchestration
+- [x] 9 Docker services: Frappe backend/worker/scheduler, MariaDB, Redis (cache + queue), ClickHouse, Cube.js, Caddy
+- [x] 2 one-shot init containers: configurator (site setup), dbt_init (seed + build)
+- [x] `deploy.sh` — generates secrets, clones konsol, runs compose up, health checks
+- [x] Caddy reverse proxy with auto-SSL
+- [x] Static assets via gunicorn SharedDataMiddleware (PR #9)
+- [x] Initial Setup Guide documentation
+- [x] Subcommands: `./deploy.sh backup`, `restore`, `status`, `logs`, `down`
 
 ---
 
-## Upcoming
+## Phase 2: Dynamic Schema — Dimensions, Measures & Facts (~5 days)
 
-### Phase 1: Security & Entra ID SSO (~2 days)
+Make the data model fully registry-driven from Frappe. Adding a dimension, measure, or fact table should be a UI operation in Frappe Desk, not a code change across 6 files.
 
-- [ ] Register Konsol in Microsoft Entra ID (same tenant as D365)
-- [ ] Configure Frappe Social Login Key for Entra ID (OAuth2 / OpenID Connect)
+### Current state (hardcoded)
+
+| Concept | What it is | Example | Where hardcoded |
+|---|---|---|---|
+| **Dimension** | Attribute to slice by | Cost Center, Department, Project | ClickHouse columns, API params, Budget Input doctype, dbt macros |
+| **Measure** | Numeric value to aggregate | period_net_amount, opening_balance, ytd_amount | dbt macros, API column mapping, Excel function `measure` param |
+| **Fact** | Transactional grain / source table | GL Journal Entries, Budget Input, Allocation Results | dbt models, ClickHouse staging tables, Airbyte sync config |
+
+### 2.1 Dimension Registry (1 day)
+
+- [ ] Frappe `Dimension` doctype becomes authoritative — on save, auto-generates:
+  - ClickHouse `ALTER TABLE ADD COLUMN` for all staging/reporting tables
+  - Entry in `dbt_project.yml` `vars.dimensions` (or dbt vars override)
+  - Budget Input doctype field (dynamic via Frappe custom fields API)
+- [ ] Validation: dimension name must be `dim_*`, unique, no reserved words
+- [ ] Source mapping per ERP: D365 JSON path, SAP field name, ERPNext fieldname
+- [ ] Allocation engine uses `allocation_role` from dimension config, not hardcoded column names
+
+### 2.2 Measure Registry (1 day)
+
+- [ ] Frappe `Measure` doctype: `name`, `column_name`, `aggregation` (sum/avg/last), `label`, `favorable_direction` (debit/credit)
+- [ ] On save, auto-generates:
+  - dbt `vars.measures` entries (drives `{{ measure_select() }}` macros)
+  - ClickHouse columns on gold tables
+  - API response includes only active measures
+- [ ] Default measures pre-seeded: `period_net_amount`, `opening_balance`, `closing_balance`, `ytd_amount`, `debit_amount`, `credit_amount`
+- [ ] Custom measures: e.g. `headcount`, `revenue_per_sqm` — derived via SQL expression field on the doctype
+
+### 2.3 Fact Registry (1.5 days)
+
+- [ ] Frappe `Fact Table` doctype: `name`, `source_type` (ERP GL / Budget / Statistical / Sub-ledger), `grain` description, `refresh_frequency`
+- [ ] Core facts (pre-seeded, always present):
+  - **GL Journal Entries** — debits/credits by account/period/entity (the universal financial fact)
+  - **Budget Input** — budget submissions per cell
+  - **Allocation Results** — derived output from allocation engine
+- [ ] Statistical facts (customer-configurable):
+  - **Headcount** — employees per cost center per period (for allocation drivers)
+  - **Area (sqm)** — square metres per cost center (for facilities allocation)
+  - **Revenue by Product** — for revenue-based allocation
+- [ ] Sub-ledger facts (for detailed reporting):
+  - **Accounts Payable** — invoice-level detail for cash flow
+  - **Fixed Assets** — asset register for depreciation / investing cash flow
+  - **Accounts Receivable** — aging for working capital analysis
+- [ ] Each Fact Table defines: required dimensions, required measures, ClickHouse table name, dbt model name
+- [ ] On save: generates ClickHouse staging table DDL + dbt source definition
+- [ ] Statistical facts replace the current `allocation_drivers` seed with a proper queryable fact table
+
+### 2.4 API Generalisation (1 day)
+
+- [ ] Replace hardcoded `cost_center`, `department` params with generic `dimensions` dict
+- [ ] `=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})`
+- [ ] `measure` parameter validates against active Measure registry
+- [ ] New `fact` parameter: defaults to GL, but can query budget or statistical facts
+- [ ] Backward-compatible: old named params still work, mapped internally
+- [ ] ClickHouse query builder reads active dimensions/measures/facts from registry
+
+### 2.5 Source Layer Abstraction (0.5 days)
+
+- [ ] dbt macro `{{ dim_extract_from_source() }}` reads dimension list and generates extraction SQL per ERP
+- [ ] D365: auto-extract from `LedgerDimensionValuesJson` by `source_column` name
+- [ ] SAP/ERPNext: each connector provides its own dimension mapping (see Phase 3)
+- [ ] Fact-specific source macros: GL extraction vs. budget extraction vs. statistical extraction
+
+---
+
+## Phase 3: Multi-ERP Support (~8 weeks)
+
+Konsolidat's silver/gold layers are already ERP-agnostic. The staging layer is D365 F&O-specific. This phase introduces a canonical staging interface that all ERP adapters write to, enabling SAP (S/4HANA, ECC, B1), D365 Business Central, and ERPNext consolidation.
+
+> **Note:** D365 F&O and D365 Business Central are completely different products (different APIs, entity models, dimension systems). BC needs its own connector.
+
+### PRD Breakdown
+
+| PRD | Title | Effort | Status |
+|-----|-------|--------|--------|
+| **PRD-30** | Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) |
+| **PRD-31** | D365 F&O Adapter Refactor | 1 day | Blocked by PRD-30 |
+| **PRD-32** | D365 Business Central Connector | 3 days | Blocked by PRD-30 |
+| **PRD-33** | SAP S/4HANA Connector | 3 days | Blocked by PRD-30 |
+| **PRD-34** | SAP ECC 6.0 Connector | 3 days | Blocked by PRD-30 |
+| **PRD-35** | SAP Business One Connector | 2 days | Blocked by PRD-30 |
+| **PRD-36** | ERPNext Connector | 2 days | Blocked by PRD-30 |
+| **PRD-37** | Dimension Harmonization | 3 days | Blocked by PRD-31/32/33 |
+| **PRD-38** | Scale Architecture (50–500 LEs) | 5 days | Blocked by PRD-37 |
+| **PRD-39** | Connector Registry (Frappe) | 2 days | Blocked by PRD-38 |
+
+### Dependency Graph
+
+```mermaid
+graph TD
+    PRD30[PRD-30: Canonical Schema]
+    PRD31[PRD-31: D365 F&O Adapter]
+    PRD32[PRD-32: D365 Business Central]
+    PRD33[PRD-33: SAP S/4HANA]
+    PRD34[PRD-34: SAP ECC 6.0]
+    PRD35[PRD-35: SAP Business One]
+    PRD36[PRD-36: ERPNext]
+    PRD37[PRD-37: Dimension Harmonization]
+    PRD38[PRD-38: Scale 50-500 LEs]
+    PRD39[PRD-39: Connector Registry]
+
+    PRD30 --> PRD31
+    PRD30 --> PRD32
+    PRD30 --> PRD33
+    PRD30 --> PRD34
+    PRD30 --> PRD35
+    PRD30 --> PRD36
+    PRD31 --> PRD37
+    PRD32 --> PRD37
+    PRD33 --> PRD37
+    PRD37 --> PRD38
+    PRD38 --> PRD39
+```
+
+### Connector Details
+
+| PRD | Connector | API | GL Source Entity | Airbyte Source |
+|-----|-----------|-----|------------------|----------------|
+| 31 | D365 F&O (refactor) | OData v2 | `GeneralJournalAccountEntryBiEntities` | Existing |
+| 32 | D365 Business Central | REST v2.0 / OData v4 | `generalLedgerEntries` | Airbyte BC connector |
+| 33 | SAP S/4HANA | OData v4 (CDS views) | `I_JournalEntry`, `I_GLAccountLineItem` | Airbyte SAP OData |
+| 34 | SAP ECC 6.0 | RFC/BAPI or IDoc | BSEG + BKPF tables | Airbyte SAP (RFC) |
+| 35 | SAP Business One | Service Layer REST | `JournalEntries` (JDT1) | Airbyte HTTP |
+| 36 | ERPNext | Frappe REST API | `GL Entry` doctype | Airbyte ERPNext or direct Frappe API |
+
+### Architecture
+
+```
+Raw ERP Data (Airbyte / direct API)
+    ↓
+Per-ERP Adapters (models/staging/<erp>/)
+    ↓
+Canonical Staging (models/staging/canonical/) ← UNION ALL from adapters
+    ↓
+Bronze → Silver → Gold (unchanged, ERP-agnostic)
+```
+
+### Scale Architecture (PRD-38)
+
+For deployments with 50–500 legal entities across multiple ERPs:
+
+- **Partitioned canonical staging** — partition by `erp_source` for parallel processing
+- **Incremental extraction** — Airbyte CDC for high-volume ERPs (SAP, D365)
+- **ClickHouse cluster** — sharded by entity_id for horizontal scale
+- **Parallel dbt builds** — per-ERP adapter builds can run concurrently
+- **Monitoring** — per-connector health dashboard in Frappe
+
+---
+
+## Phase 4: Security & Entra ID SSO (~2 days)
+
+### 4.1 Entra ID Integration (1 day)
+
+- [ ] Register Konsol in Microsoft Entra ID (OAuth2 / OpenID Connect)
 - [ ] Map Entra ID groups to Frappe roles (Reader, Planner, Controller, Admin)
-- [ ] TLS via Caddy with auto Let's Encrypt
-- [ ] CORS whitelist for `*.officeapps.live.com`
+- [ ] Test SSO login flow
+
+### 4.2 Reverse Proxy & TLS (0.5 days)
+
+- [ ] Caddy in docker-compose: auto-cert TLS, CORS for Excel Online
 - [ ] Rate limiting: 100 req/min per user
 
-### Phase 2: Excel Online Add-in (~3 days)
+### 4.3 ClickHouse Network Isolation (0.5 days)
 
-- [ ] TypeScript + Office.js custom functions: `EPM.VALUE`, `EPM.CONSOLIDATED`, `EPM.VARIANCE`, `EPM.MEMBERS`, `EPM.SUBMIT`
-- [ ] MSAL.js integration for Entra ID token-based auth
-- [ ] Batch coalescing during recalc
-- [ ] 5-minute result cache TTL
-- [ ] Microsoft 365 Admin Center deployment
+- [ ] ClickHouse on Docker internal network only (no host port bindings in production)
+- [ ] Verify: no ClickHouse ports reachable from public internet
 
-### Phase 3: D365 Budget Write-Back (~1 day)
+---
 
-Push approved budgets from Konsolidat back into D365 F&O so that D365's native budget control (encumbrance checking, PO validation) works with Konsolidat budgets.
+## Phase 5: Excel Online Add-in ~~(~3 days)~~ DONE
 
-**Flow:**
+Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe `public/excel-addin/`.
 
-```
-Konsolidat                              D365 F&O
-────────                              ────────
+- [x] Office.js Task Pane app (manifest.xml, taskpane.html/js/css, icons)
+- [x] Frappe session-based authentication (login/logout via cookie)
+- [x] Pipeline orchestration: trigger Extract + dbt Build, poll status (5s interval)
+- [x] Status display: Queued/Extracting/Transforming/Success/Failed badges
+- [x] Deployed to Frappe static assets, sideloadable via manifest.xml
+- [x] Documentation: README + user guide + architecture diagram
 
-Budget Input (Approved)
-  ↓ on_update hook
-  ├──→ ClickHouse sync (existing)
-  └──→ D365 OData POST (new)
-         ↓
-       Budget Register Entry
-         ↓
-       Budget Control (encumbrance)
-       PO validation against budget
-       D365 native budget reports
-```
+**Not included** (by design — VBA handles data):
+- No custom functions (=EPM() stays in VBA for desktop, Office.js for pipeline control)
+- No MSAL/OAuth (uses Frappe session cookies instead)
 
-**Implementation:**
+---
 
-- [ ] New module: `konsol/d365_writeback.py`
-    - On Budget Input approval → POST to D365 OData API
-    - Create `BudgetRegisterEntryHeader` (journal number, budget model, date)
-    - Create `BudgetRegisterEntryLines` (one per period — account, amount, financial dimensions)
-- [ ] Dimension mapping: translate `dim_cost_center = "SALES"` → D365 `DefaultDimension` format (dimension set with `CostCenter=SALES, Department=SALES`)
-- [ ] Budget Model mapping: map `scenario_id = "BUDGET_2025"` → D365 Budget Model (e.g., `"KONSOLIDAT"`)
-- [ ] Idempotency: store D365 journal number on Budget Input doc — don't double-post on retry
-- [ ] EPM Settings fields: D365 write-back URL, Budget Model name, enable/disable toggle
+## Phase 6: Analytical Gaps (~2 weeks)
 
-**Prerequisites:**
+### 6.1 Cash Flow Statement (2–3 days)
 
-| Item | How |
-|------|-----|
-| OAuth app registration | Already exists (Airbyte uses it for reading D365) |
-| Write permission on Budget entities | Enable `BudgetRegisterEntryHeaders` and `BudgetRegisterEntryLines` data entities for the app registration in D365 |
-| Budget Model in D365 | Create a Budget Model (e.g., `"KONSOLIDAT"`) in D365: Budgeting → Setup → Budget models |
-| Financial Dimension mapping | Configure in EPM Settings: map Konsolidat dimension names to D365 financial dimension names |
-
-**D365 OData endpoints:**
-
-```
-POST https://{d365-url}/data/BudgetRegisterEntryHeaders
-{
-  "EntryNumber": "KONSOLIDAT-BUDGET_2025-6100",
-  "BudgetModelId": "KONSOLIDAT",
-  "BudgetTransactionType": "Original",
-  "DefaultLedgerDimensionDisplayValue": "6100-SALES-SALES"
-}
-
-POST https://{d365-url}/data/BudgetRegisterEntryLines
-{
-  "EntryNumber": "KONSOLIDAT-BUDGET_2025-6100",
-  "Date": "2025-01-01",
-  "AccountStructure": "Manufacturing P&L",
-  "LedgerDimensionDisplayValue": "6100-SALES-SALES",
-  "TransactionCurrencyAmount": 95000
-}
-```
-
-**When to build:** Only needed if D365 budget control (encumbrance checking on POs, budget validation on journals) must reflect Konsolidat budgets. If budgets are only consumed in Excel reports, this is unnecessary.
-
-### Phase 4: Analytical Gaps (~2 weeks)
-
-**Cash Flow Statement (2–3 days)**
-- [ ] `gold_cash_flow_indirect.sql` — derive from BS delta method
+- [ ] `gold_cash_flow_indirect.sql` — derive from balance sheet delta method
 - [ ] Categories: Operating, Investing, Financing
 - [ ] Account mapping seed: `cash_flow_categories.csv`
-- [ ] Consolidated cash flow after FX translation
-- [ ] Test: CF operating + investing + financing = net change in cash
+- [ ] Consolidated cash flow (after FX translation)
+- [ ] Tests: operating + investing + financing = net change in cash
 
-**Multi-GAAP / Dual Reporting (1 week)**
+### 6.2 Multi-GAAP / Dual Reporting (1 week)
+
 - [ ] `reporting_standard` dimension (LOCAL_GAAP, IFRS)
-- [ ] Per-standard consolidation adjustments
-- [ ] Separate consolidated TB per standard
+- [ ] Separate adjustment rules per standard
+- [ ] Gold models produce one output per standard
+- [ ] Tests: each standard balances independently
 
-**Rolling Forecasts (2–3 days)**
+### 6.3 Rolling Forecasts (2–3 days)
+
 - [ ] 12-month forward window, shifts monthly
-- [ ] Actual for closed periods + forecast for open
+- [ ] Actual for closed periods + forecast for open periods
 - [ ] Scenario type `rolling`
 
-### Phase 5: Production Hardening (~3 days)
+### 6.4 Budget Cell Locking (1–2 days)
 
-- [ ] ClickHouse backup automation
-- [ ] Pipeline alerting on failure
-- [ ] Monitoring: query latency + API response times
-- [ ] Load testing: 50 concurrent Excel users
+- [ ] Optimistic locking: check `modified` timestamp on `budget_cell_save()` — reject if stale
+- [ ] Conflict response with latest value so Excel can prompt user
+- [ ] Optional pessimistic locking: `Budget Lock` doctype with auto-expiry (5 min)
+- [ ] VBA retry logic on conflict (refresh cell, re-prompt)
+
+### 6.5 Multi-Step Budget Approval Chain (0.5 day)
+
+- [ ] Extend `budget_input_workflow.json`: Draft → Submitted → Dept Manager Approved → Controller Approved → CFO Approved
+- [ ] Each transition gated by a separate Frappe role
+- [ ] Use Frappe `docstatus = 1` (Submit) on final approval to permanently lock document
+- [ ] Email notifications on workflow state changes (Frappe Notification doctype)
+
+---
+
+## Phase 7: Production Hardening (~3 days)
+
+- [ ] ClickHouse backup automation (scheduled snapshots to Azure Blob / S3)
+- [ ] Monitoring: ClickHouse query latency + Frappe response times (Prometheus + Grafana)
+- [ ] Alerting: email/Slack on pipeline failure or dbt test failure
+- [ ] Load testing: simulate 50 concurrent Excel users
+- [ ] Runbook: monthly close process
 - [ ] Disaster recovery procedure
 
 ---
@@ -193,10 +287,14 @@ POST https://{d365-url}/data/BudgetRegisterEntryLines
 ## Effort Summary
 
 | Phase | Effort | Dependencies |
-|-------|--------|-------------|
-| Phase 1: Security & SSO | ~2 days | None |
-| Phase 2: Excel Online | ~3 days | Phase 1 |
-| Phase 3: D365 Budget Write-Back | ~1 day | Phase 1, D365 admin config |
-| Phase 4: Analytical gaps | ~2 weeks | None |
-| Phase 5: Production hardening | ~3 days | Phase 1–2 |
-| **Total** | **~4 weeks** | |
+|---|---|---|
+| **Phase 1:** One-click deploy | ~3 days | None |
+| **Phase 2:** Dynamic schema (dimensions, measures, facts) | ~5 days | None |
+| **Phase 3:** Multi-ERP (6 connectors + scale) | ~8 weeks | Phase 2 (dimension abstraction) |
+| **Phase 4:** Security & SSO | ~2 days | Phase 1 |
+| **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
+| **Phase 6:** Analytical gaps + budget hardening | ~2.5 weeks | Phase 2 (dimensions) |
+| **Phase 7:** Production hardening | ~3 days | Phase 1 |
+| **Total** | **~7 weeks** | |
+
+Phases 1 and 2 can run in parallel. Phase 3 depends on Phase 2 (schema abstraction). Phases 4–7 can overlap.
