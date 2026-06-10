@@ -46,3 +46,4 @@ backups/
 # Codegraph
 .codegraph/
 site/
+docker/frappe/konsol/
