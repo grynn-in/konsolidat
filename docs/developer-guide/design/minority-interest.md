@@ -1,4 +1,4 @@
-# PRD-4: Minority Interest (Non-Controlling Interest)
+# Minority Interest (Non-Controlling Interest)
 
 ## Problem
 When ownership < 100%, the consolidated TB applies ownership % uniformly. Under IFRS 10 / ASC 810, you must show:

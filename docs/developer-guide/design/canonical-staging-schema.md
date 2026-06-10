@@ -1,10 +1,6 @@
-# PRD-30: Canonical Staging Schema & Adapter Interface
+# Canonical Staging Schema & Adapter Interface
 
-**Status:** Done (PR #10)
-**Priority:** P0 — Foundation for all multi-ERP work
-**Labels:** `multi-erp`, `prd-30`
-**Dependencies:** None (this is the root of the multi-ERP dependency graph)
-**Blocks:** PRD-31, PRD-32, PRD-33, PRD-34, PRD-35, PRD-36
+Foundation for all multi-ERP work. This design defines the canonical staging interface that every ERP adapter must produce.
 
 ---
 

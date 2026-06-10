@@ -16,7 +16,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 |---|---|---|---|---|
 | Multi-entity consolidation | Native | Native | Add-on | **Yes** (dbt gold layer) |
 | FX translation (closing/avg rate) | Native | Native | Manual | **Yes** (IFRS/GAAP compliant) |
-| CTA (equity plug) | Native | Native | Manual | **Yes** (PRD-2, tested) |
+| CTA (equity plug) | Native | Native | Manual | **Yes** (tested) |
 | IC elimination | Native | Native | Manual | **Yes** (3 rules, nets to zero) |
 | Minority interest / NCI | Native | Native | Manual | **Yes** (ownership %, NCI columns) |
 | Top-side adjustments | Native | Native | Yes | **Yes** (CSV-driven) |

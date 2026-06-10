@@ -123,16 +123,16 @@ nav:
           - Extending API: developer-guide/extending-api.md
       - Design Documents:
           - Consolidation:
-              - FX Translation: prd/PRD-1-fx-translation.md
-              - CTA Calculation: prd/PRD-2-cta-calculation.md
-              - Minority Interest: prd/PRD-4-minority-interest.md
-              - Topside Journals: prd/PRD-5-topside-journals.md
+              - FX Translation: developer-guide/design/fx-translation.md
+              - CTA Calculation: developer-guide/design/cta-calculation.md
+              - Minority Interest: developer-guide/design/minority-interest.md
+              - Topside Journals: developer-guide/design/topside-journals.md
           - Planning:
-              - Multi-Step Allocations: prd/PRD-3-multistep-allocations.md
-              - Budget Spreading: prd/PRD-6-budget-spreading.md
-              - Variance Analysis: prd/PRD-7-variance-analysis.md
+              - Multi-Step Allocations: developer-guide/design/multistep-allocations.md
+              - Budget Spreading: developer-guide/design/budget-spreading.md
+              - Variance Analysis: developer-guide/design/variance-analysis.md
           - Multi-ERP:
-              - Canonical Staging Schema: prd/PRD-30-canonical-staging-schema.md
+              - Canonical Staging Schema: developer-guide/design/canonical-staging-schema.md
       - Testing Guide: developer-guide/testing-guide.md
       - Contributing: developer-guide/contributing.md
   - Help:

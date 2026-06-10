@@ -1,6 +1,6 @@
 # POST reverse_adjustment
 
-Reverse an Approved Consolidation Adjustment (PRD-16). Creates a reversal document with negated amounts and links both via `reversal_journal_id`.
+Reverse an Approved Consolidation Adjustment. Creates a reversal document with negated amounts and links both via `reversal_journal_id`.
 
 ## Endpoint
 

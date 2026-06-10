@@ -8,7 +8,7 @@
 |---|---|
 | Data pipeline (Bronze → Silver → Gold) | **Done** — 77 dbt models, 144 tests |
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
-| Hierarchy, equity method, acquisition/disposal | **Done** — PRD-8 through PRD-22 |
+| Hierarchy, equity method, acquisition/disposal | **Done** |
 | Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
 | Budget write-back | **Done** — EPMSAVE() from Excel + Frappe API |
 | Scenario management | **Done** — budget/forecast/whatif via API |
@@ -18,8 +18,8 @@
 | Docs site (MkDocs Material) | **Done** — konsolid.at, 40+ pages |
 | Custom domain | **Done** — konsolid.at on GitHub Pages |
 | One-click deploy | **Done** — `git clone && ./deploy.sh`, 9 Docker services |
-| Multi-ERP canonical staging | **Done** — PRD-30, 7 canonical models, UNION ALL adapters |
-| Multi-ERP connectors (SAP, D365 BC, ERPNext) | **Not started** — PRD-31..36 |
+| Multi-ERP canonical staging | **Done** — 7 canonical models, UNION ALL adapters |
+| Multi-ERP connectors (SAP, D365 BC, ERPNext) | **Not started** |
 | FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
 | Dynamic schema (dimensions, measures, facts) | **Not started** |
 | Security / Entra ID SSO | **Not started** |
@@ -123,47 +123,36 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The staging layer is D
 
 > **Note:** D365 F&O and D365 Business Central are completely different products (different APIs, entity models, dimension systems). BC needs its own connector.
 
-### PRD Breakdown
+### Work Breakdown
 
-| PRD | Title | Effort | Status |
-|-----|-------|--------|--------|
-| **PRD-30** | Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) |
-| **PRD-31** | D365 F&O Adapter Refactor | 1 day | Blocked by PRD-30 |
-| **PRD-32** | D365 Business Central Connector | 3 days | Blocked by PRD-30 |
-| **PRD-33** | SAP S/4HANA Connector | 3 days | Blocked by PRD-30 |
-| **PRD-34** | SAP ECC 6.0 Connector | 3 days | Blocked by PRD-30 |
-| **PRD-35** | SAP Business One Connector | 2 days | Blocked by PRD-30 |
-| **PRD-36** | ERPNext Connector | 2 days | Blocked by PRD-30 |
-| **PRD-37** | Dimension Harmonization | 3 days | Blocked by PRD-31/32/33 |
-| **PRD-38** | Scale Architecture (50–500 LEs) | 5 days | Blocked by PRD-37 |
-| **PRD-39** | Connector Registry (Frappe) | 2 days | Blocked by PRD-38 |
+| Task | Effort | Status |
+|------|--------|--------|
+| Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) |
+| D365 F&O Adapter Refactor | 1 day | Not started |
+| D365 Business Central Connector | 3 days | Not started |
+| SAP S/4HANA Connector | 3 days | Not started |
+| SAP ECC 6.0 Connector | 3 days | Not started |
+| SAP Business One Connector | 2 days | Not started |
+| ERPNext Connector | 2 days | Not started |
+| Dimension Harmonization | 3 days | Not started |
+| Scale Architecture (50–500 LEs) | 5 days | Not started |
+| Connector Registry (Frappe) | 2 days | Not started |
 
 ### Dependency Graph
 
 ```mermaid
 graph TD
-    PRD30[PRD-30: Canonical Schema]
-    PRD31[PRD-31: D365 F&O Adapter]
-    PRD32[PRD-32: D365 Business Central]
-    PRD33[PRD-33: SAP S/4HANA]
-    PRD34[PRD-34: SAP ECC 6.0]
-    PRD35[PRD-35: SAP Business One]
-    PRD36[PRD-36: ERPNext]
-    PRD37[PRD-37: Dimension Harmonization]
-    PRD38[PRD-38: Scale 50-500 LEs]
-    PRD39[PRD-39: Connector Registry]
-
-    PRD30 --> PRD31
-    PRD30 --> PRD32
-    PRD30 --> PRD33
-    PRD30 --> PRD34
-    PRD30 --> PRD35
-    PRD30 --> PRD36
-    PRD31 --> PRD37
-    PRD32 --> PRD37
-    PRD33 --> PRD37
-    PRD37 --> PRD38
-    PRD38 --> PRD39
+    A[Canonical Schema] --> B[D365 F&O Adapter]
+    A --> C[D365 Business Central]
+    A --> D[SAP S/4HANA]
+    A --> E[SAP ECC 6.0]
+    A --> F[SAP Business One]
+    A --> G[ERPNext]
+    B --> H[Dimension Harmonization]
+    C --> H
+    D --> H
+    H --> I[Scale 50-500 LEs]
+    I --> J[Connector Registry]
 ```
 
 ### Connector Details
@@ -189,7 +178,7 @@ Canonical Staging (models/staging/canonical/) ← UNION ALL from adapters
 Bronze → Silver → Gold (unchanged, ERP-agnostic)
 ```
 
-### Scale Architecture (PRD-38)
+### Scale Architecture
 
 For deployments with 50–500 legal entities across multiple ERPs:
 

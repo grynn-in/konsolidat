@@ -1,4 +1,4 @@
-# PRD-6: Budget Spreading / Seasonality Profiles
+# Budget Spreading / Seasonality Profiles
 
 ## Problem
 Budget input is per-period line items. In practice, planners often enter annual amounts and expect the system to spread them across months using a profile:
