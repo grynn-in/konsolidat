@@ -313,16 +313,21 @@ Public Function EPMSAVE( _
     ' Skip non-numeric
     If Not IsNumeric(amount) Then Exit Function
 
+    On Error GoTo SaveFail
+
     Dim amt As Double
     amt = CDbl(amount)
 
     ' Build cache key to skip unchanged values
     EnsureSaveCache
     Dim cacheKey As String
-    cacheKey = entity & "|" & CLng(fiscal_year) & "|" & CStr(fiscal_period) & "|" & _
-               account & "|" & scenario_id & "|" & layer & "|" & cost_center & "|" & department
-    If pSaveCache.Exists(cacheKey) Then
-        If pSaveCache(cacheKey) = amt Then Exit Function
+    cacheKey = CStr(entity) & "|" & CLng(fiscal_year) & "|" & CLng(fiscal_period) & "|" & _
+               CStr(account) & "|" & CStr(scenario_id) & "|" & CStr(layer) & "|" & _
+               CStr(cost_center) & "|" & CStr(department)
+    If Not pSaveCache Is Nothing Then
+        If pSaveCache.Exists(cacheKey) Then
+            If pSaveCache(cacheKey) = amt Then Exit Function
+        End If
     End If
 
     ' POST to budget_cell_save
@@ -347,7 +352,6 @@ Public Function EPMSAVE( _
     End If
     json = json & "}"
 
-    On Error GoTo SaveFail
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
     http.setOption 2, SXH_IGNORE_CERTS
     http.setTimeouts 5000, 5000, 10000, 10000
@@ -882,6 +886,254 @@ Private Function JsonEscape(s As String) As String
     JsonEscape = s
 End Function
 
+' ── EPM_Save: batch save budget/forecast from structured sheets ──
+'
+' Scans the active sheet for data rows with the standard layout:
+'   Col A: Scenario ID   Col B: Entity   Col D: Account
+'   Col G: Cost Center   Col H: Department
+'   Cols I-T: Period 1-12 amounts
+'
+' Collects all non-empty data rows and POSTs to budget_save_batch.
+' The header row (detected by "Scenario ID" in col A) marks where data starts.
+
+Public Sub EPM_Save()
+    Dim n As Long
+    n = SaveSheet(ActiveSheet)
+    Application.StatusBar = False
+End Sub
+
+Public Sub EPM_SaveAll()
+    Dim ws As Worksheet
+    Dim total As Long
+    Dim current As Long
+    Dim totalRows As Long
+
+    total = ActiveWorkbook.Worksheets.Count
+    current = 0
+
+    For Each ws In ActiveWorkbook.Worksheets
+        current = current + 1
+        ' Skip Setup and log sheets
+        If ws.Name <> "Setup" And ws.Name <> LOG_SHEET_NAME Then
+            Application.StatusBar = "Open EPM: Saving " & current & "/" & total & " - " & ws.Name
+            Dim n As Long
+            n = SaveSheet(ws)
+            totalRows = totalRows + n
+        End If
+    Next ws
+
+    Application.StatusBar = False
+    If totalRows > 0 Then
+        MsgBox "Saved " & totalRows & " budget rows across " & total & " sheets.", _
+               vbInformation, "Open EPM"
+    Else
+        MsgBox "No data rows found to save. Ensure sheets have the standard layout" & vbCrLf & _
+               "(Scenario ID in col A, Entity in col B, Account in col D, periods in cols I-T).", _
+               vbExclamation, "Open EPM"
+    End If
+End Sub
+
+Private Function SaveSheet(ws As Worksheet) As Long
+    Dim headerRow As Long
+    Dim r As Long
+    Dim lastRow As Long
+    Dim scenarioId As String
+    Dim entity As String
+    Dim account As String
+    Dim costCenter As String
+    Dim department As String
+    Dim fiscalYear As Long
+    Dim amount As Double
+    Dim json As String
+    Dim rowCount As Long
+
+    ' Find header row (look for "Scenario ID" in column A)
+    headerRow = 0
+    For r = 1 To 20
+        If UCase(Trim(CStr(ws.Cells(r, 1).Value))) = "SCENARIO ID" Then
+            headerRow = r
+            Exit For
+        End If
+    Next r
+
+    If headerRow = 0 Then
+        LogMsg "INFO", ws.Name & ": no header row found, skipping"
+        SaveSheet = 0
+        Exit Function
+    End If
+
+    ' Read fiscal year from the info block (look for "Fiscal Year:" label)
+    fiscalYear = 2024  ' default
+    For r = 1 To headerRow - 1
+        If InStr(UCase(CStr(ws.Cells(r, 1).Value)), "FISCAL YEAR") > 0 Then
+            If IsNumeric(ws.Cells(r, 2).Value) Then
+                fiscalYear = CLng(ws.Cells(r, 2).Value)
+            End If
+            Exit For
+        End If
+    Next r
+
+    ' Read layer from info block (REQUIRED)
+    Dim layer As String
+    layer = ""
+    For r = 1 To headerRow - 1
+        If UCase(Trim(CStr(ws.Cells(r, 1).Value))) = "LAYER:" Then
+            layer = Trim(CStr(ws.Cells(r, 2).Value))
+            Exit For
+        End If
+    Next r
+
+    If layer = "" Then
+        MsgBox ws.Name & ": Layer is required." & vbCrLf & vbCrLf & _
+               "Add a row in the info block with ""Layer:"" in column A " & _
+               "and the layer name (base, challenge, management, board) in column B.", _
+               vbExclamation, "Open EPM"
+        SaveSheet = 0
+        Exit Function
+    End If
+
+    ' Find last data row
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+
+    ' Ensure logged in
+    If Not pLoggedIn Or pSessionCookie = "" Then
+        EPM_Login
+        If Not pLoggedIn Then
+            MsgBox "Not logged in. Click Setup to configure connection.", _
+                   vbExclamation, "Open EPM"
+            Exit Function
+        End If
+    End If
+
+    Application.StatusBar = "Open EPM: Scanning " & ws.Name & " for budget data..."
+    DoEvents
+
+    ' Build JSON array of budget entries
+    json = "["
+    rowCount = 0
+
+    For r = headerRow + 1 To lastRow
+        scenarioId = Trim(CStr(ws.Cells(r, 1).Value))   ' Col A
+        entity = Trim(CStr(ws.Cells(r, 2).Value))       ' Col B
+        account = Trim(CStr(ws.Cells(r, 4).Value))       ' Col D
+        costCenter = Trim(CStr(ws.Cells(r, 7).Value))   ' Col G
+        department = Trim(CStr(ws.Cells(r, 8).Value))    ' Col H
+
+        ' Skip separator rows, total rows, and empty rows
+        If scenarioId = "" Or entity = "" Or account = "" Then GoTo NextRow
+        If Not IsNumeric(Left(account, 1)) Then GoTo NextRow  ' skip "Net Income" etc.
+
+        ' Build periods array from cols I-T (9-20)
+        Dim periods As String
+        Dim hasData As Boolean
+        Dim p As Long
+        periods = "["
+        hasData = False
+
+        For p = 1 To 12
+            Dim cellVal As Variant
+            cellVal = ws.Cells(r, 8 + p).Value  ' Col I=9 for period 1
+
+            If IsNumeric(cellVal) And CStr(cellVal) <> "" Then
+                amount = CDbl(cellVal)
+                hasData = True
+            Else
+                amount = 0
+            End If
+
+            If p > 1 Then periods = periods & ","
+            periods = periods & "{""period"":" & p & ",""amount"":" & amount & _
+                      ",""layer"":""" & JsonEscape(layer) & """}"
+        Next p
+        periods = periods & "]"
+
+        If Not hasData Then GoTo NextRow
+
+        If rowCount > 0 Then json = json & ","
+        json = json & "{"
+        json = json & """scenario_id"":""" & JsonEscape(scenarioId) & """"
+        json = json & ",""data_area_id"":""" & JsonEscape(entity) & """"
+        json = json & ",""fiscal_year"":" & fiscalYear
+        json = json & ",""main_account"":""" & JsonEscape(account) & """"
+        If costCenter <> "" Then
+            json = json & ",""dim_cost_center"":""" & JsonEscape(costCenter) & """"
+        End If
+        If department <> "" Then
+            json = json & ",""dim_department"":""" & JsonEscape(department) & """"
+        End If
+        json = json & ",""periods"":" & periods
+        json = json & "}"
+        rowCount = rowCount + 1
+
+NextRow:
+    Next r
+
+    json = json & "]"
+
+    If rowCount = 0 Then
+        LogMsg "INFO", ws.Name & ": no data rows found"
+        SaveSheet = 0
+        Exit Function
+    End If
+
+    LogMsg "INFO", ws.Name & ": saving " & rowCount & " budget rows"
+    Application.StatusBar = "Open EPM: Saving " & rowCount & " rows from " & ws.Name & "..."
+    DoEvents
+
+    ' POST to budget_save_batch
+    Dim http As Object
+    Dim url As String
+    url = API_BASE_URL & "/api/method/konsol.api.budget_save_batch"
+
+    On Error GoTo SaveError
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
+    http.setTimeouts 5000, 10000, 30000, 120000  ' 2 min timeout for large batches
+    http.Open "POST", url, False
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "Cookie", pSessionCookie
+    http.send json
+
+    ' Retry on auth failure
+    If http.Status = 401 Or http.Status = 403 Then
+        pLoggedIn = False
+        EPM_Login
+        If Not pLoggedIn Then
+            SaveSheet = 0
+            Exit Function
+        End If
+        Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+        http.setOption 2, SXH_IGNORE_CERTS
+        http.setTimeouts 5000, 10000, 30000, 120000
+        http.Open "POST", url, False
+        http.setRequestHeader "Content-Type", "application/json"
+        http.setRequestHeader "Cookie", pSessionCookie
+        http.send json
+    End If
+
+    If http.Status = 200 Then
+        LogMsg "INFO", ws.Name & ": saved " & rowCount & " rows successfully"
+        MsgBox ws.Name & ": " & rowCount & " budget rows saved.", _
+               vbInformation, "Open EPM"
+    Else
+        LogMsg "ERROR", ws.Name & ": server returned HTTP " & http.Status & " " & _
+               Left(http.responseText, 300)
+        MsgBox "Save failed — HTTP " & http.Status & ":" & vbCrLf & vbCrLf & _
+               Left(http.responseText, 500), vbExclamation, "Open EPM"
+    End If
+
+    SaveSheet = rowCount
+    Exit Function
+
+SaveError:
+    Application.StatusBar = False
+    Dim saveErrMsg As String
+    saveErrMsg = ClassifyNetworkError(Err.Number, Err.Description, API_BASE_URL)
+    LogMsg "ERROR", ws.Name & ": " & saveErrMsg
+    MsgBox saveErrMsg, vbExclamation, "Open EPM"
+    SaveSheet = 0
+End Function
+
 ' ── Setup wizard ───────────────────────────────────────────────
 
 Public Sub EPM_Setup()
@@ -967,6 +1219,19 @@ Private Sub CreateToolbar()
     btn.Style = 3
 
     Set btn = bar.Controls.Add(Type:=1)
+    btn.Caption = "Save"
+    btn.OnAction = "EPM_Save"
+    btn.FaceId = 3      ' save icon
+    btn.Style = 3
+    btn.TooltipText = "Save active sheet budget data (Ctrl+Shift+S)"
+
+    Set btn = bar.Controls.Add(Type:=1)
+    btn.Caption = "Save All"
+    btn.OnAction = "EPM_SaveAll"
+    btn.FaceId = 3
+    btn.Style = 3
+
+    Set btn = bar.Controls.Add(Type:=1)
     btn.Caption = "Debug"
     btn.OnAction = "EPM_Debug"
     btn.FaceId = 548    ' info icon
@@ -987,6 +1252,7 @@ Public Sub Workbook_Open()
     EnsureCache
     CreateToolbar
     Application.OnKey "+^r", "EPM_Refresh"
+    Application.OnKey "+^s", "EPM_Save"
     LogMsg "INFO", "Open EPM loaded (server: " & API_BASE_URL & ")"
 
     ' Silent auto-login if credentials are saved
