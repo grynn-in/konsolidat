@@ -121,6 +121,15 @@ nav:
           - Extending Models: developer-guide/extending-dbt-models.md
           - Adding Dimensions: developer-guide/adding-dimensions.md
           - Extending API: developer-guide/extending-api.md
+      - PRDs:
+          - "PRD-30: Canonical Staging Schema": prd/PRD-30-canonical-staging-schema.md
+          - "PRD-1: FX Translation": prd/PRD-1-fx-translation.md
+          - "PRD-2: CTA Calculation": prd/PRD-2-cta-calculation.md
+          - "PRD-3: Multi-Step Allocations": prd/PRD-3-multistep-allocations.md
+          - "PRD-4: Minority Interest": prd/PRD-4-minority-interest.md
+          - "PRD-5: Topside Journals": prd/PRD-5-topside-journals.md
+          - "PRD-6: Budget Spreading": prd/PRD-6-budget-spreading.md
+          - "PRD-7: Variance Analysis": prd/PRD-7-variance-analysis.md
       - Testing Guide: developer-guide/testing-guide.md
       - Contributing: developer-guide/contributing.md
   - Help:
