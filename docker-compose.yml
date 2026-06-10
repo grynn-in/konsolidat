@@ -133,7 +133,7 @@ services:
     ports:
       - "${FRAPPE_PORT:-8069}:8069"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf -H 'Host: konsolidat.local' http://localhost:8069/api/method/ping"]
+      test: ["CMD-SHELL", "curl -sf -H \"Host: ${SITE_NAME:-konsolidat.local}\" http://localhost:8069/api/method/ping"]
       interval: 15s
       timeout: 5s
       retries: 10

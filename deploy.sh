@@ -210,8 +210,8 @@ KONSOL_BRANCH="${KONSOL_BRANCH:-main}"
 
 if [ ! -d "$KONSOL_DIR/.git" ]; then
     info "Cloning konsol app..."
-    rm -rf "$KONSOL_DIR"
-    git clone "$KONSOL_REPO" --branch "$KONSOL_BRANCH" --depth 1 "$KONSOL_DIR" 2>/dev/null \
+    [ -n "$KONSOL_DIR" ] && rm -rf "$KONSOL_DIR"
+    git clone "$KONSOL_REPO" --branch "$KONSOL_BRANCH" --depth 1 "$KONSOL_DIR" 2>&1 \
         || { err "Failed to clone konsol. If it's a private repo, run:"; \
              echo "  git clone $KONSOL_REPO docker/frappe/konsol"; \
              echo "  Then re-run ./deploy.sh"; exit 1; }
