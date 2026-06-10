@@ -28,10 +28,11 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
-# Wait for Redis
+# Wait for Redis (TCP check — redis-cli not installed in image)
 echo "Waiting for Redis..."
+REDIS_HOST="${REDIS_CACHE_HOST:-redis_cache}"
 for i in $(seq 1 30); do
-    if redis-cli -h "${REDIS_CACHE_HOST:-redis_cache}" ping >/dev/null 2>&1; then
+    if bash -c "exec 3<>/dev/tcp/${REDIS_HOST}/6379; printf 'PING\r\n' >&3; read -t 2 reply <&3; [[ \$reply == *PONG* ]]" 2>/dev/null; then
         echo "Redis is ready."
         break
     fi

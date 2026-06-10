@@ -1,9 +1,14 @@
 {$SITE_DOMAIN:localhost} {
-    reverse_proxy frappe_backend:8069
     encode gzip
 
     handle /api/method/konsol.cube_proxy/* {
         reverse_proxy cubejs:4000
+    }
+
+    handle {
+        reverse_proxy frappe_backend:8069 {
+            header_up Host {$SITE_NAME:konsolidat.local}
+        }
     }
 }
 

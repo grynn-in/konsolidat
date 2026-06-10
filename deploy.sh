@@ -198,10 +198,28 @@ for svc in mariadb redis_cache redis_queue clickhouse; do
 done
 
 # ---------------------------------------------------------------------------
-# Step 2: Build Frappe image
+# Step 2: Stage konsol app + build Frappe image
 # ---------------------------------------------------------------------------
 echo ""
 info "Step 2/5: Building Frappe + Konsol image (this takes a few minutes on first run)..."
+
+# Stage konsol app for Docker build
+KONSOL_DIR="docker/frappe/konsol"
+KONSOL_REPO="${KONSOL_REPO:-https://github.com/grynn-in/konsol.git}"
+KONSOL_BRANCH="${KONSOL_BRANCH:-main}"
+
+if [ ! -d "$KONSOL_DIR/.git" ]; then
+    info "Cloning konsol app..."
+    [ -n "$KONSOL_DIR" ] && rm -rf "$KONSOL_DIR"
+    git clone "$KONSOL_REPO" --branch "$KONSOL_BRANCH" --depth 1 "$KONSOL_DIR" 2>&1 \
+        || { err "Failed to clone konsol. If it's a private repo, run:"; \
+             echo "  git clone $KONSOL_REPO docker/frappe/konsol"; \
+             echo "  Then re-run ./deploy.sh"; exit 1; }
+else
+    info "Updating konsol app..."
+    git -C "$KONSOL_DIR" pull --ff-only 2>/dev/null || true
+fi
+
 docker compose build frappe_backend
 
 # ---------------------------------------------------------------------------
@@ -221,7 +239,7 @@ docker compose up -d frappe_backend frappe_worker frappe_scheduler cubejs caddy
 # Wait for Frappe to respond
 info "Waiting for Frappe to start..."
 for i in $(seq 1 60); do
-  if curl -sf "http://localhost:${FRAPPE_PORT:-8069}/api/method/ping" >/dev/null 2>&1; then
+  if curl -sf -H "Host: ${SITE_NAME:-konsolidat.local}" "http://localhost:${FRAPPE_PORT:-8069}/api/method/ping" >/dev/null 2>&1; then
     ok "Frappe is responding"
     break
   fi

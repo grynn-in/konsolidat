@@ -1,12 +1,10 @@
 FROM python:3.11-slim-bookworm AS base
 
 ARG FRAPPE_BRANCH=version-15
-ARG KONSOL_REPO=https://github.com/grynn-in/konsol.git
-ARG KONSOL_BRANCH=main
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl wget \
+    git curl wget cron \
     mariadb-client \
     xfonts-75dpi xfonts-base \
     libfontconfig1 libxrender1 libxext6 \
@@ -37,8 +35,9 @@ RUN bench init \
 
 WORKDIR /home/frappe/frappe-bench
 
-# Install konsol app
-RUN bench get-app konsol ${KONSOL_REPO} --branch ${KONSOL_BRANCH}
+# Copy konsol app from local source (pre-staged by deploy.sh)
+COPY --chown=frappe:frappe konsol /tmp/konsol
+RUN bench get-app /tmp/konsol
 
 # Install dbt + clickhouse adapter in bench venv (for pipeline runner)
 RUN ./env/bin/pip install dbt-core dbt-clickhouse
