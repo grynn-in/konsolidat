@@ -31,7 +31,9 @@
 Option Explicit
 
 ' ── Configuration ───────────────────────────────────────────
-Private Const DEFAULT_API_URL As String = "http://localhost:8069"
+Private Const DEFAULT_API_URL As String = "https://localhost"
+' SXH_SERVER_CERT_IGNORE_ALL_SERVER_ERRORS = 13056 — accept Caddy's self-signed cert
+Private Const SXH_IGNORE_CERTS As Long = 13056
 Private pApiUrl As String
 Private pCache As Object  ' Scripting.Dictionary
 Private pLoggedIn As Boolean
@@ -53,13 +55,12 @@ End Property
 
 Public Sub EPM_Login()
     Dim usr As String, pwd As String
-    usr = InputBox("Frappe email / username:", "Open EPM Login")
-    If usr = "" Then Exit Sub
-    pwd = InputBox("Password:", "Open EPM Login")
-    If pwd = "" Then Exit Sub
+    usr = "Administrator"
+    pwd = "admin"
 
     Dim http As Object
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
     Dim url As String
     url = API_BASE_URL & "/api/method/login"
 
@@ -237,6 +238,7 @@ Public Function EPMSAVE( _
 
     On Error GoTo SaveFail
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
     http.setTimeouts 5000, 5000, 10000, 10000
     http.Open "POST", url, False
     http.setRequestHeader "Content-Type", "application/json"
@@ -408,6 +410,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
 
     On Error GoTo FetchError
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
     http.setTimeouts 5000, 10000, 30000, 60000
     http.Open "POST", url, False
     http.setRequestHeader "Content-Type", "application/json"
@@ -420,6 +423,7 @@ Private Function RefreshSheet(ws As Worksheet) As Long
         EPM_Login
         If Not pLoggedIn Then Exit Function
         Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+        http.setOption 2, SXH_IGNORE_CERTS
         http.setTimeouts 5000, 10000, 30000, 60000
         http.Open "POST", url, False
         http.setRequestHeader "Content-Type", "application/json"
@@ -966,6 +970,7 @@ NextRow:
     ' POST to budget_save_batch
     Dim http As Object
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
     Dim url As String
     url = API_BASE_URL & "/api/method/konsol.api.budget_save_batch"
 
@@ -1011,6 +1016,7 @@ Public Sub EPM_Debug()
         MsgBox msg, vbExclamation, "EPM Debug"
         Exit Sub
     End If
+    http.setOption 2, SXH_IGNORE_CERTS
     msg = msg & "HTTP object: OK" & vbCrLf
 
     Dim url As String
@@ -1071,6 +1077,7 @@ Public Sub EPM_Debug()
 
         On Error Resume Next
         Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+        http.setOption 2, SXH_IGNORE_CERTS
         url = API_BASE_URL & "/api/method/konsol.api.epm_batch"
         http.Open "POST", url, False
         http.setRequestHeader "Content-Type", "application/json"
