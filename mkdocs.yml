@@ -75,6 +75,7 @@ nav:
       - Excel:
           - VBA Add-in: user-guide/excel-vba-guide.md
           - Task Pane: user-guide/excel-taskpane-guide.md
+      - Initial Setup: user-guide/initial-setup-guide.md
       - Financial Processes:
           - Consolidation: user-guide/consolidation-guide.md
           - Allocations: user-guide/allocation-guide.md
