@@ -1,7 +1,7 @@
 {#
-    GL Journal Entries staging model.
-    Maps GeneralJournalEntryBiEntities fields to general_journal_entries schema.
-    SourceKey → RecId, SubledgerVoucherDataAreaId → dataAreaId.
+    D365 F&O GL journal entry headers.
+    Internal helper — not part of canonical interface.
+    Maps GeneralJournalEntryBiEntities fields.
 #}
 
 select

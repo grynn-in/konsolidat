@@ -1,6 +1,6 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-09*
+*Last updated: 2026-06-10*
 
 ## Status Summary
 
@@ -19,7 +19,7 @@
 | Custom domain | **Done** — konsolid.at on GitHub Pages |
 | FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
 | One-click deploy | **Not started** |
-| Multi-ERP (SAP, ERPNext) | **Not started** |
+| Multi-ERP (SAP, D365 BC, ERPNext) | **In progress** — PRD-30 canonical schema |
 | Dynamic schema (dimensions, measures, facts) | **Not started** |
 | Security / Entra ID SSO | **Not started** |
 | Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
@@ -125,37 +125,87 @@ Make the data model fully registry-driven from Frappe. Adding a dimension, measu
 
 ---
 
-## Phase 3: Multi-ERP Support — SAP + ERPNext (~5 days)
+## Phase 3: Multi-ERP Support (~8 weeks)
 
-Konsolidat currently extracts from D365 F&O only. Abstract the source layer so any ERP can feed the same silver/gold models.
+Konsolidat's silver/gold layers are already ERP-agnostic. The staging layer is D365 F&O-specific. This phase introduces a canonical staging interface that all ERP adapters write to, enabling SAP (S/4HANA, ECC, B1), D365 Business Central, and ERPNext consolidation.
 
-### 3.1 ERP-Agnostic Bronze Schema (2 days)
+> **Note:** D365 F&O and D365 Business Central are completely different products (different APIs, entity models, dimension systems). BC needs its own connector.
 
-- [ ] Define canonical bronze interface: `entity_id`, `fiscal_year`, `fiscal_period`, `main_account`, `debit`, `credit`, `currency`, `dimensions[]`
-- [ ] D365 connector (existing): map `GeneralJournalAccountEntry` → canonical schema
-- [ ] SAP connector: map FI line items (BSEG/BKPF or S/4HANA CDS views) → canonical schema
-- [ ] ERPNext connector: map `GL Entry` doctype → canonical schema
-- [ ] Each connector is an Airbyte source + one dbt staging model
+### PRD Breakdown
 
-### 3.2 Connector Abstraction (1.5 days)
+| PRD | Title | Effort | Status |
+|-----|-------|--------|--------|
+| **PRD-30** | Canonical Staging Schema & Adapter Interface | 2 days | **In Progress** |
+| **PRD-31** | D365 F&O Adapter Refactor | 1 day | Blocked by PRD-30 |
+| **PRD-32** | D365 Business Central Connector | 3 days | Blocked by PRD-30 |
+| **PRD-33** | SAP S/4HANA Connector | 3 days | Blocked by PRD-30 |
+| **PRD-34** | SAP ECC 6.0 Connector | 3 days | Blocked by PRD-30 |
+| **PRD-35** | SAP Business One Connector | 2 days | Blocked by PRD-30 |
+| **PRD-36** | ERPNext Connector | 2 days | Blocked by PRD-30 |
+| **PRD-37** | Dimension Harmonization | 3 days | Blocked by PRD-31/32/33 |
+| **PRD-38** | Scale Architecture (50–500 LEs) | 5 days | Blocked by PRD-37 |
+| **PRD-39** | Connector Registry (Frappe) | 2 days | Blocked by PRD-38 |
 
-- [ ] Frappe `ERP Connection` doctype: type (D365/SAP/ERPNext), credentials, entity mapping
-- [ ] Airbyte connection auto-provisioning from ERP Connection config
-- [ ] dbt source selector: `{{ source('bronze_' ~ erp_type, 'gl_entries') }}`
-- [ ] Silver layer is ERP-agnostic — all connectors produce identical output
+### Dependency Graph
 
-### 3.3 ERPNext Native Integration (0.5 days)
+```mermaid
+graph TD
+    PRD30[PRD-30: Canonical Schema]
+    PRD31[PRD-31: D365 F&O Adapter]
+    PRD32[PRD-32: D365 Business Central]
+    PRD33[PRD-33: SAP S/4HANA]
+    PRD34[PRD-34: SAP ECC 6.0]
+    PRD35[PRD-35: SAP Business One]
+    PRD36[PRD-36: ERPNext]
+    PRD37[PRD-37: Dimension Harmonization]
+    PRD38[PRD-38: Scale 50-500 LEs]
+    PRD39[PRD-39: Connector Registry]
 
-- [ ] ERPNext bonus: direct Frappe-to-Frappe API (no Airbyte needed)
-- [ ] `hooks.py` event on GL Entry submit → write to ClickHouse bronze directly
-- [ ] Real-time consolidation for ERPNext customers
+    PRD30 --> PRD31
+    PRD30 --> PRD32
+    PRD30 --> PRD33
+    PRD30 --> PRD34
+    PRD30 --> PRD35
+    PRD30 --> PRD36
+    PRD31 --> PRD37
+    PRD32 --> PRD37
+    PRD33 --> PRD37
+    PRD37 --> PRD38
+    PRD38 --> PRD39
+```
 
-### 3.4 Docs & Landing Page (1 day)
+### Connector Details
 
-- [ ] Update konsolid.at: "Works with D365, SAP, and ERPNext"
-- [ ] Connector setup guides for each ERP
-- [ ] Update marketing blurb (PPTX) with multi-ERP positioning
-- [ ] Architecture diagram showing pluggable source layer
+| PRD | Connector | API | GL Source Entity | Airbyte Source |
+|-----|-----------|-----|------------------|----------------|
+| 31 | D365 F&O (refactor) | OData v2 | `GeneralJournalAccountEntryBiEntities` | Existing |
+| 32 | D365 Business Central | REST v2.0 / OData v4 | `generalLedgerEntries` | Airbyte BC connector |
+| 33 | SAP S/4HANA | OData v4 (CDS views) | `I_JournalEntry`, `I_GLAccountLineItem` | Airbyte SAP OData |
+| 34 | SAP ECC 6.0 | RFC/BAPI or IDoc | BSEG + BKPF tables | Airbyte SAP (RFC) |
+| 35 | SAP Business One | Service Layer REST | `JournalEntries` (JDT1) | Airbyte HTTP |
+| 36 | ERPNext | Frappe REST API | `GL Entry` doctype | Airbyte ERPNext or direct Frappe API |
+
+### Architecture
+
+```
+Raw ERP Data (Airbyte / direct API)
+    ↓
+Per-ERP Adapters (models/staging/<erp>/)
+    ↓
+Canonical Staging (models/staging/canonical/) ← UNION ALL from adapters
+    ↓
+Bronze → Silver → Gold (unchanged, ERP-agnostic)
+```
+
+### Scale Architecture (PRD-38)
+
+For deployments with 50–500 legal entities across multiple ERPs:
+
+- **Partitioned canonical staging** — partition by `erp_source` for parallel processing
+- **Incremental extraction** — Airbyte CDC for high-volume ERPs (SAP, D365)
+- **ClickHouse cluster** — sharded by entity_id for horizontal scale
+- **Parallel dbt builds** — per-ERP adapter builds can run concurrently
+- **Monitoring** — per-connector health dashboard in Frappe
 
 ---
 
@@ -252,7 +302,7 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 |---|---|---|
 | **Phase 1:** One-click deploy | ~3 days | None |
 | **Phase 2:** Dynamic schema (dimensions, measures, facts) | ~5 days | None |
-| **Phase 3:** Multi-ERP (SAP + ERPNext) | ~5 days | Phase 2 (dimension abstraction) |
+| **Phase 3:** Multi-ERP (6 connectors + scale) | ~8 weeks | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
 | **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
 | **Phase 6:** Analytical gaps + budget hardening | ~2.5 weeks | Phase 2 (dimensions) |

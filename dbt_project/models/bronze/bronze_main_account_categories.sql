@@ -13,4 +13,4 @@ select
     {{ cast_to_string("coalesce(IsClosed, '')") }} as is_closed,
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
-from {{ ref('stg_d365__main_account_categories') }}
+from {{ ref('stg_d365_fo__main_account_categories') }}
