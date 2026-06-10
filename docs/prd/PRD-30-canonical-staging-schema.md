@@ -1,6 +1,6 @@
 # PRD-30: Canonical Staging Schema & Adapter Interface
 
-**Status:** In Progress
+**Status:** Done (PR #10)
 **Priority:** P0 — Foundation for all multi-ERP work
 **Labels:** `multi-erp`, `prd-30`
 **Dependencies:** None (this is the root of the multi-ERP dependency graph)
