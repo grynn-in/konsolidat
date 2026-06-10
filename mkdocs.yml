@@ -121,20 +121,20 @@ nav:
           - Extending Models: developer-guide/extending-dbt-models.md
           - Adding Dimensions: developer-guide/adding-dimensions.md
           - Extending API: developer-guide/extending-api.md
+      - Design Documents:
+          - Consolidation:
+              - FX Translation: prd/PRD-1-fx-translation.md
+              - CTA Calculation: prd/PRD-2-cta-calculation.md
+              - Minority Interest: prd/PRD-4-minority-interest.md
+              - Topside Journals: prd/PRD-5-topside-journals.md
+          - Planning:
+              - Multi-Step Allocations: prd/PRD-3-multistep-allocations.md
+              - Budget Spreading: prd/PRD-6-budget-spreading.md
+              - Variance Analysis: prd/PRD-7-variance-analysis.md
+          - Multi-ERP:
+              - Canonical Staging Schema: prd/PRD-30-canonical-staging-schema.md
       - Testing Guide: developer-guide/testing-guide.md
       - Contributing: developer-guide/contributing.md
-  - PRDs:
-      - Multi-ERP:
-          - "PRD-30: Canonical Staging Schema (Done)": prd/PRD-30-canonical-staging-schema.md
-      - Consolidation:
-          - "PRD-1: FX Translation (Done)": prd/PRD-1-fx-translation.md
-          - "PRD-2: CTA Calculation (Done)": prd/PRD-2-cta-calculation.md
-          - "PRD-4: Minority Interest (Done)": prd/PRD-4-minority-interest.md
-          - "PRD-5: Topside Journals (Done)": prd/PRD-5-topside-journals.md
-      - Planning:
-          - "PRD-3: Multi-Step Allocations (Done)": prd/PRD-3-multistep-allocations.md
-          - "PRD-6: Budget Spreading (Done)": prd/PRD-6-budget-spreading.md
-          - "PRD-7: Variance Analysis (Done)": prd/PRD-7-variance-analysis.md
   - Help:
       - Troubleshooting: troubleshooting/troubleshooting.md
       - FAQ: troubleshooting/faq.md
