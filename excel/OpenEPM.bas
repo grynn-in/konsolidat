@@ -18,12 +18,13 @@
 '   =EPMSAVE(amount, entity, year, period, account, scenario_id, layer)
 '   =EPMSAVE(amount, entity, year, period, account, scenario_id, layer, cost_center, dept)
 '
-' Macros:
-'   EPM_Login             Log in to Frappe (prompted automatically on refresh)
+' Macros (also available from the "Open EPM" toolbar):
+'   EPM_Setup             Connection wizard — URL, username, password (saves to workbook)
 '   EPM_Refresh           Refresh active sheet   (Ctrl+Shift+R)
 '   EPM_RefreshAll        Refresh all sheets
+'   EPM_Debug             Connectivity diagnostics
+'   EPM_Login             Log in using saved credentials
 '   EPM_ClearCache        Clear cached values
-'   EPM_SetServer         Change API server URL
 '   EPM_ToggleLog         Toggle logging to _EPM_Log sheet
 '
 ' ============================================================
@@ -39,6 +40,7 @@ Private pCache As Object  ' Scripting.Dictionary
 Private pLoggedIn As Boolean
 Private pSessionCookie As String
 Private Const LOG_SHEET_NAME As String = "_EPM_Log"
+Private Const TOOLBAR_NAME As String = "Open EPM"
 Private pLoggingEnabled As Boolean
 
 Public Property Get API_BASE_URL() As String
@@ -51,43 +53,152 @@ Public Property Get API_BASE_URL() As String
     API_BASE_URL = pApiUrl
 End Property
 
+' ── Persistent config helpers ─────────────────────────────────
+
+Private Function GetConfig(Key As String, Optional default As String = "") As String
+    On Error Resume Next
+    GetConfig = ActiveWorkbook.CustomDocumentProperties(Key).Value
+    On Error GoTo 0
+    If GetConfig = "" Then GetConfig = default
+End Function
+
+Private Sub SaveConfig(Key As String, val As String)
+    On Error Resume Next
+    ActiveWorkbook.CustomDocumentProperties(Key).Value = val
+    If Err.Number <> 0 Then
+        Err.Clear
+        ActiveWorkbook.CustomDocumentProperties.Add _
+            Name:=Key, LinkToContent:=False, Type:=4, Value:=val
+    End If
+    On Error GoTo 0
+End Sub
+
 ' ── Session cookie ──────────────────────────────────────────
 
-Public Sub EPM_Login()
+Public Sub EPM_Login(Optional silent As Boolean = False)
     Dim usr As String, pwd As String
-    usr = "Administrator"
-    pwd = "admin"
+    usr = GetConfig("EPM_USER", "")
+    pwd = GetConfig("EPM_PASS", "")
 
+    If usr = "" Or pwd = "" Then
+        If silent Then Exit Sub
+        MsgBox "No credentials configured." & vbCrLf & _
+               "Click the Setup button on the Open EPM toolbar to configure.", _
+               vbExclamation, "Open EPM"
+        Exit Sub
+    End If
+
+    Dim result As String
+    result = DoLogin(API_BASE_URL, usr, pwd)
+
+    If result = "OK" Then
+        LogMsg "INFO", "Logged in as " & usr
+        If Not silent Then
+            MsgBox "Logged in as " & usr & ". Press Ctrl+Shift+R to refresh.", _
+                   vbInformation, "Open EPM"
+        End If
+    Else
+        LogMsg "ERROR", "Login failed: " & result
+        If Not silent Then
+            MsgBox "Login failed: " & result, vbExclamation, "Open EPM"
+        End If
+    End If
+End Sub
+
+' ── Actual login logic (shared by EPM_Login and EPM_Setup) ──
+
+Private Function DoLogin(baseUrl As String, usr As String, pwd As String) As String
     Dim http As Object
+    Dim url As String
+
+    On Error GoTo LoginNetworkFail
     Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
     http.setOption 2, SXH_IGNORE_CERTS
-    Dim url As String
-    url = API_BASE_URL & "/api/method/login"
-
-    On Error GoTo LoginFail
+    http.setTimeouts 5000, 10000, 10000, 15000
+    url = baseUrl & "/api/method/login"
     http.Open "POST", url, False
     http.setRequestHeader "Content-Type", "application/json"
     http.send "{""usr"":""" & JsonEscape(usr) & """,""pwd"":""" & JsonEscape(pwd) & """}"
 
-    If http.Status <> 200 Then
-        MsgBox "Login failed (HTTP " & http.Status & "): " & http.responseText, vbExclamation, "Open EPM"
-        Exit Sub
+    Select Case http.Status
+        Case 200
+            Dim headers As String
+            headers = http.getAllResponseHeaders()
+            pSessionCookie = ExtractCookies(headers)
+            pLoggedIn = True
+            DoLogin = "OK"
+        Case 401, 403
+            DoLogin = "Invalid username or password."
+        Case 404
+            DoLogin = "Login endpoint not found. Is the Konsol app installed?"
+        Case 502, 503
+            DoLogin = "Server is starting up. Try again in a moment."
+        Case Else
+            DoLogin = "HTTP " & http.Status & ": " & Left(http.responseText, 200)
+    End Select
+    Exit Function
+
+LoginNetworkFail:
+    DoLogin = ClassifyNetworkError(Err.Number, Err.Description, baseUrl)
+End Function
+
+' ── Connection test (used by EPM_Setup) ───────────────────────
+
+Private Function TestConnection(baseUrl As String, usr As String, pwd As String) As String
+    Dim http As Object
+    Dim url As String
+
+    ' Step 1: Can we reach the server?
+    On Error GoTo PingNetworkFail
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    http.setOption 2, SXH_IGNORE_CERTS
+    http.setTimeouts 5000, 10000, 10000, 15000
+    url = baseUrl & "/api/method/ping"
+    http.Open "GET", url, False
+    http.send
+
+    Select Case http.Status
+        Case 200
+            ' Server reachable, continue to login test
+        Case 404
+            TestConnection = "Server responded but endpoint not found. Is the Konsol app installed?"
+            Exit Function
+        Case 502, 503
+            TestConnection = "Server is starting up. Try again in a moment."
+            Exit Function
+        Case Else
+            TestConnection = "Server returned HTTP " & http.Status
+            Exit Function
+    End Select
+    On Error GoTo 0
+
+    ' Step 2: Can we log in?
+    TestConnection = DoLogin(baseUrl, usr, pwd)
+    Exit Function
+
+PingNetworkFail:
+    TestConnection = ClassifyNetworkError(Err.Number, Err.Description, baseUrl)
+End Function
+
+' ── Error classification ──────────────────────────────────────
+
+Private Function ClassifyNetworkError(errNum As Long, errDesc As String, baseUrl As String) As String
+    Dim desc As String
+    desc = LCase(errDesc)
+    If InStr(desc, "name not resolved") > 0 Or InStr(desc, "server name") > 0 Or _
+       InStr(desc, "could not resolve") > 0 Then
+        ClassifyNetworkError = "Cannot reach server at " & baseUrl & ". Check the URL in EPM Setup."
+    ElseIf InStr(desc, "certificate") > 0 Or InStr(desc, "ssl") > 0 Or _
+           InStr(desc, "secure channel") > 0 Then
+        ClassifyNetworkError = "Certificate error connecting to " & baseUrl & ". Server may use a self-signed cert."
+    ElseIf InStr(desc, "timed out") > 0 Or InStr(desc, "timeout") > 0 Then
+        ClassifyNetworkError = "Server took too long to respond. Check if Docker is running."
+    ElseIf InStr(desc, "refused") > 0 Or InStr(desc, "connect") > 0 Then
+        ClassifyNetworkError = "Connection refused at " & baseUrl & ". Is the server running?"
+    Else
+        ClassifyNetworkError = "Cannot reach server at " & baseUrl & " (" & errDesc & ")"
     End If
-
-    ' Extract session cookies from Set-Cookie headers
-    Dim headers As String
-    headers = http.getAllResponseHeaders()
-    pSessionCookie = ExtractCookies(headers)
-    pLoggedIn = True
-
-    LogMsg "INFO", "Logged in as " & usr
-    MsgBox "Logged in as " & usr & ". Press Ctrl+Shift+R to refresh.", vbInformation, "Open EPM"
-    Exit Sub
-
-LoginFail:
-    LogMsg "ERROR", "Login failed: " & Err.Description
-    MsgBox "Cannot connect to " & url & vbCrLf & Err.Description, vbExclamation, "Open EPM"
-End Sub
+End Function
 
 Private Function ExtractCookies(headers As String) As String
     ' Parse Set-Cookie headers and build a Cookie string
@@ -483,9 +594,10 @@ FetchError:
     On Error Resume Next
     Application.Calculation = xlCalculationAutomatic
     On Error GoTo 0
-    LogMsg "ERROR", ws.Name & ": " & Err.Description
-    MsgBox "Cannot connect to EPM server at " & url & vbCrLf & _
-           "Error: " & Err.Description, vbExclamation, "Open EPM"
+    Dim fetchErrMsg As String
+    fetchErrMsg = ClassifyNetworkError(Err.Number, Err.Description, API_BASE_URL)
+    LogMsg "ERROR", ws.Name & ": " & fetchErrMsg
+    MsgBox fetchErrMsg, vbExclamation, "Open EPM"
 End Function
 
 ' ── Parse the values array from JSON response ────────────────
@@ -770,27 +882,51 @@ Private Function JsonEscape(s As String) As String
     JsonEscape = s
 End Function
 
-' ── Server configuration ────────────────────────────────────
+' ── Setup wizard ───────────────────────────────────────────────
+
+Public Sub EPM_Setup()
+    Dim url As String, usr As String, pwd As String
+
+    url = InputBox("Server URL:" & vbCrLf & vbCrLf & _
+                   "(e.g. https://localhost or https://konsolidat.local)", _
+                   "Open EPM Setup", GetConfig("EPM_API_URL", DEFAULT_API_URL))
+    If url = "" Then Exit Sub
+    ' Strip trailing slash
+    If Right(url, 1) = "/" Then url = Left(url, Len(url) - 1)
+
+    usr = InputBox("Username:", "Open EPM Setup", GetConfig("EPM_USER", "Administrator"))
+    If usr = "" Then Exit Sub
+
+    pwd = InputBox("Password:", "Open EPM Setup", GetConfig("EPM_PASS", "admin"))
+    If pwd = "" Then Exit Sub
+
+    Application.StatusBar = "Open EPM: Testing connection to " & url & "..."
+    DoEvents
+
+    Dim result As String
+    result = TestConnection(url, usr, pwd)
+
+    Application.StatusBar = False
+
+    If result = "OK" Then
+        ' Save all three settings
+        SaveConfig "EPM_API_URL", url
+        SaveConfig "EPM_USER", usr
+        SaveConfig "EPM_PASS", pwd
+        pApiUrl = url  ' update in-memory value
+        MsgBox "Connected to " & url & " as " & usr & "!" & vbCrLf & vbCrLf & _
+               "Settings saved. Press Ctrl+Shift+R to refresh.", _
+               vbInformation, "Open EPM"
+    Else
+        MsgBox "Connection failed:" & vbCrLf & vbCrLf & result & vbCrLf & vbCrLf & _
+               "Settings NOT saved.", vbExclamation, "Open EPM"
+    End If
+End Sub
+
+' ── Legacy: EPM_SetServer (kept for backward compat) ──────────
 
 Public Sub EPM_SetServer()
-    Dim url As String
-    url = InputBox("Enter the Open EPM API server URL:", "Open EPM", API_BASE_URL)
-    If url = "" Then Exit Sub
-
-    pApiUrl = url
-
-    ' Save to workbook custom properties (4 = msoPropertyTypeString)
-    On Error Resume Next
-    ActiveWorkbook.CustomDocumentProperties("EPM_API_URL").Value = url
-    If Err.Number <> 0 Then
-        Err.Clear
-        ActiveWorkbook.CustomDocumentProperties.Add _
-            Name:="EPM_API_URL", LinkToContent:=False, _
-            Type:=4, Value:=url
-    End If
-    On Error GoTo 0
-
-    MsgBox "API URL set to: " & url, vbInformation, "Open EPM"
+    EPM_Setup
 End Sub
 
 ' ── Status bar cleanup ──────────────────────────────────────
@@ -799,14 +935,76 @@ Public Sub ClearStatusBar()
     Application.StatusBar = False
 End Sub
 
-' ── Auto-bind Ctrl+Shift+R on workbook open ─────────────────
+' ── Toolbar ────────────────────────────────────────────────────
+
+Private Sub CreateToolbar()
+    On Error Resume Next
+    Application.CommandBars(TOOLBAR_NAME).Delete
+    On Error GoTo 0
+
+    Dim bar As Object  ' CommandBar
+    Set bar = Application.CommandBars.Add(Name:=TOOLBAR_NAME, temporary:=True)
+
+    Dim btn As Object  ' CommandBarButton
+
+    Set btn = bar.Controls.Add(Type:=1)  ' msoControlButton
+    btn.Caption = "Setup"
+    btn.OnAction = "EPM_Setup"
+    btn.FaceId = 2950   ' gear icon
+    btn.Style = 3       ' msoButtonIconAndCaption
+
+    Set btn = bar.Controls.Add(Type:=1)
+    btn.Caption = "Refresh"
+    btn.OnAction = "EPM_Refresh"
+    btn.FaceId = 37     ' refresh icon
+    btn.Style = 3
+    btn.TooltipText = "Refresh active sheet (Ctrl+Shift+R)"
+
+    Set btn = bar.Controls.Add(Type:=1)
+    btn.Caption = "Refresh All"
+    btn.OnAction = "EPM_RefreshAll"
+    btn.FaceId = 37
+    btn.Style = 3
+
+    Set btn = bar.Controls.Add(Type:=1)
+    btn.Caption = "Debug"
+    btn.OnAction = "EPM_Debug"
+    btn.FaceId = 548    ' info icon
+    btn.Style = 3
+
+    bar.Visible = True
+End Sub
+
+Private Sub DestroyToolbar()
+    On Error Resume Next
+    Application.CommandBars(TOOLBAR_NAME).Delete
+    On Error GoTo 0
+End Sub
+
+' ── Auto-open / auto-close ─────────────────────────────────────
 
 Public Sub Workbook_Open()
     EnsureCache
-    LogMsg "INFO", "Open EPM loaded (server: " & API_BASE_URL & ")"
+    CreateToolbar
     Application.OnKey "+^r", "EPM_Refresh"
-    Application.StatusBar = "Open EPM loaded. Ctrl+Shift+R to refresh."
-    Application.OnTime Now + TimeValue("00:00:03"), "ClearStatusBar"
+    LogMsg "INFO", "Open EPM loaded (server: " & API_BASE_URL & ")"
+
+    ' Silent auto-login if credentials are saved
+    Dim usr As String
+    usr = GetConfig("EPM_USER", "")
+    If usr <> "" Then
+        Application.StatusBar = "Open EPM: Logging in..."
+        DoEvents
+        EPM_Login silent:=True
+        If pLoggedIn Then
+            Application.StatusBar = "Open EPM: Logged in as " & usr & ". Ctrl+Shift+R to refresh."
+        Else
+            Application.StatusBar = "Open EPM: Auto-login failed. Click Setup to configure."
+        End If
+    Else
+        Application.StatusBar = "Open EPM loaded. Click Setup on the toolbar to configure."
+    End If
+    Application.OnTime Now + TimeValue("00:00:05"), "ClearStatusBar"
 End Sub
 
 Public Sub Auto_Open()
@@ -815,6 +1013,7 @@ End Sub
 
 Public Sub Auto_Close()
     Application.OnKey "+^r"
+    DestroyToolbar
 End Sub
 
 Private Function EnsureLogin() As Boolean
@@ -1001,11 +1200,19 @@ End Sub
 ' ── Debug: test connectivity and formula scanning ─────────
 Public Sub EPM_Debug()
     Dim msg As String
-    msg = "=== EPM Debug ===" & vbCrLf
+    msg = "=== EPM Debug ===" & vbCrLf & vbCrLf
+
+    ' Config status
+    msg = msg & "Server: " & API_BASE_URL & vbCrLf
+    msg = msg & "User:   " & GetConfig("EPM_USER", "(not set)") & vbCrLf
+    msg = msg & "Pass:   "
+    If GetConfig("EPM_PASS", "") <> "" Then msg = msg & "***" Else msg = msg & "(not set)"
+    msg = msg & vbCrLf
+    msg = msg & "Logged in: " & pLoggedIn & vbCrLf & vbCrLf
 
     ' Test 1: Cache
     EnsureCache
-    msg = msg & "Cache: OK" & vbCrLf
+    msg = msg & "Cache: OK (" & pCache.Count & " entries)" & vbCrLf
 
     ' Test 2: HTTP connectivity
     Dim http As Object
@@ -1017,20 +1224,33 @@ Public Sub EPM_Debug()
         Exit Sub
     End If
     http.setOption 2, SXH_IGNORE_CERTS
+    http.setTimeouts 5000, 10000, 10000, 15000
     msg = msg & "HTTP object: OK" & vbCrLf
 
     Dim url As String
+    url = API_BASE_URL & "/api/method/ping"
+    http.Open "GET", url, False
+    http.send
+    If Err.Number <> 0 Then
+        msg = msg & "Ping: FAILED - " & ClassifyNetworkError(Err.Number, Err.Description, API_BASE_URL) & vbCrLf
+        MsgBox msg, vbExclamation, "EPM Debug"
+        Exit Sub
+    End If
+    msg = msg & "Ping: HTTP " & http.Status & vbCrLf
+
+    ' Test health endpoint
     url = API_BASE_URL & "/api/method/konsol.api.health"
     http.Open "GET", url, False
     If pSessionCookie <> "" Then http.setRequestHeader "Cookie", pSessionCookie
     http.send
     If Err.Number <> 0 Then
-        msg = msg & "GET " & url & ": FAILED - " & Err.Description & vbCrLf
-        MsgBox msg, vbExclamation, "EPM Debug"
-        Exit Sub
+        msg = msg & "Health: FAILED - " & Err.Description & vbCrLf
+    Else
+        msg = msg & "Health: HTTP " & http.Status & " " & Left(http.responseText, 100) & vbCrLf
     End If
-    msg = msg & "GET " & url & ": " & http.Status & " " & http.responseText & vbCrLf
     On Error GoTo 0
+
+    msg = msg & vbCrLf
 
     ' Test 3: Scan formulas
     Dim ws As Worksheet
@@ -1071,7 +1291,7 @@ Public Sub EPM_Debug()
     msg = msg & "Total EPM formulas found: " & epmCount & vbCrLf
 
     ' Test 4: Try a single batch call
-    If epmCount > 0 Then
+    If epmCount > 0 And pLoggedIn Then
         Dim testJson As String
         testJson = "[{""entity"":""USMF"",""year"":2024,""period"":5,""account"":""401100"",""measure"":""period_net_amount"",""scenario"":""actuals""}]"
 
@@ -1086,7 +1306,7 @@ Public Sub EPM_Debug()
         If Err.Number <> 0 Then
             msg = msg & "POST batch: FAILED - " & Err.Description & vbCrLf
         Else
-            msg = msg & "POST batch: " & http.Status & " " & http.responseText & vbCrLf
+            msg = msg & "POST batch: " & http.Status & " " & Left(http.responseText, 100) & vbCrLf
         End If
         On Error GoTo 0
     End If
