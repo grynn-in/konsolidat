@@ -91,7 +91,8 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - clickhouse_logs:/var/log/clickhouse-server
-      - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+      - ./clickhouse/demo-data.sql:/docker-entrypoint-initdb.d/02-demo-data.sql:ro
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
     ulimits:
       nofile:
