@@ -1,6 +1,6 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-11*
 
 ## Status Summary
 
@@ -18,10 +18,10 @@
 | Docs site (MkDocs Material) | **Done** — konsolid.at, 40+ pages |
 | Custom domain | **Done** — konsolid.at on GitHub Pages |
 | One-click deploy | **Done** — `git clone && ./deploy.sh`, 9 Docker services |
-| Multi-ERP canonical staging | **Done** — 7 canonical models, UNION ALL adapters |
+| Multi-ERP canonical staging + D365 F&O adapter | **Done** — 7 canonical models, 16 D365 F&O adapter models (PR #10) |
 | Multi-ERP connectors (SAP, D365 BC, ERPNext) | **Not started** |
 | FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
-| Dynamic schema (dimensions, measures, facts) | **Not started** |
+| Dynamic schema (dimensions, measures, facts) | **In progress** — Dimension + Measure registries done, API + Fact registry remaining |
 | Security / Entra ID SSO | **Not started** |
 | Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
 | Cash flow statement | **Not started** |
@@ -48,37 +48,34 @@ Full docker-compose stack + single deploy script. Completed in PRs #7 and #9.
 
 ---
 
-## Phase 2: Dynamic Schema — Dimensions, Measures & Facts (~5 days)
+## Phase 2: Dynamic Schema — Dimensions, Measures & Facts ~~(~5 days)~~ IN PROGRESS
 
 Make the data model fully registry-driven from Frappe. Adding a dimension, measure, or fact table should be a UI operation in Frappe Desk, not a code change across 6 files.
 
-### Current state (hardcoded)
+### What's done
 
-| Concept | What it is | Example | Where hardcoded |
-|---|---|---|---|
-| **Dimension** | Attribute to slice by | Cost Center, Department, Project | ClickHouse columns, API params, Budget Input doctype, dbt macros |
-| **Measure** | Numeric value to aggregate | period_net_amount, opening_balance, ytd_amount | dbt macros, API column mapping, Excel function `measure` param |
-| **Fact** | Transactional grain / source table | GL Journal Entries, Budget Input, Allocation Results | dbt models, ClickHouse staging tables, Airbyte sync config |
+The dbt layer is fully dynamic — Dimension and Measure registries in Frappe drive dbt_project.yml vars, and macros (`dim_select()`, `dim_group_by()`, `measure_select()`) generate SQL from those vars. Gold models like `gold_trial_balance` already use them. Source-layer abstraction is complete (`dim_select_from_source()` maps ERP source columns to canonical dimension names).
 
-### 2.1 Dimension Registry (1 day)
+### What remains
 
-- [ ] Frappe `Dimension` doctype becomes authoritative — on save, auto-generates:
-  - ClickHouse `ALTER TABLE ADD COLUMN` for all staging/reporting tables
-  - Entry in `dbt_project.yml` `vars.dimensions` (or dbt vars override)
-  - Budget Input doctype field (dynamic via Frappe custom fields API)
-- [ ] Validation: dimension name must be `dim_*`, unique, no reserved words
-- [ ] Source mapping per ERP: D365 JSON path, SAP field name, ERPNext fieldname
-- [ ] Allocation engine uses `allocation_role` from dimension config, not hardcoded column names
+The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to specific dimensions/measures, so adding a new dimension still requires code changes in `api.py` and manual ClickHouse schema updates.
 
-### 2.2 Measure Registry (1 day)
+### 2.1 Dimension Registry ~~(1 day)~~ DONE
 
-- [ ] Frappe `Measure` doctype: `name`, `column_name`, `aggregation` (sum/avg/last), `label`, `favorable_direction` (debit/credit)
-- [ ] On save, auto-generates:
-  - dbt `vars.measures` entries (drives `{{ measure_select() }}` macros)
-  - ClickHouse columns on gold tables
-  - API response includes only active measures
-- [ ] Default measures pre-seeded: `period_net_amount`, `opening_balance`, `closing_balance`, `ytd_amount`, `debit_amount`, `credit_amount`
-- [ ] Custom measures: e.g. `headcount`, `revenue_per_sqm` — derived via SQL expression field on the doctype
+- [x] Frappe `Dimension` doctype — on save, auto-generates `dbt_project.yml` `vars.dimensions` via `dbt_config.py`
+- [x] Fields: `dimension_name`, `source_column`, `label`, `cube_type`, `in_budget`, `allocation_role`
+- [x] Allocation engine uses `allocation_role` from dimension config
+- [ ] ClickHouse `ALTER TABLE ADD COLUMN` on dimension save (currently requires dbt rebuild)
+- [ ] Budget Input doctype field generation (dynamic via Frappe custom fields API)
+
+### 2.2 Measure Registry ~~(1 day)~~ DONE
+
+- [x] Frappe `Measure` doctype — on save, auto-generates `dbt_project.yml` `vars.base_measures` via `dbt_config.py`
+- [x] Fields: `measure_name`, `expression`, `label`, `cube_type`
+- [x] Default measures pre-seeded: `period_debit`, `period_credit`, `period_net_amount`, `transaction_count`
+- [x] dbt macros (`measure_select()`, `measure_passthrough()`) consume measures dynamically
+- [ ] API response validates `measure` param against active Measure registry (currently hardcoded `ALLOWED_MEASURES` dict)
+- [ ] ClickHouse gold table columns auto-generated on measure save
 
 ### 2.3 Fact Registry (1.5 days)
 
@@ -108,18 +105,19 @@ Make the data model fully registry-driven from Frappe. Adding a dimension, measu
 - [ ] Backward-compatible: old named params still work, mapped internally
 - [ ] ClickHouse query builder reads active dimensions/measures/facts from registry
 
-### 2.5 Source Layer Abstraction (0.5 days)
+### 2.5 Source Layer Abstraction ~~(0.5 days)~~ DONE
 
-- [ ] dbt macro `{{ dim_extract_from_source() }}` reads dimension list and generates extraction SQL per ERP
-- [ ] D365: auto-extract from `LedgerDimensionValuesJson` by `source_column` name
+- [x] dbt macro `{{ dim_select_from_source() }}` reads dimension list and generates extraction SQL per ERP
+- [x] D365: auto-extract from `LedgerDimensionValuesJson` by `source_column` name
+- [x] `dim_select()`, `dim_group_by()`, `dim_partition_by()` — generate SQL from dimension vars
 - [ ] SAP/ERPNext: each connector provides its own dimension mapping (see Phase 3)
 - [ ] Fact-specific source macros: GL extraction vs. budget extraction vs. statistical extraction
 
 ---
 
-## Phase 3: Multi-ERP Support (~8 weeks)
+## Phase 3: Multi-ERP Support ~~(~8 weeks)~~ IN PROGRESS
 
-Konsolidat's silver/gold layers are already ERP-agnostic. The staging layer is D365 F&O-specific. This phase introduces a canonical staging interface that all ERP adapters write to, enabling SAP (S/4HANA, ECC, B1), D365 Business Central, and ERPNext consolidation.
+Konsolidat's silver/gold layers are already ERP-agnostic. The canonical staging interface and D365 F&O adapter are complete. Remaining work is adding connectors for SAP (S/4HANA, ECC, B1), D365 Business Central, and ERPNext.
 
 > **Note:** D365 F&O and D365 Business Central are completely different products (different APIs, entity models, dimension systems). BC needs its own connector.
 
@@ -127,15 +125,15 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The staging layer is D
 
 | Task | Effort | Status |
 |------|--------|--------|
-| Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) |
-| D365 F&O Adapter Refactor | 1 day | Not started |
+| Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) — 7 canonical models, UNION ALL from adapters |
+| D365 F&O Adapter Refactor | 1 day | **Done** (PR #10) — 16 models renamed `stg_d365_fo__*`, canonical output |
 | D365 Business Central Connector | 3 days | Not started |
 | SAP S/4HANA Connector | 3 days | Not started |
 | SAP ECC 6.0 Connector | 3 days | Not started |
 | SAP Business One Connector | 2 days | Not started |
 | ERPNext Connector | 2 days | Not started |
 | Dimension Harmonization | 3 days | Not started |
-| Scale Architecture (50–500 LEs) | 5 days | Not started |
+| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning done, incremental extraction not started |
 | Connector Registry (Frappe) | 2 days | Not started |
 
 ### Dependency Graph
@@ -182,11 +180,11 @@ Bronze → Silver → Gold (unchanged, ERP-agnostic)
 
 For deployments with 50–500 legal entities across multiple ERPs:
 
-- **Partitioned canonical staging** — partition by `erp_source` for parallel processing
-- **Incremental extraction** — Airbyte CDC for high-volume ERPs (SAP, D365)
-- **ClickHouse cluster** — sharded by entity_id for horizontal scale
-- **Parallel dbt builds** — per-ERP adapter builds can run concurrently
-- **Monitoring** — per-connector health dashboard in Frappe
+- [x] **Partitioned bronze tables** — `bronze_general_journal_account_entries` partitioned by `toYear(accounting_date)`, budget by `toYYYYMM(transaction_date)`, FX by `toYear(valid_from)`
+- [x] **Parallel dbt builds** — per-ERP adapter builds can run concurrently (adapter pattern supports this)
+- [ ] **Incremental extraction** — Airbyte CDC for high-volume ERPs (SAP, D365)
+- [ ] **ClickHouse cluster** — sharded by entity_id for horizontal scale
+- [ ] **Monitoring** — per-connector health dashboard in Frappe
 
 ---
 
@@ -309,8 +307,8 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 | Phase | Effort | Dependencies |
 |---|---|---|
 | **Phase 1:** One-click deploy | ~3 days | None |
-| **Phase 2:** Dynamic schema (dimensions, measures, facts) | ~5 days | None |
-| **Phase 3:** Multi-ERP (6 connectors + scale) | ~8 weeks | Phase 2 (dimension abstraction) |
+| **Phase 2:** Dynamic schema (dimensions, measures, facts) | ~~5 days~~ ~2 days remaining | None |
+| **Phase 3:** Multi-ERP (6 connectors + scale) | ~~8 weeks~~ ~6 weeks remaining | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
 | **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
 | **Phase 6:** Analytical gaps, consolidation/allocation/planning/reporting enhancements | ~6 weeks | Phase 2 (dimensions) |
