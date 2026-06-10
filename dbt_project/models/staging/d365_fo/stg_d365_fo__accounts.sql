@@ -11,12 +11,10 @@ select
     coalesce(MainAccountCategory, '') as account_category,
     coalesce(DebitCreditDefault, '') as debit_credit_default,
     coalesce(ChartOfAccounts, '') as chart_of_accounts,
-    toString(
-        case
-            when lower(toString(coalesce(IsSuspended, ''))) in ('yes', 'true', '1') then 1
-            else 0
-        end
-    ) as is_suspended,
-    toString(_airbyte_extracted_at) as _loaded_at,
-    toString(_airbyte_raw_id) as _raw_id
+    case
+        when lower(toString(coalesce(IsSuspended, ''))) in ('yes', 'true', '1') then 1
+        else 0
+    end as is_suspended,
+    _airbyte_extracted_at as _loaded_at,
+    _airbyte_raw_id as _raw_id
 from {{ source('d365_raw', 'MainAccounts') }}

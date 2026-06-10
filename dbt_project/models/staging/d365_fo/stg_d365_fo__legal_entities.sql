@@ -21,8 +21,8 @@ joined as (
         coalesce(ledgers.ReportingCurrency, '') as reporting_currency,
         coalesce(entities.PartyNumber, '') as party_number,
         coalesce(entities.AddressCountryRegionId, '') as country_region,
-        toString(entities._airbyte_extracted_at) as _loaded_at,
-        toString(entities._airbyte_raw_id) as _raw_id
+        entities._airbyte_extracted_at as _loaded_at,
+        entities._airbyte_raw_id as _raw_id
     from entities
     left join ledgers
         on lower(entities.LegalEntityId) = lower(ledgers.LegalEntityId)

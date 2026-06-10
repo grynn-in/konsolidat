@@ -75,8 +75,5 @@ models:
   - name: stg_d365_fo__budget_register_entries
     description: "Budget register headers deduplicated by EntryNumber"
 
-  - name: stg_d365_fo__budget_transaction_lines
-    description: "Budget transaction lines with parsed DimensionDisplayValue"
-
   - name: stg_d365_fo__consolidation_groups
     description: "Consolidation account groups deduplicated"

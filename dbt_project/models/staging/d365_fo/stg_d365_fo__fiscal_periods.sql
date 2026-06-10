@@ -10,6 +10,6 @@ select
     coalesce(FiscalYear, Description, '') as fiscal_year,
     toString(substring(coalesce(toString(StartDate), '1900-01-01'), 1, 10)) as start_date,
     toString(substring(coalesce(toString(EndDate), '2099-12-31'), 1, 10)) as end_date,
-    toString(_airbyte_extracted_at) as _loaded_at,
-    toString(_airbyte_raw_id) as _raw_id
+    _airbyte_extracted_at as _loaded_at,
+    _airbyte_raw_id as _raw_id
 from {{ source('d365_raw', 'FiscalCalendarYears') }}
