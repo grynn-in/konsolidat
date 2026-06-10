@@ -168,11 +168,18 @@ The template includes pre-built reports for Trial Balance, P&L, Balance Sheet, a
 
 A fresh deploy includes synthetic data for a fictional **Alpine Manufacturing Group** — 3 legal entities across CHF, USD, and EUR with 12 months of GL entries, budgets, exchange rates, and trial balance data. This lets you explore consolidation, FX translation, variance analysis, and Excel reports immediately.
 
-| Entity | Currency | Country | Role |
-|--------|----------|---------|------|
-| AMHQ | CHF | Switzerland | Parent / HQ |
-| AMUS | USD | United States | Subsidiary |
-| AMDE | EUR | Germany | Subsidiary |
+| Entity | Currency | Country | Ownership | Role |
+|--------|----------|---------|-----------|------|
+| AMHQ | CHF | Switzerland | 100% | Parent / HQ |
+| AMUS | USD | United States | 100% | Subsidiary |
+| AMDE | EUR | Germany | 75% | Subsidiary (25% NCI) |
+
+The demo data includes:
+
+- **Intercompany transactions**: Monthly product sales AMUS→AMDE (~120K USD/month), quarterly management fees from HQ, with matching AR/AP for IC elimination
+- **Non-controlling interest**: AMDE at 75% ownership triggers NCI calculations in the consolidated trial balance
+- **IC elimination rules**: Balance-based (AR/AP, Revenue/Expense) and unrealized profit on IC inventory (15% margin)
+- **Staging data**: Ownership periods, consolidation hierarchy, and IC balances pre-loaded for full consolidation pipeline
 
 The demo data is loaded from `clickhouse/demo-data.sql` on first container start. To reset to demo data, delete the ClickHouse volume and restart:
 

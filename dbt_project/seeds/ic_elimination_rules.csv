@@ -2,3 +2,5 @@ rule_id,rule_name,debit_account,credit_account,debit_entity_pattern,credit_entit
 IC_001,IC Receivable/Payable,1300,2100,*,*,Eliminate intercompany receivables against payables
 IC_002,IC Revenue/COGS,4000,5000,*,*,Eliminate intercompany revenue against COGS
 IC_003,IC Dividend,8100,3200,*,*,Eliminate intercompany dividends
+IC_004,IC Product Revenue/Expense,4030,5030,*,*,Eliminate intercompany product sales against IC expense
+IC_005,IC AR/AP,1100,2010,*,*,Eliminate intercompany receivables against IC payables

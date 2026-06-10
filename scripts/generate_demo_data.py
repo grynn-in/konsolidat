@@ -616,7 +616,7 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
                 fx = FX_CHF_EUR[q - 1]
             rpt_amt = round(ic_amount * fx, 2)
 
-            # Sub side: DR IC Expense, CR Cash
+            # Sub side: DR IC Expense, CR AP (IC payable)
             header_key += 1
             hk = header_key
             jnum = f"IC-{entity_id}-Q{q//3}"
@@ -638,12 +638,12 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
             gl_lines.append(
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC management fee', 'Yes', {line_key}, 'Normal', "
-                f"'1010-{cc}-{dept}', {val(ic_date)}, {hk}, "
+                f"'2010-{cc}-{dept}', {val(ic_date)}, {hk}, "
                 f"{rpt_amt}, {val(accy)}, {ic_amount}, "
-                f"{val(dim_json('1010', cc, dept, bu))}, {ic_amount})"
+                f"{val(dim_json('2010', cc, dept, bu))}, {ic_amount})"
             )
 
-            # HQ side: DR Cash, CR IC Revenue (in CHF)
+            # HQ side: DR AR (IC receivable), CR IC Revenue (in CHF)
             header_key += 1
             hk = header_key
             jnum = f"IC-AMHQ-from-{entity_id}-Q{q//3}"
@@ -659,9 +659,9 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
             gl_lines.append(
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC fee from {entity_id}', 'No', {line_key}, 'Normal', "
-                f"'1010-{hq_cc}-{hq_dept}', {val(ic_date)}, {hk}, "
+                f"'1100-{hq_cc}-{hq_dept}', {val(ic_date)}, {hk}, "
                 f"{ic_chf}, 'CHF', {ic_chf}, "
-                f"{val(dim_json('1010', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
+                f"{val(dim_json('1100', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
             )
             line_key += 1
             gl_lines.append(
@@ -671,6 +671,134 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
                 f"{ic_chf}, 'CHF', {ic_chf}, "
                 f"{val(dim_json('4030', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
             )
+
+            # Settlement: Sub pays HQ (DR AP, CR Cash on sub / DR Cash, CR AR on HQ)
+            # Settle in the following month (or same month for Q4)
+            settle_m = min(q + 1, 12)
+            settle_date = f"2024-{settle_m:02d}-15"
+
+            header_key += 1
+            hk = header_key
+            jnum = f"IC-SETTLE-{entity_id}-Q{q//3}"
+            gl_headers.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{hk}, {val(settle_date)}, 'Current', {val(jnum)}, "
+                f"{val(settle_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+                f"2024, {settle_m}, {val(entity_id)})"
+            )
+            line_key += 1
+            gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"'IC settlement', 'No', {line_key}, 'Normal', "
+                f"'2010-{cc}-{dept}', {val(settle_date)}, {hk}, "
+                f"{rpt_amt}, {val(accy)}, {ic_amount}, "
+                f"{val(dim_json('2010', cc, dept, bu))}, {ic_amount})"
+            )
+            line_key += 1
+            gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"'IC settlement', 'Yes', {line_key}, 'Normal', "
+                f"'1010-{cc}-{dept}', {val(settle_date)}, {hk}, "
+                f"{rpt_amt}, {val(accy)}, {ic_amount}, "
+                f"{val(dim_json('1010', cc, dept, bu))}, {ic_amount})"
+            )
+
+            header_key += 1
+            hk = header_key
+            jnum = f"IC-SETTLE-AMHQ-from-{entity_id}-Q{q//3}"
+            gl_headers.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{hk}, {val(settle_date)}, 'Current', {val(jnum)}, "
+                f"{val(settle_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+                f"2024, {settle_m}, 'AMHQ')"
+            )
+            line_key += 1
+            gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"'IC settlement from {entity_id}', 'No', {line_key}, 'Normal', "
+                f"'1010-{hq_cc}-{hq_dept}', {val(settle_date)}, {hk}, "
+                f"{ic_chf}, 'CHF', {ic_chf}, "
+                f"{val(dim_json('1010', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
+            )
+            line_key += 1
+            gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"'IC settlement from {entity_id}', 'Yes', {line_key}, 'Normal', "
+                f"'1100-{hq_cc}-{hq_dept}', {val(settle_date)}, {hk}, "
+                f"{ic_chf}, 'CHF', {ic_chf}, "
+                f"{val(dim_json('1100', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
+            )
+
+# ── Monthly IC product sales: AMUS → AMDE ────────────────────────
+# AMUS sells components to AMDE at 15% markup
+IC_MONTHLY_SALES = 120000  # USD base amount per month
+for month_idx in range(12):
+    m = month_idx + 1
+    ic_date = f"2024-{m:02d}-20"
+    seasonal = SEASONAL[month_idx]
+    ic_sale = int(IC_MONTHLY_SALES * seasonal)
+    # Convert USD sale to EUR for AMDE side
+    usd_fx = FX_CHF_USD[month_idx]
+    eur_fx = FX_CHF_EUR[month_idx]
+    ic_sale_eur = int(ic_sale * usd_fx / eur_fx)  # USD → CHF → EUR
+    ic_sale_chf = round(ic_sale * usd_fx, 2)
+
+    # AMUS side: DR AR 1100 (IC receivable), CR IC Revenue 4030
+    header_key += 1
+    hk = header_key
+    jnum = f"IC-SALE-AMUS-{m:02d}"
+    gl_headers.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{hk}, {val(ic_date)}, 'Current', {val(jnum)}, "
+        f"{val(ic_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+        f"2024, {m}, 'AMUS')"
+    )
+    us_cc, us_dept, us_bu = "SALES", "SALES", "SERVICES"
+    line_key += 1
+    gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC product sale to AMDE', 'No', {line_key}, 'Normal', "
+        f"'1100-{us_cc}-{us_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_chf}, 'USD', {ic_sale}, "
+        f"{val(dim_json('1100', us_cc, us_dept, us_bu))}, {ic_sale})"
+    )
+    line_key += 1
+    gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC product sale to AMDE', 'Yes', {line_key}, 'Normal', "
+        f"'4030-{us_cc}-{us_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_chf}, 'USD', {ic_sale}, "
+        f"{val(dim_json('4030', us_cc, us_dept, us_bu))}, {ic_sale})"
+    )
+
+    # AMDE side: DR IC Expense 5030, CR AP 2010 (IC payable)
+    header_key += 1
+    hk = header_key
+    jnum = f"IC-PURCH-AMDE-{m:02d}"
+    ic_sale_chf_de = round(ic_sale_eur * eur_fx, 2)
+    gl_headers.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{hk}, {val(ic_date)}, 'Current', {val(jnum)}, "
+        f"{val(ic_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+        f"2024, {m}, 'AMDE')"
+    )
+    de_cc, de_dept, de_bu = "PROD", "OPS", "MANUFACTURING"
+    line_key += 1
+    gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC purchase from AMUS', 'No', {line_key}, 'Normal', "
+        f"'5030-{de_cc}-{de_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_chf_de}, 'EUR', {ic_sale_eur}, "
+        f"{val(dim_json('5030', de_cc, de_dept, de_bu))}, {ic_sale_eur})"
+    )
+    line_key += 1
+    gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC purchase from AMUS', 'Yes', {line_key}, 'Normal', "
+        f"'2010-{de_cc}-{de_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_chf_de}, 'EUR', {ic_sale_eur}, "
+        f"{val(dim_json('2010', de_cc, de_dept, de_bu))}, {ic_sale_eur})"
+    )
 
 # Write GL headers
 w("INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES")
@@ -779,6 +907,64 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
 
 w(",\n".join(budget_rows) + ";")
 
+# ══════════════════════════════════════════════════════════════════
+# ── epm_staging data (NCI ownership, IC elimination, IC balances) ─
+# ══════════════════════════════════════════════════════════════════
+
+section("epm_staging: Ownership Periods (PRD-11 — NCI for AMDE at 75%)")
+w("INSERT INTO epm_staging.ownership_periods VALUES")
+ownership_rows = []
+for eid, ename, country, accy, rcy, party in ENTITIES:
+    pct = 75.00 if eid == "AMDE" else 100.00
+    method = "full"
+    # All entities acquired at group inception (2020-01-01)
+    ownership_rows.append(
+        f"  ('AMG', {val(eid)}, '2020-01-01', '9999-12-31', {pct}, {val(method)}, "
+        f"'2020-01-01', 1, 0, 0, '9999-12-31', 0, 0, now())"
+    )
+w(",\n".join(ownership_rows) + ";")
+
+section("epm_staging: Consolidation Hierarchy")
+w("INSERT INTO epm_staging.consolidation_hierarchy VALUES")
+hier_rows = [
+    # Group root
+    "  ('AMG', '', '', 0, 100.00, 'AMG', now())",
+    # Direct subsidiaries under AMG
+    "  ('AMG', 'AMHQ', '', 1, 100.00, 'AMG/AMHQ', now())",
+    "  ('AMG', 'AMUS', '', 1, 100.00, 'AMG/AMUS', now())",
+    "  ('AMG', 'AMDE', '', 1, 75.00, 'AMG/AMDE', now())",
+]
+w(",\n".join(hier_rows) + ";")
+
+section("epm_staging: IC Elimination Rules (enhanced with rule_type + margin)")
+w("INSERT INTO epm_staging.ic_elimination_rules VALUES")
+ic_rules = [
+    # Balance-based: IC AR (1100) vs IC AP (2010)
+    "  ('IC_AMG_001', 'IC AR/AP Elimination', '1100', '2010', '*', '*', "
+    "'Eliminate IC receivables against IC payables', 'balance', 0, '', now())",
+    # Balance-based: IC Revenue (4030) vs IC Expense (5030)
+    "  ('IC_AMG_002', 'IC Revenue/Expense Elimination', '4030', '5030', '*', '*', "
+    "'Eliminate IC product revenue against IC expense', 'balance', 0, '', now())",
+    # Unrealized profit: AMUS sells to AMDE at 15% markup
+    "  ('IC_AMG_003', 'IC Unrealized Profit in Inventory', '4030', '5030', 'AMUS', 'AMDE', "
+    "'Eliminate unrealized profit on IC inventory (15% margin)', 'unrealized_profit', 15.00, '1200', now())",
+]
+w(",\n".join(ic_rules) + ";")
+
+section("epm_staging: IC Balances (AMUS → AMDE monthly product sales)")
+w("INSERT INTO epm_staging.ic_balances VALUES")
+ic_bal_rows = []
+for month_idx in range(12):
+    m = month_idx + 1
+    seasonal = SEASONAL[month_idx]
+    ic_sale = int(IC_MONTHLY_SALES * seasonal)
+    # 30% of IC purchases remain in ending inventory (AMDE hasn't sold them yet)
+    ending_inv = int(ic_sale * 0.30)
+    ic_bal_rows.append(
+        f"  ('AMUS', 'AMDE', 2024, {m}, {ic_sale}, {ending_inv}, now())"
+    )
+w(",\n".join(ic_bal_rows) + ";")
+
 # ── Write output ──────────────────────────────────────────────────
 output = "\n".join(lines) + "\n"
 with open("clickhouse/demo-data.sql", "w") as f:
@@ -790,3 +976,5 @@ print(f"  GL lines:    {len(gl_lines)}")
 print(f"  TB rows:     {len(tb_rows)}")
 print(f"  Budget rows: {len(budget_rows)}")
 print(f"  FX rates:    {12 * 6}")  # 12 months × 2 pairs × 3 types
+print(f"  Ownership:   {len(ownership_rows)}")
+print(f"  IC balances: {len(ic_bal_rows)}")

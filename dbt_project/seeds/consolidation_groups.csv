@@ -3,3 +3,6 @@ GROUP_CORP,USMF,Contoso US,100,USD,full
 GROUP_CORP,DEMF,Contoso DE,100,USD,full
 GROUP_CORP,GBMF,Contoso UK,80,USD,full
 GROUP_CORP,JPMF,Contoso JP,51,USD,full
+AMG,AMHQ,Alpine Manufacturing HQ,100,CHF,full
+AMG,AMUS,Alpine Manufacturing US,100,CHF,full
+AMG,AMDE,Alpine Manufacturing DE,75,CHF,full
