@@ -71,7 +71,7 @@ sequenceDiagram
 | POST | [`budget_cell_save`](api-budget-cell-save.md) | Session | Save single cell (EPMSAVE) |
 | POST | [`budget_save_batch`](api-budget-save-batch.md) | Session | Save multiple budget lines |
 
-### Consolidation (PRD-8, PRD-16)
+### Consolidation
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -79,7 +79,7 @@ sequenceDiagram
 | POST | [`approve_adjustment`](api-approve-adjustment.md) | Session | Approve topside journal |
 | POST | [`reverse_adjustment`](api-reverse-adjustment.md) | Session | Reverse approved journal |
 
-### Allocation (PRD-21)
+### Allocation
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|

@@ -1,6 +1,6 @@
 # GET get_hierarchy_tree
 
-Returns the consolidation hierarchy as a nested JSON tree (PRD-8).
+Returns the consolidation hierarchy as a nested JSON tree.
 
 ## Endpoint
 

@@ -1,6 +1,6 @@
 # POST reverse_allocation
 
-Reverse an Active Allocation Run (PRD-21). Creates a reversal run and cancels the original.
+Reverse an Active Allocation Run. Creates a reversal run and cancels the original.
 
 ## Endpoint
 

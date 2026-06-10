@@ -1,4 +1,4 @@
-# PRD-7: Variance Analysis Model
+# Variance Analysis Model
 
 ## Problem
 `gold_scenario_trial_balance` unions actual + budget but provides no computed variance. Users must calculate variance in Excel. A proper EPM tool provides:

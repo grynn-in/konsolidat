@@ -1,4 +1,4 @@
-# PRD-5: Top-Side Journal Adjustments
+# Top-Side Journal Adjustments
 
 ## Problem
 Consolidation requires manual adjustment entries that don't exist in any subsidiary's GL:
@@ -44,7 +44,7 @@ posted_at DateTime DEFAULT now()
   1. Translated entity balances (existing)
   2. IC eliminations (existing model, folded in)
   3. **Top-side adjustments** (new)
-  4. **CTA entries** (from PRD-2)
+  4. **CTA entries** (from CTA calculation)
 - Or: create a new `gold_fully_consolidated_tb` that unions all four
 
 ### R5: Adjustment type tracking

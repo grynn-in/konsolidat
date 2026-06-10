@@ -1,6 +1,6 @@
 # POST approve_adjustment
 
-Approve a Consolidation Adjustment that is in "Pending Approval" status (PRD-16).
+Approve a Consolidation Adjustment that is in "Pending Approval" status.
 
 ## Endpoint
 

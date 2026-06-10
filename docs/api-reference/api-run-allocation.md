@@ -1,6 +1,6 @@
 # POST run_allocation
 
-Create and execute an Allocation Run for a given fiscal period (PRD-21).
+Create and execute an Allocation Run for a given fiscal period.
 
 ## Endpoint
 

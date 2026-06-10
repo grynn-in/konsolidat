@@ -1,10 +1,10 @@
-# PRD-2: Currency Translation Adjustment (CTA)
+# Currency Translation Adjustment (CTA)
 
 ## Problem
 `gold_fx_revaluation` has `cta_amount = 0` (placeholder). CTA is required under IFRS (IAS 21) and US GAAP (ASC 830) to keep the balance sheet balanced after translation.
 
 ## Depends On
-PRD-1 (separate closing and average rates must exist in consolidated TB)
+FX Translation (separate closing and average rates must exist in consolidated TB)
 
 ## What is CTA?
 When you translate a foreign subsidiary:

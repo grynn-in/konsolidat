@@ -1,4 +1,4 @@
-# PRD-3: Multi-Step Cascading Allocations
+# Multi-Step Cascading Allocations
 
 ## Problem
 Current allocation engine runs a single pass per rule. Real allocations require ordered steps where output of step N becomes input to step N+1. Example:

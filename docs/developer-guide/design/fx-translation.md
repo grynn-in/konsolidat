@@ -1,4 +1,4 @@
-# PRD-1: Proper FX Translation (Closing vs Average Rate)
+# FX Translation (Closing vs Average Rate)
 
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
@@ -41,5 +41,5 @@ Enhance `gold_consolidated_trial_balance.sql` and `silver_exchange_rates` to sup
 | `assert_group_amount_formula` | `group_amount = translated_amount × ownership_pct` within 0.01 |
 
 ## Out of Scope
-- Temporal (historical) rate for equity line items (PRD-2 covers CTA)
+- Temporal (historical) rate for equity line items (CTA calculation covers this)
 - Remeasurement vs translation (single functional currency assumed)
