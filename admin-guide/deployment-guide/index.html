@@ -4104,6 +4104,7 @@ docker<span class="w"> </span>compose<span class="w"> </span>restart<span class=
 <th>Entity</th>
 <th>Currency</th>
 <th>Country</th>
+<th>Ownership</th>
 <th>Role</th>
 </tr>
 </thead>
@@ -4112,22 +4113,32 @@ docker<span class="w"> </span>compose<span class="w"> </span>restart<span class=
 <td>AMHQ</td>
 <td>CHF</td>
 <td>Switzerland</td>
+<td>100%</td>
 <td>Parent / HQ</td>
 </tr>
 <tr>
 <td>AMUS</td>
 <td>USD</td>
 <td>United States</td>
+<td>100%</td>
 <td>Subsidiary</td>
 </tr>
 <tr>
 <td>AMDE</td>
 <td>EUR</td>
 <td>Germany</td>
-<td>Subsidiary</td>
+<td>75%</td>
+<td>Subsidiary (25% NCI)</td>
 </tr>
 </tbody>
 </table>
+<p>The demo data includes:</p>
+<ul>
+<li><strong>Intercompany transactions</strong>: Monthly product sales AMUS→AMDE (~120K USD/month), quarterly management fees from HQ, with matching AR/AP for IC elimination</li>
+<li><strong>Non-controlling interest</strong>: AMDE at 75% ownership triggers NCI calculations in the consolidated trial balance</li>
+<li><strong>IC elimination rules</strong>: Balance-based (AR/AP, Revenue/Expense) and unrealized profit on IC inventory (15% margin)</li>
+<li><strong>Staging data</strong>: Ownership periods, consolidation hierarchy, and IC balances pre-loaded for full consolidation pipeline</li>
+</ul>
 <p>The demo data is loaded from <code>clickhouse/demo-data.sql</code> on first container start. To reset to demo data, delete the ClickHouse volume and restart:</p>
 <div class="highlight"><pre><span></span><code>./deploy.sh<span class="w"> </span>down
 docker<span class="w"> </span>volume<span class="w"> </span>rm<span class="w"> </span>open_epm_clickhouse_data
