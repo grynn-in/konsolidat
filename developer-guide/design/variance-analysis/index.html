@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://konsolid.at/prd/PRD-5-topside-journals/">
+        <link rel="canonical" href="https://konsolid.at/developer-guide/design/variance-analysis/">
       
       
-        <link rel="prev" href="../PRD-4-minority-interest/">
+        <link rel="prev" href="../budget-spreading/">
       
       
-        <link rel="next" href="../PRD-3-multistep-allocations/">
+        <link rel="next" href="../canonical-staging-schema/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Topside Journals - KNSLDT</title>
+        <title>Variance Analysis - KNSLDT</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -47,9 +47,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#prd-5-top-side-journal-adjustments" class="md-skip">
+        <a href="#variance-analysis-model" class="md-skip">
           Skip to content
         </a>
       
@@ -88,7 +88,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Topside Journals
+              Variance Analysis
             
           </span>
         </div>
@@ -219,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -240,7 +240,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../why-konsolidat/" class="md-tabs__link">
+        <a href="../../../why-konsolidat/" class="md-tabs__link">
           
   
   
@@ -267,7 +267,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+        <a href="../../../getting-started/quickstart/" class="md-tabs__link">
           
   
   
@@ -292,7 +292,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../developer-guide/developer-overview/" class="md-tabs__link">
+        <a href="../../developer-overview/" class="md-tabs__link">
           
   
   
@@ -312,7 +312,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+        <a href="../../../troubleshooting/troubleshooting/" class="md-tabs__link">
           
   
   
@@ -346,7 +346,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -376,7 +376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -455,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../why-konsolidat/" class="md-nav__link">
+      <a href="../../../why-konsolidat/" class="md-nav__link">
         
   
   
@@ -483,7 +483,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../features/" class="md-nav__link">
+      <a href="../../../features/" class="md-nav__link">
         
   
   
@@ -511,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+      <a href="../../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
         
   
   
@@ -539,7 +539,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/security-architecture/" class="md-nav__link">
+      <a href="../../../evaluation/security-architecture/" class="md-nav__link">
         
   
   
@@ -567,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/roadmap/" class="md-nav__link">
+      <a href="../../../reference/roadmap/" class="md-nav__link">
         
   
   
@@ -706,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -734,7 +734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+      <a href="../../../getting-started/setup-guide/" class="md-nav__link">
         
   
   
@@ -762,7 +762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+      <a href="../../../getting-started/configuration-reference/" class="md-nav__link">
         
   
   
@@ -850,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-vba-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-vba-guide/" class="md-nav__link">
         
   
   
@@ -878,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-taskpane-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-taskpane-guide/" class="md-nav__link">
         
   
   
@@ -914,7 +914,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/initial-setup-guide/" class="md-nav__link">
+      <a href="../../../user-guide/initial-setup-guide/" class="md-nav__link">
         
   
   
@@ -994,7 +994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/consolidation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/consolidation-guide/" class="md-nav__link">
         
   
   
@@ -1022,7 +1022,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/allocation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/allocation-guide/" class="md-nav__link">
         
   
   
@@ -1050,7 +1050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budgeting-guide/" class="md-nav__link">
+      <a href="../../../user-guide/budgeting-guide/" class="md-nav__link">
         
   
   
@@ -1078,7 +1078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budget-layers/" class="md-nav__link">
+      <a href="../../../user-guide/budget-layers/" class="md-nav__link">
         
   
   
@@ -1106,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/variance-analysis-guide/" class="md-nav__link">
+      <a href="../../../user-guide/variance-analysis-guide/" class="md-nav__link">
         
   
   
@@ -1194,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/report-catalog/" class="md-nav__link">
+      <a href="../../../user-guide/report-catalog/" class="md-nav__link">
         
   
   
@@ -1282,7 +1282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+      <a href="../../../admin-guide/deployment-guide/" class="md-nav__link">
         
   
   
@@ -1310,7 +1310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+      <a href="../../../admin-guide/operations-runbook/" class="md-nav__link">
         
   
   
@@ -1338,7 +1338,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+      <a href="../../../admin-guide/d365-integration/" class="md-nav__link">
         
   
   
@@ -1366,7 +1366,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+      <a href="../../../admin-guide/monitoring/" class="md-nav__link">
         
   
   
@@ -1466,7 +1466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/developer-overview/" class="md-nav__link">
+      <a href="../../developer-overview/" class="md-nav__link">
         
   
   
@@ -1549,7 +1549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-overview/" class="md-nav__link">
+      <a href="../../../api-reference/api-overview/" class="md-nav__link">
         
   
   
@@ -1629,7 +1629,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-health/" class="md-nav__link">
+      <a href="../../../api-reference/api-health/" class="md-nav__link">
         
   
   
@@ -1657,7 +1657,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-value/" class="md-nav__link">
         
   
   
@@ -1685,7 +1685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-batch/" class="md-nav__link">
         
   
   
@@ -1773,7 +1773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save/" class="md-nav__link">
         
   
   
@@ -1801,7 +1801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-cell-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-cell-save/" class="md-nav__link">
         
   
   
@@ -1829,7 +1829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save-batch/" class="md-nav__link">
         
   
   
@@ -1917,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-hierarchy/" class="md-nav__link">
+      <a href="../../../api-reference/api-hierarchy/" class="md-nav__link">
         
   
   
@@ -1945,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-approve-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-approve-adjustment/" class="md-nav__link">
         
   
   
@@ -1973,7 +1973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-adjustment/" class="md-nav__link">
         
   
   
@@ -2061,7 +2061,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-run-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-run-allocation/" class="md-nav__link">
         
   
   
@@ -2089,7 +2089,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-allocation/" class="md-nav__link">
         
   
   
@@ -2117,7 +2117,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-allocation-history/" class="md-nav__link">
+      <a href="../../../api-reference/api-allocation-history/" class="md-nav__link">
         
   
   
@@ -2216,7 +2216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+      <a href="../../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
         
   
   
@@ -2244,7 +2244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/gold-models/" class="md-nav__link">
         
   
   
@@ -2272,7 +2272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/silver-models/" class="md-nav__link">
         
   
   
@@ -2300,7 +2300,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/bronze-models/" class="md-nav__link">
         
   
   
@@ -2328,7 +2328,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+      <a href="../../../data-dictionary/seeds-reference/" class="md-nav__link">
         
   
   
@@ -2356,7 +2356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+      <a href="../../../data-dictionary/staging-tables/" class="md-nav__link">
         
   
   
@@ -2447,7 +2447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/macro-reference/" class="md-nav__link">
+      <a href="../../macro-reference/" class="md-nav__link">
         
   
   
@@ -2475,7 +2475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-dbt-models/" class="md-nav__link">
+      <a href="../../extending-dbt-models/" class="md-nav__link">
         
   
   
@@ -2503,7 +2503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/adding-dimensions/" class="md-nav__link">
+      <a href="../../adding-dimensions/" class="md-nav__link">
         
   
   
@@ -2531,7 +2531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-api/" class="md-nav__link">
+      <a href="../../extending-api/" class="md-nav__link">
         
   
   
@@ -2621,8 +2621,6 @@
                 
   
   
-    
-  
   
   
     
@@ -2635,11 +2633,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_1" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_1" >
         
           
           <label class="md-nav__link" for="__nav_4_5_1" id="__nav_4_5_1_label" tabindex="0">
@@ -2660,7 +2658,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_5_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2678,7 +2676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-1-fx-translation/" class="md-nav__link">
+      <a href="../fx-translation/" class="md-nav__link">
         
   
   
@@ -2706,7 +2704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-2-cta-calculation/" class="md-nav__link">
+      <a href="../cta-calculation/" class="md-nav__link">
         
   
   
@@ -2734,7 +2732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-4-minority-interest/" class="md-nav__link">
+      <a href="../minority-interest/" class="md-nav__link">
         
   
   
@@ -2742,6 +2740,152 @@
     
   
     Minority Interest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topside-journals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topside Journals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Planning
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Planning
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multistep-allocations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Step Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../budget-spreading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Spreading
   
 
     
@@ -2778,7 +2922,7 @@
   <span class="md-ellipsis">
     
   
-    Topside Journals
+    Variance Analysis
   
 
     
@@ -2796,7 +2940,7 @@
   <span class="md-ellipsis">
     
   
-    Topside Journals
+    Variance Analysis
   
 
     
@@ -2845,10 +2989,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#r1-staging-table-for-consolidation-adjustments" class="md-nav__link">
+  <a href="#r1-new-model-gold_variance_analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R1: Staging table for consolidation adjustments
+        R1: New model gold_variance_analysis
       
     </span>
   </a>
@@ -2856,10 +3000,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r2-api-endpoints" class="md-nav__link">
+  <a href="#r2-favorableunfavorable-logic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R2: API endpoints
+        R2: Favorable/unfavorable logic
       
     </span>
   </a>
@@ -2867,10 +3011,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r3-dbt-model-gold_consolidation_adjustments" class="md-nav__link">
+  <a href="#r3-cube-schema" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R3: dbt model gold_consolidation_adjustments
+        R3: Cube schema
       
     </span>
   </a>
@@ -2878,21 +3022,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r4-integration-with-consolidated-tb" class="md-nav__link">
+  <a href="#r4-multi-scenario-comparison" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R4: Integration with consolidated TB
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#r5-adjustment-type-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        R5: Adjustment type tracking
+        R4: Multi-scenario comparison
       
     </span>
   </a>
@@ -2930,150 +3063,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Planning
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Planning
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-3-multistep-allocations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-Step Allocations
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-6-budget-spreading/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Budget Spreading
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-7-variance-analysis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Variance Analysis
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -3146,7 +3135,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-30-canonical-staging-schema/" class="md-nav__link">
+      <a href="../canonical-staging-schema/" class="md-nav__link">
         
   
   
@@ -3190,7 +3179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/testing-guide/" class="md-nav__link">
+      <a href="../../testing-guide/" class="md-nav__link">
         
   
   
@@ -3218,7 +3207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -3305,7 +3294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+      <a href="../../../troubleshooting/troubleshooting/" class="md-nav__link">
         
   
   
@@ -3333,7 +3322,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/faq/" class="md-nav__link">
+      <a href="../../../troubleshooting/faq/" class="md-nav__link">
         
   
   
@@ -3361,7 +3350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/glossary/" class="md-nav__link">
+      <a href="../../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -3439,10 +3428,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#r1-staging-table-for-consolidation-adjustments" class="md-nav__link">
+  <a href="#r1-new-model-gold_variance_analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R1: Staging table for consolidation adjustments
+        R1: New model gold_variance_analysis
       
     </span>
   </a>
@@ -3450,10 +3439,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r2-api-endpoints" class="md-nav__link">
+  <a href="#r2-favorableunfavorable-logic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R2: API endpoints
+        R2: Favorable/unfavorable logic
       
     </span>
   </a>
@@ -3461,10 +3450,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r3-dbt-model-gold_consolidation_adjustments" class="md-nav__link">
+  <a href="#r3-cube-schema" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R3: dbt model gold_consolidation_adjustments
+        R3: Cube schema
       
     </span>
   </a>
@@ -3472,21 +3461,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r4-integration-with-consolidated-tb" class="md-nav__link">
+  <a href="#r4-multi-scenario-comparison" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R4: Integration with consolidated TB
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#r5-adjustment-type-tracking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        R5: Adjustment type tracking
+        R4: Multi-scenario comparison
       
     </span>
   </a>
@@ -3540,59 +3518,81 @@
   
 
 
-<h1 id="prd-5-top-side-journal-adjustments">PRD-5: Top-Side Journal Adjustments<a class="headerlink" href="#prd-5-top-side-journal-adjustments" title="Permanent link">&para;</a></h1>
+<h1 id="variance-analysis-model">Variance Analysis Model<a class="headerlink" href="#variance-analysis-model" title="Permanent link">&para;</a></h1>
 <h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
-<p>Consolidation requires manual adjustment entries that don't exist in any subsidiary's GL:
-- Goodwill amortization
-- Fair value adjustments
-- Reclassifications
-- Audit adjustments
-- Opening balance adjustments</p>
-<p>Currently there is no way to post entries at the consolidated level.</p>
+<p><code>gold_scenario_trial_balance</code> unions actual + budget but provides no computed variance. Users must calculate variance in Excel. A proper EPM tool provides:
+- Absolute variance (actual - budget)
+- Percentage variance
+- Favorable/unfavorable classification (expense under-budget = favorable)</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<h3 id="r1-staging-table-for-consolidation-adjustments">R1: Staging table for consolidation adjustments<a class="headerlink" href="#r1-staging-table-for-consolidation-adjustments" title="Permanent link">&para;</a></h3>
-<p>New ClickHouse table <code>epm_staging.consolidation_adjustments</code>:
-<div class="highlight"><pre><span></span><code><span class="n">consolidation_group</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="n">adjustment_type</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">          </span><span class="c1">-- &#39;topside&#39;, &#39;reclassification&#39;, &#39;audit&#39;, &#39;opening&#39;</span>
-<span class="n">journal_id</span><span class="w"> </span><span class="n">String</span><span class="p">,</span><span class="w">               </span><span class="c1">-- unique per adjustment entry</span>
-<span class="n">data_area_id</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- empty = group-level</span>
-<span class="n">fiscal_year</span><span class="w"> </span><span class="n">UInt16</span><span class="p">,</span>
-<span class="n">fiscal_period</span><span class="w"> </span><span class="n">UInt8</span><span class="p">,</span>
-<span class="n">main_account</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="n">debit_amount</span><span class="w"> </span><span class="nb">Decimal</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="n">credit_amount</span><span class="w"> </span><span class="nb">Decimal</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="n">description</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="n">posted_by</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="n">posted_at</span><span class="w"> </span><span class="n">DateTime</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">now</span><span class="p">()</span>
-</code></pre></div></p>
-<h3 id="r2-api-endpoints">R2: API endpoints<a class="headerlink" href="#r2-api-endpoints" title="Permanent link">&para;</a></h3>
+<h3 id="r1-new-model-gold_variance_analysis">R1: New model <code>gold_variance_analysis</code><a class="headerlink" href="#r1-new-model-gold_variance_analysis" title="Permanent link">&para;</a></h3>
+<p>Pivots scenario data into a columnar format per account/period:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>data_area_id</td>
+<td>Legal entity</td>
+</tr>
+<tr>
+<td>fiscal_year, fiscal_period</td>
+<td>Period</td>
+</tr>
+<tr>
+<td>main_account, account_name</td>
+<td>Account</td>
+</tr>
+<tr>
+<td>dim_cost_center, dim_department</td>
+<td>Dimensions</td>
+</tr>
+<tr>
+<td>actual_amount</td>
+<td>From scenario_id = 'ACTUAL'</td>
+</tr>
+<tr>
+<td>budget_amount</td>
+<td>From scenario_id = 'BUDGET'</td>
+</tr>
+<tr>
+<td>forecast_amount</td>
+<td>From latest forecast scenario</td>
+</tr>
+<tr>
+<td>variance_abs</td>
+<td>actual_amount - budget_amount</td>
+</tr>
+<tr>
+<td>variance_pct</td>
+<td>variance_abs / nullif(budget_amount, 0) × 100</td>
+</tr>
+<tr>
+<td>variance_favorable</td>
+<td>Boolean: true if variance is favorable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="r2-favorableunfavorable-logic">R2: Favorable/unfavorable logic<a class="headerlink" href="#r2-favorableunfavorable-logic" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>POST /api/v1/consolidation-adjustments</code> — post adjustment journal (batch of lines)</li>
-<li><code>GET /api/v1/consolidation-adjustments/{consolidation_group}</code> — list adjustments</li>
-<li><code>DELETE /api/v1/consolidation-adjustments/{journal_id}</code> — reverse/delete an adjustment</li>
+<li><strong>Revenue accounts</strong> (account_type in revenue categories): actual &gt; budget = favorable</li>
+<li><strong>Expense accounts</strong> (account_type in expense categories): actual &lt; budget = favorable</li>
+<li><strong>Asset/Liability</strong>: not applicable (null)</li>
+<li>Uses <code>is_pnl</code> flag + account_type_name to determine direction</li>
 </ul>
-<h3 id="r3-dbt-model-gold_consolidation_adjustments">R3: dbt model <code>gold_consolidation_adjustments</code><a class="headerlink" href="#r3-dbt-model-gold_consolidation_adjustments" title="Permanent link">&para;</a></h3>
+<h3 id="r3-cube-schema">R3: Cube schema<a class="headerlink" href="#r3-cube-schema" title="Permanent link">&para;</a></h3>
+<p>New Cube model <code>variance_analysis</code> with:
+- Dimensions: entity, year, period, account, cost_center, department
+- Measures: actual_amount, budget_amount, forecast_amount, variance_abs, variance_pct</p>
+<h3 id="r4-multi-scenario-comparison">R4: Multi-scenario comparison<a class="headerlink" href="#r4-multi-scenario-comparison" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Reads from staging table</li>
-<li>Validates: each journal_id must have debits = credits (balanced entry)</li>
-<li>Outputs in same grain as consolidated TB</li>
-</ul>
-<h3 id="r4-integration-with-consolidated-tb">R4: Integration with consolidated TB<a class="headerlink" href="#r4-integration-with-consolidated-tb" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>gold_consolidated_trial_balance</code> unions:</li>
-<li>Translated entity balances (existing)</li>
-<li>IC eliminations (existing model, folded in)</li>
-<li><strong>Top-side adjustments</strong> (new)</li>
-<li><strong>CTA entries</strong> (from PRD-2)</li>
-<li>Or: create a new <code>gold_fully_consolidated_tb</code> that unions all four</li>
-</ul>
-<h3 id="r5-adjustment-type-tracking">R5: Adjustment type tracking<a class="headerlink" href="#r5-adjustment-type-tracking" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Every row in final consolidated output has <code>adjustment_type</code>:</li>
-<li><code>'entity'</code> — normal translated balance</li>
-<li><code>'ic_elimination'</code> — from IC rules</li>
-<li><code>'topside'</code> — manual adjustment</li>
-<li><code>'cta'</code> — currency translation adjustment</li>
+<li>Support comparing any two scenarios (not just actual vs budget)</li>
+<li>Parameterized via Cube filters: <code>base_scenario</code> and <code>compare_scenario</code></li>
+<li>Default: base = ACTUAL, compare = BUDGET</li>
 </ul>
 <h2 id="acceptance-tests">Acceptance Tests<a class="headerlink" href="#acceptance-tests" title="Permanent link">&para;</a></h2>
 <table>
@@ -3604,27 +3604,32 @@
 </thead>
 <tbody>
 <tr>
-<td><code>assert_topside_journal_balanced</code></td>
-<td>Per journal_id: sum(debit_amount) = sum(credit_amount) within 0.01</td>
+<td><code>assert_variance_abs_formula</code></td>
+<td>variance_abs = actual_amount - budget_amount within 0.01</td>
 </tr>
 <tr>
-<td><code>assert_adjustments_in_consolidated</code></td>
-<td>Posted adjustments appear in gold_fully_consolidated_tb</td>
+<td><code>assert_variance_pct_formula</code></td>
+<td>variance_pct = variance_abs / budget_amount × 100 (where budget ≠ 0)</td>
 </tr>
 <tr>
-<td><code>assert_adjustment_type_populated</code></td>
-<td>Every row in gold_fully_consolidated_tb has a non-empty adjustment_type</td>
+<td><code>assert_favorable_revenue</code></td>
+<td>Revenue accounts: actual &gt; budget → variance_favorable = true</td>
 </tr>
 <tr>
-<td><code>assert_consolidated_tb_still_balances</code></td>
-<td>After including top-side entries, debits still = credits per group/period</td>
+<td><code>assert_favorable_expense</code></td>
+<td>Expense accounts: actual &lt; budget → variance_favorable = true</td>
+</tr>
+<tr>
+<td><code>assert_no_orphan_actuals</code></td>
+<td>Every account with actuals has a budget row (or null budget)</td>
 </tr>
 </tbody>
 </table>
 <h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Approval workflow (post = immediate)</li>
-<li>Recurring journal templates</li>
+<li>Waterfall / bridge analysis (e.g., price/volume/mix decomposition)</li>
+<li>Trend analysis (period-over-period)</li>
+<li>Commentary / annotation on variances</li>
 </ul>
 
 
@@ -3713,10 +3718,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

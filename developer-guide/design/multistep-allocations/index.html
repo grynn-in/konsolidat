@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://konsolid.at/prd/PRD-30-canonical-staging-schema/">
+        <link rel="canonical" href="https://konsolid.at/developer-guide/design/multistep-allocations/">
       
       
-        <link rel="prev" href="../PRD-7-variance-analysis/">
+        <link rel="prev" href="../topside-journals/">
       
       
-        <link rel="next" href="../../developer-guide/testing-guide/">
+        <link rel="next" href="../budget-spreading/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Canonical Staging Schema - KNSLDT</title>
+        <title>Multi-Step Allocations - KNSLDT</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -47,9 +47,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#prd-30-canonical-staging-schema-adapter-interface" class="md-skip">
+        <a href="#multi-step-cascading-allocations" class="md-skip">
           Skip to content
         </a>
       
@@ -88,7 +88,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Canonical Staging Schema
+              Multi-Step Allocations
             
           </span>
         </div>
@@ -219,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -240,7 +240,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../why-konsolidat/" class="md-tabs__link">
+        <a href="../../../why-konsolidat/" class="md-tabs__link">
           
   
   
@@ -267,7 +267,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+        <a href="../../../getting-started/quickstart/" class="md-tabs__link">
           
   
   
@@ -292,7 +292,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../developer-guide/developer-overview/" class="md-tabs__link">
+        <a href="../../developer-overview/" class="md-tabs__link">
           
   
   
@@ -312,7 +312,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+        <a href="../../../troubleshooting/troubleshooting/" class="md-tabs__link">
           
   
   
@@ -346,7 +346,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -376,7 +376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -455,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../why-konsolidat/" class="md-nav__link">
+      <a href="../../../why-konsolidat/" class="md-nav__link">
         
   
   
@@ -483,7 +483,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../features/" class="md-nav__link">
+      <a href="../../../features/" class="md-nav__link">
         
   
   
@@ -511,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+      <a href="../../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
         
   
   
@@ -539,7 +539,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/security-architecture/" class="md-nav__link">
+      <a href="../../../evaluation/security-architecture/" class="md-nav__link">
         
   
   
@@ -567,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/roadmap/" class="md-nav__link">
+      <a href="../../../reference/roadmap/" class="md-nav__link">
         
   
   
@@ -706,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -734,7 +734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+      <a href="../../../getting-started/setup-guide/" class="md-nav__link">
         
   
   
@@ -762,7 +762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+      <a href="../../../getting-started/configuration-reference/" class="md-nav__link">
         
   
   
@@ -850,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-vba-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-vba-guide/" class="md-nav__link">
         
   
   
@@ -878,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-taskpane-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-taskpane-guide/" class="md-nav__link">
         
   
   
@@ -914,7 +914,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/initial-setup-guide/" class="md-nav__link">
+      <a href="../../../user-guide/initial-setup-guide/" class="md-nav__link">
         
   
   
@@ -994,7 +994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/consolidation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/consolidation-guide/" class="md-nav__link">
         
   
   
@@ -1022,7 +1022,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/allocation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/allocation-guide/" class="md-nav__link">
         
   
   
@@ -1050,7 +1050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budgeting-guide/" class="md-nav__link">
+      <a href="../../../user-guide/budgeting-guide/" class="md-nav__link">
         
   
   
@@ -1078,7 +1078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budget-layers/" class="md-nav__link">
+      <a href="../../../user-guide/budget-layers/" class="md-nav__link">
         
   
   
@@ -1106,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/variance-analysis-guide/" class="md-nav__link">
+      <a href="../../../user-guide/variance-analysis-guide/" class="md-nav__link">
         
   
   
@@ -1194,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/report-catalog/" class="md-nav__link">
+      <a href="../../../user-guide/report-catalog/" class="md-nav__link">
         
   
   
@@ -1282,7 +1282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+      <a href="../../../admin-guide/deployment-guide/" class="md-nav__link">
         
   
   
@@ -1310,7 +1310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+      <a href="../../../admin-guide/operations-runbook/" class="md-nav__link">
         
   
   
@@ -1338,7 +1338,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+      <a href="../../../admin-guide/d365-integration/" class="md-nav__link">
         
   
   
@@ -1366,7 +1366,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+      <a href="../../../admin-guide/monitoring/" class="md-nav__link">
         
   
   
@@ -1466,7 +1466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/developer-overview/" class="md-nav__link">
+      <a href="../../developer-overview/" class="md-nav__link">
         
   
   
@@ -1549,7 +1549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-overview/" class="md-nav__link">
+      <a href="../../../api-reference/api-overview/" class="md-nav__link">
         
   
   
@@ -1629,7 +1629,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-health/" class="md-nav__link">
+      <a href="../../../api-reference/api-health/" class="md-nav__link">
         
   
   
@@ -1657,7 +1657,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-value/" class="md-nav__link">
         
   
   
@@ -1685,7 +1685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-batch/" class="md-nav__link">
         
   
   
@@ -1773,7 +1773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save/" class="md-nav__link">
         
   
   
@@ -1801,7 +1801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-cell-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-cell-save/" class="md-nav__link">
         
   
   
@@ -1829,7 +1829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save-batch/" class="md-nav__link">
         
   
   
@@ -1917,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-hierarchy/" class="md-nav__link">
+      <a href="../../../api-reference/api-hierarchy/" class="md-nav__link">
         
   
   
@@ -1945,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-approve-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-approve-adjustment/" class="md-nav__link">
         
   
   
@@ -1973,7 +1973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-adjustment/" class="md-nav__link">
         
   
   
@@ -2061,7 +2061,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-run-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-run-allocation/" class="md-nav__link">
         
   
   
@@ -2089,7 +2089,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-allocation/" class="md-nav__link">
         
   
   
@@ -2117,7 +2117,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-allocation-history/" class="md-nav__link">
+      <a href="../../../api-reference/api-allocation-history/" class="md-nav__link">
         
   
   
@@ -2216,7 +2216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+      <a href="../../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
         
   
   
@@ -2244,7 +2244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/gold-models/" class="md-nav__link">
         
   
   
@@ -2272,7 +2272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/silver-models/" class="md-nav__link">
         
   
   
@@ -2300,7 +2300,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/bronze-models/" class="md-nav__link">
         
   
   
@@ -2328,7 +2328,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+      <a href="../../../data-dictionary/seeds-reference/" class="md-nav__link">
         
   
   
@@ -2356,7 +2356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+      <a href="../../../data-dictionary/staging-tables/" class="md-nav__link">
         
   
   
@@ -2447,7 +2447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/macro-reference/" class="md-nav__link">
+      <a href="../../macro-reference/" class="md-nav__link">
         
   
   
@@ -2475,7 +2475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-dbt-models/" class="md-nav__link">
+      <a href="../../extending-dbt-models/" class="md-nav__link">
         
   
   
@@ -2503,7 +2503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/adding-dimensions/" class="md-nav__link">
+      <a href="../../adding-dimensions/" class="md-nav__link">
         
   
   
@@ -2531,7 +2531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-api/" class="md-nav__link">
+      <a href="../../extending-api/" class="md-nav__link">
         
   
   
@@ -2676,7 +2676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-1-fx-translation/" class="md-nav__link">
+      <a href="../fx-translation/" class="md-nav__link">
         
   
   
@@ -2704,7 +2704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-2-cta-calculation/" class="md-nav__link">
+      <a href="../cta-calculation/" class="md-nav__link">
         
   
   
@@ -2732,7 +2732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-4-minority-interest/" class="md-nav__link">
+      <a href="../minority-interest/" class="md-nav__link">
         
   
   
@@ -2760,7 +2760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-5-topside-journals/" class="md-nav__link">
+      <a href="../topside-journals/" class="md-nav__link">
         
   
   
@@ -2768,150 +2768,6 @@
     
   
     Topside Journals
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Planning
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Planning
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-3-multistep-allocations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-Step Allocations
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-6-budget-spreading/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Budget Spreading
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-7-variance-analysis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Variance Analysis
   
 
     
@@ -2955,17 +2811,17 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_5_3" id="__nav_4_5_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-    Multi-ERP
+    Planning
   
 
     
@@ -2976,12 +2832,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_5_3">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_5_2">
             <span class="md-nav__icon md-icon"></span>
             
   
-    Multi-ERP
+    Planning
   
 
           </label>
@@ -3010,7 +2866,7 @@
   <span class="md-ellipsis">
     
   
-    Canonical Staging Schema
+    Multi-Step Allocations
   
 
     
@@ -3028,7 +2884,7 @@
   <span class="md-ellipsis">
     
   
-    Canonical Staging Schema
+    Multi-Step Allocations
   
 
     
@@ -3065,22 +2921,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#solution" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Solution
+        Requirements
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Solution">
+    <nav class="md-nav" aria-label="Requirements">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
+  <a href="#r1-step-ordering-in-allocation_rules-seed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture
+        R1: Step ordering in allocation_rules seed
       
     </span>
   </a>
@@ -3088,10 +2944,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#canonical-models" class="md-nav__link">
+  <a href="#r2-cascading-allocation-macro" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Models
+        R2: Cascading allocation macro
       
     </span>
   </a>
@@ -3099,10 +2955,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#erp_source-column" class="md-nav__link">
+  <a href="#r3-new-model-gold_allocation_results_v2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        erp_source Column
+        R3: New model gold_allocation_results_v2
       
     </span>
   </a>
@@ -3110,10 +2966,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#erp_sources-variable" class="md-nav__link">
+  <a href="#r4-driver-seed-flexibility" class="md-nav__link">
     <span class="md-ellipsis">
       
-        erp_sources Variable
+        R4: Driver seed flexibility
       
     </span>
   </a>
@@ -3126,104 +2982,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#canonical-column-specifications" class="md-nav__link">
+  <a href="#acceptance-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Column Specifications
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Canonical Column Specifications">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#stg_gl_entries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_gl_entries
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_trial_balance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_trial_balance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_accounts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_accounts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_legal_entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_legal_entities
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_exchange_rates" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_exchange_rates
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_budget_entries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_budget_entries
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_fiscal_periods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_fiscal_periods
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#d365-fo-adapter-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D365 F&amp;O Adapter Mapping
+        Acceptance Tests
       
     </span>
   </a>
@@ -3231,32 +2993,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
+  <a href="#out-of-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#success-criteria" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Success Criteria
+        Out of Scope
       
     </span>
   </a>
@@ -3267,6 +3007,150 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../budget-spreading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Budget Spreading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../variance-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_3" id="__nav_4_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-ERP
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Multi-ERP
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../canonical-staging-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Canonical Staging Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3295,7 +3179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/testing-guide/" class="md-nav__link">
+      <a href="../../testing-guide/" class="md-nav__link">
         
   
   
@@ -3323,7 +3207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -3410,7 +3294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+      <a href="../../../troubleshooting/troubleshooting/" class="md-nav__link">
         
   
   
@@ -3438,7 +3322,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/faq/" class="md-nav__link">
+      <a href="../../../troubleshooting/faq/" class="md-nav__link">
         
   
   
@@ -3466,7 +3350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/glossary/" class="md-nav__link">
+      <a href="../../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -3532,22 +3416,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#solution" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Solution
+        Requirements
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Solution">
+    <nav class="md-nav" aria-label="Requirements">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
+  <a href="#r1-step-ordering-in-allocation_rules-seed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture
+        R1: Step ordering in allocation_rules seed
       
     </span>
   </a>
@@ -3555,10 +3439,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#canonical-models" class="md-nav__link">
+  <a href="#r2-cascading-allocation-macro" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Models
+        R2: Cascading allocation macro
       
     </span>
   </a>
@@ -3566,10 +3450,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#erp_source-column" class="md-nav__link">
+  <a href="#r3-new-model-gold_allocation_results_v2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        erp_source Column
+        R3: New model gold_allocation_results_v2
       
     </span>
   </a>
@@ -3577,10 +3461,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#erp_sources-variable" class="md-nav__link">
+  <a href="#r4-driver-seed-flexibility" class="md-nav__link">
     <span class="md-ellipsis">
       
-        erp_sources Variable
+        R4: Driver seed flexibility
       
     </span>
   </a>
@@ -3593,104 +3477,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#canonical-column-specifications" class="md-nav__link">
+  <a href="#acceptance-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Canonical Column Specifications
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Canonical Column Specifications">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#stg_gl_entries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_gl_entries
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_trial_balance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_trial_balance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_accounts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_accounts
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_legal_entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_legal_entities
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_exchange_rates" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_exchange_rates
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_budget_entries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_budget_entries
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stg_fiscal_periods" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        stg_fiscal_periods
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#d365-fo-adapter-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D365 F&amp;O Adapter Mapping
+        Acceptance Tests
       
     </span>
   </a>
@@ -3698,32 +3488,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
+  <a href="#out-of-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#success-criteria" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Success Criteria
+        Out of Scope
       
     </span>
   </a>
@@ -3750,310 +3518,69 @@
   
 
 
-<h1 id="prd-30-canonical-staging-schema-adapter-interface">PRD-30: Canonical Staging Schema &amp; Adapter Interface<a class="headerlink" href="#prd-30-canonical-staging-schema-adapter-interface" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Done (PR #10)
-<strong>Priority:</strong> P0 — Foundation for all multi-ERP work
-<strong>Labels:</strong> <code>multi-erp</code>, <code>prd-30</code>
-<strong>Dependencies:</strong> None (this is the root of the multi-ERP dependency graph)
-<strong>Blocks:</strong> PRD-31, PRD-32, PRD-33, PRD-34, PRD-35, PRD-36</p>
-<hr />
+<h1 id="multi-step-cascading-allocations">Multi-Step Cascading Allocations<a class="headerlink" href="#multi-step-cascading-allocations" title="Permanent link">&para;</a></h1>
 <h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
-<p>Konsolidat's 15 staging models (<code>stg_d365__*</code>) are hardcoded to D365 F&amp;O OData entity names and column conventions. The bronze layer directly references these D365-specific models via <code>{{ ref('stg_d365__gl_account_entries') }}</code>. This means:</p>
-<ol>
-<li>Adding a new ERP (SAP, ERPNext, D365 BC) requires modifying every bronze model</li>
-<li>There is no contract defining what a staging adapter must produce</li>
-<li>Column names leak D365 conventions (<code>dataAreaId</code>, <code>RecId</code>) into layers that should be ERP-agnostic</li>
-</ol>
-<p>The silver and gold layers are already ERP-agnostic — they consume from bronze with generic column names. The gap is between raw ERP data and bronze.</p>
-<h2 id="solution">Solution<a class="headerlink" href="#solution" title="Permanent link">&para;</a></h2>
-<p>Introduce a <strong>canonical staging interface</strong> — a set of 7 staging models with standardised column names that every ERP adapter must produce. Each canonical model UNION ALLs from per-ERP adapters, gated by <code>var('erp_sources')</code>.</p>
-<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>Raw ERP Data (Airbyte)
-    ↓
-Per-ERP Adapters (e.g., stg_d365_fo__gl_entries)
-    ↓
-Canonical Staging (stg_gl_entries — UNION ALL from adapters)
-    ↓
-Bronze (type casting, ClickHouse materialisation)
-    ↓
-Silver → Gold (unchanged)
-</code></pre></div>
-<h3 id="canonical-models">Canonical Models<a class="headerlink" href="#canonical-models" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Purpose</th>
-<th>Key Columns</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>stg_gl_entries</code></td>
-<td>GL line items</td>
-<td>erp_source, record_id, entity_id, posting_date, main_account, amount</td>
-</tr>
-<tr>
-<td><code>stg_trial_balance</code></td>
-<td>Period-end TB snapshots</td>
-<td>erp_source, entity_id, main_account, fiscal_year, opening/closing balance</td>
-</tr>
-<tr>
-<td><code>stg_accounts</code></td>
-<td>Chart of accounts</td>
-<td>erp_source, account_id, account_name, account_type</td>
-</tr>
-<tr>
-<td><code>stg_legal_entities</code></td>
-<td>Company/entity master</td>
-<td>erp_source, entity_id, entity_name, accounting_currency</td>
-</tr>
-<tr>
-<td><code>stg_exchange_rates</code></td>
-<td>FX rates</td>
-<td>erp_source, from_currency, to_currency, valid_from, rate</td>
-</tr>
-<tr>
-<td><code>stg_budget_entries</code></td>
-<td>Budget lines</td>
-<td>erp_source, entity_id, posting_date, main_account, amount</td>
-</tr>
-<tr>
-<td><code>stg_fiscal_periods</code></td>
-<td>Fiscal calendar</td>
-<td>erp_source, calendar_id, fiscal_year, start_date, end_date</td>
-</tr>
-</tbody>
-</table>
-<h3 id="erp_source-column"><code>erp_source</code> Column<a class="headerlink" href="#erp_source-column" title="Permanent link">&para;</a></h3>
-<p>Every canonical model includes <code>erp_source</code> (String) identifying the source ERP:</p>
-<table>
-<thead>
-<tr>
-<th>Value</th>
-<th>ERP</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>d365_fo</code></td>
-<td>Dynamics 365 Finance &amp; Operations</td>
-</tr>
-<tr>
-<td><code>d365_bc</code></td>
-<td>Dynamics 365 Business Central</td>
-</tr>
-<tr>
-<td><code>sap_s4</code></td>
-<td>SAP S/4HANA</td>
-</tr>
-<tr>
-<td><code>sap_ecc</code></td>
-<td>SAP ECC 6.0</td>
-</tr>
-<tr>
-<td><code>sap_b1</code></td>
-<td>SAP Business One</td>
-</tr>
-<tr>
-<td><code>erpnext</code></td>
-<td>ERPNext</td>
-</tr>
-</tbody>
-</table>
-<h3 id="erp_sources-variable"><code>erp_sources</code> Variable<a class="headerlink" href="#erp_sources-variable" title="Permanent link">&para;</a></h3>
-<p><code>dbt_project.yml</code> gains a new var:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">vars</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">erp_sources</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">d365_fo</span>
-</code></pre></div>
-<p>Canonical models conditionally include adapters based on this list. Adding a new ERP is:
-1. Write the adapter models in <code>models/staging/&lt;erp&gt;/</code>
-2. Add the ERP key to <code>erp_sources</code>
-3. <code>dbt build</code> — canonical models automatically UNION the new adapter</p>
-<h2 id="canonical-column-specifications">Canonical Column Specifications<a class="headerlink" href="#canonical-column-specifications" title="Permanent link">&para;</a></h2>
-<h3 id="stg_gl_entries">stg_gl_entries<a class="headerlink" href="#stg_gl_entries" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String    -- &#39;d365_fo&#39;, &#39;sap_s4&#39;, &#39;erpnext&#39;, etc.
-record_id             String    -- unique row ID within source
-entity_id             String    -- legal entity / company code
-posting_date          String    -- accounting date (YYYY-MM-DD)
-fiscal_year           String    -- fiscal year
-fiscal_period         String    -- period 1-12
-main_account          String    -- GL account number
-account_name          String    -- account description (empty if N/A)
-amount                String    -- signed amount (positive=debit, negative=credit)
-debit_amount          String    -- absolute debit
-credit_amount         String    -- absolute credit
-transaction_currency  String    -- original currency code
-currency_amount       String    -- amount in transaction currency
-description           String    -- posting text / voucher
-journal_number        String    -- journal header reference
-posting_type          String    -- posting type code
-ledger_account        String    -- full ledger account string
-is_credit             String    -- &#39;1&#39; if credit, &#39;0&#39; if debit
-dim_cost_center       String    -- dimension: cost center
-dim_department        String    -- dimension: department
-dim_business_unit     String    -- dimension: business unit
-_loaded_at            String    -- extraction timestamp
-_raw_id               String    -- source system row identifier
-</code></pre></div>
-<h3 id="stg_trial_balance">stg_trial_balance<a class="headerlink" href="#stg_trial_balance" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-entity_id             String    -- legal entity
-main_account          String    -- GL account number
-account_name          String    -- account description
-fiscal_year           String    -- fiscal year
-opening_balance       String    -- period opening balance
-debit_amount          String    -- period debits
-credit_amount         String    -- period credits
-closing_balance       String    -- period closing balance
-currency_code         String    -- reporting currency
-account_type          String    -- BS/PL classification
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h3 id="stg_accounts">stg_accounts<a class="headerlink" href="#stg_accounts" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-account_id            String    -- GL account number
-account_name          String    -- description
-account_type          String    -- Revenue/Expense/Asset/Liability/Equity
-account_category      String    -- sub-classification
-debit_credit_default  String    -- default side
-chart_of_accounts     String    -- CoA identifier
-is_suspended          String    -- &#39;1&#39; if inactive
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h3 id="stg_legal_entities">stg_legal_entities<a class="headerlink" href="#stg_legal_entities" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-entity_id             String    -- company code / legal entity ID
-entity_name           String    -- display name
-accounting_currency   String    -- functional currency
-reporting_currency    String    -- group reporting currency
-party_number          String    -- external party reference
-country_region        String    -- ISO country code
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h3 id="stg_exchange_rates">stg_exchange_rates<a class="headerlink" href="#stg_exchange_rates" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-from_currency         String    -- source currency
-to_currency           String    -- target currency
-valid_from            String    -- rate effective date
-valid_to              String    -- rate expiry date
-exchange_rate         String    -- rate value (scaled for ClickHouse)
-rate_type             String    -- rate type (spot, average, etc.)
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h3 id="stg_budget_entries">stg_budget_entries<a class="headerlink" href="#stg_budget_entries" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-record_id             String    -- budget line ID
-entity_id             String    -- legal entity
-posting_date          String    -- budget date
-main_account          String    -- GL account
-amount                String    -- budget amount (accounting currency)
-transaction_amount    String    -- amount in transaction currency
-transaction_currency  String    -- transaction currency code
-budget_model          String    -- budget model / version
-budget_status         String    -- Completed / Draft
-dim_cost_center       String    -- dimension
-dim_department        String    -- dimension
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h3 id="stg_fiscal_periods">stg_fiscal_periods<a class="headerlink" href="#stg_fiscal_periods" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>erp_source            String
-calendar_id           String    -- fiscal calendar identifier
-calendar_name         String    -- display name
-fiscal_year           String    -- year name
-start_date            String    -- period start
-end_date              String    -- period end
-_loaded_at            String
-_raw_id               String
-</code></pre></div>
-<h2 id="d365-fo-adapter-mapping">D365 F&amp;O Adapter Mapping<a class="headerlink" href="#d365-fo-adapter-mapping" title="Permanent link">&para;</a></h2>
-<p>The existing <code>stg_d365__*</code> models are renamed to <code>stg_d365_fo__*</code> and their output columns aligned to the canonical schema:</p>
-<table>
-<thead>
-<tr>
-<th>D365 F&amp;O Column</th>
-<th>Canonical Column</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>RecId</code> / <code>SourceKey</code></td>
-<td><code>record_id</code></td>
-</tr>
-<tr>
-<td><code>dataAreaId</code></td>
-<td><code>entity_id</code></td>
-</tr>
-<tr>
-<td><code>AccountingDate</code></td>
-<td><code>posting_date</code></td>
-</tr>
-<tr>
-<td><code>MainAccount</code></td>
-<td><code>main_account</code></td>
-</tr>
-<tr>
-<td><code>AccountingCurrencyAmount</code></td>
-<td><code>amount</code></td>
-</tr>
-<tr>
-<td><code>TransactionCurrencyCode</code></td>
-<td><code>transaction_currency</code></td>
-</tr>
-<tr>
-<td><code>_airbyte_extracted_at</code></td>
-<td><code>_loaded_at</code></td>
-</tr>
-<tr>
-<td><code>_airbyte_raw_id</code></td>
-<td><code>_raw_id</code></td>
-</tr>
-</tbody>
-</table>
-<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>models/staging/
-├── d365_fo/                          # D365 F&amp;O adapter
-│   ├── _d365_fo__sources.yml         # d365_raw source definition
-│   ├── _d365_fo__models.yml          # D365 adapter model docs
-│   ├── stg_d365_fo__gl_entries.sql   # GL entries adapter
-│   ├── stg_d365_fo__gl_journal_entries.sql
-│   ├── stg_d365_fo__trial_balance.sql
-│   ├── stg_d365_fo__accounts.sql
-│   ├── stg_d365_fo__legal_entities.sql
-│   ├── stg_d365_fo__exchange_rates.sql
-│   ├── stg_d365_fo__budget_entries.sql
-│   ├── stg_d365_fo__fiscal_periods.sql
-│   └── (internal helpers: dimensions, categories, etc.)
-├── canonical/                         # Canonical interface
-│   ├── _canonical__models.yml
-│   ├── stg_gl_entries.sql
-│   ├── stg_trial_balance.sql
-│   ├── stg_accounts.sql
-│   ├── stg_legal_entities.sql
-│   ├── stg_exchange_rates.sql
-│   ├── stg_budget_entries.sql
-│   └── stg_fiscal_periods.sql
-└── (old stg_d365__*.sql removed)
-</code></pre></div>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<p>Current allocation engine runs a single pass per rule. Real allocations require ordered steps where output of step N becomes input to step N+1. Example:
+1. Step 1: Allocate IT costs to all departments by headcount
+2. Step 2: Allocate Facilities costs (which now include some IT) by square meters
+3. Step 3: Allocate shared services to business units by revenue</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<h3 id="r1-step-ordering-in-allocation_rules-seed">R1: Step ordering in allocation_rules seed<a class="headerlink" href="#r1-step-ordering-in-allocation_rules-seed" title="Permanent link">&para;</a></h3>
+<p>Add column <code>step_order</code> (integer) to <code>allocation_rules.csv</code>:
+<div class="highlight"><pre><span></span><code>allocation_rule_id,rule_name,step_order,source_account,source_cost_center,driver_type,target_account,description
+ALLOC_001,IT Cost Allocation,1,7100,IT,headcount,7100,Step 1: IT by headcount
+ALLOC_002,Facility Allocation,2,7200,FACILITY,sqm,7200,Step 2: Facilities by sqm
+ALLOC_003,Mgmt Fee Allocation,3,7300,MGMT,revenue,7300,Step 3: Mgmt by revenue
+</code></pre></div></p>
+<h3 id="r2-cascading-allocation-macro">R2: Cascading allocation macro<a class="headerlink" href="#r2-cascading-allocation-macro" title="Permanent link">&para;</a></h3>
+<p>New macro <code>allocation_engine_multistep</code> that:
+1. Reads all rules ordered by <code>step_order</code>
+2. For step 1: source pool comes from <code>gold_trial_balance</code> (as today)
+3. For step N&gt;1: source pool comes from <code>gold_trial_balance</code> PLUS allocated amounts from steps 1..N-1
+4. Each step produces allocation rows with <code>step_order</code> column</p>
+<h3 id="r3-new-model-gold_allocation_results_v2">R3: New model <code>gold_allocation_results_v2</code><a class="headerlink" href="#r3-new-model-gold_allocation_results_v2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Schema tests in <code>_canonical__models.yml</code>: not_null on key columns</li>
-<li>Custom tests: <code>test_canonical_gl_entries_schema.sql</code>, <code>test_erp_source_valid.sql</code></li>
-<li>Regression: <code>dbt build</code> must pass all existing 26+ tests unchanged</li>
+<li>Replaces <code>gold_allocation_results</code></li>
+<li>Contains all steps' results</li>
+<li>Columns: step_order, allocation_rule_id, data_area_id, fiscal_year, fiscal_period, source_account, target_cost_center, driver_type, pool_amount, driver_weight, allocated_amount</li>
 </ul>
-<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
-<ol>
-<li>All bronze models consume from canonical staging (no <code>stg_d365__</code> refs)</li>
-<li><code>dbt build</code> passes with zero regressions</li>
-<li>Gold model outputs are byte-identical before and after</li>
-<li>Adding a new ERP requires only: adapter models + <code>erp_sources</code> var update</li>
-</ol>
+<h3 id="r4-driver-seed-flexibility">R4: Driver seed flexibility<a class="headerlink" href="#r4-driver-seed-flexibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Each rule references its own driver seed via <code>driver_seed_name</code> column</li>
+<li><code>allocation_drivers_headcount</code> (existing), add <code>allocation_drivers_sqm</code>, <code>allocation_drivers_revenue</code></li>
+</ul>
+<h2 id="acceptance-tests">Acceptance Tests<a class="headerlink" href="#acceptance-tests" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Assertion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>assert_allocation_step_order</code></td>
+<td>All rows have valid step_order matching their rule</td>
+</tr>
+<tr>
+<td><code>assert_step2_pool_includes_step1</code></td>
+<td>Step 2 pool_amount &gt; original TB amount for that account (proves cascade)</td>
+</tr>
+<tr>
+<td><code>assert_each_step_sums_to_pool</code></td>
+<td>Per step: sum(allocated_amount) = pool_amount within 0.01</td>
+</tr>
+<tr>
+<td><code>assert_no_self_allocation</code></td>
+<td>No row has target_cost_center = source_cost_center</td>
+</tr>
+</tbody>
+</table>
+<h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Circular (iterative) allocations</li>
+<li>Reciprocal allocation method</li>
+</ul>
 
 
 
@@ -4141,10 +3668,10 @@ _raw_id               String
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

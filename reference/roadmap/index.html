@@ -749,10 +749,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#prd-breakdown" class="md-nav__link">
+  <a href="#work-breakdown" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PRD Breakdown
+        Work Breakdown
       
     </span>
   </a>
@@ -793,10 +793,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#scale-architecture-prd-38" class="md-nav__link">
+  <a href="#scale-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scale Architecture (PRD-38)
+        Scale Architecture
       
     </span>
   </a>
@@ -3085,7 +3085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-1-fx-translation/" class="md-nav__link">
+      <a href="../../developer-guide/design/fx-translation/" class="md-nav__link">
         
   
   
@@ -3113,7 +3113,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-2-cta-calculation/" class="md-nav__link">
+      <a href="../../developer-guide/design/cta-calculation/" class="md-nav__link">
         
   
   
@@ -3141,7 +3141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-4-minority-interest/" class="md-nav__link">
+      <a href="../../developer-guide/design/minority-interest/" class="md-nav__link">
         
   
   
@@ -3169,7 +3169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-5-topside-journals/" class="md-nav__link">
+      <a href="../../developer-guide/design/topside-journals/" class="md-nav__link">
         
   
   
@@ -3257,7 +3257,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-3-multistep-allocations/" class="md-nav__link">
+      <a href="../../developer-guide/design/multistep-allocations/" class="md-nav__link">
         
   
   
@@ -3285,7 +3285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-6-budget-spreading/" class="md-nav__link">
+      <a href="../../developer-guide/design/budget-spreading/" class="md-nav__link">
         
   
   
@@ -3313,7 +3313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-7-variance-analysis/" class="md-nav__link">
+      <a href="../../developer-guide/design/variance-analysis/" class="md-nav__link">
         
   
   
@@ -3401,7 +3401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../prd/PRD-30-canonical-staging-schema/" class="md-nav__link">
+      <a href="../../developer-guide/design/canonical-staging-schema/" class="md-nav__link">
         
   
   
@@ -3788,10 +3788,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#prd-breakdown" class="md-nav__link">
+  <a href="#work-breakdown" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PRD Breakdown
+        Work Breakdown
       
     </span>
   </a>
@@ -3832,10 +3832,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#scale-architecture-prd-38" class="md-nav__link">
+  <a href="#scale-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scale Architecture (PRD-38)
+        Scale Architecture
       
     </span>
   </a>
@@ -4087,7 +4087,7 @@
 </tr>
 <tr>
 <td>Hierarchy, equity method, acquisition/disposal</td>
-<td><strong>Done</strong> — PRD-8 through PRD-22</td>
+<td><strong>Done</strong></td>
 </tr>
 <tr>
 <td>Allocations (multi-step cascade, reciprocal, tiered)</td>
@@ -4127,11 +4127,11 @@
 </tr>
 <tr>
 <td>Multi-ERP canonical staging</td>
-<td><strong>Done</strong> — PRD-30, 7 canonical models, UNION ALL adapters</td>
+<td><strong>Done</strong> — 7 canonical models, UNION ALL adapters</td>
 </tr>
 <tr>
 <td>Multi-ERP connectors (SAP, D365 BC, ERPNext)</td>
-<td><strong>Not started</strong> — PRD-31..36</td>
+<td><strong>Not started</strong></td>
 </tr>
 <tr>
 <td>FastAPI / Streamlit / Dagster</td>
@@ -4286,103 +4286,81 @@
 <blockquote>
 <p><strong>Note:</strong> D365 F&amp;O and D365 Business Central are completely different products (different APIs, entity models, dimension systems). BC needs its own connector.</p>
 </blockquote>
-<h3 id="prd-breakdown">PRD Breakdown<a class="headerlink" href="#prd-breakdown" title="Permanent link">&para;</a></h3>
+<h3 id="work-breakdown">Work Breakdown<a class="headerlink" href="#work-breakdown" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>PRD</th>
-<th>Title</th>
+<th>Task</th>
 <th>Effort</th>
 <th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>PRD-30</strong></td>
 <td>Canonical Staging Schema &amp; Adapter Interface</td>
 <td>2 days</td>
 <td><strong>Done</strong> (PR #10)</td>
 </tr>
 <tr>
-<td><strong>PRD-31</strong></td>
 <td>D365 F&amp;O Adapter Refactor</td>
 <td>1 day</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-32</strong></td>
 <td>D365 Business Central Connector</td>
 <td>3 days</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-33</strong></td>
 <td>SAP S/4HANA Connector</td>
 <td>3 days</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-34</strong></td>
 <td>SAP ECC 6.0 Connector</td>
 <td>3 days</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-35</strong></td>
 <td>SAP Business One Connector</td>
 <td>2 days</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-36</strong></td>
 <td>ERPNext Connector</td>
 <td>2 days</td>
-<td>Blocked by PRD-30</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-37</strong></td>
 <td>Dimension Harmonization</td>
 <td>3 days</td>
-<td>Blocked by PRD-31/32/33</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-38</strong></td>
 <td>Scale Architecture (50–500 LEs)</td>
 <td>5 days</td>
-<td>Blocked by PRD-37</td>
+<td>Not started</td>
 </tr>
 <tr>
-<td><strong>PRD-39</strong></td>
 <td>Connector Registry (Frappe)</td>
 <td>2 days</td>
-<td>Blocked by PRD-38</td>
+<td>Not started</td>
 </tr>
 </tbody>
 </table>
 <h3 id="dependency-graph">Dependency Graph<a class="headerlink" href="#dependency-graph" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>graph TD
-    PRD30[PRD-30: Canonical Schema]
-    PRD31[PRD-31: D365 F&amp;O Adapter]
-    PRD32[PRD-32: D365 Business Central]
-    PRD33[PRD-33: SAP S/4HANA]
-    PRD34[PRD-34: SAP ECC 6.0]
-    PRD35[PRD-35: SAP Business One]
-    PRD36[PRD-36: ERPNext]
-    PRD37[PRD-37: Dimension Harmonization]
-    PRD38[PRD-38: Scale 50-500 LEs]
-    PRD39[PRD-39: Connector Registry]
-
-    PRD30 --&gt; PRD31
-    PRD30 --&gt; PRD32
-    PRD30 --&gt; PRD33
-    PRD30 --&gt; PRD34
-    PRD30 --&gt; PRD35
-    PRD30 --&gt; PRD36
-    PRD31 --&gt; PRD37
-    PRD32 --&gt; PRD37
-    PRD33 --&gt; PRD37
-    PRD37 --&gt; PRD38
-    PRD38 --&gt; PRD39</code></pre>
+    A[Canonical Schema] --&gt; B[D365 F&amp;O Adapter]
+    A --&gt; C[D365 Business Central]
+    A --&gt; D[SAP S/4HANA]
+    A --&gt; E[SAP ECC 6.0]
+    A --&gt; F[SAP Business One]
+    A --&gt; G[ERPNext]
+    B --&gt; H[Dimension Harmonization]
+    C --&gt; H
+    D --&gt; H
+    H --&gt; I[Scale 50-500 LEs]
+    I --&gt; J[Connector Registry]</code></pre>
 <h3 id="connector-details">Connector Details<a class="headerlink" href="#connector-details" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4448,7 +4426,7 @@ Canonical Staging (models/staging/canonical/) ← UNION ALL from adapters
     ↓
 Bronze → Silver → Gold (unchanged, ERP-agnostic)
 </code></pre></div>
-<h3 id="scale-architecture-prd-38">Scale Architecture (PRD-38)<a class="headerlink" href="#scale-architecture-prd-38" title="Permanent link">&para;</a></h3>
+<h3 id="scale-architecture">Scale Architecture<a class="headerlink" href="#scale-architecture" title="Permanent link">&para;</a></h3>
 <p>For deployments with 50–500 legal entities across multiple ERPs:</p>
 <ul>
 <li><strong>Partitioned canonical staging</strong> — partition by <code>erp_source</code> for parallel processing</li>

@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://konsolid.at/prd/PRD-1-fx-translation/">
+        <link rel="canonical" href="https://konsolid.at/developer-guide/design/budget-spreading/">
       
       
-        <link rel="prev" href="../../developer-guide/extending-api/">
+        <link rel="prev" href="../multistep-allocations/">
       
       
-        <link rel="next" href="../PRD-2-cta-calculation/">
+        <link rel="next" href="../variance-analysis/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>FX Translation - KNSLDT</title>
+        <title>Budget Spreading - KNSLDT</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -47,9 +47,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#prd-1-proper-fx-translation-closing-vs-average-rate" class="md-skip">
+        <a href="#budget-spreading-seasonality-profiles" class="md-skip">
           Skip to content
         </a>
       
@@ -88,7 +88,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-header__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              FX Translation
+              Budget Spreading
             
           </span>
         </div>
@@ -219,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -240,7 +240,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../why-konsolidat/" class="md-tabs__link">
+        <a href="../../../why-konsolidat/" class="md-tabs__link">
           
   
   
@@ -267,7 +267,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../getting-started/quickstart/" class="md-tabs__link">
+        <a href="../../../getting-started/quickstart/" class="md-tabs__link">
           
   
   
@@ -292,7 +292,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../developer-guide/developer-overview/" class="md-tabs__link">
+        <a href="../../developer-overview/" class="md-tabs__link">
           
   
   
@@ -312,7 +312,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../troubleshooting/troubleshooting/" class="md-tabs__link">
+        <a href="../../../troubleshooting/troubleshooting/" class="md-tabs__link">
           
   
   
@@ -346,7 +346,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
+    <a href="../../.." title="KNSLDT" class="md-nav__button md-logo" aria-label="KNSLDT" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 9h2V4h2v5a2 2 0 0 1-2 2h-2v2l-3-3 3-3m-4 3a2 2 0 1 0-2 2 2 2 0 0 0 2-2M2 11v5h2v-5h2v2l3-3-3-3v2H4a2 2 0 0 0-2 2m13 5-3-3-3 3h2v2a2 2 0 0 0 2 2h5v-2h-5v-2"/></svg>
@@ -376,7 +376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -455,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../why-konsolidat/" class="md-nav__link">
+      <a href="../../../why-konsolidat/" class="md-nav__link">
         
   
   
@@ -483,7 +483,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../features/" class="md-nav__link">
+      <a href="../../../features/" class="md-nav__link">
         
   
   
@@ -511,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
+      <a href="../../../evaluation/cost-comparison-vs-commercial/" class="md-nav__link">
         
   
   
@@ -539,7 +539,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../evaluation/security-architecture/" class="md-nav__link">
+      <a href="../../../evaluation/security-architecture/" class="md-nav__link">
         
   
   
@@ -567,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/roadmap/" class="md-nav__link">
+      <a href="../../../reference/roadmap/" class="md-nav__link">
         
   
   
@@ -706,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quickstart/" class="md-nav__link">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -734,7 +734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/setup-guide/" class="md-nav__link">
+      <a href="../../../getting-started/setup-guide/" class="md-nav__link">
         
   
   
@@ -762,7 +762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/configuration-reference/" class="md-nav__link">
+      <a href="../../../getting-started/configuration-reference/" class="md-nav__link">
         
   
   
@@ -850,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-vba-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-vba-guide/" class="md-nav__link">
         
   
   
@@ -878,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/excel-taskpane-guide/" class="md-nav__link">
+      <a href="../../../user-guide/excel-taskpane-guide/" class="md-nav__link">
         
   
   
@@ -914,7 +914,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/initial-setup-guide/" class="md-nav__link">
+      <a href="../../../user-guide/initial-setup-guide/" class="md-nav__link">
         
   
   
@@ -994,7 +994,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/consolidation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/consolidation-guide/" class="md-nav__link">
         
   
   
@@ -1022,7 +1022,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/allocation-guide/" class="md-nav__link">
+      <a href="../../../user-guide/allocation-guide/" class="md-nav__link">
         
   
   
@@ -1050,7 +1050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budgeting-guide/" class="md-nav__link">
+      <a href="../../../user-guide/budgeting-guide/" class="md-nav__link">
         
   
   
@@ -1078,7 +1078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/budget-layers/" class="md-nav__link">
+      <a href="../../../user-guide/budget-layers/" class="md-nav__link">
         
   
   
@@ -1106,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/variance-analysis-guide/" class="md-nav__link">
+      <a href="../../../user-guide/variance-analysis-guide/" class="md-nav__link">
         
   
   
@@ -1194,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../user-guide/report-catalog/" class="md-nav__link">
+      <a href="../../../user-guide/report-catalog/" class="md-nav__link">
         
   
   
@@ -1282,7 +1282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/deployment-guide/" class="md-nav__link">
+      <a href="../../../admin-guide/deployment-guide/" class="md-nav__link">
         
   
   
@@ -1310,7 +1310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/operations-runbook/" class="md-nav__link">
+      <a href="../../../admin-guide/operations-runbook/" class="md-nav__link">
         
   
   
@@ -1338,7 +1338,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/d365-integration/" class="md-nav__link">
+      <a href="../../../admin-guide/d365-integration/" class="md-nav__link">
         
   
   
@@ -1366,7 +1366,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../admin-guide/monitoring/" class="md-nav__link">
+      <a href="../../../admin-guide/monitoring/" class="md-nav__link">
         
   
   
@@ -1466,7 +1466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/developer-overview/" class="md-nav__link">
+      <a href="../../developer-overview/" class="md-nav__link">
         
   
   
@@ -1549,7 +1549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-overview/" class="md-nav__link">
+      <a href="../../../api-reference/api-overview/" class="md-nav__link">
         
   
   
@@ -1629,7 +1629,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-health/" class="md-nav__link">
+      <a href="../../../api-reference/api-health/" class="md-nav__link">
         
   
   
@@ -1657,7 +1657,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-value/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-value/" class="md-nav__link">
         
   
   
@@ -1685,7 +1685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-epm-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-epm-batch/" class="md-nav__link">
         
   
   
@@ -1773,7 +1773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save/" class="md-nav__link">
         
   
   
@@ -1801,7 +1801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-cell-save/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-cell-save/" class="md-nav__link">
         
   
   
@@ -1829,7 +1829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-budget-save-batch/" class="md-nav__link">
+      <a href="../../../api-reference/api-budget-save-batch/" class="md-nav__link">
         
   
   
@@ -1917,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-hierarchy/" class="md-nav__link">
+      <a href="../../../api-reference/api-hierarchy/" class="md-nav__link">
         
   
   
@@ -1945,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-approve-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-approve-adjustment/" class="md-nav__link">
         
   
   
@@ -1973,7 +1973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-adjustment/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-adjustment/" class="md-nav__link">
         
   
   
@@ -2061,7 +2061,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-run-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-run-allocation/" class="md-nav__link">
         
   
   
@@ -2089,7 +2089,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-reverse-allocation/" class="md-nav__link">
+      <a href="../../../api-reference/api-reverse-allocation/" class="md-nav__link">
         
   
   
@@ -2117,7 +2117,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api-reference/api-allocation-history/" class="md-nav__link">
+      <a href="../../../api-reference/api-allocation-history/" class="md-nav__link">
         
   
   
@@ -2216,7 +2216,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
+      <a href="../../../data-dictionary/data-dictionary-overview/" class="md-nav__link">
         
   
   
@@ -2244,7 +2244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/gold-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/gold-models/" class="md-nav__link">
         
   
   
@@ -2272,7 +2272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/silver-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/silver-models/" class="md-nav__link">
         
   
   
@@ -2300,7 +2300,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/bronze-models/" class="md-nav__link">
+      <a href="../../../data-dictionary/bronze-models/" class="md-nav__link">
         
   
   
@@ -2328,7 +2328,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/seeds-reference/" class="md-nav__link">
+      <a href="../../../data-dictionary/seeds-reference/" class="md-nav__link">
         
   
   
@@ -2356,7 +2356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-dictionary/staging-tables/" class="md-nav__link">
+      <a href="../../../data-dictionary/staging-tables/" class="md-nav__link">
         
   
   
@@ -2447,7 +2447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/macro-reference/" class="md-nav__link">
+      <a href="../../macro-reference/" class="md-nav__link">
         
   
   
@@ -2475,7 +2475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-dbt-models/" class="md-nav__link">
+      <a href="../../extending-dbt-models/" class="md-nav__link">
         
   
   
@@ -2503,7 +2503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/adding-dimensions/" class="md-nav__link">
+      <a href="../../adding-dimensions/" class="md-nav__link">
         
   
   
@@ -2531,7 +2531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/extending-api/" class="md-nav__link">
+      <a href="../../extending-api/" class="md-nav__link">
         
   
   
@@ -2621,8 +2621,6 @@
                 
   
   
-    
-  
   
   
     
@@ -2635,11 +2633,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_1" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_1" >
         
           
           <label class="md-nav__link" for="__nav_4_5_1" id="__nav_4_5_1_label" tabindex="0">
@@ -2660,7 +2658,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_5_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2670,6 +2668,208 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fx-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FX Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cta-calculation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CTA Calculation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../minority-interest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minority Interest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topside-journals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Topside Journals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Planning
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Planning
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multistep-allocations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Step Allocations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2694,7 +2894,7 @@
   <span class="md-ellipsis">
     
   
-    FX Translation
+    Budget Spreading
   
 
     
@@ -2712,7 +2912,7 @@
   <span class="md-ellipsis">
     
   
-    FX Translation
+    Budget Spreading
   
 
     
@@ -2749,17 +2949,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2772,10 +2961,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#r1-exchange-rate-type-lookup" class="md-nav__link">
+  <a href="#r1-spread-profile-seed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R1: Exchange rate type lookup
+        R1: Spread profile seed
       
     </span>
   </a>
@@ -2783,10 +2972,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r2-rate-selection-by-account-type" class="md-nav__link">
+  <a href="#r2-api-endpoint-for-annual-budget-input" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R2: Rate selection by account type
+        R2: API endpoint for annual budget input
       
     </span>
   </a>
@@ -2794,10 +2983,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r3-translated-columns" class="md-nav__link">
+  <a href="#r3-dbt-model-gold_spread_budget" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R3: Translated columns
+        R3: dbt model gold_spread_budget
       
     </span>
   </a>
@@ -2805,10 +2994,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r4-backward-compatibility" class="md-nav__link">
+  <a href="#r4-integration-with-scenario-tb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R4: Backward compatibility
+        R4: Integration with scenario TB
       
     </span>
   </a>
@@ -2821,10 +3010,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#acceptance-tests-dbt-singular-tests" class="md-nav__link">
+  <a href="#acceptance-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Acceptance Tests (dbt singular tests)
+        Acceptance Tests
       
     </span>
   </a>
@@ -2858,207 +3047,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-2-cta-calculation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CTA Calculation
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-4-minority-interest/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Minority Interest
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-5-topside-journals/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Topside Journals
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Planning
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Planning
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-3-multistep-allocations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-Step Allocations
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-6-budget-spreading/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Budget Spreading
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../PRD-7-variance-analysis/" class="md-nav__link">
+      <a href="../variance-analysis/" class="md-nav__link">
         
   
   
@@ -3146,7 +3135,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PRD-30-canonical-staging-schema/" class="md-nav__link">
+      <a href="../canonical-staging-schema/" class="md-nav__link">
         
   
   
@@ -3190,7 +3179,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/testing-guide/" class="md-nav__link">
+      <a href="../../testing-guide/" class="md-nav__link">
         
   
   
@@ -3218,7 +3207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developer-guide/contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -3305,7 +3294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/troubleshooting/" class="md-nav__link">
+      <a href="../../../troubleshooting/troubleshooting/" class="md-nav__link">
         
   
   
@@ -3333,7 +3322,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../troubleshooting/faq/" class="md-nav__link">
+      <a href="../../../troubleshooting/faq/" class="md-nav__link">
         
   
   
@@ -3361,7 +3350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/glossary/" class="md-nav__link">
+      <a href="../../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -3427,17 +3416,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3450,10 +3428,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#r1-exchange-rate-type-lookup" class="md-nav__link">
+  <a href="#r1-spread-profile-seed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R1: Exchange rate type lookup
+        R1: Spread profile seed
       
     </span>
   </a>
@@ -3461,10 +3439,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r2-rate-selection-by-account-type" class="md-nav__link">
+  <a href="#r2-api-endpoint-for-annual-budget-input" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R2: Rate selection by account type
+        R2: API endpoint for annual budget input
       
     </span>
   </a>
@@ -3472,10 +3450,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r3-translated-columns" class="md-nav__link">
+  <a href="#r3-dbt-model-gold_spread_budget" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R3: Translated columns
+        R3: dbt model gold_spread_budget
       
     </span>
   </a>
@@ -3483,10 +3461,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#r4-backward-compatibility" class="md-nav__link">
+  <a href="#r4-integration-with-scenario-tb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        R4: Backward compatibility
+        R4: Integration with scenario TB
       
     </span>
   </a>
@@ -3499,10 +3477,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#acceptance-tests-dbt-singular-tests" class="md-nav__link">
+  <a href="#acceptance-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Acceptance Tests (dbt singular tests)
+        Acceptance Tests
       
     </span>
   </a>
@@ -3540,40 +3518,58 @@
   
 
 
-<h1 id="prd-1-proper-fx-translation-closing-vs-average-rate">PRD-1: Proper FX Translation (Closing vs Average Rate)<a class="headerlink" href="#prd-1-proper-fx-translation-closing-vs-average-rate" title="Permanent link">&para;</a></h1>
+<h1 id="budget-spreading-seasonality-profiles">Budget Spreading / Seasonality Profiles<a class="headerlink" href="#budget-spreading-seasonality-profiles" title="Permanent link">&para;</a></h1>
 <h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
-<p><code>gold_consolidated_trial_balance</code> uses a single closing rate for all accounts. IFRS/US GAAP require:
-- <strong>Balance sheet accounts</strong> → closing (spot) rate at period end
-- <strong>P&amp;L accounts</strong> → average rate for the period
-- <strong>Equity accounts</strong> → historical rate at transaction date</p>
-<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
-<p>Enhance <code>gold_consolidated_trial_balance.sql</code> and <code>silver_exchange_rates</code> to support rate type selection.</p>
+<p>Budget input is per-period line items. In practice, planners often enter annual amounts and expect the system to spread them across months using a profile:
+- <strong>Even</strong> — divide by 12
+- <strong>Seasonal</strong> — use historical seasonal pattern
+- <strong>Custom</strong> — user-defined weights per period</p>
+<p>Currently there is no spreading logic — users must enter all 12 periods manually.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<h3 id="r1-exchange-rate-type-lookup">R1: Exchange rate type lookup<a class="headerlink" href="#r1-exchange-rate-type-lookup" title="Permanent link">&para;</a></h3>
+<h3 id="r1-spread-profile-seed">R1: Spread profile seed<a class="headerlink" href="#r1-spread-profile-seed" title="Permanent link">&para;</a></h3>
+<p>New seed <code>spread_profiles.csv</code>:
+<div class="highlight"><pre><span></span><code>profile_id,profile_name,fiscal_period,weight
+EVEN,Even Spread,1,1.0
+EVEN,Even Spread,2,1.0
+...
+EVEN,Even Spread,12,1.0
+SEASONAL_RETAIL,Retail Seasonal,1,0.6
+SEASONAL_RETAIL,Retail Seasonal,2,0.5
+...
+SEASONAL_RETAIL,Retail Seasonal,11,1.8
+SEASONAL_RETAIL,Retail Seasonal,12,2.5
+</code></pre></div>
+Weights are relative — the model normalizes them to sum to 1.0.</p>
+<h3 id="r2-api-endpoint-for-annual-budget-input">R2: API endpoint for annual budget input<a class="headerlink" href="#r2-api-endpoint-for-annual-budget-input" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Silver exchange rates must expose <code>exchange_rate_type</code> (D365 stores: Default, Closing, Average, Historical)</li>
-<li>If a specific rate type is not available, fall back to Default</li>
+<li><code>POST /api/v1/budget-annual</code> — accepts:
+  <div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;scenario_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BUDGET_2025&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;legal_entity_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;USMF&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;fiscal_year&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2025</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;main_account&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;6100&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;annual_amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1200000</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;spread_profile_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EVEN&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;submitted_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user@co.com&quot;</span>
+<span class="p">}</span>
+</code></pre></div></li>
+<li>API spreads the annual amount into 12 period rows in <code>budget_input</code> staging table</li>
 </ul>
-<h3 id="r2-rate-selection-by-account-type">R2: Rate selection by account type<a class="headerlink" href="#r2-rate-selection-by-account-type" title="Permanent link">&para;</a></h3>
+<h3 id="r3-dbt-model-gold_spread_budget">R3: dbt model <code>gold_spread_budget</code><a class="headerlink" href="#r3-dbt-model-gold_spread_budget" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>is_balance_sheet = 1</code> → use rate type <code>Closing</code> (fall back to latest Default)</li>
-<li><code>is_pnl = 1</code> → use rate type <code>Average</code> (fall back to latest Default)</li>
-<li>Neither (equity-like) → use rate type <code>Historical</code> (fall back to latest Default)</li>
+<li>Reads annual budget entries (where <code>fiscal_period = 0</code> convention) from staging</li>
+<li>Joins with <code>spread_profiles</code> seed</li>
+<li>Normalizes weights: <code>period_weight = weight / sum(weight) over profile</code></li>
+<li>Calculates: <code>period_amount = annual_amount × period_weight</code></li>
+<li>Outputs 12 rows per annual input</li>
 </ul>
-<h3 id="r3-translated-columns">R3: Translated columns<a class="headerlink" href="#r3-translated-columns" title="Permanent link">&para;</a></h3>
+<h3 id="r4-integration-with-scenario-tb">R4: Integration with scenario TB<a class="headerlink" href="#r4-integration-with-scenario-tb" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>closing_rate</code> — the closing rate used (always populated for audit)</li>
-<li><code>average_rate</code> — the average rate used (always populated for audit)</li>
-<li><code>translation_rate</code> — the rate actually applied (closing or average depending on account type)</li>
-<li><code>translated_amount</code> = <code>local_amount × translation_rate</code></li>
-<li><code>group_amount</code> = <code>translated_amount × ownership_pct</code></li>
+<li><code>gold_scenario_trial_balance</code> must include spread budget entries</li>
+<li>Either via the staging table (API does the spreading) or via the dbt model (dbt does the spreading)</li>
+<li><strong>Decision</strong>: API does the spreading into staging → simpler, dbt just reads staging as-is</li>
 </ul>
-<h3 id="r4-backward-compatibility">R4: Backward compatibility<a class="headerlink" href="#r4-backward-compatibility" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Output schema adds columns; existing columns keep same semantics</li>
-<li>Cube YAML for <code>consolidated_trial_balance</code> must expose new rate columns</li>
-</ul>
-<h2 id="acceptance-tests-dbt-singular-tests">Acceptance Tests (dbt singular tests)<a class="headerlink" href="#acceptance-tests-dbt-singular-tests" title="Permanent link">&para;</a></h2>
+<h2 id="acceptance-tests">Acceptance Tests<a class="headerlink" href="#acceptance-tests" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -3583,27 +3579,28 @@
 </thead>
 <tbody>
 <tr>
-<td><code>assert_bs_uses_closing_rate</code></td>
-<td>All rows where <code>is_balance_sheet=1</code> have <code>translation_rate = closing_rate</code></td>
+<td><code>assert_even_spread_equal_periods</code></td>
+<td>EVEN profile: all 12 periods have same amount (annual / 12) within 0.01</td>
 </tr>
 <tr>
-<td><code>assert_pnl_uses_average_rate</code></td>
-<td>All rows where <code>is_pnl=1</code> have <code>translation_rate = average_rate</code></td>
+<td><code>assert_spread_sums_to_annual</code></td>
+<td>Per annual input: sum of 12 period amounts = annual_amount within 0.01</td>
 </tr>
 <tr>
-<td><code>assert_translated_amount_formula</code></td>
-<td><code>translated_amount = local_amount × translation_rate</code> within 0.01</td>
+<td><code>assert_seasonal_weights_applied</code></td>
+<td>Period amounts are proportional to profile weights</td>
 </tr>
 <tr>
-<td><code>assert_group_amount_formula</code></td>
-<td><code>group_amount = translated_amount × ownership_pct</code> within 0.01</td>
+<td><code>assert_spread_profile_weights_positive</code></td>
+<td>All weights &gt; 0</td>
 </tr>
 </tbody>
 </table>
 <h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Temporal (historical) rate for equity line items (PRD-2 covers CTA)</li>
-<li>Remeasurement vs translation (single functional currency assumed)</li>
+<li>Driver-based planning (revenue × price × volume)</li>
+<li>Rolling forecast auto-spread</li>
+<li>Phasing templates at account-group level</li>
 </ul>
 
 
@@ -3692,10 +3689,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
