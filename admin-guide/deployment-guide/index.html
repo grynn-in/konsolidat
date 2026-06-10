@@ -1473,6 +1473,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#demo-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connecting-real-erp-data" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3680,6 +3691,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#demo-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demo Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#connecting-real-erp-data" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4074,13 +4096,50 @@ docker<span class="w"> </span>compose<span class="w"> </span>restart<span class=
 <li>User: <code>default</code>, Password: (from <code>.credentials</code> file)</li>
 </ol>
 <p>The template includes pre-built reports for Trial Balance, P&amp;L, Balance Sheet, and Budget vs Actual.</p>
+<h2 id="demo-data">Demo Data<a class="headerlink" href="#demo-data" title="Permanent link">&para;</a></h2>
+<p>A fresh deploy includes synthetic data for a fictional <strong>Alpine Manufacturing Group</strong> — 3 legal entities across CHF, USD, and EUR with 12 months of GL entries, budgets, exchange rates, and trial balance data. This lets you explore consolidation, FX translation, variance analysis, and Excel reports immediately.</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Currency</th>
+<th>Country</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AMHQ</td>
+<td>CHF</td>
+<td>Switzerland</td>
+<td>Parent / HQ</td>
+</tr>
+<tr>
+<td>AMUS</td>
+<td>USD</td>
+<td>United States</td>
+<td>Subsidiary</td>
+</tr>
+<tr>
+<td>AMDE</td>
+<td>EUR</td>
+<td>Germany</td>
+<td>Subsidiary</td>
+</tr>
+</tbody>
+</table>
+<p>The demo data is loaded from <code>clickhouse/demo-data.sql</code> on first container start. To reset to demo data, delete the ClickHouse volume and restart:</p>
+<div class="highlight"><pre><span></span><code>./deploy.sh<span class="w"> </span>down
+docker<span class="w"> </span>volume<span class="w"> </span>rm<span class="w"> </span>open_epm_clickhouse_data
+./deploy.sh
+</code></pre></div>
 <h2 id="connecting-real-erp-data">Connecting Real ERP Data<a class="headerlink" href="#connecting-real-erp-data" title="Permanent link">&para;</a></h2>
-<p>The system works with demo data out of the box. To connect a real D365 Finance &amp; Operations instance:</p>
+<p>To replace demo data with a real D365 Finance &amp; Operations instance:</p>
 <ol>
 <li>Log into Frappe: <code>http://your-server:8069</code></li>
 <li>Go to <strong>EPM Settings</strong></li>
 <li>Enter your D365 credentials (Tenant ID, Client ID, Client Secret, Environment URL)</li>
-<li>Click <strong>Run Pipeline</strong> to sync data</li>
+<li>Click <strong>Run Pipeline</strong> to sync data — this replaces the demo data with your real ERP data</li>
 </ol>
 <p>Konsolidat supports any ERP via <a href="https://docs.airbyte.com/integrations/">Airbyte connectors</a>. See <a href="../d365-integration/">D365 Integration</a> for detailed setup.</p>
 <h2 id="backup-restore">Backup &amp; Restore<a class="headerlink" href="#backup-restore" title="Permanent link">&para;</a></h2>
