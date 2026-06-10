@@ -5,3 +5,5 @@ GLOBAL,reclassification,ADJ-002,GROUP,2024,1,4200,25000.00,0.00,Reclassify other
 GLOBAL,reclassification,ADJ-002,GROUP,2024,1,4100,0.00,25000.00,Reclassify other income to revenue,admin
 GLOBAL,topside,ADJ-003,GROUP,2024,2,5100,50000.00,0.00,Goodwill amortization period 2 - debit,admin
 GLOBAL,topside,ADJ-003,GROUP,2024,2,1800,0.00,50000.00,Goodwill amortization period 2 - credit,admin
+AMG,topside,ADJ-004,AMG,2024,1,6070,15000.00,0.00,Group audit fee allocation - debit,admin
+AMG,topside,ADJ-004,AMG,2024,1,2100,0.00,15000.00,Group audit fee allocation - credit,admin
