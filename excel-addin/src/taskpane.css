@@ -27,9 +27,42 @@ header h1 {
   color: #0078d4;
 }
 
-.subtitle {
-  font-size: 12px;
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid #edebe9;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
   color: #605e5c;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.tab:hover {
+  color: #323130;
+}
+
+.tab.active {
+  color: #0078d4;
+  border-bottom-color: #0078d4;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
 }
 
 /* Forms */
@@ -85,6 +118,42 @@ header h1 {
 
 .btn-primary:disabled {
   background: #c8c6c4;
+  cursor: default;
+}
+
+.btn-secondary {
+  width: 100%;
+  background: #fff;
+  color: #323130;
+  border: 1px solid #8a8886;
+  margin-bottom: 8px;
+}
+
+.btn-secondary:hover {
+  background: #f3f2f1;
+}
+
+.btn-secondary:disabled {
+  background: #f3f2f1;
+  color: #a19f9d;
+  cursor: default;
+}
+
+.btn-outline {
+  width: 100%;
+  background: none;
+  color: #0078d4;
+  border: 1px solid #0078d4;
+  margin-top: 8px;
+}
+
+.btn-outline:hover {
+  background: #deecf9;
+}
+
+.btn-outline:disabled {
+  color: #c8c6c4;
+  border-color: #c8c6c4;
   cursor: default;
 }
 
@@ -197,4 +266,24 @@ header h1 {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Status area */
+.status-area {
+  margin-top: 12px;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 2px;
+  background: #dff6dd;
+  color: #107c10;
+}
+
+.status-area.status-error {
+  background: #fde7e9;
+  color: #d13438;
+}
+
+.status-area.status-info {
+  background: #deecf9;
+  color: #0078d4;
 }
