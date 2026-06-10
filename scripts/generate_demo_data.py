@@ -73,7 +73,7 @@ FX_CHF_EUR = [0.9350, 0.9400, 0.9450, 0.9500, 0.9550, 0.9480,
 
 
 def uid():
-    return str(uuid.uuid4())
+    return str(uuid.UUID(int=random.getrandbits(128), version=4))
 
 
 def dim_json(acct, cc, dept, bu):
@@ -677,6 +677,14 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
             settle_m = min(q + 1, 12)
             settle_date = f"2024-{settle_m:02d}-15"
 
+            # Use settlement month's FX rate (not original month's)
+            if accy == "USD":
+                settle_fx = FX_CHF_USD[settle_m - 1]
+            else:
+                settle_fx = FX_CHF_EUR[settle_m - 1]
+            settle_rpt_amt = round(ic_amount * settle_fx, 2)
+            settle_ic_chf = int(ic_amount * settle_fx)
+
             header_key += 1
             hk = header_key
             jnum = f"IC-SETTLE-{entity_id}-Q{q//3}"
@@ -691,7 +699,7 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC settlement', 'No', {line_key}, 'Normal', "
                 f"'2010-{cc}-{dept}', {val(settle_date)}, {hk}, "
-                f"{rpt_amt}, {val(accy)}, {ic_amount}, "
+                f"{settle_rpt_amt}, {val(accy)}, {ic_amount}, "
                 f"{val(dim_json('2010', cc, dept, bu))}, {ic_amount})"
             )
             line_key += 1
@@ -699,7 +707,7 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC settlement', 'Yes', {line_key}, 'Normal', "
                 f"'1010-{cc}-{dept}', {val(settle_date)}, {hk}, "
-                f"{rpt_amt}, {val(accy)}, {ic_amount}, "
+                f"{settle_rpt_amt}, {val(accy)}, {ic_amount}, "
                 f"{val(dim_json('1010', cc, dept, bu))}, {ic_amount})"
             )
 
@@ -717,16 +725,16 @@ for entity_id, ename, country, accy, rcy, party in ENTITIES:
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC settlement from {entity_id}', 'No', {line_key}, 'Normal', "
                 f"'1010-{hq_cc}-{hq_dept}', {val(settle_date)}, {hk}, "
-                f"{ic_chf}, 'CHF', {ic_chf}, "
-                f"{val(dim_json('1010', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
+                f"{settle_ic_chf}, 'CHF', {settle_ic_chf}, "
+                f"{val(dim_json('1010', hq_cc, hq_dept, hq_bu))}, {settle_ic_chf})"
             )
             line_key += 1
             gl_lines.append(
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"'IC settlement from {entity_id}', 'Yes', {line_key}, 'Normal', "
                 f"'1100-{hq_cc}-{hq_dept}', {val(settle_date)}, {hk}, "
-                f"{ic_chf}, 'CHF', {ic_chf}, "
-                f"{val(dim_json('1100', hq_cc, hq_dept, hq_bu))}, {ic_chf})"
+                f"{settle_ic_chf}, 'CHF', {settle_ic_chf}, "
+                f"{val(dim_json('1100', hq_cc, hq_dept, hq_bu))}, {settle_ic_chf})"
             )
 
 # ── Monthly IC product sales: AMUS → AMDE ────────────────────────
