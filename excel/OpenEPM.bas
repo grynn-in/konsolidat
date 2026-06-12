@@ -318,8 +318,7 @@ Public Function EPMSAVE( _
     Dim amt As Double
     amt = CDbl(amount)
 
-    ' Build cache key to skip unchanged values
-    EnsureSaveCache
+    ' Build cache key to skip unchanged values (skip cache in UDF context)
     Dim cacheKey As String
     cacheKey = CStr(entity) & "|" & CLng(fiscal_year) & "|" & CLng(fiscal_period) & "|" & _
                CStr(account) & "|" & CStr(scenario_id) & "|" & CStr(layer) & "|" & _
