@@ -1,5 +1,13 @@
 open_epm:
-  target: dev
+  # Default target is local dev (plaintext, loopback ClickHouse). Select the
+  # `prod` target — `dbt build --target prod`, or set DBT_TARGET=prod — for any
+  # networked deployment so traffic and credentials are encrypted.
+  #
+  # secure/verify are literal YAML booleans (not Jinja-rendered strings) so the
+  # dbt-clickhouse adapter receives real bools — a rendered "False" string would
+  # be truthy and silently force TLS on. TLS is therefore chosen by target, not
+  # by env var.
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
   outputs:
     dev:
       type: clickhouse
@@ -10,6 +18,22 @@ open_epm:
       schema: epm
       secure: false
       verify: false
+      connect_timeout: 30
+      send_receive_timeout: 300
+      custom_settings:
+        max_memory_usage: 10000000000
+
+    prod:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST') }}"
+      port: "{{ env_var('CLICKHOUSE_PORT', '8443') | int }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'default') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD') }}"
+      schema: "{{ env_var('CLICKHOUSE_SCHEMA', 'epm') }}"
+      # Encrypted; verify can be relaxed via a separate self-signed-cert target
+      # if ever needed, but defaults stay strict here.
+      secure: true
+      verify: true
       connect_timeout: 30
       send_receive_timeout: 300
       custom_settings:
