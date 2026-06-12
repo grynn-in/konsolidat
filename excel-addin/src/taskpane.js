@@ -615,9 +615,10 @@ function refreshSheet() {
           if (!scenario || !entity || !account) continue;
 
           for (var p = 1; p <= 12; p++) {
+            // Keys must match the konsol.api.epm_batch contract: year + period.
             queries.push({
               entity: entity,
-              fiscal_year: fiscalYear,
+              year: fiscalYear,
               period: p,
               account: account,
               measure: "amount",
@@ -637,12 +638,15 @@ function refreshSheet() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ queries: queries })
+          // epm_batch expects a bare JSON array, not an object wrapper.
+          body: JSON.stringify(queries)
         }).then(function (res) {
           if (!res.ok) throw new Error("Refresh failed (HTTP " + res.status + ")");
           return res.json();
         }).then(function (data) {
-          var results = data.message || [];
+          // epm_batch returns { values: [...] } (Frappe wraps it in `message`).
+          var payload = data.message || {};
+          var results = payload.values || [];
 
           // Write values back to cells I-T
           return Excel.run(function (ctx) {
@@ -664,7 +668,8 @@ function refreshSheet() {
                 // This row has 12 results
                 for (var p = 0; p < 12; p++) {
                   if (resultIdx < results.length) {
-                    var val = results[resultIdx].value;
+                    // values[] holds the numeric results directly.
+                    var val = results[resultIdx];
                     if (val !== null && val !== undefined) {
                       var cellAddr = String.fromCharCode(73 + p) + (dataStartRow + r); // I=73
                       ws.getRange(cellAddr).values = [[val]];
