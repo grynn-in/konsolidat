@@ -1,0 +1,46 @@
+cubes:
+- name: consolidated_trial_balance
+  sql_table: epm_gold.gold_consolidated_trial_balance
+  data_source: default
+  dimensions:
+  - name: consolidation_group
+    sql: consolidation_group
+    type: string
+    title: Group
+  - name: data_area_id
+    sql: data_area_id
+    type: string
+    title: Legal Entity
+  - name: fiscal_year
+    sql: fiscal_year
+    type: number
+    title: Fiscal Year
+  - name: fiscal_period
+    sql: fiscal_period
+    type: number
+    title: Period
+  - name: main_account
+    sql: main_account
+    type: string
+    title: Account
+  - name: account_name
+    sql: account_name
+    type: string
+    title: Account Name
+  - name: reporting_currency
+    sql: reporting_currency
+    type: string
+    title: Reporting Currency
+  measures:
+  - name: local_amount
+    sql: local_amount
+    type: sum
+    title: Local Amount
+  - name: group_amount
+    sql: group_amount
+    type: sum
+    title: Group Amount
+  - name: ownership_pct
+    sql: ownership_pct
+    type: avg
+    title: Ownership %

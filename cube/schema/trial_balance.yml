@@ -1,0 +1,71 @@
+cubes:
+- name: trial_balance
+  sql_table: epm_gold.gold_trial_balance
+  data_source: default
+  dimensions:
+  - name: data_area_id
+    sql: data_area_id
+    type: string
+    title: Legal Entity
+  - name: fiscal_year
+    sql: fiscal_year
+    type: number
+    title: Fiscal Year
+  - name: fiscal_period
+    sql: fiscal_period
+    type: number
+    title: Period
+  - name: main_account
+    sql: main_account
+    type: string
+    title: Account
+  - name: account_name
+    sql: account_name
+    type: string
+    title: Account Name
+  - name: account_type_name
+    sql: account_type_name
+    type: string
+    title: Account Type
+  - name: is_balance_sheet
+    sql: is_balance_sheet
+    type: boolean
+    title: Is Balance Sheet
+  - name: is_pnl
+    sql: is_pnl
+    type: boolean
+    title: Is P&L
+  - name: dim_cost_center
+    sql: dim_cost_center
+    type: string
+    title: Cost Center
+  - name: dim_department
+    sql: dim_department
+    type: string
+    title: Department
+  - name: dim_business_unit
+    sql: dim_business_unit
+    type: string
+    title: Business Unit
+  measures:
+  - name: period_debit
+    sql: period_debit
+    type: sum
+    title: Debit
+  - name: period_credit
+    sql: period_credit
+    type: sum
+    title: Credit
+  - name: period_net_amount
+    sql: period_net_amount
+    type: sum
+    title: Net Amount
+  - name: transaction_count
+    sql: transaction_count
+    type: sum
+    title: Transaction Count
+  segments:
+  - name: balance_sheet_only
+    sql: "{CUBE}.is_balance_sheet = true"
+  - name: pnl_only
+    sql: "{CUBE}.is_pnl = true"

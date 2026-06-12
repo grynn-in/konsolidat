@@ -1,0 +1,16 @@
+views:
+- name: v_consolidated_report
+  description: Consolidated group report for Excel
+  cubes:
+  - join_path: consolidated_trial_balance
+    includes:
+    - consolidation_group
+    - data_area_id
+    - fiscal_year
+    - fiscal_period
+    - main_account
+    - account_name
+    - reporting_currency
+    - local_amount
+    - group_amount
+    - ownership_pct
