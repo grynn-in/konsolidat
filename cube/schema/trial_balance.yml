@@ -64,3 +64,8 @@ cubes:
     sql: transaction_count
     type: sum
     title: Transaction Count
+  segments:
+  - name: balance_sheet_only
+    sql: "{CUBE}.is_balance_sheet = true"
+  - name: pnl_only
+    sql: "{CUBE}.is_pnl = true"

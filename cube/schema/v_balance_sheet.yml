@@ -16,5 +16,5 @@ views:
     - period_debit
     - period_credit
     - period_net_amount
-  meta:
-    sql_filter: trial_balance.is_balance_sheet = true
+    # Queries should include segment: balance_sheet_only to filter
+    - balance_sheet_only

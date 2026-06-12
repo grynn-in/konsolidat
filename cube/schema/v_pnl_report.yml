@@ -16,5 +16,5 @@ views:
     - period_credit
     - period_net_amount
     - transaction_count
-  meta:
-    sql_filter: trial_balance.is_pnl = true
+    # Queries should include segment: pnl_only to filter
+    - pnl_only
