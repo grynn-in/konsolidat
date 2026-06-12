@@ -1,6 +1,6 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-11*
+*Last updated: 2026-06-12*
 
 ## Status Summary
 
@@ -10,7 +10,8 @@
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
 | Hierarchy, equity method, acquisition/disposal | **Done** |
 | Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
-| Budget write-back | **Done** — EPMSAVE() from Excel + Frappe API |
+| Budget write-back (Excel → CH) | **Done** — EPMSAVE() from Excel + Frappe API |
+| Budget write-back (CH → ERP) | **Not started** — push approved budget to D365 BudgetRegisterEntries |
 | Scenario management | **Done** — budget/forecast/whatif via API |
 | Variance analysis | **Done** — actual vs budget with favorable logic |
 | Excel VBA integration | **Done** — =EPM() + 5 functions, ODBC + REST |
@@ -127,6 +128,7 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The canonical staging 
 |------|--------|--------|
 | Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) — 7 canonical models, UNION ALL from adapters |
 | D365 F&O Adapter Refactor | 1 day | **Done** (PR #10) — 16 models renamed `stg_d365_fo__*`, canonical output |
+| D365 F&O Budget Write-Back | 2 days | Not started — OData POST on budget approval |
 | D365 Business Central Connector | 3 days | Not started |
 | SAP S/4HANA Connector | 3 days | Not started |
 | SAP ECC 6.0 Connector | 3 days | Not started |
@@ -155,14 +157,14 @@ graph TD
 
 ### Connector Details
 
-| PRD | Connector | API | GL Source Entity | Airbyte Source |
-|-----|-----------|-----|------------------|----------------|
-| 31 | D365 F&O (refactor) | OData v2 | `GeneralJournalAccountEntryBiEntities` | Existing |
-| 32 | D365 Business Central | REST v2.0 / OData v4 | `generalLedgerEntries` | Airbyte BC connector |
-| 33 | SAP S/4HANA | OData v4 (CDS views) | `I_JournalEntry`, `I_GLAccountLineItem` | Airbyte SAP OData |
-| 34 | SAP ECC 6.0 | RFC/BAPI or IDoc | BSEG + BKPF tables | Airbyte SAP (RFC) |
-| 35 | SAP Business One | Service Layer REST | `JournalEntries` (JDT1) | Airbyte HTTP |
-| 36 | ERPNext | Frappe REST API | `GL Entry` doctype | Airbyte ERPNext or direct Frappe API |
+| PRD | Connector | API | GL Source Entity | Budget Write-Back Target | Airbyte Source |
+|-----|-----------|-----|------------------|--------------------------|----------------|
+| 31 | D365 F&O (refactor) | OData v2 | `GeneralJournalAccountEntryBiEntities` | `BudgetRegisterEntries` (OData POST) | Existing |
+| 32 | D365 Business Central | REST v2.0 / OData v4 | `generalLedgerEntries` | `budgets` (REST API) | Airbyte BC connector |
+| 33 | SAP S/4HANA | OData v4 (CDS views) | `I_JournalEntry`, `I_GLAccountLineItem` | `A_BudgetPeriodBalance` (CDS) | Airbyte SAP OData |
+| 34 | SAP ECC 6.0 | RFC/BAPI or IDoc | BSEG + BKPF tables | BAPI_BUDGET_POST (RFC) | Airbyte SAP (RFC) |
+| 35 | SAP Business One | Service Layer REST | `JournalEntries` (JDT1) | `BudgetScenarios` (Service Layer) | Airbyte HTTP |
+| 36 | ERPNext | Frappe REST API | `GL Entry` doctype | `Budget` doctype (Frappe API) | Airbyte ERPNext or direct Frappe API |
 
 ### Architecture
 
@@ -175,6 +177,32 @@ Canonical Staging (models/staging/canonical/) ← UNION ALL from adapters
     ↓
 Bronze → Silver → Gold (unchanged, ERP-agnostic)
 ```
+
+### D365 Budget Write-Back
+
+On budget approval in Frappe, push the approved budget to D365 F&O via OData POST to `BudgetRegisterEntries`.
+
+**Source of Truth Decision:**
+
+| Concern | Source of Truth | Rationale |
+|---|---|---|
+| Budget planning & scenarios | **ClickHouse** (via Frappe) | Multi-layer budgets (base/challenge/management/board), spreading profiles, scenario modeling — none of this exists in D365 |
+| Actuals / GL | **D365** (synced to CH via Airbyte) | ERP owns transactional data |
+| Budget vs Actuals reporting | **ClickHouse** (has both) | Single query engine for all analytics |
+| Budget control in ERP | **D365** (receives approved budget) | D365 uses `BudgetRegisterEntries` for PO/expense validation |
+
+ClickHouse is the authoritative store for budget. D365 is a **downstream sync target** — a one-way push so D365's native budget control features have the numbers.
+
+**Round-trip prevention:** Do NOT Airbyte-sync `BudgetRegisterEntries` back from D365 into `epm_raw`. If syncing is required for audit, tag EPM-originated entries (e.g. `BudgetModelId = 'EPM'`) so dbt can filter them out.
+
+**Implementation:**
+
+- [ ] Frappe hook on Budget Input workflow transition to "Approved" → triggers async write-back
+- [ ] D365 OData POST: map flat budget rows to `BudgetRegisterEntries` header + line format
+- [ ] Dimension mapping: entity, account, cost center, dept → D365 `LedgerDimensionValuesJson`
+- [ ] Error handling: D365 validation failures (closed posting period, invalid account) → log to Budget Input doctype
+- [ ] Idempotency: tag entries with EPM budget ID to allow re-push without duplicates
+- [ ] Config: D365 connection settings in Frappe (Azure AD tenant, client ID, resource URL) — reuse Airbyte credentials pattern
 
 ### Scale Architecture
 
