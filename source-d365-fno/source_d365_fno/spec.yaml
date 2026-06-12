@@ -13,13 +13,13 @@ connectionSpecification:
       type: string
       title: Azure AD Tenant ID
       description: "The Azure Active Directory tenant ID for the D365 environment."
-      airbyte_secret: false
+      airbyte_secret: true
       order: 0
     client_id:
       type: string
       title: Azure AD Client ID
       description: "The application (client) ID registered in Azure AD."
-      airbyte_secret: false
+      airbyte_secret: true
       order: 1
     client_secret:
       type: string
@@ -42,3 +42,13 @@ connectionSpecification:
       minimum: 100
       maximum: 10000
       order: 4
+    cross_company:
+      type: boolean
+      title: Read Across All Companies
+      description: >-
+        When enabled (default), data is read across all legal entities in the
+        environment (cross-company=true), as required for consolidation.
+        Disable to restrict a sync to the default company of the service
+        principal — useful for large tenants or permission-scoped credentials.
+      default: true
+      order: 5

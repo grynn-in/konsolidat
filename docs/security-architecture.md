@@ -88,8 +88,25 @@ Frappe RBAC enforces this on every DocType and API endpoint automatically.
 | **TLS** | Caddy reverse proxy with automatic Let's Encrypt certificates |
 | **CORS** | Whitelist `*.officeapps.live.com` + company tenant domain |
 | **Rate limiting** | 100 requests/min per user (prevents runaway Excel refresh loops) |
-| **ClickHouse isolation** | Private network only — no public endpoint. All access via Frappe or Cube. |
+| **ClickHouse isolation** | Target posture: private network only, no public endpoint — all access via Frappe or Cube. The bundled `docker-compose.yml` binds ClickHouse ports to loopback (`CLICKHOUSE_BIND=127.0.0.1`) by default; see *Deployment profiles* below. |
 | **Cube SQL API** | Internal network only, or VPN for desktop Excel ODBC users |
+
+> #### Deployment profiles — read before exposing anything
+>
+> The two columns above describe the **intended production posture**. The
+> bundled `docker-compose.yml` is a **local-dev profile** and differs in ways
+> you must close before any networked deployment:
+>
+> | Concern | Default (bundled compose) | Production action |
+> |---|---|---|
+> | ClickHouse port binding | Loopback only (`CLICKHOUSE_BIND=127.0.0.1`) | Keep loopback; reach ClickHouse via the Caddy proxy or a private network. Never bind `0.0.0.0` on a public host. |
+> | ClickHouse transport | Plaintext HTTP (`CLICKHOUSE_SECURE=false`) | Set `CLICKHOUSE_SECURE=true` / `CLICKHOUSE_VERIFY=true` and use the dbt `prod` target (`DBT_TARGET=prod`). |
+> | Secrets | `deploy.sh` generates random passwords into `.env`; compose refuses to start if any password is unset | Use a real secrets manager; rotate the generated values. |
+> | Cube API secret | Required (compose fails if unset) | Keep; rotate per environment. |
+>
+> "Encryption in transit — TLS everywhere" (below) is only true once
+> `CLICKHOUSE_SECURE=true`; the loopback-only default keeps the plaintext hop
+> on the host, off the wire.
 
 ### 4. Audit Trail
 
@@ -108,8 +125,30 @@ No custom code needed — this is Frappe's built-in behavior.
 | **PII in GL data** | ClickHouse stores account-level aggregates, not transactional PII. Personal data stays in D365. |
 | **Budget confidentiality** | Role-based: planners see only their entity/cost center (Frappe user permissions) |
 | **Encryption at rest** | ClickHouse Cloud and Azure/AWS managed disks provide this by default |
-| **Encryption in transit** | TLS everywhere (Frappe ↔ browser, Frappe ↔ ClickHouse, Airbyte ↔ D365) |
+| **Encryption in transit** | TLS everywhere once `CLICKHOUSE_SECURE=true` (Frappe ↔ browser via Caddy, Frappe/dbt ↔ ClickHouse, Airbyte ↔ D365). The local-dev default leaves the Frappe ↔ ClickHouse hop plaintext on loopback. |
 | **Backup** | ClickHouse Cloud: automatic. Self-hosted: scheduled snapshots to blob storage. |
+
+### 6. Source Connector Security (Airbyte → D365 F&O)
+
+The custom `source-d365-fno` connector authenticates to Dynamics 365 via Azure
+AD v2.0 **client-credentials** OAuth:
+
+- **Credential handling** — `tenant_id`, `client_id`, and `client_secret` are
+  all marked `airbyte_secret: true` in `spec.yaml`, so Airbyte stores them
+  encrypted and masks them in logs. Tokens are cached in memory with a 60-second
+  expiry buffer and never persisted.
+- **No secret leakage on failure** — `check_connection` returns a generic
+  message (HTTP status only); the raw Azure AD response body is logged at debug
+  level, never surfaced to the UI.
+- **Transport** — token acquisition and all OData calls use HTTPS with default
+  certificate verification.
+- **Throttling** — the connector retries `429`/`5xx` with `Retry-After`-aware
+  backoff so it degrades politely against D365's OData limits.
+- **Data scope** — reads are cross-company by default (required for
+  consolidation); set `cross_company: false` to scope a sync to the service
+  principal's default company.
+- **Recommendation** — grant the Azure AD app the **minimum** D365 data-entity
+  permissions needed, and rotate the client secret per Azure AD policy.
 
 ---
 

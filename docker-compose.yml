@@ -20,7 +20,7 @@ x-frappe-common: &frappe-common
     CLICKHOUSE_HOST: clickhouse
     CLICKHOUSE_PORT: "8123"
     CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
-    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
     # dbt config (for pipeline runner)
     DBT_PROJECT_DIR: /home/frappe/dbt_project
   volumes:
@@ -45,7 +45,7 @@ services:
     image: mariadb:10.11
     container_name: konsolidat_mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
@@ -81,12 +81,12 @@ services:
     image: clickhouse/clickhouse-server:24.8-alpine
     container_name: konsolidat_clickhouse
     ports:
-      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"    # HTTP API
-      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"  # Native protocol
-      - "${EXCEL_ODBC_PORT:-15432}:15432"       # PostgreSQL wire (Excel/ODBC)
+      - "${CLICKHOUSE_BIND:-127.0.0.1}:${CLICKHOUSE_HTTP_PORT:-8123}:8123"    # HTTP API (loopback by default)
+      - "${CLICKHOUSE_BIND:-127.0.0.1}:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"  # Native protocol (loopback by default)
+      - "${CLICKHOUSE_BIND:-127.0.0.1}:${EXCEL_ODBC_PORT:-15432}:15432"       # PostgreSQL wire (Excel/ODBC, loopback by default)
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     volumes:
       - clickhouse_data:/var/lib/clickhouse
@@ -114,8 +114,8 @@ services:
     entrypoint: ["bash", "/home/frappe/configurator/init.sh"]
     environment:
       <<: *frappe-env
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run ./deploy.sh to generate secrets in .env}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?run ./deploy.sh to generate secrets in .env}
     volumes:
       - frappe_sites:/home/frappe/frappe-bench/sites
       - frappe_logs:/home/frappe/frappe-bench/logs
@@ -163,7 +163,7 @@ services:
       CUBEJS_DB_HOST: clickhouse
       CUBEJS_DB_PORT: "8123"
       CUBEJS_DB_USER: ${CLICKHOUSE_USER:-default}
-      CUBEJS_DB_PASS: ${CLICKHOUSE_PASSWORD:-open_epm_dev}
+      CUBEJS_DB_PASS: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       CUBEJS_DB_NAME: epm_gold
       CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:?Run ./deploy.sh to generate CUBEJS_API_SECRET}
       CUBEJS_DEV_MODE: ${CUBEJS_DEV_MODE:-false}
@@ -217,7 +217,7 @@ services:
     entrypoint: ["bash", "/home/frappe/backup/backup.sh"]
     environment:
       <<: *frappe-env
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       BACKUP_DIR: /backups
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
       BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}

@@ -5,6 +5,7 @@
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping, MutableMapping
 
@@ -16,6 +17,28 @@ from .auth import D365OAuth2Authenticator
 logger = logging.getLogger("airbyte")
 
 SCHEMAS_DIR = Path(__file__).parent / "schemas"
+
+# ISO-8601 date / datetime, optionally with timezone. Cursor fields in D365
+# (AccountingDate, StartDate, Date) are dates, so a matching value is emitted
+# as a bare OData temporal literal; anything else is treated as a string and
+# single-quoted (with '' escaping) so it cannot break out of the $filter.
+_ISO_TEMPORAL = re.compile(
+    r"^\d{4}-\d{2}-\d{2}"
+    r"([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$"
+)
+
+
+def odata_filter_literal(value: Any) -> str:
+    """Render a cursor value as a safe OData literal for use in a $filter.
+
+    Temporal values (ISO-8601) pass through unquoted; everything else becomes a
+    quoted string with embedded single-quotes doubled per the OData spec. This
+    prevents filter-injection from a tampered cursor/state value.
+    """
+    s = str(value)
+    if _ISO_TEMPORAL.match(s):
+        return s
+    return "'" + s.replace("'", "''") + "'"
 
 
 class D365ODataStream(HttpStream):
@@ -32,13 +55,31 @@ class D365ODataStream(HttpStream):
     page_size: int = 5000
     odata_entity: str = ""  # Override in subclass
 
+    # Retry throttled / transient responses with capped exponential backoff.
+    max_retries: int = 5
+
     def __init__(self, authenticator: D365OAuth2Authenticator, environment_url: str,
-                 page_size: int = 5000, **kwargs):
+                 page_size: int = 5000, cross_company: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._authenticator = authenticator
         self._environment_url = environment_url.rstrip("/")
         self.page_size = page_size
+        self._cross_company = cross_company
         self._use_skip = True
+
+    def should_retry(self, response: requests.Response) -> bool:
+        """Retry on throttling (429) and transient server errors (5xx)."""
+        return response.status_code == 429 or 500 <= response.status_code < 600
+
+    def backoff_time(self, response: requests.Response) -> float | None:
+        """Honour Retry-After when D365 sends it; else exponential backoff."""
+        retry_after = response.headers.get("Retry-After")
+        if retry_after:
+            try:
+                return float(retry_after)
+            except (TypeError, ValueError):
+                pass
+        return None  # fall back to the CDK's exponential backoff
 
     @property
     def url_base(self) -> str:
@@ -63,9 +104,10 @@ class D365ODataStream(HttpStream):
         next_page_token: Mapping[str, Any] | None = None,
     ) -> MutableMapping[str, Any]:
         params: MutableMapping[str, Any] = {
-            "cross-company": "true",
             "$top": str(self.page_size),
         }
+        if self._cross_company:
+            params["cross-company"] = "true"
 
         if next_page_token:
             if next_page_token.get("next_link"):
@@ -151,10 +193,13 @@ class D365IncrementalStream(D365ODataStream):
             next_page_token=next_page_token,
         )
 
-        # Apply incremental filter
+        # Apply incremental filter. The cursor value is rendered as a safe
+        # OData literal so a tampered/unexpected state value cannot inject
+        # additional filter syntax.
         cursor_value = (stream_state or {}).get(self.cursor_field)
         if cursor_value and params:  # params is empty when using nextLink
-            params["$filter"] = f"{self.cursor_field} ge {cursor_value}"
+            literal = odata_filter_literal(cursor_value)
+            params["$filter"] = f"{self.cursor_field} ge {literal}"
 
         return params
 

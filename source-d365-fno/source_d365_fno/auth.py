@@ -3,10 +3,30 @@
 
 """D365 F&O OAuth2 authenticator using Azure AD v2.0 client credentials."""
 
+import logging
 import time
 from typing import Any, Mapping
 
 import requests
+
+logger = logging.getLogger("airbyte")
+
+
+def auth_error_message(exc: Exception) -> str:
+    """Render a generic, non-sensitive auth-failure message.
+
+    Kept pure so it can be unit-tested directly. The raw server body — which
+    Azure AD may populate with echoed request metadata — is never included; it
+    is logged separately at debug level by the caller.
+    """
+    if isinstance(exc, requests.exceptions.HTTPError):
+        status = exc.response.status_code if exc.response is not None else "unknown"
+        return (
+            f"Authentication failed (HTTP {status}). Check tenant_id, "
+            "client_id, client_secret and that the app has access to the "
+            "environment."
+        )
+    return f"Connection error: {type(exc).__name__}"
 
 
 class D365OAuth2Authenticator:
@@ -58,11 +78,20 @@ class D365OAuth2Authenticator:
         return {"Authorization": f"Bearer {self.get_token()}"}
 
     def check_connection(self) -> tuple[bool, str | None]:
-        """Validate credentials by acquiring a token."""
+        """Validate credentials by acquiring a token.
+
+        Returns a generic, non-sensitive message to the caller (surfaced in the
+        Airbyte UI/logs). The full server response — which Azure AD may populate
+        with echoed request metadata — is logged at debug level only.
+        """
         try:
             self._refresh_token()
             return True, None
         except requests.exceptions.HTTPError as e:
-            return False, f"Authentication failed: {e.response.status_code} {e.response.text}"
-        except Exception as e:
-            return False, f"Authentication error: {str(e)}"
+            logger.debug("D365 token request failed (HTTP %s): %s",
+                         getattr(e.response, "status_code", "?"),
+                         getattr(e.response, "text", ""))
+            return False, auth_error_message(e)
+        except (requests.exceptions.RequestException, KeyError) as e:
+            logger.debug("D365 token request error", exc_info=True)
+            return False, auth_error_message(e)

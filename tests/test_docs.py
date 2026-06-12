@@ -18,12 +18,17 @@ def test_readme_no_streamlit():
     assert "Streamlit" not in content
 
 
-def test_readme_no_cube():
-    """README must not reference Cube.js as active component."""
+def test_readme_documents_cube():
+    """Cube.js is a core component — README must mention it.
+
+    Cube is the semantic / SQL-API layer that scales concurrent reads to the
+    target 50–500 users (Excel ODBC and BI tools query through it). The Frappe
+    direct-query path remains the source of truth for the =EPM() formulas and
+    write-back. See docs/reference/semantic-layer.md.
+    """
     with open(os.path.join(PROJECT_ROOT, "README.md")) as f:
         content = f.read()
-    assert "Cube.js" not in content
-    assert "CubeJS" not in content
+    assert "Cube" in content
 
 
 def test_readme_no_dagster():

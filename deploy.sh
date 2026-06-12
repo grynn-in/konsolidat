@@ -274,7 +274,7 @@ else
 fi
 echo -e "  ${CYAN}Excel ODBC:${NC} localhost:${EXCEL_ODBC_PORT:-15432}"
 echo ""
-echo -e "  ${CYAN}Admin login:${NC} Administrator / ${ADMIN_PASSWORD:-admin123}"
+echo -e "  ${CYAN}Admin login:${NC} Administrator (password saved to ./.credentials)"
 echo ""
 echo -e "  ${YELLOW}Commands:${NC}"
 echo -e "    ./deploy.sh status     Show service status"

@@ -55,11 +55,15 @@ class SourceD365Fno(AbstractSource):
         auth = D365OAuth2Authenticator(config)
         env_url = config["environment_url"]
         page_size = config.get("page_size", 5000)
+        # Default True preserves prior behaviour (read across all legal
+        # entities, as required for consolidation).
+        cross_company = config.get("cross_company", True)
 
         common = {
             "authenticator": auth,
             "environment_url": env_url,
             "page_size": page_size,
+            "cross_company": cross_company,
         }
 
         return [

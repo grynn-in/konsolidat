@@ -9,8 +9,9 @@ def test_streamlit_dir_removed():
     assert not os.path.exists(os.path.join(PROJECT_ROOT, "streamlit"))
 
 
-def test_cube_dir_removed():
-    assert not os.path.exists(os.path.join(PROJECT_ROOT, "cube"))
+def test_cube_dir_present():
+    """Cube is a core component (semantic layer that scales reads to 50–500 users)."""
+    assert os.path.exists(os.path.join(PROJECT_ROOT, "cube"))
 
 
 def test_api_dir_removed():
@@ -25,21 +26,23 @@ def test_dockerfile_api_removed():
     assert not os.path.exists(os.path.join(PROJECT_ROOT, "docker", "Dockerfile.api"))
 
 
-def test_docker_compose_only_clickhouse():
-    """docker-compose.yml should only have clickhouse service."""
+def test_docker_compose_core_services():
+    """docker-compose.yml has the core stack and none of the retired services."""
     path = os.path.join(PROJECT_ROOT, "docker-compose.yml")
     with open(path) as f:
         dc = yaml.safe_load(f)
 
     services = list(dc.get("services", {}).keys())
+    # Core stack: ClickHouse warehouse, Frappe app, and the Cube semantic layer
+    # (Cube scales concurrent reads to the target 50–500 users).
     assert "clickhouse" in services
-    # These should be gone
+    assert "frappe_backend" in services
+    assert "cubejs" in services
+    # Retired alternatives that must stay gone.
     removed = [
         "dagster_postgres",
-        "dbt_init",
         "dagster_webserver",
         "dagster_daemon",
-        "cube",
         "api",
         "streamlit",
     ]
@@ -57,13 +60,12 @@ def test_docker_compose_no_removed_volumes():
     assert "dagster_postgres_data" not in volumes
 
 
-def test_env_example_no_cube_vars():
-    """No Cube.js env vars in .env.example."""
+def test_env_example_has_cube_vars():
+    """Cube is a core service, so its config belongs in .env.example."""
     path = os.path.join(PROJECT_ROOT, ".env.example")
     with open(path) as f:
         content = f.read()
-    assert "CUBEJS" not in content
-    assert "CUBE_" not in content
+    assert "CUBEJS" in content
 
 
 def test_env_example_no_dagster_vars():
