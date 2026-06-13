@@ -22,17 +22,24 @@ Complete the `Fact Table` registry: add `grain`/`refresh_frequency`/required-art
 
 ### 1. `Fact Table` doctype fields (additions)
 
-Existing fields stay (`fact_name`, `label`, `source_type`, `clickhouse_table`, `dbt_model`, `scenario_key`, `has_scenario_id`, `measures`, `fact_dimensions`, `reroute_*`). Add:
+Existing fields stay (`fact_name`, `label`, `source_type`, `clickhouse_table`, `dbt_model`, `scenario_key`, `has_scenario_id`, `reroute_*`). **`measures` is converted from a free-text JSON array to a child table** (`fact_measures`) for symmetry with `fact_dimensions` (decided 2026-06-13). Add:
 
 | Field | Type | Purpose |
 |---|---|---|
 | `grain` | Small Text | Human description of one row, e.g. "one row per account × period × entity × cost_center" |
 | `refresh_frequency` | Select | `On Extract` / `Daily` / `Monthly` / `On Demand` — drives PBR scheduling later |
-| `required_measures` | Small Text (JSON) | Subset of `measures` that must be non-null; validated against active `Measure` registry |
 | `generates_source` | Check | If set, `schema_apply` creates a CREATE TABLE + dbt source for write-back facts (statistical/sub-ledger). Off for derived gold facts. |
+| `extra_columns` | Code (JSON) | Fact-local detail columns for sub-ledger facts (e.g. `invoice_id`, `due_date`, `aging_bucket`) that are **not** shared analytical dimensions — `[{"name","ch_type"}]`. Kept out of the global `Dimension` registry by design. |
 | `status` | Select | `Draft` / `Published` / `Inactive` (mirror `Dimension`/`Measure` lifecycle) |
 
-`validate()` (extend `fact_table.py`): each `required_measures` entry must exist in `measures`; every `measures` entry must match a Published `Measure.measure_name`; every `fact_dimensions.dimension` must be a Published `Dimension`; `clickhouse_table` must match `_SAFE_TABLE_NAME` (`schema.table`).
+Child tables (per-row `required` checkbox on **both**, for symmetry):
+
+| Child table | Row fields |
+|---|---|
+| `fact_dimensions` | `dimension` (Link → Dimension), `required` (Check) |
+| `fact_measures` | `measure` (Link → Measure), `required` (Check) |
+
+`validate()` (extend `fact_table.py`): every `fact_measures.measure` must match a Published `Measure.measure_name`; every `fact_dimensions.dimension` must be a Published `Dimension`; `clickhouse_table` must match `_SAFE_TABLE_NAME` (`schema.table`); each `extra_columns[].name` must pass `_SAFE_IDENTIFIER`.
 
 ### 2. Pre-seeded facts (`install.py`)
 
@@ -95,8 +102,8 @@ Statistical facts replace the seed-driven drivers:
 8. `=EPM("USMF", 2024, "P1", fact="headcount", dimensions={"cost_center":"SALES"})` resolves through `_get_fact_by_scenario("headcount")` and returns the headcount value (no hardcoded scenario branch).
 9. New structural tests in `test_fact_registry.py` pass: validation rejects bad measures/dimensions, generation produces expected DDL string, summary keys present.
 
-## Open Questions
+## Resolved Decisions (2026-06-13)
 
-- Should `fact_dimensions` carry a `required` flag per row (vs the separate `required_measures` JSON), to express mandatory grain columns symmetrically with measures?
-- Sub-ledger facts (AP/AR/Fixed Assets) have richer grains than the dimension/measure model expresses — do we model their detail columns as ad-hoc dimensions, or add a free-form `extra_columns` JSON to `Fact Table`?
-- Does dropping/inactivating a fact ever drop the ClickHouse table, or is teardown always manual (current dimension flow never drops columns)?
+- **Required flags:** symmetric per-row `required` checkbox on both `fact_dimensions` and `fact_measures`; `measures` becomes a child table (no separate `required_measures` JSON).
+- **Sub-ledger detail columns:** `extra_columns` JSON on `Fact Table` for fact-local detail (invoice_id, due_date, aging_bucket) — kept out of the global `Dimension` registry, which is reserved for shared analytical dimensions.
+- **Teardown:** inactivating a fact **never** drops its ClickHouse table (mirrors the dimension flow that never drops columns). Inactive stops dbt sources/queries; physical `DROP TABLE` is a deliberate manual admin action.

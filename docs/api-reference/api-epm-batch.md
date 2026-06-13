@@ -22,11 +22,11 @@ Send a JSON array as the raw POST body. Each element is a request object.
 | `year` | integer | Yes | — | Fiscal year |
 | `period` | string/int | Yes | — | Period: `1`–`12`, `Q1`–`Q4`, `H1`, `H2`, `FY` |
 | `account` | string | Yes | — | Main account code |
-| `measure` | string | No | `period_net_amount` | Measure name |
-| `scenario` | string | No | `actuals` | Scenario: `actuals`, `budget`, `variance` |
-| `cost_center` | string | No | `""` | Cost center filter |
-| `department` | string | No | `""` | Department filter |
-| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to tables with a `scenario_id` column. |
+| `measure` | string | No | `period_net_amount` | Measure name. Validated against the active Measure registry ∩ the fact's measures. |
+| `fact` | string | No | — | Fact registry name selecting the source table. Case-insensitive; wins over `scenario`. |
+| `dimensions` | object | No | `{}` | Dimension filters, e.g. `{"dim_cost_center":"SALES","dim_project":"P01"}`. Keys are canonical dimension names, validated against the fact's allowed dimensions. The only way to filter by dimension. |
+| `scenario` | string | No | `actuals` | Resolves the fact via its `scenario_key` when `fact` is not supplied. |
+| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to facts whose `has_scenario_id` flag is set. |
 
 ### Size Limit
 
@@ -39,7 +39,7 @@ Maximum **2000** items per request (`MAX_BATCH_SIZE`). Requests exceeding this l
   "message": {
     "values": [125430.50, 0.0, 89200.00, null],
     "errors": [
-      {"index": 3, "error": "Measure foo not allowed for scenario actuals. Allowed: period_debit, period_credit, period_net_amount, transaction_count, ytd_debit, ytd_credit, ytd_net_amount"}
+      {"index": 3, "error": "Invalid measure 'foo' for fact 'gl_journal_entries'. Allowed: period_credit, period_debit, period_net_amount, transaction_count, ytd_net_amount"}
     ]
   }
 }
@@ -71,8 +71,8 @@ curl -X POST "http://localhost:8069/api/method/konsol.api.epm_batch" \
     {"entity": "USMF", "year": 2024, "period": 5, "account": "401100"},
     {"entity": "USMF", "year": 2024, "period": 5, "account": "501100"},
     {"entity": "DEMF", "year": 2024, "period": "Q1", "account": "401100", "measure": "period_net_amount"},
-    {"entity": "USMF", "year": 2025, "period": "FY", "account": "6100", "measure": "period_amount", "scenario": "budget"},
-    {"entity": "USMF", "year": 2024, "period": 5, "account": "401100", "measure": "variance_abs", "scenario": "variance", "cost_center": "SALES"}
+    {"entity": "USMF", "year": 2025, "period": "FY", "account": "6100", "measure": "period_amount", "fact": "budget_input"},
+    {"entity": "USMF", "year": 2024, "period": 5, "account": "401100", "measure": "variance_abs", "fact": "variance_analysis", "dimensions": {"dim_cost_center": "SALES"}}
   ]'
 ```
 
@@ -102,7 +102,7 @@ print(data["values"])  # [125430.50, 89200.00]
 The batch endpoint doesn't issue one SQL query per item. Instead, it groups items by:
 
 ```
-(scenario, measure, period_tuple, has_cost_center, has_department, scenario_id)
+(fact, measure, period_tuple, dimension_name_set, scenario_id)
 ```
 
 All items in a group are fetched with a single ClickHouse `SELECT` using parameterized `IN` clauses:
@@ -129,8 +129,9 @@ Per-item validation runs before query grouping. Invalid items get inline errors 
 
 | Error | Trigger |
 |-------|---------|
-| `Invalid scenario: {x}` | Scenario not in `actuals`, `budget`, `variance` |
-| `Measure {x} not allowed for scenario {y}` | Measure/scenario mismatch |
+| `Invalid fact '{x}'. Allowed: ...` | Fact name not in the Fact registry |
+| `Invalid measure '{x}' for fact '{y}'. Allowed: ...` | Measure not in the Published registry ∩ the fact's measures |
+| `Invalid dimension '{x}' for fact '{y}'. Allowed: ...` | Dimension not allowed by the fact |
 | `Batch size {n} exceeds maximum of 2000` | Array too large (rejects entire request) |
 | `ClickHouse query timeout` | ClickHouse query exceeded 30s |
 | `ClickHouse connection failed` | ClickHouse unreachable |

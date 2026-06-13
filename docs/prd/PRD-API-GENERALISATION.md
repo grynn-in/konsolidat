@@ -42,17 +42,18 @@ Excel `=EPM()` target: `=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_cen
 
 Add `_get_fact(fact=None, scenario=None)` in `api.py`:
 
-1. If `fact` is given → load `Fact Table` by `fact_name` (case-insensitive); error `Invalid fact '{x}'. Allowed: {published fact_names}` if missing.
+1. If `fact` is given → load `Fact Table` by `fact_name`, matched **case-insensitively** (`fact_name` is stored normalized lowercase; the lookup lower-cases the input). Match on `fact_name` only — not the dbt model / ClickHouse table name. Error `Invalid fact '{x}'. Allowed: {published fact_names}` if missing.
 2. Else fall back to current `_get_fact_by_scenario(scenario)` for backward compatibility.
-3. Default `fact="GL"` resolves to the pre-seeded universal GL `Fact Table` (Phase 2.3 core fact, `clickhouse_table = epm_gold.gold_trial_balance`).
+3. **If both `fact` and `scenario` are supplied, `fact` wins** and a warning is logged (`frappe.log_error`/`logger().warning`) — the more explicit, newer param takes precedence so mixed-era calls don't break.
+4. Default `fact="GL"` resolves to the pre-seeded universal GL `Fact Table` (Phase 2.3 core fact, `clickhouse_table = epm_gold.gold_trial_balance`).
 
 `_get_fact_by_scenario` stays as the legacy path; both return the same dict shape (`clickhouse_table`, `measures`, `dimensions`, `has_scenario_id`, reroute fields).
 
 ### 3. Dimension handling
 
-- Accept `dimensions` as a dict on `epm_value` (query-string JSON or repeated `dimensions[<name>]=` style) and on each `epm_batch` item.
+- Accept `dimensions` on `epm_value` as a **JSON-encoded string** query param (e.g. `dimensions=%7B%22cost_center%22%3A%22CC001%22%7D`), and as a native object on each `epm_batch` item (POST JSON). Bracket syntax (`dimensions[name]=`) is **not** supported — one encoding, documented.
 - Build the canonical dimensions dict by merging, in precedence order: legacy `cost_center`/`department` named params → explicit `dimensions` dict (explicit wins).
-- Drop the `dim_` prefix requirement from the public contract: keys are **canonical dimension names** (matching `Dimension.dimension_name`). Internally the query builder maps each name to its ClickHouse column.
+- Drop the `dim_` prefix requirement from the public contract: keys are **canonical dimension names** (matching `Dimension.dimension_name`). **The gold/ClickHouse column IS the canonical dimension name** — `dim_select_from_source()` renames `source_column → name` at the bronze→staging boundary, so every gold column equals `Dimension.name`. The query builder uses the dimension name directly as the column; `source_column` is never used in read queries (adapter/staging concern only).
 - Validate every supplied dimension name against the resolved fact's `dimensions` JSON (the fact's allowed dimensions); unknown name → `Invalid dimension '{x}' for fact '{f}'. Allowed: {...}`.
 - Keep the existing `_SAFE_IDENTIFIER` regex guard before any SQL interpolation.
 
@@ -67,7 +68,7 @@ Add `_get_fact(fact=None, scenario=None)` in `api.py`:
 `_batch_query_clickhouse` already groups by `(scenario, measure, periods, frozenset(dim_names), scenario_id)`. Changes:
 
 - Group key gains `fact` (replacing `scenario` as the table-determining element); the table is read from the resolved fact, not from scenario.
-- Dimension column names come from the `Dimension` registry mapping (canonical name → ClickHouse column), not assumed equal to the param key.
+- Dimension column = the canonical dimension name (confirmed: gold columns equal `Dimension.name`); the param key is used directly as the column, guarded by `_SAFE_IDENTIFIER`.
 - No change to the parameterized `IN`-tuple batching or reroute logic.
 
 ### 6. Docs & Excel contract
@@ -101,9 +102,16 @@ Add `_get_fact(fact=None, scenario=None)` in `api.py`:
 9. Docs (`api-epm-value.md`, `api-epm-batch.md`, `api-overview.md`) document `fact` and `dimensions`, and no longer present `cost_center`/`department` as the primary dimension mechanism.
 10. Existing pytest suite for `epm_value`/`epm_batch` passes unchanged for all legacy-param call shapes (no regression).
 
-## Open Questions
+## Resolved Decisions (2026-06-13)
 
-- Query-string encoding of `dimensions` for the GET `epm_value` (JSON-encoded string vs `dimensions[name]=value` bracket syntax) — pick one and document; batch (POST JSON) is unambiguous.
-- Canonical name vs ClickHouse column mapping: is `Dimension.source_column` the warehouse column, or is there a separate gold-layer column name? Confirm the registry field the query builder should map to.
-- Should `fact` and `scenario` both being supplied be an error, or should `fact` silently win? (Proposed: `fact` wins, warn.)
-- Case sensitivity / aliasing for `fact_name` lookup (e.g. `GL` vs `gl` vs `gold_trial_balance`).
+- **No backward compatibility (2026-06-13):** the legacy `cost_center`/`department` named params and `dim_*` kwargs are **removed**. `dimensions` (dict) is the only dimension mechanism. The duplicate per-scenario validation helpers (`_check_scenario`/`_check_measure`/`_validate_scenario_and_measure`) are removed in favour of a single `_resolve_and_validate()`. `scenario` is retained as a valid fact resolver (via `scenario_key`), not as a legacy alias.
+- **`dimensions` encoding:** JSON-encoded string for GET `epm_value`; native object for POST `epm_batch`. Bracket syntax not supported.
+- **Canonical name → column:** the gold/ClickHouse column **is** the canonical `Dimension.name` (verified in `macros/dimension_helpers.sql`: `dim_select_from_source()` renames `source_column → name` at staging). Query builder uses the dimension name directly; `source_column` is staging-only.
+- **`fact` + `scenario` both supplied:** `fact` wins, log a warning.
+- **`fact_name` lookup:** case-insensitive, stored normalized lowercase; match on `fact_name` only (not model/table name).
+
+## Implementation status (2026-06-13)
+
+Implemented in konsol branch `feat/phase2-fact-registry` (commits `36eec5b`, plus
+backward-compat removal). Remaining: Excel VBA `=EPM()` dimensions emission (§6) and
+runtime verification (needs a konsol-installed site / live ClickHouse).
