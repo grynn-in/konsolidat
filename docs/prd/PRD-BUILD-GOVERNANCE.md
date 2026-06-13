@@ -2,7 +2,7 @@
 
 **Status:** In Progress
 **Date:** 2026-06-11
-**Repos:** `open_epm` (dbt tags), `konsol` (Frappe governance layer)
+**Repos:** `konsolidat` (dbt tags), `konsol` (Frappe governance layer)
 
 ## Problem
 
@@ -19,7 +19,7 @@ Replace fire-and-forget `dbt build` with a **governed, tag-aware, approval-gated
 
 ## Scope
 
-### 1. dbt Domain Tags (`open_epm`)
+### 1. dbt Domain Tags (`konsolidat`)
 
 | Tag | Models | Needs epm_raw? |
 |---|---|---|
