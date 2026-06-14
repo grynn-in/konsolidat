@@ -1,0 +1,97 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/office-js/custom-functions.schema.json",
+  "functions": [
+    {
+      "id": "EPM",
+      "name": "EPM",
+      "description": "Retrieve a financial value (actuals by default) for an entity / period / account.",
+      "parameters": [
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year, e.g. 2024", "type": "number" },
+        { "name": "period", "description": "1-12, or Q1-Q4, H1-H2, FY", "type": "string" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "measure", "description": "Measure (default period_net_amount)", "type": "string", "optional": true },
+        { "name": "scenario", "description": "Scenario (default actuals)", "type": "string", "optional": true },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true },
+        { "name": "scenarioId", "description": "Explicit scenario id", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    },
+    {
+      "id": "EPM_BUDGET",
+      "name": "EPM_BUDGET",
+      "description": "Budget amount (measure=period_amount, scenario=budget).",
+      "parameters": [
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year", "type": "number" },
+        { "name": "period", "description": "1-12, or Q1-Q4, H1-H2, FY", "type": "string" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true },
+        { "name": "scenarioId", "description": "Explicit scenario id", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    },
+    {
+      "id": "EPM_VARIANCE",
+      "name": "EPM_VARIANCE",
+      "description": "Variance (absolute) — measure=variance_abs, scenario=variance.",
+      "parameters": [
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year", "type": "number" },
+        { "name": "period", "description": "1-12, or Q1-Q4, H1-H2, FY", "type": "string" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true },
+        { "name": "scenarioId", "description": "Explicit scenario id", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    },
+    {
+      "id": "EPM_DEBIT",
+      "name": "EPM_DEBIT",
+      "description": "Period debit (measure=period_debit, scenario=actuals).",
+      "parameters": [
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year", "type": "number" },
+        { "name": "period", "description": "1-12, or Q1-Q4, H1-H2, FY", "type": "string" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    },
+    {
+      "id": "EPM_CREDIT",
+      "name": "EPM_CREDIT",
+      "description": "Period credit (measure=period_credit, scenario=actuals).",
+      "parameters": [
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year", "type": "number" },
+        { "name": "period", "description": "1-12, or Q1-Q4, H1-H2, FY", "type": "string" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    },
+    {
+      "id": "EPMSAVE",
+      "name": "EPMSAVE",
+      "description": "Write a single budget cell back to konsol on recalc. Returns the amount.",
+      "parameters": [
+        { "name": "amount", "description": "Value to write", "type": "number" },
+        { "name": "entity", "description": "Legal entity / data area id", "type": "string" },
+        { "name": "year", "description": "Fiscal year", "type": "number" },
+        { "name": "period", "description": "Fiscal period 1-12", "type": "number" },
+        { "name": "account", "description": "Main account code", "type": "string" },
+        { "name": "scenarioId", "description": "Scenario id", "type": "string" },
+        { "name": "layer", "description": "base | challenge | management | board", "type": "string" },
+        { "name": "costCenter", "description": "Cost center dimension", "type": "string", "optional": true },
+        { "name": "department", "description": "Department dimension", "type": "string", "optional": true }
+      ],
+      "result": { "type": "number" }
+    }
+  ]
+}

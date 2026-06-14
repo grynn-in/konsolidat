@@ -31,14 +31,44 @@
   <Permissions>ReadWriteDocument</Permissions>
 
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.1">
+        <bt:Set Name="SharedRuntime" MinVersion="1.1" />
+      </bt:Sets>
+    </Requirements>
     <Hosts>
       <Host xsi:type="Workbook">
+        <!-- Shared runtime: one long-lived browser runtime hosts BOTH the task
+             pane and the custom functions, so the session cookie established at
+             login in the pane is sent by the =K.EPM() fetch() calls. The
+             JS-only (non-shared) custom-functions runtime does NOT support
+             cookies, which would make cookie-based auth fail with a 401. -->
+        <Runtimes>
+          <Runtime resid="Taskpane.Url" lifetime="long" />
+        </Runtimes>
+        <AllFormFactors>
+          <ExtensionPoint xsi:type="CustomFunctions">
+            <Script>
+              <SourceLocation resid="Functions.Script.Url" />
+            </Script>
+            <!-- Shared runtime: functions register from the same page as the
+                 task pane (which loads functions.js), so Page == Taskpane.Url. -->
+            <Page>
+              <SourceLocation resid="Taskpane.Url" />
+            </Page>
+            <Metadata>
+              <SourceLocation resid="Functions.Metadata.Url" />
+            </Metadata>
+            <Namespace resid="Functions.Namespace" />
+          </ExtensionPoint>
+        </AllFormFactors>
         <DesktopFormFactor>
           <GetStarted>
             <Title resid="GetStarted.Title" />
             <Description resid="GetStarted.Description" />
             <LearnMoreUrl resid="GetStarted.LearnMoreUrl" />
           </GetStarted>
+          <FunctionFile resid="Taskpane.Url" />
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="OpenEPMGroup">
@@ -80,11 +110,14 @@
       <bt:Urls>
         <bt:Url id="Taskpane.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/index.html" />
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/open-epm/open-epm" />
+        <bt:Url id="Functions.Script.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.js" />
+        <bt:Url id="Functions.Metadata.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.json" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Open EPM Pipeline" />
         <bt:String id="CommandsGroup.Label" DefaultValue="Open EPM" />
         <bt:String id="TaskpaneButton.Label" DefaultValue="OpenEPM" />
+        <bt:String id="Functions.Namespace" DefaultValue="K" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="GetStarted.Description" DefaultValue="Monitor and trigger pipeline runs from Excel." />
