@@ -43,6 +43,7 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | [Allocation Enhancements (Circular & Reciprocal)](PRD-ALLOCATION-ENHANCEMENTS.md) | Iterative convergence and simultaneous-equations methods for reciprocal cost pools. | Not Started |
 | [Planning Enhancements (Driver-Based & Recurring)](PRD-PLANNING-ENHANCEMENTS.md) | Driver-based planning, phasing templates, recurring topside journals with approval. | Not Started |
 | [Reporting Enhancements (Waterfall, Trend, Commentary)](PRD-REPORTING-ENHANCEMENTS.md) | Waterfall/bridge variance decomposition, trend analysis, commentary on variance cells. | Not Started |
+| [Close Assertion Suite (Reconciliation Gate)](PRD-CLOSE-ASSERTION-SUITE.md) | Per-close green/red assertion suite over the 60 dbt `assert_*` tests — row-level failures + sign-off gate. | Not Started |
 
 ## Phase 7 — Production Hardening
 

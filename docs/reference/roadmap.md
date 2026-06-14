@@ -345,7 +345,7 @@ PRD: [Reporting Enhancements (Waterfall, Trend, Commentary)](../prd/PRD-REPORTIN
 
 ### 6.10 Close Assertion Suite — Reconciliation Gate (3–5 days)
 
-PRD: _to be authored_
+PRD: [Close Assertion Suite — Reconciliation Gate](../prd/PRD-CLOSE-ASSERTION-SUITE.md)
 
 > Every close runs against an automated assertion suite. **Green** means the numbers reconcile; **red** tells you exactly which row broke, and why — before anyone signs off.
 
