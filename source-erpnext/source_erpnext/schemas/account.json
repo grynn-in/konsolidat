@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": { "type": ["string", "null"] },
+    "account_name": { "type": ["string", "null"] },
+    "root_type": { "type": ["string", "null"] },
+    "account_type": { "type": ["string", "null"] },
+    "company": { "type": ["string", "null"] },
+    "disabled": { "type": ["string", "integer", "boolean", "null"] },
+    "modified": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

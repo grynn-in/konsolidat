@@ -18,6 +18,7 @@ clean-targets:
 vars:
   erp_sources:
     - d365_fo
+    - erpnext
 
   dimensions:
     - name: dim_cost_center

@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  # --- Canonical adapter models (feed into stg_gl_entries, stg_accounts, etc.) ---
+  - name: stg_erpnext__gl_entries
+    description: "ERPNext GL entries adapter — canonical schema output"
+    columns:
+      - name: record_id
+        tests:
+          - not_null
+      - name: entity_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+
+  - name: stg_erpnext__trial_balance
+    description: "ERPNext trial balance adapter (derived from GL Entry) — canonical schema output"
+
+  - name: stg_erpnext__accounts
+    description: "ERPNext chart of accounts adapter — canonical schema output"
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+
+  - name: stg_erpnext__legal_entities
+    description: "ERPNext legal entities adapter — canonical schema output"
+    columns:
+      - name: entity_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_erpnext__exchange_rates
+    description: "ERPNext exchange rates adapter — canonical schema output"
+
+  - name: stg_erpnext__budget_entries
+    description: "ERPNext budget entries adapter — canonical schema output"
+
+  - name: stg_erpnext__fiscal_periods
+    description: "ERPNext fiscal periods adapter — canonical schema output"
