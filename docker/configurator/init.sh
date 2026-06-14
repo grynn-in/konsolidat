@@ -90,6 +90,26 @@ bench --site "$SITE_NAME" execute konsol.install.setup_epm_settings \
     --kwargs "{\"ch_host\": \"${CH_HOST}\", \"ch_port\": ${CH_PORT}, \"ch_user\": \"${CLICKHOUSE_USER:-default}\", \"ch_password\": \"${CLICKHOUSE_PASSWORD:-open_epm_dev}\"}" \
     2>/dev/null || echo "EPM Settings setup skipped (install.py may not exist yet)"
 
+# Rebuild assets so the manifest matches the current image.
+#
+# Why: the hashed JS/CSS bundles live in the image layer
+# (sites/assets/frappe -> apps/frappe/.../public/dist), but the manifest
+# that maps logical bundle names to those hashes (sites/assets/assets.json)
+# lives in the persistent `frappe_sites` named volume. Docker never
+# overwrites a populated volume, so when the image is rebuilt (new content
+# hashes) over an existing volume, the stale assets.json keeps pointing at
+# old hashes -> every asset URL 404s -> the Desk loads with no CSS/JS.
+# Regenerating here rewrites dist + assets.json together so they can never
+# drift. Runs in both the fresh-install and existing-site paths.
+#
+# Kept last and non-fatal on purpose: this script runs under `set -e` and the
+# deploy aborts if the configurator exits non-zero, so a flaky esbuild must not
+# block the more critical site/DB/EPM setup above or stop services from
+# starting. A running Desk with a loud warning beats a halted deploy.
+echo "Rebuilding assets (sync manifest to current image)..."
+bench build --app frappe --app konsol \
+    || echo "WARN: asset build failed — Desk CSS/JS may 404 until the next deploy"
+
 echo ""
 echo "=== Configurator Complete ==="
 echo "Site: ${SITE_NAME}"
