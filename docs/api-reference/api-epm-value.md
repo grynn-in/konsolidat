@@ -20,11 +20,13 @@ All parameters are passed as query string arguments.
 | `year` | integer | Yes | — | Fiscal year (e.g., `2024`) |
 | `period` | string/int | Yes | — | Fiscal period: `1`–`12`, `Q1`–`Q4`, `H1`, `H2`, `FY` |
 | `account` | string | Yes | — | Main account code (e.g., `401100`) |
-| `measure` | string | No | `period_net_amount` | Measure name ([see allowed measures](api-overview.md#scenario--table-mapping)) |
-| `scenario` | string | No | `actuals` | Scenario: `actuals`, `budget`, `variance` |
-| `cost_center` | string | No | `""` | Cost center filter |
-| `department` | string | No | `""` | Department filter |
-| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to tables with a `scenario_id` column (currently `gold_spread_budget`). When empty, returns the sum across all scenario IDs. |
+| `measure` | string | No | `period_net_amount` | Measure name. Validated against the active **Measure** registry intersected with the fact's allowed measures. |
+| `fact` | string | No | — | Fact registry name (e.g. `gl_journal_entries`, `budget_input`, `headcount`) selecting the source table. Case-insensitive. **Wins over `scenario`** when both are given. |
+| `dimensions` | string (JSON) | No | `{}` | Dimension filters as a JSON object, e.g. `{"dim_cost_center":"CC001","dim_project":"P01"}`. Keys are canonical dimension names; validated against the fact's allowed dimensions. This is the only way to filter by dimension. |
+| `scenario` | string | No | `actuals` | Resolves the fact via its `scenario_key` when `fact` is not supplied. |
+| `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to facts whose `has_scenario_id` flag is set (e.g. `budget_input`). When empty, returns the sum across all scenario IDs. |
+
+> **Dynamic schema (Phase 2.4):** dimensions, measures, and facts are registry-driven (Frappe `Dimension`, `Measure`, `Fact Table` doctypes). Adding a dimension/measure/fact is a registry operation — the API requires no code change. There is no fixed scenario→table map; `fact` (or legacy `scenario`) resolves to a `Fact Table.clickhouse_table`.
 
 ## Period Resolution
 
@@ -70,12 +72,22 @@ measure=period_amount&scenario=budget" \
   -b "cookies.txt"
 ```
 
-### With dimension filters
+### With generic dimension filters (Phase 2.4)
+
+```bash
+# dimensions is a URL-encoded JSON object: {"dim_cost_center":"SALES","dim_project":"P01"}
+curl "http://localhost:8069/api/method/konsol.api.epm_value?\
+entity=USMF&year=2024&period=FY&account=401100&\
+dimensions=%7B%22dim_cost_center%22%3A%22SALES%22%2C%22dim_project%22%3A%22P01%22%7D" \
+  -b "cookies.txt"
+```
+
+### Selecting a fact by name (Phase 2.4)
 
 ```bash
 curl "http://localhost:8069/api/method/konsol.api.epm_value?\
 entity=USMF&year=2024&period=FY&account=401100&\
-cost_center=SALES&department=SALES" \
+fact=headcount&measure=driver_value" \
   -b "cookies.txt"
 ```
 
@@ -90,21 +102,30 @@ measure=period_amount&scenario=budget&scenario_id=BUDGET_2025" \
 
 ## Error Responses
 
-### Invalid scenario
+### Invalid fact
 
 ```json
 {
   "exc_type": "ValidationError",
-  "_server_messages": "[\"Invalid scenario: forecast. Allowed: actuals, budget, variance\"]"
+  "_server_messages": "[\"Invalid fact 'forecast'. Allowed: budget_input, gl_journal_entries, headcount, ...\"]"
 }
 ```
 
-### Invalid measure for scenario
+### Invalid measure for fact
 
 ```json
 {
   "exc_type": "ValidationError",
-  "_server_messages": "[\"Measure ytd_net_amount not allowed for scenario budget. Allowed: period_amount, annual_amount\"]"
+  "_server_messages": "[\"Invalid measure 'ytd_net_amount' for fact 'budget_input'. Allowed: annual_amount, period_amount\"]"
+}
+```
+
+### Invalid dimension for fact
+
+```json
+{
+  "exc_type": "ValidationError",
+  "_server_messages": "[\"Invalid dimension 'dim_project' for fact 'gl_journal_entries'. Allowed: dim_business_unit, dim_cost_center, dim_department\"]"
 }
 ```
 

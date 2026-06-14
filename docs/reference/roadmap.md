@@ -1,6 +1,8 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-12*
+*Last updated: 2026-06-13*
+
+See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
 ## Status Summary
 
@@ -80,6 +82,8 @@ The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to spe
 
 ### 2.3 Fact Registry (1.5 days)
 
+PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
+
 - [ ] Frappe `Fact Table` doctype: `name`, `source_type` (ERP GL / Budget / Statistical / Sub-ledger), `grain` description, `refresh_frequency`
 - [ ] Core facts (pre-seeded, always present):
   - **GL Journal Entries** — debits/credits by account/period/entity (the universal financial fact)
@@ -98,6 +102,8 @@ The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to spe
 - [ ] Statistical facts replace the current `allocation_drivers` seed with a proper queryable fact table
 
 ### 2.4 API Generalisation (1 day)
+
+PRD: [API Generalisation](../prd/PRD-API-GENERALISATION.md)
 
 - [ ] Replace hardcoded `cost_center`, `department` params with generic `dimensions` dict
 - [ ] `=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})`
@@ -129,14 +135,14 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The canonical staging 
 | Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) — 7 canonical models, UNION ALL from adapters |
 | D365 F&O Adapter Refactor | 1 day | **Done** (PR #10) — 16 models renamed `stg_d365_fo__*`, canonical output |
 | D365 F&O Budget Write-Back | 2 days | Not started — OData POST on budget approval |
-| D365 Business Central Connector | 3 days | Not started |
-| SAP S/4HANA Connector | 3 days | Not started |
-| SAP ECC 6.0 Connector | 3 days | Not started |
-| SAP Business One Connector | 2 days | Not started |
-| ERPNext Connector | 2 days | Not started |
-| Dimension Harmonization | 3 days | Not started |
-| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning done, incremental extraction not started |
-| Connector Registry (Frappe) | 2 days | Not started |
+| D365 Business Central Connector | 3 days | Not started — PRD: [D365 BC](../prd/PRD-D365-BC-CONNECTOR.md) |
+| SAP S/4HANA Connector | 3 days | Not started — PRD: [SAP S/4HANA](../prd/PRD-SAP-S4HANA-CONNECTOR.md) |
+| SAP ECC 6.0 Connector | 3 days | Not started — PRD: [SAP ECC 6.0](../prd/PRD-SAP-ECC-CONNECTOR.md) |
+| SAP Business One Connector | 2 days | Not started — PRD: [SAP B1](../prd/PRD-SAP-B1-CONNECTOR.md) |
+| ERPNext Connector | 2 days | Not started — PRD: [ERPNext](../prd/PRD-ERPNEXT-CONNECTOR.md) |
+| Dimension Harmonization | 3 days | Not started — PRD: [Dimension Harmonization](../prd/PRD-DIMENSION-HARMONIZATION.md) |
+| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning done, incremental extraction not started — PRD: [Scale Architecture](../prd/PRD-SCALE-ARCHITECTURE.md) |
+| Connector Registry (Frappe) | 2 days | Not started — PRD: [Connector Registry](../prd/PRD-CONNECTOR-REGISTRY.md) |
 
 ### Dependency Graph
 
@@ -218,6 +224,8 @@ For deployments with 50–500 legal entities across multiple ERPs:
 
 ## Phase 4: Security & Entra ID SSO (~2 days)
 
+PRD: [Security & Microsoft Entra ID SSO](../prd/PRD-SECURITY-ENTRA-SSO.md)
+
 ### 4.1 Entra ID Integration (1 day)
 
 - [ ] Register Konsol in Microsoft Entra ID (OAuth2 / OpenID Connect)
@@ -257,6 +265,8 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.1 Cash Flow Statement (2–3 days)
 
+PRD: [Cash Flow Statement (Indirect Method)](../prd/PRD-CASH-FLOW-STATEMENT.md)
+
 - [ ] `gold_cash_flow_indirect.sql` — derive from balance sheet delta method
 - [ ] Categories: Operating, Investing, Financing
 - [ ] Account mapping seed: `cash_flow_categories.csv`
@@ -265,6 +275,8 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.2 Multi-GAAP / Dual Reporting (1 week)
 
+PRD: [Multi-GAAP / Dual Reporting](../prd/PRD-MULTI-GAAP.md)
+
 - [ ] `reporting_standard` dimension (LOCAL_GAAP, IFRS)
 - [ ] Separate adjustment rules per standard
 - [ ] Gold models produce one output per standard
@@ -272,11 +284,15 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.3 Rolling Forecasts (2–3 days)
 
+PRD: [Rolling Forecasts](../prd/PRD-ROLLING-FORECASTS.md)
+
 - [ ] 12-month forward window, shifts monthly
 - [ ] Actual for closed periods + forecast for open periods
 - [ ] Scenario type `rolling`
 
 ### 6.4 Budget Cell Locking (1–2 days)
+
+PRD: [Budget Cell Locking (Concurrency Control)](../prd/PRD-BUDGET-CELL-LOCKING.md)
 
 - [ ] Optimistic locking: check `modified` timestamp on `budget_cell_save()` — reject if stale
 - [ ] Conflict response with latest value so Excel can prompt user
@@ -285,12 +301,16 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.5 Multi-Step Budget Approval Chain (0.5 day)
 
+PRD: [Multi-Step Budget Approval Chain](../prd/PRD-BUDGET-APPROVAL-CHAIN.md)
+
 - [ ] Extend `budget_input_workflow.json`: Draft → Submitted → Dept Manager Approved → Controller Approved → CFO Approved
 - [ ] Each transition gated by a separate Frappe role
 - [ ] Use Frappe `docstatus = 1` (Submit) on final approval to permanently lock document
 - [ ] Email notifications on workflow state changes (Frappe Notification doctype)
 
 ### 6.6 Consolidation Enhancements (1–2 weeks)
+
+PRD: [Consolidation Enhancements](../prd/PRD-CONSOLIDATION-ENHANCEMENTS.md)
 
 - [ ] Historical (temporal) rate for equity line items — IAS 21 equity translation at acquisition-date rates
 - [ ] Remeasurement vs translation distinction (separate functional currency handling)
@@ -301,10 +321,14 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.7 Allocation Enhancements (3–5 days)
 
+PRD: [Allocation Enhancements (Circular & Reciprocal)](../prd/PRD-ALLOCATION-ENHANCEMENTS.md)
+
 - [ ] Circular (iterative) allocations — convergence-based solving for reciprocal cost pools
 - [ ] Reciprocal allocation method — simultaneous equations approach (alternative to iteration)
 
 ### 6.8 Planning Enhancements (1 week)
+
+PRD: [Planning Enhancements (Driver-Based & Recurring)](../prd/PRD-PLANNING-ENHANCEMENTS.md)
 
 - [ ] Driver-based planning — revenue × price × volume decomposition
 - [ ] Phasing templates at account-group level (apply seasonal patterns by account type)
@@ -313,13 +337,31 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 
 ### 6.9 Reporting Enhancements (3–5 days)
 
+PRD: [Reporting Enhancements (Waterfall, Trend, Commentary)](../prd/PRD-REPORTING-ENHANCEMENTS.md)
+
 - [ ] Waterfall / bridge analysis — price, volume, mix decomposition of variances
 - [ ] Trend analysis — period-over-period and rolling averages
 - [ ] Commentary / annotation on variances — attach narrative to variance cells
 
+### 6.10 Close Assertion Suite — Reconciliation Gate (3–5 days)
+
+PRD: [Close Assertion Suite — Reconciliation Gate](../prd/PRD-CLOSE-ASSERTION-SUITE.md)
+
+> Every close runs against an automated assertion suite. **Green** means the numbers reconcile; **red** tells you exactly which row broke, and why — before anyone signs off.
+
+- [ ] Surface the **60+ existing dbt `assert_*` tests** (BS balances, CTA, IC elimination, equity method, allocations, hierarchy ties) as a named, per-close **assertion suite**, run on a Pipeline Build Request via `dbt build` / `dbt test --store-failures`
+- [ ] `Close Assertion Run` doctype — one row per assertion with pass/fail (green/red), category, and a link to its failing rows
+- [ ] Capture the **failing rows + reason** from dbt `--store-failures` (the offending entity/account/period rows — not just "a test failed")
+- [ ] Close sign-off **gate** — block close approval (ties into the budget/consolidation approval chain, §6.5) until the suite is green, with an explicit, audited override
+- [ ] Dashboard — green/red board per close period; drill a red assertion into its failing rows
+
+Builds on what already exists: the `tests/**/assert_*.sql` suite, `gold_ic_reconciliation`, and the `Pipeline Build Request` governed-build path. Net-new work is **capturing/parsing dbt test results into the app** and the **sign-off gate** UI.
+
 ---
 
 ## Phase 7: Production Hardening (~3 days)
+
+PRD: [Production Hardening](../prd/PRD-PRODUCTION-HARDENING.md)
 
 - [ ] ClickHouse backup automation (scheduled snapshots to Azure Blob / S3)
 - [ ] Monitoring: ClickHouse query latency + Frappe response times (Prometheus + Grafana)
