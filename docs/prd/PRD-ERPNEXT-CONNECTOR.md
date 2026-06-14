@@ -1,6 +1,6 @@
 # PRD: ERPNext Connector
 
-**Status:** Not Started
+**Status:** Implemented (konsolidat #37)
 **Date:** 2026-06-13
 **Phase:** Phase 3 — Multi-ERP Support (PRD 36)
 **Repos:** `konsolidat` (dbt adapter + Airbyte source), `konsol` (Frappe API client, optional direct-extract path)

@@ -1,6 +1,6 @@
 # PRD: Fact Registry
 
-**Status:** Not Started
+**Status:** Implemented (konsol #14)
 **Date:** 2026-06-13
 **Phase:** Phase 2.3 — Dynamic Schema (Facts)
 **Repos:** `konsolidat` (dbt/data stack), `konsol` (Frappe app)

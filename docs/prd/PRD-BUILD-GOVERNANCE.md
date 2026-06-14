@@ -1,6 +1,6 @@
 # PRD: Pipeline Build Governance
 
-**Status:** In Progress
+**Status:** Implemented (konsol #16)
 **Date:** 2026-06-11
 **Repos:** `konsolidat` (dbt tags), `konsol` (Frappe governance layer)
 

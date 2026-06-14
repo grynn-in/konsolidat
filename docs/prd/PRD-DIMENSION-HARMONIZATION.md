@@ -1,6 +1,6 @@
 # PRD: Dimension Harmonization
 
-**Status:** Not Started
+**Status:** Implemented (konsolidat #38, konsol #18)
 **Date:** 2026-06-13
 **Phase:** Phase 3 — Multi-ERP (cross-connector)
 **Repos:** `konsolidat` (dbt/data stack), `konsol` (Frappe app)

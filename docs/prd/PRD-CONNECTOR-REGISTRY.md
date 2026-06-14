@@ -1,6 +1,6 @@
 # PRD: Connector Registry (Frappe)
 
-**Status:** Not Started
+**Status:** Implemented (konsol #15)
 **Date:** 2026-06-13
 **Phase:** Phase 3 — Multi-ERP (registry)
 **Repos:** `konsol` (Frappe app — new doctype + dbt var generation), `konsolidat` (dbt `erp_sources` var, per-ERP adapters)

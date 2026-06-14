@@ -8,8 +8,8 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 
 | PRD | Summary | Status |
 |---|---|---|
-| [Fact Registry](PRD-FACT-REGISTRY.md) | Complete the `Fact Table` registry — grain, refresh frequency, required-artifact validation, pre-seeded facts, DDL + dbt source generation on save. | Not Started |
-| [API Generalisation](PRD-API-GENERALISATION.md) | Replace hardcoded dimension/measure params with generic `dimensions` dict + registry-validated `measure`/`fact`; backward-compatible `=EPM()`. | Not Started |
+| [Fact Registry](PRD-FACT-REGISTRY.md) | Complete the `Fact Table` registry — grain, refresh frequency, required-artifact validation, pre-seeded facts, DDL + dbt source generation on save. | ✅ Implemented (konsol #14) |
+| [API Generalisation](PRD-API-GENERALISATION.md) | Replace hardcoded dimension/measure params with generic `dimensions` dict + registry-validated `measure`/`fact`; backward-compatible `=EPM()`. | ✅ Implemented (konsol #14) |
 
 ## Phase 3 — Multi-ERP Support
 
@@ -19,10 +19,10 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | [SAP S/4HANA Connector](PRD-SAP-S4HANA-CONNECTOR.md) | S/4HANA adapter via OData v4 CDS views (`I_JournalEntry`, `I_GLAccountLineItem`). | Not Started |
 | [SAP ECC 6.0 Connector](PRD-SAP-ECC-CONNECTOR.md) | ECC adapter via RFC/BAPI or IDoc over BSEG + BKPF. | Not Started |
 | [SAP Business One Connector](PRD-SAP-B1-CONNECTOR.md) | SAP B1 adapter via Service Layer REST (`JournalEntries` / JDT1). | Not Started |
-| [ERPNext Connector](PRD-ERPNEXT-CONNECTOR.md) | ERPNext adapter via Frappe REST API over the `GL Entry` doctype. | Not Started |
-| [Dimension Harmonization](PRD-DIMENSION-HARMONIZATION.md) | Map per-ERP dimensions to canonical dimensions across connectors. | Not Started |
+| [ERPNext Connector](PRD-ERPNEXT-CONNECTOR.md) | ERPNext adapter via Frappe REST API over the `GL Entry` doctype. | ✅ Implemented (konsolidat #37) |
+| [Dimension Harmonization](PRD-DIMENSION-HARMONIZATION.md) | Map per-ERP dimensions to canonical dimensions across connectors. | ✅ Implemented (konsolidat #38, konsol #18) |
 | [Scale Architecture (50–500 LEs)](PRD-SCALE-ARCHITECTURE.md) | Incremental extraction, ClickHouse sharding, per-connector health for large multi-ERP estates. | Not Started |
-| [Connector Registry (Frappe)](PRD-CONNECTOR-REGISTRY.md) | Frappe-driven catalog of connectors, credentials, and sync configuration. | Not Started |
+| [Connector Registry (Frappe)](PRD-CONNECTOR-REGISTRY.md) | Frappe-driven catalog of connectors, credentials, and sync configuration. | ✅ Implemented (konsol #15) |
 
 ## Phase 4 — Security & SSO
 
@@ -54,4 +54,4 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 
 | PRD | Summary | Status |
 |---|---|---|
-| [Pipeline Build Governance](PRD-BUILD-GOVERNANCE.md) | Governed, tag-aware, approval-gated dbt builds via Pipeline Build Request + Airbyte sync preflight. | In Progress |
+| [Pipeline Build Governance](PRD-BUILD-GOVERNANCE.md) | Governed, tag-aware, approval-gated dbt builds via Pipeline Build Request + Airbyte sync preflight. | ✅ Implemented (konsol #16) |

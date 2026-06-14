@@ -1,6 +1,6 @@
 # PRD: API Generalisation (generic dimensions/measures/facts)
 
-**Status:** Not Started
+**Status:** Implemented (konsol #14)
 **Date:** 2026-06-13
 **Phase:** Phase 2.4 — Dynamic Schema (API)
 **Repos:** `konsol` (Frappe app — `konsol/api.py`, EPM doctypes), `konsolidat` (docs/api-reference, Excel VBA `=EPM()` contract)
