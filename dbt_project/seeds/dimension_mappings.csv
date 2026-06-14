@@ -1,0 +1,3 @@
+dimension,erp_source,source_value,canonical_value,canonical_label,status
+dim_cost_center,d365_fo,001,CC-CORP,Corporate,Published
+dim_cost_center,erpnext,Main - AC,CC-CORP,Corporate,Published

@@ -76,6 +76,55 @@
     {%- endfor %}
 {% endmacro %}
 
+{# ============================================================
+   Dimension Harmonization (Phase 3)
+   Crosswalk raw, ERP-local dimension values to canonical values
+   via the `dimension_mappings` seed, keyed by
+   (dimension, erp_source, source_value). Unmapped values pass
+   through unchanged (coalesce fallback) so onboarding a new value
+   is non-blocking.
+
+   Applied centrally in canonical staging models: wrap the per-ERP UNION in a
+   CTE, then harmonize keyed on the per-row erp_source column so every adapter
+   is covered without restating columns:
+
+       with unioned as ( ...union all of stg_<erp>__gl_entries... )
+       select
+           erp_source, record_id, ..., is_credit,
+           {{ dim_harmonize_select(raw_alias='unioned') }}
+           _loaded_at, _raw_id
+       from unioned
+       {{ dim_harmonize_joins('unioned.erp_source', raw_alias='unioned') }}
+
+   Pass dims=get_budget_dimensions() for budget (no dim_business_unit).
+   ============================================================ #}
+
+{# Harmonized SELECT expressions: mapped canonical_value, else raw value passes
+   through. Uses an empty-string check rather than coalesce because ClickHouse
+   LEFT JOIN fills unmatched rows with the column default ('' for String), not
+   NULL — so coalesce() would wrongly blank out unmapped values.
+   Trailing comma slots this before the trailing _loaded_at/_raw_id. #}
+{% macro dim_harmonize_select(raw_alias='unioned', map_prefix='dmap_', dims=none) %}
+    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% for d in dimensions %}
+    if({{ map_prefix }}{{ d.name }}.canonical_value != '', {{ map_prefix }}{{ d.name }}.canonical_value, {{ raw_alias }}.{{ d.name }}) as {{ d.name }},
+    {%- endfor %}
+{% endmacro %}
+
+{# LEFT JOINs against the dimension_mappings seed, one per dimension.
+   erp_source_col is a SQL expression — the per-row erp_source column
+   (e.g. 'unioned.erp_source') so each source's values map correctly. #}
+{% macro dim_harmonize_joins(erp_source_col, raw_alias='unioned', map_prefix='dmap_', dims=none) %}
+    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% for d in dimensions %}
+    left join {{ ref('dimension_mappings') }} as {{ map_prefix }}{{ d.name }}
+        on {{ map_prefix }}{{ d.name }}.status = 'Published'
+        and {{ map_prefix }}{{ d.name }}.dimension = '{{ d.name }}'
+        and {{ map_prefix }}{{ d.name }}.erp_source = {{ erp_source_col }}
+        and {{ map_prefix }}{{ d.name }}.source_value = {{ raw_alias }}.{{ d.name }}
+    {%- endfor %}
+{% endmacro %}
+
 {# Bronze source mapping: casts source columns to dimension names #}
 {% macro dim_select_from_source(prefix='', dims=none) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
