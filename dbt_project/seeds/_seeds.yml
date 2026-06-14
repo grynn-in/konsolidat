@@ -1,0 +1,31 @@
+version: 2
+
+seeds:
+  - name: dimension_mappings
+    description: >
+      Dimension harmonization crosswalk — maps raw, ERP-local dimension values
+      to canonical values, keyed by (dimension, erp_source, source_value).
+      Consumed by the dim_harmonize() macro in per-ERP staging adapters.
+      Generated from published `Dimension Mapping` docs by konsol's dbt_config,
+      and hand-editable for bulk loads.
+    config:
+      column_types:
+        dimension: String
+        erp_source: String
+        source_value: String
+        canonical_value: String
+        canonical_label: String
+        status: String
+    columns:
+      - name: dimension
+        description: "Canonical dimension name (e.g. dim_cost_center)"
+      - name: erp_source
+        description: "ERP this raw value comes from (matches stg_*.erp_source)"
+      - name: source_value
+        description: "Raw value as it appears in that ERP"
+      - name: canonical_value
+        description: "Harmonized target value"
+      - name: canonical_label
+        description: "Display label for the canonical value"
+      - name: status
+        description: "Draft / Published / Inactive — only Published rows are applied"

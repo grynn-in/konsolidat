@@ -14,6 +14,10 @@
     amount/is_credit: silver takes abs(amount) and splits debit/credit by the
     is_credit flag, so amount = debit - credit (signed) with is_credit derived
     from the sign reproduces the canonical contract.
+
+    Dimension values are emitted raw here; harmonization to canonical values
+    happens centrally in the canonical stg_gl_entries model (keyed on the
+    per-row erp_source), so every adapter benefits without restating columns.
 #}
 
 select
