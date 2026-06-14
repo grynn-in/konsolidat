@@ -84,6 +84,20 @@ else
     bench use "$SITE_NAME"
 fi
 
+# Rebuild assets so the manifest matches the current image.
+#
+# Why: the hashed JS/CSS bundles live in the image layer
+# (sites/assets/frappe -> apps/frappe/.../public/dist), but the manifest
+# that maps logical bundle names to those hashes (sites/assets/assets.json)
+# lives in the persistent `frappe_sites` named volume. Docker never
+# overwrites a populated volume, so when the image is rebuilt (new content
+# hashes) over an existing volume, the stale assets.json keeps pointing at
+# old hashes -> every asset URL 404s -> the Desk loads with no CSS/JS.
+# Regenerating here rewrites dist + assets.json together so they can never
+# drift. Runs in both the fresh-install and existing-site paths.
+echo "Rebuilding assets (sync manifest to current image)..."
+bench build --app frappe --app konsol
+
 # Configure EPM Settings with ClickHouse connection
 echo "Configuring ClickHouse connection in EPM Settings..."
 bench --site "$SITE_NAME" execute konsol.install.setup_epm_settings \
