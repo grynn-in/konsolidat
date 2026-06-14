@@ -1,4 +1,4 @@
-.PHONY: setup up down dbt seed test logs status clean cube-schema
+.PHONY: setup up down dbt seed test logs status clean cube-schema check-gold-domains
 
 COMPOSE = docker compose
 COMPOSE_INIT = $(COMPOSE) --profile init
@@ -44,6 +44,9 @@ seed: ## Run dbt seed only
 
 cube-schema: ## Regenerate Cube YAML schemas from dbt_project.yml vars
 	python scripts/generate_cube_schemas.py
+
+check-gold-domains: ## Assert every gold model carries a known Build Governance domain
+	python scripts/check_gold_domains.py dbt_project/dbt_project.yml
 
 # ---------- Monitoring ----------
 
