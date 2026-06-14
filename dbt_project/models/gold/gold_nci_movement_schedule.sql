@@ -56,26 +56,32 @@ nci_bs_balance as (
 ),
 
 {# Build movement schedule per entity per period #}
+nci_periods as (
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period from nci_profit
+    union distinct
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period from nci_bs_balance
+),
+
 movement_schedule as (
     select
-        ne.consolidation_group,
-        ne.data_area_id,
-        ne.entity_name,
-        coalesce(np.fiscal_year, nb.fiscal_year) as fiscal_year,
-        coalesce(np.fiscal_period, nb.fiscal_period) as fiscal_period,
-        ne.nci_pct,
+        ne.consolidation_group as consolidation_group,
+        ne.data_area_id as data_area_id,
+        ne.entity_name as entity_name,
+        pr.fiscal_year as fiscal_year,
+        pr.fiscal_period as fiscal_period,
+        ne.nci_pct as nci_pct,
         coalesce(nb.nci_bs_total, 0) as nci_closing_balance,
         coalesce(np.nci_share_of_profit, 0) as share_of_profit,
-        ne.consolidation_method
+        ne.consolidation_method as consolidation_method
     from nci_entities as ne
+    inner join nci_periods as pr
+        on pr.consolidation_group = ne.consolidation_group and pr.data_area_id = ne.data_area_id
     left join nci_profit as np
-        on ne.consolidation_group = np.consolidation_group
-        and ne.data_area_id = np.data_area_id
+        on np.consolidation_group = ne.consolidation_group and np.data_area_id = ne.data_area_id
+        and np.fiscal_year = pr.fiscal_year and np.fiscal_period = pr.fiscal_period
     left join nci_bs_balance as nb
-        on ne.consolidation_group = nb.consolidation_group
-        and ne.data_area_id = nb.data_area_id
-        and np.fiscal_year = nb.fiscal_year
-        and np.fiscal_period = nb.fiscal_period
+        on nb.consolidation_group = ne.consolidation_group and nb.data_area_id = ne.data_area_id
+        and nb.fiscal_year = pr.fiscal_year and nb.fiscal_period = pr.fiscal_period
 )
 
 select

@@ -1,5 +1,6 @@
 {{
     config(
+        query_settings={'allow_experimental_join_condition': 1},
         engine='MergeTree()',
         order_by='tuple()'
     )
@@ -53,10 +54,12 @@ ic_balances as (
         ctb.data_area_id as data_area_id,
         sum(ctb.group_amount) as account_balance
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
-    inner join ic_rules as icr
-        on (ctb.main_account = icr.debit_account
-        or ctb.main_account = icr.credit_account)
-        and icr.rule_type = 'balance'
+    inner join (
+        select debit_account as ic_account from ic_rules where rule_type = 'balance'
+        union distinct
+        select credit_account as ic_account from ic_rules where rule_type = 'balance'
+    ) as ica
+        on ctb.main_account = ica.ic_account
     group by
         ctb.consolidation_group,
         ctb.fiscal_year,
@@ -116,14 +119,14 @@ unrealized_profit_eliminations as (
         -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination
     from ic_rules as icr
-    inner join {{ source('epm_staging', 'ic_balances') }} as icb
-        on (icr.debit_entity_pattern = '*' or icb.selling_entity = icr.debit_entity_pattern)
-        and (icr.credit_entity_pattern = '*' or icb.buying_entity = icr.credit_entity_pattern)
+    cross join {{ source('epm_staging', 'ic_balances') }} as icb
     inner join {{ ref('consolidation_groups') }} as cg
         on icb.buying_entity = cg.data_area_id
     where icr.rule_type = 'unrealized_profit'
       and icb.ending_inventory_from_ic > 0
       and icr.margin_pct > 0
+      and (icr.debit_entity_pattern = '*' or icb.selling_entity = icr.debit_entity_pattern)
+      and (icr.credit_entity_pattern = '*' or icb.buying_entity = icr.credit_entity_pattern)
 )
 
 select * from balance_eliminations

@@ -191,6 +191,15 @@ models:
 seeds:
   open_epm:
     +schema: gold
+    allocation_rules:
+      +column_types:
+        source_account: "String"
+        target_account: "String"
+        step_order: "UInt8"
+    ic_elimination_rules:
+      +column_types:
+        debit_account: "String"
+        credit_account: "String"
     consolidation_groups:
       +column_types:
         ownership_pct: "Decimal(5,2)"
