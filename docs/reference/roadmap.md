@@ -141,7 +141,7 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The canonical staging 
 | SAP Business One Connector | 2 days | Not started — PRD: [SAP B1](../prd/PRD-SAP-B1-CONNECTOR.md) |
 | ERPNext Connector | 2 days | Not started — PRD: [ERPNext](../prd/PRD-ERPNEXT-CONNECTOR.md) |
 | Dimension Harmonization | 3 days | Not started — PRD: [Dimension Harmonization](../prd/PRD-DIMENSION-HARMONIZATION.md) |
-| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning done, incremental extraction not started — PRD: [Scale Architecture](../prd/PRD-SCALE-ARCHITECTURE.md) |
+| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning + incremental extraction done; CH cluster sharding + per-connector health dashboard remaining — PRD: [Scale Architecture](../prd/PRD-SCALE-ARCHITECTURE.md) |
 | Connector Registry (Frappe) | 2 days | Not started — PRD: [Connector Registry](../prd/PRD-CONNECTOR-REGISTRY.md) |
 
 ### Dependency Graph
@@ -216,7 +216,7 @@ For deployments with 50–500 legal entities across multiple ERPs:
 
 - [x] **Partitioned bronze tables** — `bronze_general_journal_account_entries` partitioned by `toYear(accounting_date)`, budget by `toYYYYMM(transaction_date)`, FX by `toYear(valid_from)`
 - [x] **Parallel dbt builds** — per-ERP adapter builds can run concurrently (adapter pattern supports this)
-- [ ] **Incremental extraction** — Airbyte CDC for high-volume ERPs (SAP, D365)
+- [x] **Incremental extraction** — high-volume GL/budget bronze models are `incremental` + `ReplacingMergeTree` (CDC re-deliveries dedup on `_airbyte_extracted_at`); D365 GL streams cursor on the monotonic `SourceKey`; ERPNext on `modified`
 - [ ] **ClickHouse cluster** — sharded by entity_id for horizontal scale
 - [ ] **Monitoring** — per-connector health dashboard in Frappe
 
