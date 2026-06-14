@@ -1,0 +1,15 @@
+data:
+  connectorType: source
+  definitionId: "open-epm-erpnext"
+  dockerImageTag: "0.1.0"
+  dockerRepository: "open-epm/source-erpnext"
+  connectorSubtype: api
+  githubIssueLabel: source-erpnext
+  license: MIT
+  name: ERPNext
+  releaseStage: alpha
+  supportLevel: community
+  documentationUrl: https://github.com/open-epm/open-epm
+  tags:
+    - language:python
+    - cdk:python

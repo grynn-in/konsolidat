@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: erpnext_raw
+    description: "Raw ERPNext GL-family doctypes landed via the Frappe REST API (Airbyte HTTP source or direct konsol extractor)"
+    database: epm_raw
+    schema: ""
+    tables:
+      - name: gl_entry
+        identifier: gl_entry
+        description: "GL postings from ERPNext `GL Entry` doctype (one debit/credit row per posting)"
+        loaded_at_field: _airbyte_extracted_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+
+      - name: account
+        identifier: account
+        description: "Chart of accounts from ERPNext `Account` doctype"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: company
+        identifier: company
+        description: "Legal entity master from ERPNext `Company` doctype"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: currency_exchange
+        identifier: currency_exchange
+        description: "Exchange rates from ERPNext `Currency Exchange` doctype"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: budget
+        identifier: budget
+        description: "Budgets from ERPNext `Budget` doctype, flattened to one row per `Budget Account` child line"
+        loaded_at_field: _airbyte_extracted_at
+
+      - name: fiscal_year
+        identifier: fiscal_year
+        description: "Fiscal years from ERPNext `Fiscal Year` doctype"
+        loaded_at_field: _airbyte_extracted_at

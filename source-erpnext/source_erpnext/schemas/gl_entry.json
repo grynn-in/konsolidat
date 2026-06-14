@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": { "type": ["string", "null"] },
+    "company": { "type": ["string", "null"] },
+    "posting_date": { "type": ["string", "null"], "format": "date" },
+    "fiscal_year": { "type": ["string", "null"] },
+    "account": { "type": ["string", "null"] },
+    "account_currency": { "type": ["string", "null"] },
+    "debit": { "type": ["number", "null"] },
+    "credit": { "type": ["number", "null"] },
+    "against": { "type": ["string", "null"] },
+    "voucher_no": { "type": ["string", "null"] },
+    "voucher_type": { "type": ["string", "null"] },
+    "cost_center": { "type": ["string", "null"] },
+    "project": { "type": ["string", "null"] },
+    "is_cancelled": { "type": ["string", "integer", "boolean", "null"] },
+    "remarks": { "type": ["string", "null"] },
+    "modified": { "type": ["string", "null"], "format": "date-time" }
+  }
+}
