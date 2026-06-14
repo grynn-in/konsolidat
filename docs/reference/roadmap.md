@@ -343,6 +343,20 @@ PRD: [Reporting Enhancements (Waterfall, Trend, Commentary)](../prd/PRD-REPORTIN
 - [ ] Trend analysis — period-over-period and rolling averages
 - [ ] Commentary / annotation on variances — attach narrative to variance cells
 
+### 6.10 Close Assertion Suite — Reconciliation Gate (3–5 days)
+
+PRD: _to be authored_
+
+> Every close runs against an automated assertion suite. **Green** means the numbers reconcile; **red** tells you exactly which row broke, and why — before anyone signs off.
+
+- [ ] Surface the **60+ existing dbt `assert_*` tests** (BS balances, CTA, IC elimination, equity method, allocations, hierarchy ties) as a named, per-close **assertion suite**, run on a Pipeline Build Request via `dbt build` / `dbt test --store-failures`
+- [ ] `Close Assertion Run` doctype — one row per assertion with pass/fail (green/red), category, and a link to its failing rows
+- [ ] Capture the **failing rows + reason** from dbt `--store-failures` (the offending entity/account/period rows — not just "a test failed")
+- [ ] Close sign-off **gate** — block close approval (ties into the budget/consolidation approval chain, §6.5) until the suite is green, with an explicit, audited override
+- [ ] Dashboard — green/red board per close period; drill a red assertion into its failing rows
+
+Builds on what already exists: the `tests/**/assert_*.sql` suite, `gold_ic_reconciliation`, and the `Pipeline Build Request` governed-build path. Net-new work is **capturing/parsing dbt test results into the app** and the **sign-off gate** UI.
+
 ---
 
 ## Phase 7: Production Hardening (~3 days)
