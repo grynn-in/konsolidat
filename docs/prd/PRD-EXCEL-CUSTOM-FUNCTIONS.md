@@ -79,26 +79,44 @@ short debounce (one tick) coalesces every pending cell into **one** `epm_batch` 
 resolves each cell by index. A full grid recalc → a single round-trip. Respects
 `MAX_BATCH_SIZE = 2000` by chunking.
 
+### Auth — shared runtime (required)
+The functions authenticate with the **same session cookie** the task pane sets at login. A
+default custom-functions runtime is **JavaScript-only and does not support cookies**, so
+`fetch(credentials:"include")` would always 401. The manifest therefore declares a **shared
+runtime** (`<Runtimes lifetime="long">` + `SharedRuntime` requirement, `CustomFunctions` under
+`<AllFormFactors>`): the task pane and the functions share one browser runtime and one cookie
+jar. The shared page is `taskpane.html`/`index.html`, which loads `functions.js`. The user must
+still **sign in via the pane first**; until then every `=K.EPM` cell returns an instructive
+"not logged in" error.
+
 ### Errors
-Per-cell `errors[i]` → that cell returns a `#VALUE!`-style Custom Function error; other cells
-in the batch still resolve. Auth failure (401/403) → instructive error directing the user to
-open the task pane and log in.
+Per-cell `errors[i]` → that cell returns a `#VALUE!`-style Custom Function error; other cells in
+the batch still resolve. Missing data (`values[i]` null) → `0` (matches the VBA). Auth/HTTP
+failure on a read → all cells in that chunk error with a guiding message. A non-numeric `year`
+is rejected **client-side** (it would otherwise 500 the whole batch server-side).
+
+### Write-back (`EPMSAVE`) — VBA parity
+Mirrors the VBA `EPMSAVE`: a per-cell **save cache** skips re-POSTing unchanged cells (custom
+functions are volatile and recalc often), and on a failed write the function **returns the typed
+amount** (best-effort, not cached so it retries) rather than replacing the value with `#VALUE!`.
 
 ## Deliverables
 
 | File | Purpose |
 |---|---|
 | `excel-addin/src/functions.json` | Custom Functions metadata (names, params, types) |
-| `excel-addin/src/functions.js` | Implementation + `CustomFunctions.associate`, debounced batcher |
-| `excel-addin/src/functions.html` | Runtime page that loads `functions.js` |
-| `excel-addin/manifest.xml` | + `CustomFunctions` extension point, namespace `K`, runtime resources |
-| `excel-addin/package.json` | `deploy` script copies the 3 new files into `public/excel-addin/` |
+| `excel-addin/src/functions.js` | Implementation + `CustomFunctions.associate`, debounced batcher, `postJson` helper, save cache |
+| `excel-addin/manifest.xml` | `CustomFunctions` extension point (under `<AllFormFactors>`), namespace `K`, **shared runtime** |
+| `excel-addin/src/taskpane.html` | Shared page also loads `functions.js` to register the functions |
+| `excel-addin/package.json` | `deploy` script copies the new files into `public/excel-addin/` |
 
-`OpenEPM.bas` — **unchanged.**
+`OpenEPM.bas` — **unchanged.** (The standalone `functions.html` was removed; the shared page hosts the functions.)
 
 ## Open items / verification
-- ⚠️ `taskpane.js` currently sends `measure:"amount", scenario:"actual"` in its batch refresh —
-  drift from the backend defaults (`period_net_amount`/`actuals`). The Custom Functions use the
-  correct defaults; the task pane should be reconciled separately.
 - Not runtime-verified: needs a live konsol site + Office.js host (desktop Excel or web) to
-  sideload `manifest.xml` and smoke-test recalc + write-back.
+  sideload `manifest.xml` and smoke-test recalc, the shared-runtime cookie auth, and write-back.
+- Backend hardening follow-up (separate `konsol` PR): `epm_batch` does `int(req["year"])`
+  **outside** its per-cell try/except, so a bad `year` 500s the whole batch. The client now
+  guards this, but the server should also fail just the offending row.
+- The microtask debounce coalesces cells enqueued in one synchronous turn; confirm on a real
+  host that a large recalc still collapses to one POST (else switch to `setTimeout(flush, 0)`).

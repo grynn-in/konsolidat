@@ -85,10 +85,17 @@ Refresh — and work on Windows, Mac, and Excel on the web.
 | `=K.EPMSAVE(amount, entity, year, period, account, scenarioId, layer, [costCenter], [department])` | Write a budget cell back on recalc (`layer` ∈ base/challenge/management/board) |
 
 All `=K.EPM*` reads in a recalc pass are debounced into a **single** `epm_batch` POST
-(chunked at 2000). Auth uses the same session cookie as the task pane — sign in via the
-pane first. Files: `src/functions.json` (metadata), `src/functions.js` (logic),
-`src/functions.html` (runtime page); wired in `manifest.xml` via the `CustomFunctions`
-extension point.
+(chunked at 2000). Auth uses the same session cookie as the task pane — **sign in via the
+pane first**.
+
+The manifest declares a **shared runtime** (`<Runtimes>` + the `SharedRuntime`
+requirement): the task pane and the custom functions run in one browser runtime, so the
+session cookie set at login is sent by the functions' `fetch()` calls. (The default
+JS-only custom-functions runtime does not support cookies, so cookie-based auth would
+401.) The shared page is `taskpane.html` / `index.html`, which loads `functions.js` to
+register the functions. Files: `src/functions.json` (metadata) and `src/functions.js`
+(logic); wired in `manifest.xml` via the `CustomFunctions` extension point under
+`<AllFormFactors>`.
 
 ## Deploy
 

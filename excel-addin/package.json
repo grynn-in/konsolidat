@@ -4,6 +4,6 @@
   "private": true,
   "description": "Office.js Task Pane add-in + Custom Functions for Open EPM",
   "scripts": {
-    "deploy": "cp src/taskpane.html ../../frappe-bench/apps/konsol/konsol/public/excel-addin/index.html && cp src/taskpane.js src/taskpane.css src/functions.js src/functions.html src/functions.json ../../frappe-bench/apps/konsol/konsol/public/excel-addin/ && cp src/assets/*.png ../../frappe-bench/apps/konsol/konsol/public/excel-addin/assets/"
+    "deploy": "cp src/taskpane.html ../../frappe-bench/apps/konsol/konsol/public/excel-addin/index.html && cp src/taskpane.js src/taskpane.css src/functions.js src/functions.json ../../frappe-bench/apps/konsol/konsol/public/excel-addin/ && cp src/assets/*.png ../../frappe-bench/apps/konsol/konsol/public/excel-addin/assets/"
   }
 }
