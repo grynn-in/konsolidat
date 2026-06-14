@@ -6,7 +6,7 @@
 }}
 
 select
-    {{ cast_to_int64('RecId') }} as recid,
+    reinterpretAsInt64(cityHash64(assumeNotNull(RecId))) as recid,
     {{ cast_to_string('AccountCategory') }} as account_category,
     {{ cast_to_string('Description') }} as description,
     {{ cast_to_string('AccountType') }} as account_type,

@@ -73,9 +73,9 @@ auto_reversals as (
             else toUInt8(fiscal_period + auto_reverse_period)
         end as fiscal_period,
         main_account,
-        credit_amount as debit_amount,
-        debit_amount as credit_amount,
-        credit_amount - debit_amount as net_amount,
+        staging_adjustments.credit_amount as debit_amount,
+        staging_adjustments.debit_amount as credit_amount,
+        staging_adjustments.credit_amount - staging_adjustments.debit_amount as net_amount,
         concat('Auto-reversal of ', journal_id) as description,
         'system' as posted_by,
         'Approved' as status,

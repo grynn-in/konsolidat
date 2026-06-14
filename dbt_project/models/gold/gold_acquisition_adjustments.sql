@@ -81,7 +81,7 @@ goodwill as (
         ap.acquisition_price as acquisition_price,
         na.total_net_assets as net_assets,
         ap.ownership_pct as ownership_pct,
-        ap.acquisition_price - (na.total_net_assets * ap.ownership_pct / 100.0) as goodwill_amount,
+        toFloat64(ap.acquisition_price) - (toFloat64(na.total_net_assets) * toFloat64(ap.ownership_pct) / 100.0) as goodwill_amount,
         ap.fair_value_adjustment as fair_value_adjustment,
         ap.acquisition_date as acquisition_date,
         'goodwill' as adjustment_type
@@ -135,7 +135,7 @@ fva_entries as (
         '1900' as main_account,
         'Fair value adjustment on acquisition' as account_name,
         'fair_value_adjustment' as adjustment_type,
-        fair_value_adjustment as adjustment_amount,
+        toFloat64(fair_value_adjustment) as adjustment_amount,
         acquisition_date
     from goodwill
     where abs(fair_value_adjustment) > 0.01

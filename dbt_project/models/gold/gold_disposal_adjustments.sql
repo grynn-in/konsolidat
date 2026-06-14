@@ -29,7 +29,7 @@ disposal_net_assets as (
         dp.data_area_id,
         dp.disposal_date,
         dp.disposal_price,
-        dp.ownership_pct,
+        toFloat64(dp.ownership_pct) as ownership_pct,
         sum(case when ctb.is_balance_sheet = 1 then ctb.local_amount else 0 end) as net_assets
     from disposal_periods as dp
     inner join {{ ref('gold_consolidated_trial_balance') }} as ctb
@@ -57,13 +57,13 @@ disposal_gain_loss as (
         dna.data_area_id,
         toUInt16(toYear(dna.disposal_date)) as fiscal_year,
         toUInt8(toMonth(dna.disposal_date)) as fiscal_period,
-        dna.disposal_price,
-        dna.net_assets,
-        dna.ownership_pct,
-        coalesce(rg.goodwill_balance, 0) as remaining_goodwill,
-        dna.disposal_price
-            - (dna.net_assets * dna.ownership_pct / 100.0)
-            - coalesce(rg.goodwill_balance, 0) as gain_loss_amount,
+        toFloat64(dna.disposal_price) as disposal_price,
+        toFloat64(dna.net_assets) as net_assets,
+        toFloat64(dna.ownership_pct) as ownership_pct,
+        toFloat64(coalesce(rg.goodwill_balance, 0)) as remaining_goodwill,
+        toFloat64(dna.disposal_price)
+            - (toFloat64(dna.net_assets) * toFloat64(dna.ownership_pct) / 100.0)
+            - toFloat64(coalesce(rg.goodwill_balance, 0)) as gain_loss_amount,
         'disposal_gain_loss' as adjustment_type,
         dna.disposal_date
     from disposal_net_assets as dna
@@ -81,7 +81,7 @@ cta_recycling as (
         toUInt8(toMonth(dp.disposal_date)) as fiscal_period,
         toFloat64(0) as disposal_price,
         toFloat64(0) as net_assets,
-        dp.ownership_pct,
+        toFloat64(dp.ownership_pct) as ownership_pct,
         toFloat64(0) as remaining_goodwill,
         -sum(fx.cta_amount) as gain_loss_amount,
         'cta_recycling' as adjustment_type,

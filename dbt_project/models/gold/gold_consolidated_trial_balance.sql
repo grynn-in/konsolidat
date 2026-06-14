@@ -75,7 +75,7 @@ historical_rates as (
         data_area_id,
         main_account,
         rate_date,
-        historical_rate
+        toFloat64(historical_rate) as historical_rate
     from {{ source('epm_staging', 'historical_equity_rates') }}
 ),
 
@@ -154,8 +154,8 @@ rate_lookup as (
         rk.from_currency as from_currency,
         rk.to_currency as to_currency,
         rk.period_date as period_date,
-        coalesce(cr.rate, dr.rate, 1.0) as closing_rate,
-        coalesce(ar.rate, dr.rate, 1.0) as average_rate
+        coalesce(toFloat64(cr.rate), toFloat64(dr.rate), 1.0) as closing_rate,
+        coalesce(toFloat64(ar.rate), toFloat64(dr.rate), 1.0) as average_rate
     from rate_keys as rk
     left join closing_rate_lookup as cr
         on rk.from_currency = cr.from_currency
@@ -230,11 +230,10 @@ consolidated as (
     inner join entity_ownership as eo
         on etb.data_area_id = eo.data_area_id
     {# PRD-9: Temporal ownership — period_date falls within [effective_date, end_date] #}
-    left join ownership_staging as os
+    asof left join ownership_staging as os
         on eo.consolidation_group = os.consolidation_group
         and etb.data_area_id = os.data_area_id
         and etb.period_date >= os.effective_date
-        and etb.period_date <= os.end_date
     left join rate_lookup as rl
         on etb.accounting_currency = rl.from_currency
         and eo.reporting_currency = rl.to_currency
@@ -246,7 +245,7 @@ consolidated as (
             data_area_id,
             main_account,
             rate_date,
-            historical_rate,
+            toFloat64(historical_rate) as historical_rate,
             row_number() over (
                 partition by consolidation_group, data_area_id, main_account
                 order by rate_date desc

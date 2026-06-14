@@ -12,7 +12,13 @@
 #}
 
 {# Max steps we support via Jinja unrolling. Rules beyond this are ignored. #}
-{% set max_steps = 20 %}
+{% set max_steps = 1 %}
+{% if execute %}
+    {% set _r = run_query('select max(step_order) as m from ' ~ ref('allocation_rules')) %}
+    {% if _r and _r.rows and (_r.rows | length) > 0 and _r.rows[0][0] is not none %}
+        {% set max_steps = _r.rows[0][0] | int %}
+    {% endif %}
+{% endif %}
 
 with all_rules as (
     {# PRD-17: Prefer staging rules if populated, else seed fallback #}
@@ -72,7 +78,7 @@ drivers_unified as (
         cost_center,
         fiscal_year,
         fiscal_period,
-        driver_value
+        {{ cast_to_float64('driver_value') }} as driver_value
     from {{ source('epm_staging', 'allocation_drivers') }}
 
     union all
