@@ -1,6 +1,8 @@
 {{
     config(
-        engine='MergeTree()',
+        materialized='incremental',
+        incremental_strategy='append',
+        engine='ReplacingMergeTree(_airbyte_extracted_at)',
         order_by='(budget_register_entry_recid, recid)',
         partition_by='toYYYYMM(transaction_date)'
     )
@@ -28,3 +30,9 @@ from {{ ref('stg_budget_entries') }} b
 left join {{ ref('stg_d365_fo__budget_entries') }} d365
     on b.record_id = d365.record_id
     and b.erp_source = 'd365_fo'
+
+{# CDC delta: only reprocess rows extracted after the last loaded batch.
+   ReplacingMergeTree(_airbyte_extracted_at) collapses re-delivered rows. #}
+{% if is_incremental() %}
+where {{ cast_to_datetime('b._loaded_at') }} > (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}

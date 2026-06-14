@@ -1,6 +1,8 @@
 {{
     config(
-        engine='MergeTree()',
+        materialized='incremental',
+        incremental_strategy='append',
+        engine='ReplacingMergeTree(_airbyte_extracted_at)',
         order_by='(data_area_id, accounting_date, recid)',
         partition_by='toYear(accounting_date)'
     )
@@ -33,3 +35,9 @@ from {{ ref('stg_gl_entries') }} gl
 left join {{ ref('stg_d365_fo__gl_entries') }} d365
     on gl.record_id = d365.record_id
     and gl.erp_source = 'd365_fo'
+
+{# CDC delta: only reprocess rows extracted after the last loaded batch.
+   ReplacingMergeTree(_airbyte_extracted_at) collapses re-delivered rows. #}
+{% if is_incremental() %}
+where {{ cast_to_datetime('gl._loaded_at') }} > (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}

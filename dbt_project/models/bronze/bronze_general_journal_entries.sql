@@ -1,6 +1,8 @@
 {{
     config(
-        engine='MergeTree()',
+        materialized='incremental',
+        incremental_strategy='append',
+        engine='ReplacingMergeTree(_airbyte_extracted_at)',
         order_by='(data_area_id, accounting_date, recid)',
         partition_by='toYear(accounting_date)'
     )
@@ -21,3 +23,9 @@ select
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ ref('stg_d365_fo__gl_journal_entries') }}
+
+{# CDC delta: only reprocess rows extracted after the last loaded batch.
+   ReplacingMergeTree(_airbyte_extracted_at) collapses re-delivered rows. #}
+{% if is_incremental() %}
+where {{ cast_to_datetime('_airbyte_extracted_at') }} > (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}
