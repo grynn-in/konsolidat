@@ -1,0 +1,30 @@
+name: dbt checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dbt_project/**'
+      - 'scripts/check_gold_domains.py'
+      - '.github/workflows/dbt-checks.yml'
+  pull_request:
+    paths:
+      - 'dbt_project/**'
+      - 'scripts/check_gold_domains.py'
+      - '.github/workflows/dbt-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gold-domain-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pyyaml
+      - name: Every gold model has a known Build Governance domain
+        run: python scripts/check_gold_domains.py dbt_project/dbt_project.yml
