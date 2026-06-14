@@ -616,13 +616,15 @@ function refreshSheet() {
 
           for (var p = 1; p <= 12; p++) {
             // Keys must match the konsol.api.epm_batch contract: year + period.
+            // measure/scenario must match the backend defaults in konsol.api
+            // (period_net_amount / actuals) — "amount"/"actual" were wrong.
             queries.push({
               entity: entity,
               year: fiscalYear,
               period: p,
               account: account,
-              measure: "amount",
-              scenario: "actual"
+              measure: "period_net_amount",
+              scenario: "actuals"
             });
           }
         }

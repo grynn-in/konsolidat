@@ -39,6 +39,18 @@
             <Description resid="GetStarted.Description" />
             <LearnMoreUrl resid="GetStarted.LearnMoreUrl" />
           </GetStarted>
+          <ExtensionPoint xsi:type="CustomFunctions">
+            <Script>
+              <SourceLocation resid="Functions.Script.Url" />
+            </Script>
+            <Page>
+              <SourceLocation resid="Functions.Page.Url" />
+            </Page>
+            <Metadata>
+              <SourceLocation resid="Functions.Metadata.Url" />
+            </Metadata>
+            <Namespace resid="Functions.Namespace" />
+          </ExtensionPoint>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="OpenEPMGroup">
@@ -80,11 +92,15 @@
       <bt:Urls>
         <bt:Url id="Taskpane.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/index.html" />
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/open-epm/open-epm" />
+        <bt:Url id="Functions.Script.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.js" />
+        <bt:Url id="Functions.Page.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.html" />
+        <bt:Url id="Functions.Metadata.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.json" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Open EPM Pipeline" />
         <bt:String id="CommandsGroup.Label" DefaultValue="Open EPM" />
         <bt:String id="TaskpaneButton.Label" DefaultValue="OpenEPM" />
+        <bt:String id="Functions.Namespace" DefaultValue="K" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="GetStarted.Description" DefaultValue="Monitor and trigger pipeline runs from Excel." />
