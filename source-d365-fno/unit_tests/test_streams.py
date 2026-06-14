@@ -13,7 +13,34 @@ from source_d365_fno.streams import (
     GeneralJournalAccountEntryBiEntities,
     ExchangeRates,
     BudgetRegisterEntries,
+    odata_filter_literal,
+    cursor_is_greater,
 )
+
+
+class TestCursorHelpers:
+    def test_numeric_literal_is_bare(self):
+        assert odata_filter_literal(800012647) == "800012647"
+        assert odata_filter_literal("800012647") == "800012647"
+
+    def test_temporal_literal_is_bare(self):
+        assert odata_filter_literal("2024-06-01") == "2024-06-01"
+
+    def test_other_literal_is_quoted_and_escaped(self):
+        assert odata_filter_literal("USMF") == "'USMF'"
+        assert odata_filter_literal("a' or '1'='1") == "'a'' or ''1''=''1'"
+
+    def test_numeric_high_water_compares_as_int(self):
+        # Lexically "9" > "10"; numerically it must not advance the high-water.
+        assert cursor_is_greater("10", "9") is True
+        assert cursor_is_greater("9", "10") is False
+
+    def test_temporal_high_water_compares_as_string(self):
+        assert cursor_is_greater("2024-06-02", "2024-06-01") is True
+        assert cursor_is_greater("2024-06-01", "2024-06-02") is False
+
+    def test_first_value_always_greater(self):
+        assert cursor_is_greater("1", None) is True
 
 
 @pytest.fixture
@@ -129,7 +156,16 @@ class TestIncrementalStream:
             environment_url="https://test.operations.dynamics.com",
         )
         assert stream.supports_incremental is True
-        assert stream.cursor_field == "AccountingDate"
+        assert stream.cursor_field == "SourceKey"
+
+    def test_gl_cursor_numeric_filter_param(self, mock_auth):
+        """GL streams cursor on the numeric SourceKey -> bare OData literal."""
+        stream = GeneralJournalAccountEntryBiEntities(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        params = stream.request_params(stream_state={"SourceKey": 800012647})
+        assert params["$filter"] == "SourceKey ge 800012647"
 
     def test_incremental_filter_param(self, mock_auth):
         stream = ExchangeRates(
