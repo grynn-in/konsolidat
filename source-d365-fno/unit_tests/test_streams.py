@@ -167,6 +167,31 @@ class TestIncrementalStream:
         params = stream.request_params(stream_state={"SourceKey": 800012647})
         assert params["$filter"] == "SourceKey ge 800012647"
 
+    def test_read_records_tracks_numeric_max_high_water(self, mock_auth):
+        """read_records must advance state by NUMERIC max, not lexical.
+
+        Records arrive out of lexical order (9, 100, 10); the persisted cursor
+        must be "100", not "9" (lexical "9" > "100" > "10").
+        """
+        stream = GeneralJournalAccountEntryBiEntities(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        records = [{"SourceKey": 9}, {"SourceKey": 100}, {"SourceKey": 10}]
+        with patch.object(D365ODataStream, "read_records", return_value=iter(records)):
+            out = list(stream.read_records(sync_mode="incremental"))
+        assert len(out) == 3                 # all records still passed through
+        assert stream._cursor_value == "100"  # numeric max, not lexical
+
+    def test_request_params_emits_filter_for_zero_cursor(self, mock_auth):
+        """A SourceKey high-water of 0 is valid and must still emit a $filter."""
+        stream = GeneralJournalAccountEntryBiEntities(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        params = stream.request_params(stream_state={"SourceKey": 0})
+        assert params["$filter"] == "SourceKey ge 0"
+
     def test_incremental_filter_param(self, mock_auth):
         stream = ExchangeRates(
             authenticator=mock_auth,

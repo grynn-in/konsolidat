@@ -215,7 +215,9 @@ class D365IncrementalStream(D365ODataStream):
         # OData literal so a tampered/unexpected state value cannot inject
         # additional filter syntax.
         cursor_value = (stream_state or {}).get(self.cursor_field)
-        if cursor_value and params:  # params is empty when using nextLink
+        # `is not None` (not truthiness): a numeric SourceKey cursor of 0 is a
+        # valid high-water and must still emit a $filter. params is empty on nextLink.
+        if cursor_value is not None and cursor_value != "" and params:
             literal = odata_filter_literal(cursor_value)
             params["$filter"] = f"{self.cursor_field} ge {literal}"
 

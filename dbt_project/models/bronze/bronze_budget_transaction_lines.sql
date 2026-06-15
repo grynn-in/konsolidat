@@ -1,8 +1,6 @@
 {{
     config(
-        materialized='incremental',
-        incremental_strategy='append',
-        engine='ReplacingMergeTree(_airbyte_extracted_at)',
+        engine='MergeTree()',
         order_by='(budget_register_entry_recid, recid)',
         partition_by='toYYYYMM(transaction_date)'
     )
@@ -31,8 +29,7 @@ left join {{ ref('stg_d365_fo__budget_entries') }} d365
     on b.record_id = d365.record_id
     and b.erp_source = 'd365_fo'
 
-{# CDC delta: only reprocess rows extracted after the last loaded batch.
-   ReplacingMergeTree(_airbyte_extracted_at) collapses re-delivered rows. #}
-{% if is_incremental() %}
-where {{ cast_to_datetime('b._loaded_at') }} > (select max(_airbyte_extracted_at) from {{ this }})
-{% endif %}
+{# Budget stays a full `table` (not incremental): it is low-volume and its
+   staging record_id is rowNumberInAllBlocks() (positional, non-deterministic),
+   which is unsafe as a ReplacingMergeTree/delete+insert dedup key. Make it
+   incremental only once budget has a stable surrogate key. #}
