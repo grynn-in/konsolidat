@@ -21,7 +21,7 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | [SAP Business One Connector](PRD-SAP-B1-CONNECTOR.md) | SAP B1 adapter via Service Layer REST (`JournalEntries` / JDT1). | Not Started |
 | [ERPNext Connector](PRD-ERPNEXT-CONNECTOR.md) | ERPNext adapter via Frappe REST API over the `GL Entry` doctype. | ✅ Implemented (konsolidat #37) |
 | [Dimension Harmonization](PRD-DIMENSION-HARMONIZATION.md) | Map per-ERP dimensions to canonical dimensions across connectors. | ✅ Implemented (konsolidat #38, konsol #18) |
-| [Scale Architecture (50–500 LEs)](PRD-SCALE-ARCHITECTURE.md) | Incremental extraction, ClickHouse sharding, per-connector health for large multi-ERP estates. | Not Started |
+| [Scale Architecture (50–500 LEs)](PRD-SCALE-ARCHITECTURE.md) | Incremental extraction, ClickHouse sharding, per-connector health for large multi-ERP estates. | In Progress — incremental extraction (konsolidat #44) + health dashboard (konsol #25/#27) done; sharding remains |
 | [Connector Registry (Frappe)](PRD-CONNECTOR-REGISTRY.md) | Frappe-driven catalog of connectors, credentials, and sync configuration. | ✅ Implemented (konsol #15) |
 
 ## Phase 4 — Security & SSO

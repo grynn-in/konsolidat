@@ -13,7 +13,7 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Hierarchy, equity method, acquisition/disposal | **Done** |
 | Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
 | Budget write-back (Excel → CH) | **Done** — EPMSAVE() from Excel + Frappe API |
-| Budget write-back (CH → ERP) | **Not started** — push approved budget to D365 BudgetRegisterEntries |
+| Budget write-back (CH → ERP) | **Client done / dormant** (konsol#26) — D365 `BudgetRegisterEntries` push built; disabled by default, not yet wired to the approval workflow |
 | Scenario management | **Done** — budget/forecast/whatif via API |
 | Variance analysis | **Done** — actual vs budget with favorable logic |
 | Excel VBA integration | **Done** — =EPM() + 5 functions, ODBC + REST |
@@ -51,17 +51,17 @@ Full docker-compose stack + single deploy script. Completed in PRs #7 and #9.
 
 ---
 
-## Phase 2: Dynamic Schema — Dimensions, Measures & Facts ~~(~5 days)~~ IN PROGRESS
+## Phase 2: Dynamic Schema — Dimensions, Measures & Facts ~~(~5 days)~~ LARGELY DONE
 
 Make the data model fully registry-driven from Frappe. Adding a dimension, measure, or fact table should be a UI operation in Frappe Desk, not a code change across 6 files.
 
 ### What's done
 
-The dbt layer is fully dynamic — Dimension and Measure registries in Frappe drive dbt_project.yml vars, and macros (`dim_select()`, `dim_group_by()`, `measure_select()`) generate SQL from those vars. Gold models like `gold_trial_balance` already use them. Source-layer abstraction is complete (`dim_select_from_source()` maps ERP source columns to canonical dimension names).
+The dbt layer is fully dynamic — Dimension and Measure registries in Frappe drive dbt_project.yml vars, and macros (`dim_select()`, `dim_group_by()`, `measure_select()`) generate SQL from those vars. Gold models like `gold_trial_balance` already use them. Source-layer abstraction is complete (`dim_select_from_source()` maps ERP source columns to canonical dimension names). The **Fact Registry (§2.3) and API generalisation (§2.4) shipped in konsol#14** — `api.py` now takes a generic `dimensions` dict + `fact` selector and validates against the registries.
 
 ### What remains
 
-The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to specific dimensions/measures, so adding a new dimension still requires code changes in `api.py` and manual ClickHouse schema updates.
+Minor tail items only: `ALTER TABLE ADD COLUMN` on ClickHouse when a dimension/measure is saved (today a dbt rebuild is needed), dynamic Budget Input field generation, and a few deferred statistical/sub-ledger facts. None block adding a dimension via the registries.
 
 ### 2.1 Dimension Registry ~~(1 day)~~ DONE
 
@@ -80,9 +80,11 @@ The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to spe
 - [ ] API response validates `measure` param against active Measure registry (currently hardcoded `ALLOWED_MEASURES` dict)
 - [ ] ClickHouse gold table columns auto-generated on measure save
 
-### 2.3 Fact Registry (1.5 days)
+### 2.3 Fact Registry (1.5 days) — ✅ DONE (konsol#14)
 
 PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
+
+> Shipped: `Fact Table` doctype + core facts + schema-apply (CH table + dbt source). A few statistical / sub-ledger facts (AP/AR/Fixed Assets) are deferred pending connector schemas. Remaining checkboxes below track those deferred facts.
 
 - [ ] Frappe `Fact Table` doctype: `name`, `source_type` (ERP GL / Budget / Statistical / Sub-ledger), `grain` description, `refresh_frequency`
 - [ ] Core facts (pre-seeded, always present):
@@ -101,9 +103,11 @@ PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
 - [ ] On save: generates ClickHouse staging table DDL + dbt source definition
 - [ ] Statistical facts replace the current `allocation_drivers` seed with a proper queryable fact table
 
-### 2.4 API Generalisation (1 day)
+### 2.4 API Generalisation (1 day) — ✅ DONE (konsol#14)
 
 PRD: [API Generalisation](../prd/PRD-API-GENERALISATION.md)
+
+> Shipped: `epm_value`/`epm_batch` take a generic `dimensions` dict + `fact` selector, validated against the Published Measure registry ∩ fact. (Note: the legacy named params were dropped, not kept backward-compatible — a deliberate decision.)
 
 - [ ] Replace hardcoded `cost_center`, `department` params with generic `dimensions` dict
 - [ ] `=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})`
@@ -199,7 +203,7 @@ On budget approval in Frappe, push the approved budget to D365 F&O via OData POS
 
 ClickHouse is the authoritative store for budget. D365 is a **downstream sync target** — a one-way push so D365's native budget control features have the numbers.
 
-**Round-trip prevention:** Do NOT Airbyte-sync `BudgetRegisterEntries` back from D365 into `epm_raw`. If syncing is required for audit, tag EPM-originated entries (e.g. `BudgetModelId = 'EPM'`) so dbt can filter them out.
+**Round-trip prevention:** Do NOT Airbyte-sync `BudgetRegisterEntries` back from D365 into `epm_raw`. If syncing is required for audit, EPM-originated entries are tagged `BudgetModelId = 'EPM-<budget-input-name>'` (the `EPM-` prefix) so dbt can filter them out.
 
 **Implementation:** (client merged in konsol#26 as `konsol/d365_writeback.py` — **dormant**: disabled by default, NOT wired to the approval workflow yet)
 
@@ -207,7 +211,7 @@ ClickHouse is the authoritative store for budget. D365 is a **downstream sync ta
 - [x] Dimension mapping: cost center / dept → D365 financial-dimension values (`_dimension_values`)
 - [x] Error handling: failures recorded on Budget Input (`d365_writeback_status`/`_error`), D365 response body logged server-side
 - [x] Config: D365 connection settings in EPM Settings (Azure AD tenant, client ID/secret, resource URL) — mirrors the Airbyte pattern
-- [~] Idempotency: entries tagged `BudgetModelId = 'EPM-<name>'` + re-push guard. **NOT a true upsert** — a plain POST appends; replace semantics (delete-by-model or `$batch` changeset) are a go-live follow-up
+- [ ] **Partial:** Idempotency — entries tagged `BudgetModelId = 'EPM-<name>'` + re-push guard, but **NOT a true upsert** (a plain POST appends); replace semantics (delete-by-model or `$batch` changeset) are a go-live follow-up
 - [ ] Frappe hook on Budget Input workflow transition to "Approved" → async write-back **(not wired)**
 - [ ] **Go-live blockers:** replace semantics; resolve `AccountingDate` from the real D365 fiscal calendar (current code assumes fiscal period == calendar month); validate `BudgetRegisterEntries` field + `LedgerDimensionValues` attribute names against a live tenant
 

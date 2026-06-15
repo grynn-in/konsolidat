@@ -38,6 +38,8 @@ Per-connector sync mode, replacing full-refresh for high-volume GL streams. Curs
 
 ### 2. ClickHouse Cluster — Sharded by `entity_id`
 
+> ⏳ **Remaining** — the last Scale item. Not started, and not verifiable on the single-node deploy (needs a multi-node ClickHouse cluster + Keeper); single-node stays the default.
+
 Horizontal scale for 50–500 LEs. Shard key derived from the canonical `entity_id` so a given LE's rows colocate.
 
 | Item | Value |
