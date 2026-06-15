@@ -27,6 +27,24 @@ _ISO_TEMPORAL = re.compile(
     r"([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$"
 )
 
+# Whole-integer cursor values (e.g. the GL streams' SourceKey surrogate key).
+# Emitted as a bare OData numeric literal; the full anchor keeps it injection-safe.
+_NUMERIC = re.compile(r"^-?\d+$")
+
+
+def cursor_is_greater(candidate: str, current: str | None) -> bool:
+    """Numeric-aware high-water comparison for cursor values.
+
+    Integer cursors (SourceKey/RecId) are monotonic surrogate keys where lexical
+    comparison is wrong ("9" > "10"); ISO-8601 temporal cursors sort correctly as
+    strings. Compare numerically only when both values are integers.
+    """
+    if current is None:
+        return True
+    if _NUMERIC.match(candidate) and _NUMERIC.match(current):
+        return int(candidate) > int(current)
+    return candidate > current
+
 
 def odata_filter_literal(value: Any) -> str:
     """Render a cursor value as a safe OData literal for use in a $filter.
@@ -36,7 +54,7 @@ def odata_filter_literal(value: Any) -> str:
     prevents filter-injection from a tampered cursor/state value.
     """
     s = str(value)
-    if _ISO_TEMPORAL.match(s):
+    if _ISO_TEMPORAL.match(s) or _NUMERIC.match(s):
         return s
     return "'" + s.replace("'", "''") + "'"
 
@@ -197,7 +215,9 @@ class D365IncrementalStream(D365ODataStream):
         # OData literal so a tampered/unexpected state value cannot inject
         # additional filter syntax.
         cursor_value = (stream_state or {}).get(self.cursor_field)
-        if cursor_value and params:  # params is empty when using nextLink
+        # `is not None` (not truthiness): a numeric SourceKey cursor of 0 is a
+        # valid high-water and must still emit a $filter. params is empty on nextLink.
+        if cursor_value is not None and cursor_value != "" and params:
             literal = odata_filter_literal(cursor_value)
             params["$filter"] = f"{self.cursor_field} ge {literal}"
 
@@ -206,9 +226,9 @@ class D365IncrementalStream(D365ODataStream):
     def read_records(self, *args, **kwargs) -> Iterable[Mapping[str, Any]]:
         for record in super().read_records(*args, **kwargs):
             cursor = record.get(self.cursor_field)
-            if cursor:
+            if cursor is not None and cursor != "":
                 cursor_str = str(cursor)
-                if self._cursor_value is None or cursor_str > self._cursor_value:
+                if cursor_is_greater(cursor_str, self._cursor_value):
                     self._cursor_value = cursor_str
             yield record
 
@@ -281,18 +301,23 @@ class TrialBalanceFiscalYearSnapshots(D365ODataStream):
 # Incremental streams
 # ---------------------------------------------------------------------------
 
+# SourceKey is the monotonic surrogate key D365 surfaces as the BI-entity
+# primary key (the internal RecId). Posted GL is immutable in D365 — corrections
+# post as new reversing rows with a higher SourceKey — so a SourceKey high-water
+# captures every new row, including back-dated postings into open prior periods
+# that an AccountingDate cursor would silently miss.
 class GeneralJournalAccountEntryBiEntities(D365IncrementalStream):
     name = "general_journal_account_entry_bi_entities"
     odata_entity = "GeneralJournalAccountEntryBiEntities"
     primary_key = "SourceKey"
-    cursor_field = "AccountingDate"
+    cursor_field = "SourceKey"
 
 
 class GeneralJournalEntryBiEntities(D365IncrementalStream):
     name = "general_journal_entry_bi_entities"
     odata_entity = "GeneralJournalEntryBiEntities"
     primary_key = "SourceKey"
-    cursor_field = "AccountingDate"
+    cursor_field = "SourceKey"
 
 
 class ExchangeRates(D365IncrementalStream):

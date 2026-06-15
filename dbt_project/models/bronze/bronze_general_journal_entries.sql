@@ -1,6 +1,9 @@
 {{
     config(
-        engine='MergeTree()',
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key='recid',
+        engine='ReplacingMergeTree(_airbyte_extracted_at)',
         order_by='(data_area_id, accounting_date, recid)',
         partition_by='toYear(accounting_date)'
     )
@@ -21,3 +24,11 @@ select
     {{ cast_to_datetime('_airbyte_extracted_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('_airbyte_raw_id') }} as _airbyte_raw_id
 from {{ ref('stg_d365_fo__gl_journal_entries') }}
+
+{# CDC delta: reprocess rows extracted at/after the last loaded batch. `>=`
+   re-reads the boundary second (toDateTime is second-precision); delete+insert
+   on unique_key=recid removes the re-read rows before insert, so no duplicates
+   and downstream reads need no FINAL. #}
+{% if is_incremental() %}
+where {{ cast_to_datetime('_airbyte_extracted_at') }} >= (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}
