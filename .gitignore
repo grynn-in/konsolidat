@@ -40,9 +40,8 @@ docker/volumes/
 .credentials
 backups/
 
-# Claude memory (keep structure, ignore logs)
-.claude/memory/lossless/
-.claude/memory/cache/
+# Claude (all local state)
+.claude/
 
 # Codegraph
 .codegraph/
