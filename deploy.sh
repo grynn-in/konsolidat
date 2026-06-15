@@ -216,8 +216,17 @@ if [ ! -d "$KONSOL_DIR/.git" ]; then
              echo "  git clone $KONSOL_REPO docker/frappe/konsol"; \
              echo "  Then re-run ./deploy.sh"; exit 1; }
 else
-    info "Updating konsol app..."
-    git -C "$KONSOL_DIR" pull --ff-only 2>/dev/null || true
+    # Pin the staged checkout to KONSOL_BRANCH regardless of its current local
+    # state. The old `git pull --ff-only || true` pulled whatever branch was
+    # checked out (not necessarily main) and silently no-opped on failure, so
+    # the image could be built from a stale — or a DO-NOT-MERGE — branch, and
+    # KONSOL_BRANCH was ignored on every re-run. Fetch the requested branch by
+    # URL (no assumption about the local remote name) and hard-reset to it.
+    info "Updating konsol app to ${KONSOL_BRANCH}..."
+    git -C "$KONSOL_DIR" fetch --depth 1 "$KONSOL_REPO" "$KONSOL_BRANCH" \
+        || { err "Failed to fetch konsol branch ${KONSOL_BRANCH} from ${KONSOL_REPO}"; exit 1; }
+    git -C "$KONSOL_DIR" checkout -B "$KONSOL_BRANCH" FETCH_HEAD
+    git -C "$KONSOL_DIR" reset --hard FETCH_HEAD
 fi
 
 docker compose build frappe_backend
