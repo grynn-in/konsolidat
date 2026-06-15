@@ -73,10 +73,20 @@ The merged security work already built the right primitive in `konsol/api.py`: `
 | Ownership level | Mechanism | Status |
 |---|---|---|
 | **Legal entity** (`data_area_id`) — "1 user owns 1 / a few LEs" | `_assert_entity_access(data["data_area_id"])` in the budget write endpoints | **Reuse existing pattern; apply to writes** (small) |
-| **Main account** (by group/range, e.g. a controller owns all `6xxx`) | New `EPM Settings.account_permission_doctype` (an *Account Responsibility* / account-group doctype) + `_assert_account_access(account)` mirroring `_resolve_allowed_entities`; gate by **group, never per-individual-account** (per-value User Permissions don't scale) | **New, same pattern** |
-| **Finer dimensions** (cost center, etc.) — only if ownership is split below account | Gate by **group** via User Permissions, or a server-side `permission_query_condition` reading a responsibility-mapping doctype | **Optional; only when a customer splits ownership below account** |
+| **Main account** (by category, e.g. a controller owns all of *Travel*) | `EPM Settings.account_permission_doctype` → a **Virtual DocType `Main Account Category`** proxying `silver_main_accounts.main_account_category` live from ClickHouse (no synced copy); `_assert_account_access(account)` resolves account→category via a **cached** map and checks User Permission, mirroring `_resolve_allowed_entities`. Gate by **category, never per-individual-account**. | **New, same pattern, virtual proxy** |
+| **Cost center** (and other in_budget dims) — ownership split *below* the account | **Required** (confirmed: a *Travel* account is booked by multiple departments/cost centers). Virtual DocType `Cost Center` (proxying the dimension values from CH) as the permission target; `_assert_dimension_access(dim, value)` enforces at cost-center grain. Generalises to any in_budget dimension flagged ownership-controlling. | **New, required** |
 
-These compose by **AND**: a write to `(LE=FR, account=6100, cc=…)` must pass the entity check *and* the account-group check (*and* any finer-dim check). `data_area_id` and `main_account` are `Data` fields (not `Link`), which is why permissions key on a **dedicated permission-target doctype + code match** (the established pattern) rather than native Link-based User Permissions.
+These compose by **AND**: a write to `(LE=FR, account=Travel, cc=Sales)` must pass the entity check *and* the account-category check *and* the cost-center check. `data_area_id`, `main_account`, and the dimension values are `Data` fields (not `Link`), which is why permissions key on a **dedicated permission-target doctype + code match** (the established pattern) rather than native Link-based User Permissions.
+
+**Virtual DocType as the permission target (Frappe v15.93).** The category/cost-center masters live in the dbt/ClickHouse layer, not in Frappe. Rather than syncing copies, model the permission targets as **Virtual DocTypes** (`is_virtual: 1`) whose read-only controller (`get_list`/`load_from_db`) serves values live from CH via `konsol.clickhouse.execute()`. This works because **Frappe User Permission rows live in the real `tabUser Permission` table regardless of whether the *target* doctype is virtual** — a grant is just `(user, allow="Main Account Category", for_value="Travel")`, a string our `_assert_*` code reads exactly like the entity pattern. Two constraints:
+- **No automatic SQL filtering on virtual doctypes** — Frappe's `permission_query_condition` injects a `WHERE` into a MariaDB query that does not exist for a virtual doctype. Harmless here because enforcement is hand-rolled in `api.py`, but it means the generic machinery gives no free enforcement; the check must be explicit in code.
+- **Never resolve on a live CH round-trip in the write path** — `account→category` (and `account/cc` validity) is needed on every `budget_cell_save`. Cache the resolver map in `frappe.cache()` with a TTL (small, slow-changing data); the live virtual doctype is for the *picker/browse* UX only, not the per-cell hot path.
+
+**Future-proofing — Frappe v16.** Verified against the v16 (`develop`) source and the official [Migrating to version 16](https://github.com/frappe/frappe/wiki/Migrating-to-version-16) guide:
+- **Virtual DocType is not in the v16 breaking-changes list.** The controller contract is unchanged: a controller must override `db_insert`, `db_update`, `load_from_db`, `delete` (instance) and define static `get_list`, `get_count`, `get_stats`. Our targets are read-only, so the write methods are stubs that `raise frappe.ValidationError` — same as v15.
+- **User Permission / `get_user_permissions` mechanics are not in the v16 breaking-changes list.** Critically, User Permission `validate()` does **not** require `for_value` to be a real row (it only checks duplicate/overlap), and `get_user_permissions` already tolerates a missing target table — so a virtual-doctype permission target works in both v15 and v16.
+- **The two v16 permission breaking changes only affect `has_permission` *hooks*** (`has_permission` hooks must now return explicit `True`; `frappe.permissions.has_permission` drops `raise_exception` for `print_logs`). **We avoid them by design** — enforcement is explicit `_assert_*` calls that raise `PermissionError`, not registered hooks.
+- **Avoid "Apply to All Document Types" User Permissions** — they have reported rough edges in v16 (report-filter false positives) and are semantically wrong here anyway; scope every grant to its specific permission-target doctype.
 
 ### How this reframes the locking design (below)
 
@@ -99,11 +109,12 @@ Add **optimistic locking** to `budget_cell_save()`: the client sends the `modifi
 - Enforce uniqueness on the full key set (doctype composite `unique`, or an idempotent upsert guard) so one combination ⇒ one doc.
 - Migration patch: re-key existing Budget Input rows from their parent dimension attributes; **surface, do not silently merge**, any rows that collided under the old account-only key.
 
-### B. Write-path permission enforcement (`konsol/api.py`, new doctype)
+### B. Write-path permission enforcement (`konsol/api.py`, Virtual DocTypes)
 
 - Apply `_assert_entity_access(data["data_area_id"])` in `budget_cell_save()`, `budget_save()`, `budget_save_batch()` (reuses the existing read-path pattern).
-- Add `EPM Settings.account_permission_doctype` + an *Account Responsibility* (account-group) doctype + `_assert_account_access(account)` mirroring `_resolve_allowed_entities`; gate by group. Skipped when unset (backward-compatible).
-- Optional finer-dim gating via `permission_query_condition` — only if a customer splits ownership below account.
+- **Account (by category):** add `EPM Settings.account_permission_doctype` → a **Virtual DocType `Main Account Category`** proxying `silver_main_accounts.main_account_category` live from ClickHouse (no synced copy); `_assert_account_access(account)` resolves account→category via a **`frappe.cache()`-backed map** and checks User Permission. Skipped when unset (backward-compatible).
+- **Cost center (REQUIRED — confirmed: *Travel* booked by multiple departments):** Virtual DocType `Cost Center` proxy as permission target; `_assert_dimension_access(dim, value)` enforces at cost-center grain. Generalises to any in_budget dimension flagged ownership-controlling.
+- Enforce in **explicit code** (`_assert_*`), not Frappe `has_permission` hooks — virtual doctypes get no automatic SQL permission filtering, and this also sidesteps the v16 `has_permission`-hook contract change (see Future-proofing note).
 
 ### 1. Optimistic locking on `budget_cell_save()` (`konsol/api.py`)
 
@@ -198,11 +209,16 @@ New whitelisted endpoints (`methods=["POST"]`) in `konsol/api.py`:
 11. **Permission (LE):** `budget_cell_save()` / `budget_save()` / `budget_save_batch()` for a `data_area_id` the caller lacks a User Permission for raise `PermissionError` (403) and write nothing; an owned LE succeeds. System Manager / Administrator bypass (parity with the read path).
 12. **Permission (account):** with `EPM Settings.account_permission_doctype` configured, a write to an account outside the caller's responsibility group is rejected (403); an in-group account succeeds. With it unset, account checks are skipped (backward-compatible).
 
+## Resolved Decisions
+
+1. **Grain migration collisions → non-issue.** No customer is live; the Budget Input table holds only demo/empty data. The patch re-keys in place with **no collision-recovery path**; it keeps a defensive guard that *errors loudly* if a real collision is ever encountered, but none is expected.
+2. **Account permission target → Virtual DocType, derived live (not a hand-maintained master).** No Frappe chart-of-accounts doctype exists, but the grouping exists in the warehouse as `silver_main_accounts.main_account_category` (from D365 `MainAccountCategory`). Model `Main Account Category` as a **Virtual DocType** proxying CH live; resolve account→category via a `frappe.cache()`-backed map. No sync job, always current.
+3. **Finer-dim ownership → REQUIRED, build it.** Confirmed: a *Travel* main account is booked by multiple departments (cost centers), each owning only their slice. Enforce at **cost-center grain** via a `Cost Center` Virtual DocType permission target + `_assert_dimension_access`. Generalises to any in_budget dimension flagged ownership-controlling.
+4. **v16 future-proof** (see Future-proofing note): the Virtual-DocType-as-permission-target + explicit `_assert_*` enforcement is unaffected by v16's permission-hook breaking changes.
+
 ## Open Questions
 
-- Should a successful optimistic save by a different period/layer of the same doc invalidate another client's `base_modified` (since the whole-doc `modified` bumps on any cell write)? Likely yes — accept the false-positive conflict for now, since the client retry refreshes cleanly. Revisit if it causes excessive re-prompts. *(Now lower-impact: the dimensional grain means a "doc" is one owner's combination, so cross-period false-conflicts are within a single owner's own session.)*
-- **Grain migration collisions:** existing Budget Input rows that shared the old `(scenario, LE, FY, account)` key but differ on dimensions must be re-keyed. Some pre-existing rows may already have clobbered each other under the old grain — how should the patch surface (not silently merge) any irrecoverable collisions?
-- **Account-group permission target:** there is no chart-of-accounts doctype in the app today (accounts are `Data` + a dbt seed). Should the *Account Responsibility* doctype model groups/ranges explicitly, or derive groups from the account-hierarchy seed? Determines whether `_assert_account_access` resolves account→group at runtime or via a maintained mapping.
-- **Finer-dim ownership:** do any target customers split ownership *below* the account (e.g. per cost center)? If not, ship LE + account-group only and leave the dimension-level `permission_query_condition` unbuilt.
-- *(Resolved — was: keep lock at doc level vs. add period/layer scoping.)* Lock granularity is the full dimensional-combination doc; sub-doc scoping is out of scope. The pessimistic lock itself is deferred.
+- Should a successful optimistic save by a different period/layer of the same doc invalidate another client's `base_modified` (since the whole-doc `modified` bumps on any cell write)? Likely yes — accept the false-positive conflict for now, since the client retry refreshes cleanly. *(Low-impact: a "doc" is now one owner's combination, so cross-period false-conflicts stay within a single owner's own session.)*
+- Which in_budget dimensions beyond cost center are **ownership-controlling** vs. merely descriptive? (Cost center is confirmed; department/product/region TBD per customer — drives how many Virtual DocType permission targets ship.)
+- *(Resolved — lock granularity is the full dimensional-combination doc; sub-doc scoping out of scope; pessimistic lock deferred.)*
 - Should `expires_at` renew on every `budget_cell_save()` by the lock holder (sliding window), or only on explicit `budget_lock_acquire`? *(Only relevant if the deferred pessimistic mode is built.)*
