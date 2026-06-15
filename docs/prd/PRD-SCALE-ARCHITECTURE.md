@@ -1,7 +1,7 @@
 # PRD: Scale Architecture (50–500 Legal Entities)
 
-**Status:** Not Started
-**Date:** 2026-06-13
+**Status:** In Progress — §1 Incremental Extraction ✅ (konsolidat#44) and §3 Per-Connector Health Dashboard ✅ (konsol#25 + #27) are merged; §2 ClickHouse Cluster Sharding remains.
+**Date:** 2026-06-13 (status updated 2026-06-15)
 **Phase:** Phase 3 — Multi-ERP Support (Scale Architecture)
 **Repos:** `konsolidat` (dbt/data stack, ClickHouse, Airbyte), `konsol` (Frappe app — orchestration + monitoring API/Desk)
 
@@ -19,6 +19,8 @@ Make extraction incremental (Airbyte CDC / cursor-based for high-volume ERPs), s
 ## Scope
 
 ### 1. Incremental Extraction (Airbyte CDC / cursor)
+
+> ✅ **Shipped** (konsolidat#44). GL bronze uses `incremental_strategy='delete+insert'` (`unique_key=recid`) over a `>=` boundary re-read on `ReplacingMergeTree`; D365 GL streams cursor on `SourceKey`. Budget bronze stays a full `table` (positional staging key is unsafe for dedup) — revisit when budget has a stable surrogate key. The cursor table below is the design target; the merged implementation covers D365 F&O + ERPNext.
 
 Per-connector sync mode, replacing full-refresh for high-volume GL streams. Cursor and primary key per the canonical contract (`record_id` → `_raw_id`, `_loaded_at`).
 
@@ -54,6 +56,8 @@ Horizontal scale for 50–500 LEs. Shard key derived from the canonical `entity_
 - Single-node remains the default deploy; cluster mode is enabled by a profile/var so small installs are unaffected.
 
 ### 3. Per-Connector Health Dashboard (Frappe)
+
+> ✅ **Shipped** (konsol#25 dashboard + #27 hardening). `Connector Health` doctype, 5-min scheduler deriving status (Never/Running/Succeeded/Failed/Stale, incl. stuck-Running→Stale) + lag + entities-loaded (scoped to the connector's legal entities) from the webhook-fed `Connector.last_sync_*`, orphan prune, transition alerts, and `konsol.api.connector_health`. Per-connector Number Cards deferred (list-view indicators cover the green/amber/red scan).
 
 New `konsol` doctype + API + Desk dashboard. One row per active connector (from the Connector Registry, PRD 37).
 

@@ -1,6 +1,6 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-13*
+*Last updated: 2026-06-15*
 
 See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
@@ -22,9 +22,9 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Custom domain | **Done** — konsolid.at on GitHub Pages |
 | One-click deploy | **Done** — `git clone && ./deploy.sh`, 9 Docker services |
 | Multi-ERP canonical staging + D365 F&O adapter | **Done** — 7 canonical models, 16 D365 F&O adapter models (PR #10) |
-| Multi-ERP connectors (SAP, D365 BC, ERPNext) | **Not started** |
+| Multi-ERP connectors | **In progress** — ERPNext done; dimension harmonization, connector registry, incremental extraction, health dashboard done; SAP (S/4HANA, ECC, B1) + D365 BC remaining |
 | FastAPI / Streamlit / Dagster | **Retired** — replaced by Frappe konsol app |
-| Dynamic schema (dimensions, measures, facts) | **In progress** — Dimension + Measure registries done, API + Fact registry remaining |
+| Dynamic schema (dimensions, measures, facts) | **Largely done** — Dimension/Measure/Fact registries + API generalisation (konsol#14); minor ClickHouse-DDL-on-save tail items deferred |
 | Security / Entra ID SSO | **Not started** |
 | Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
 | Cash flow statement | **Not started** |
@@ -134,15 +134,15 @@ Konsolidat's silver/gold layers are already ERP-agnostic. The canonical staging 
 |------|--------|--------|
 | Canonical Staging Schema & Adapter Interface | 2 days | **Done** (PR #10) — 7 canonical models, UNION ALL from adapters |
 | D365 F&O Adapter Refactor | 1 day | **Done** (PR #10) — 16 models renamed `stg_d365_fo__*`, canonical output |
-| D365 F&O Budget Write-Back | 2 days | Not started — OData POST on budget approval |
+| D365 F&O Budget Write-Back | 2 days | **Client done** (konsol#26) — OAuth2 + OData POST to `BudgetRegisterEntries` built and tested; **dormant** (disabled by default, NOT wired to the approval workflow). Go-live needs replace semantics, fiscal-calendar period mapping, and tenant field-name validation. |
 | D365 Business Central Connector | 3 days | Not started — PRD: [D365 BC](../prd/PRD-D365-BC-CONNECTOR.md) |
 | SAP S/4HANA Connector | 3 days | Not started — PRD: [SAP S/4HANA](../prd/PRD-SAP-S4HANA-CONNECTOR.md) |
 | SAP ECC 6.0 Connector | 3 days | Not started — PRD: [SAP ECC 6.0](../prd/PRD-SAP-ECC-CONNECTOR.md) |
 | SAP Business One Connector | 2 days | Not started — PRD: [SAP B1](../prd/PRD-SAP-B1-CONNECTOR.md) |
-| ERPNext Connector | 2 days | Not started — PRD: [ERPNext](../prd/PRD-ERPNEXT-CONNECTOR.md) |
-| Dimension Harmonization | 3 days | Not started — PRD: [Dimension Harmonization](../prd/PRD-DIMENSION-HARMONIZATION.md) |
-| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning + incremental extraction done; CH cluster sharding + per-connector health dashboard remaining — PRD: [Scale Architecture](../prd/PRD-SCALE-ARCHITECTURE.md) |
-| Connector Registry (Frappe) | 2 days | Not started — PRD: [Connector Registry](../prd/PRD-CONNECTOR-REGISTRY.md) |
+| ERPNext Connector | 2 days | **Done** (konsolidat#37) — `stg_erpnext__*` dbt adapter + Airbyte source — PRD: [ERPNext](../prd/PRD-ERPNEXT-CONNECTOR.md) |
+| Dimension Harmonization | 3 days | **Done** (konsolidat#38 + konsol#18) — crosswalk macros + Dimension Mapping doctype — PRD: [Dimension Harmonization](../prd/PRD-DIMENSION-HARMONIZATION.md) |
+| Scale Architecture (50–500 LEs) | 5 days | **Partial** — bronze partitioning ✅, incremental extraction ✅ (konsolidat#44), per-connector health dashboard ✅ (konsol#25 + #27); **CH cluster sharding remaining** — PRD: [Scale Architecture](../prd/PRD-SCALE-ARCHITECTURE.md) |
+| Connector Registry (Frappe) | 2 days | **Done** (konsol#15) — `Connector` doctype drives `vars.erp_sources` — PRD: [Connector Registry](../prd/PRD-CONNECTOR-REGISTRY.md) |
 
 ### Dependency Graph
 
@@ -201,14 +201,15 @@ ClickHouse is the authoritative store for budget. D365 is a **downstream sync ta
 
 **Round-trip prevention:** Do NOT Airbyte-sync `BudgetRegisterEntries` back from D365 into `epm_raw`. If syncing is required for audit, tag EPM-originated entries (e.g. `BudgetModelId = 'EPM'`) so dbt can filter them out.
 
-**Implementation:**
+**Implementation:** (client merged in konsol#26 as `konsol/d365_writeback.py` — **dormant**: disabled by default, NOT wired to the approval workflow yet)
 
-- [ ] Frappe hook on Budget Input workflow transition to "Approved" → triggers async write-back
-- [ ] D365 OData POST: map flat budget rows to `BudgetRegisterEntries` header + line format
-- [ ] Dimension mapping: entity, account, cost center, dept → D365 `LedgerDimensionValuesJson`
-- [ ] Error handling: D365 validation failures (closed posting period, invalid account) → log to Budget Input doctype
-- [ ] Idempotency: tag entries with EPM budget ID to allow re-push without duplicates
-- [ ] Config: D365 connection settings in Frappe (Azure AD tenant, client ID, resource URL) — reuse Airbyte credentials pattern
+- [x] D365 OData POST: map a Budget Input's period rows to `BudgetRegisterEntries` lines (`build_entries` → `post_entries`)
+- [x] Dimension mapping: cost center / dept → D365 financial-dimension values (`_dimension_values`)
+- [x] Error handling: failures recorded on Budget Input (`d365_writeback_status`/`_error`), D365 response body logged server-side
+- [x] Config: D365 connection settings in EPM Settings (Azure AD tenant, client ID/secret, resource URL) — mirrors the Airbyte pattern
+- [~] Idempotency: entries tagged `BudgetModelId = 'EPM-<name>'` + re-push guard. **NOT a true upsert** — a plain POST appends; replace semantics (delete-by-model or `$batch` changeset) are a go-live follow-up
+- [ ] Frappe hook on Budget Input workflow transition to "Approved" → async write-back **(not wired)**
+- [ ] **Go-live blockers:** replace semantics; resolve `AccountingDate` from the real D365 fiscal calendar (current code assumes fiscal period == calendar month); validate `BudgetRegisterEntries` field + `LedgerDimensionValues` attribute names against a live tenant
 
 ### Scale Architecture
 
@@ -216,9 +217,9 @@ For deployments with 50–500 legal entities across multiple ERPs:
 
 - [x] **Partitioned bronze tables** — `bronze_general_journal_account_entries` partitioned by `toYear(accounting_date)`, budget by `toYYYYMM(transaction_date)`, FX by `toYear(valid_from)`
 - [x] **Parallel dbt builds** — per-ERP adapter builds can run concurrently (adapter pattern supports this)
-- [x] **Incremental extraction** — high-volume GL/budget bronze models are `incremental` + `ReplacingMergeTree` (CDC re-deliveries dedup on `_airbyte_extracted_at`); D365 GL streams cursor on the monotonic `SourceKey`; ERPNext on `modified`
-- [ ] **ClickHouse cluster** — sharded by entity_id for horizontal scale
-- [ ] **Monitoring** — per-connector health dashboard in Frappe
+- [x] **Incremental extraction** (konsolidat#44) — high-volume **GL** bronze models are `incremental` with `delete+insert` (`unique_key=recid`) over a `>=` boundary re-read, on `ReplacingMergeTree`; D365 GL streams cursor on the monotonic `SourceKey`, ERPNext on `modified`. Budget bronze stays a full `table` (its staging `record_id` is positional — unsafe as a dedup key). One-time `dbt build --full-refresh` migrates existing deployments.
+- [ ] **ClickHouse cluster** — sharded by entity_id for horizontal scale *(last remaining Scale item; not verifiable on a single node)*
+- [x] **Monitoring** — per-connector health dashboard in Frappe (konsol#25 + #27): `Connector Health` doctype + 5-min scheduler (status/lag/entities, stuck-Running→Stale, prune, alerts) + `konsol.api.connector_health`
 
 ---
 
