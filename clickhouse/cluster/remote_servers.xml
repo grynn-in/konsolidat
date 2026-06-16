@@ -17,7 +17,7 @@
   Cluster name   : konsol_cluster        (matches dbt profiles.yml cluster:)
   Shards         : 3 (increase as entity count grows)
   Replicas/shard : 1 (add second <replica> blocks for HA)
-  Shard key      : cityHash64(entity_id) (dbt cluster_sharding_key macro)
+  Shard key      : cityHash64(data_area_id) (dbt cluster_sharding_key macro)
   Databases      : epm_bronze, epm_silver, epm_gold
 
   Table naming convention

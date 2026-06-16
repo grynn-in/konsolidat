@@ -12,17 +12,17 @@
 
 ## Overview
 
-Konsolidat shards the ClickHouse warehouse by `entity_id` across a
+Konsolidat shards the ClickHouse warehouse by `data_area_id` (the materialized legal-entity column; the canonical `entity_id` is renamed to `data_area_id` at the bronze source boundary) across a
 `konsol_cluster` cluster using `Distributed` + `ReplicatedMergeTree`.  A given
-legal entity's rows colocate on one shard (`cityHash64(entity_id)`), so per-LE
+legal entity's rows colocate on one shard (`cityHash64(data_area_id)`), so per-LE
 GL history queries avoid cross-shard scatter for common single-entity reports.
 
 | Item | Value |
 |------|-------|
 | Cluster name | `konsol_cluster` |
-| Shard key | `cityHash64(entity_id)` |
+| Shard key | `cityHash64(data_area_id)` |
 | Local table engine | `ReplicatedMergeTree` (ZK path `/clickhouse/tables/{shard}/{database}/{table}`) |
-| Query table engine | `Distributed(konsol_cluster, <db>, <local_table>, cityHash64(entity_id))` |
+| Query table engine | `Distributed(konsol_cluster, <db>, <local_table>, cityHash64(data_area_id))` |
 | Coordinator | ClickHouse Keeper (co-located or standalone quorum) |
 | Sharded databases | `epm_bronze`, `epm_silver`, `epm_gold` |
 
@@ -168,7 +168,7 @@ ENGINE = Distributed(
   'konsol_cluster',
   'epm_bronze',
   'bronze_general_journal_account_entries_local',
-  cityHash64(entity_id)
+  cityHash64(data_area_id)
 );
 ```
 
@@ -178,7 +178,7 @@ ENGINE = Distributed(
 # Check shards are online
 clickhouse-client -q "SELECT * FROM system.clusters WHERE cluster = 'konsol_cluster'"
 
-# Confirm entity rows colocate (one row per entity_id per shard)
+# Confirm entity rows colocate (one row per data_area_id per shard)
 clickhouse-client -q "
   SELECT shardNum(), count() as row_count
   FROM epm_gold.gold_trial_balance
@@ -257,13 +257,13 @@ before GA:
 
 ### Hot-shard risk
 
-`cityHash64(entity_id)` distributes entities evenly by hash, but a single
+`cityHash64(data_area_id)` distributes entities evenly by hash, but a single
 very large LE (e.g. one entity with 10 years of daily GL history) may
 concentrate row volume on one shard.
 
 **Options to evaluate on a real cluster:**
 
-- Composite shard key: `cityHash64(concat(entity_id, toString(fiscal_year)))` —
+- Composite shard key: `cityHash64(concat(data_area_id, toString(fiscal_year)))` —
   fans out one LE across shards by year; breaks per-LE colocality for some
   queries.
 - Oversized-LE detection: monitor `system.parts` per shard; flag entities where

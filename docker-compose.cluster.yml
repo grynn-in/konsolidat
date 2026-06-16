@@ -41,13 +41,13 @@
 #   - clickhouse-server  (listens on port 9000 native, 8123 HTTP)
 #   - clickhouse-keeper  (embedded, port 2181 ZK-compat, 9181 raft)
 #
-# Shard key    : cityHash64(entity_id)
+# Shard key    : cityHash64(data_area_id)
 # Cluster name : konsol_cluster
 # Coordinator  : ClickHouse Keeper (replaces ZooKeeper)
 #
 # Open questions
 # ──────────────
-# - Hot-shard: a single large LE under cityHash64(entity_id) may skew one
+# - Hot-shard: a single large LE under cityHash64(data_area_id) may skew one
 #   shard.  Consider composite key (entity_id, fiscal_year) for largest tenants.
 # - Rebalancing: accept distribution skew on new-LE onboarding or run
 #   periodic reshard.

@@ -45,13 +45,16 @@
   Distributed overlay (created by run-operation):
     epm_bronze.<model>         Distributed          — query surface for API/Cube.js
 
-  Shard key: cityHash64(entity_id)  — a given legal entity colocates on one shard.
+  Shard key: cityHash64(data_area_id) — a given legal entity colocates on one
+  shard. NOTE: the shard column is `data_area_id` (the LE column materialized
+  across bronze/silver/gold). The canonical `entity_id` is renamed to
+  `data_area_id` at the bronze source boundary and is NOT present in epm_* tables.
   Partition keys are unchanged (sharding ⊥ partitioning).
   ClickHouse Keeper is used for coordination (replaces ZooKeeper).
 
   Open questions (NOT verified on this single-node build — needs a real cluster):
-  - Hot-shard risk: a very large LE under cityHash64(entity_id); consider
-    composite key (entity_id, fiscal_year) for largest tenants.
+  - Hot-shard risk: a very large LE under cityHash64(data_area_id); consider
+    composite key (data_area_id, fiscal_year) for largest tenants.
   - Rebalancing: accept skew on new-LE onboarding or run periodic reshard?
   - Cross-shard correctness of gold aggregation models (gold_trial_balance,
     gold_consolidated_trial_balance, IC eliminations, NCI).
@@ -91,11 +94,13 @@
 {% endmacro %}
 
 
-{% macro cluster_sharding_key(col='entity_id') %}
+{% macro cluster_sharding_key(col='data_area_id') %}
   {#
     Returns the sharding expression used for Distributed tables.
-    cityHash64 gives even distribution; a given entity_id always routes to the
-    same shard so per-LE GL history colocates.
+    cityHash64 gives even distribution; a given legal entity always routes to the
+    same shard so per-LE GL history colocates. The shard column is `data_area_id`
+    — the LE column materialized across bronze/silver/gold (the canonical
+    `entity_id` is renamed to `data_area_id` at the bronze source boundary).
   #}
   {{ return('cityHash64(' ~ col ~ ')') }}
 {% endmacro %}
@@ -190,11 +195,35 @@
 {% endmacro %}
 
 
+{% macro cluster_sharded_tables() %}
+  {#
+    Single source of truth for which tables get a Distributed overlay — used by
+    BOTH create_distributed_tables and drop_distributed_tables so they can never
+    diverge. Returns (database, table) pairs.
+
+    Only models that are cluster-aware (carry cluster_engine()/cluster_name() in
+    their config, so dbt builds a `<table>_local` ReplicatedMergeTree) may appear
+    here — listing a model without a `_local` table makes create fail. To shard a
+    new model: add the cluster config to the MODEL, then add its (db, table) here.
+
+    NOTE: only a few high-volume models are cluster-aware today; this is
+    intentional scaffolding. The cleaner long-term path is dbt-clickhouse's native
+    `distributed_table` / `distributed_incremental` materializations (which manage
+    _local + Distributed + sharding_key from model config) — see PRD §2.
+  #}
+  {{ return([
+    ('epm_bronze', 'bronze_general_journal_account_entries'),
+    ('epm_bronze', 'bronze_general_journal_entries'),
+    ('epm_gold', 'gold_trial_balance')
+  ]) }}
+{% endmacro %}
+
+
 {# ─────────────────────── distributed overlay (run-operation) ─────────────── #}
 
 {% macro create_distributed_tables(
     cluster_name_arg='konsol_cluster',
-    shard_key='entity_id'
+    shard_key='data_area_id'
 ) %}
   {#
     Run-operation: creates Distributed overlay tables over the ReplicatedMergeTree
@@ -213,7 +242,7 @@
       dbt run-operation create_distributed_tables
       # or, overriding defaults:
       dbt run-operation create_distributed_tables \
-        --args '{"cluster_name_arg": "konsol_cluster", "shard_key": "entity_id"}'
+        --args '{"cluster_name_arg": "konsol_cluster", "shard_key": "data_area_id"}'
 
     NEEDS-A-CLUSTER: This operation targets a live multi-node ClickHouse cluster
     and CANNOT be verified on a single-node setup.  It is provided as DDL
@@ -235,101 +264,13 @@
   {% set sk = cluster_sharding_key(shard_key) %}
   {% set cn = cluster_name_arg %}
 
-  {# ---- bronze ---- #}
-  {% set bronze_tables = [
-    'bronze_general_journal_account_entries',
-    'bronze_general_journal_entries',
-    'bronze_budget_transaction_lines',
-    'bronze_budget_register_entries',
-    'bronze_main_accounts',
-    'bronze_main_account_categories',
-    'bronze_legal_entities',
-    'bronze_fiscal_calendars',
-    'bronze_fiscal_calendar_years',
-    'bronze_financial_dimensions',
-    'bronze_financial_dimension_values',
-    'bronze_exchange_rate_currency_pairs',
-    'bronze_exchange_rate_types',
-    'bronze_consolidation_account_groups',
-    'bronze_trial_balance_snapshot'
-  ] %}
-
-  {# ---- silver ---- #}
-  {% set silver_tables = [
-    'silver_gl_entries',
-    'silver_budget_entries',
-    'silver_exchange_rates',
-    'silver_fiscal_periods',
-    'silver_financial_dimensions',
-    'silver_legal_entities',
-    'silver_main_accounts',
-    'silver_trial_balance'
-  ] %}
-
-  {# ---- gold ---- #}
-  {% set gold_tables = [
-    'gold_trial_balance',
-    'gold_ytd_trial_balance',
-    'gold_pnl_by_period',
-    'gold_pnl_quarterly',
-    'gold_pnl_half_yearly',
-    'gold_balance_sheet',
-    'gold_bs_movement',
-    'gold_prior_year_comparison',
-    'gold_consolidated_trial_balance',
-    'gold_fx_revaluation',
-    'gold_period_hierarchy',
-    'gold_scenario_versions',
-    'gold_consolidation_hierarchy',
-    'gold_consolidation_adjustments',
-    'gold_spread_budget',
-    'gold_scenario_trial_balance',
-    'gold_variance_analysis',
-    'gold_variance_ytd',
-    'gold_variance_quarterly',
-    'gold_acquisition_adjustments',
-    'gold_disposal_adjustments',
-    'gold_ic_eliminations',
-    'gold_ic_reconciliation',
-    'gold_nci_movement_schedule',
-    'gold_equity_method_associates',
-    'gold_fully_consolidated_tb',
-    'gold_consolidation_waterfall',
-    'gold_consolidation_journal',
-    'gold_consolidated_ytd',
-    'gold_allocation_results',
-    'gold_allocation_audit_trail',
-    'gold_unmapped_dimension_values'
-  ] %}
-
   {%- set ns = namespace(statements=[]) -%}
-
-  {% for tbl in bronze_tables %}
+  {% for (db, tbl) in cluster_sharded_tables() %}
     {%- set stmt -%}
-CREATE TABLE IF NOT EXISTS epm_bronze.{{ tbl }}
+CREATE TABLE IF NOT EXISTS {{ db }}.{{ tbl }}
 ON CLUSTER {{ cn }}
-AS epm_bronze.{{ tbl }}_local
-ENGINE = Distributed('{{ cn }}', 'epm_bronze', '{{ tbl }}_local', {{ sk }})
-    {%- endset -%}
-    {%- set ns.statements = ns.statements + [stmt] -%}
-  {% endfor %}
-
-  {% for tbl in silver_tables %}
-    {%- set stmt -%}
-CREATE TABLE IF NOT EXISTS epm_silver.{{ tbl }}
-ON CLUSTER {{ cn }}
-AS epm_silver.{{ tbl }}_local
-ENGINE = Distributed('{{ cn }}', 'epm_silver', '{{ tbl }}_local', {{ sk }})
-    {%- endset -%}
-    {%- set ns.statements = ns.statements + [stmt] -%}
-  {% endfor %}
-
-  {% for tbl in gold_tables %}
-    {%- set stmt -%}
-CREATE TABLE IF NOT EXISTS epm_gold.{{ tbl }}
-ON CLUSTER {{ cn }}
-AS epm_gold.{{ tbl }}_local
-ENGINE = Distributed('{{ cn }}', 'epm_gold', '{{ tbl }}_local', {{ sk }})
+AS {{ db }}.{{ tbl }}_local
+ENGINE = Distributed('{{ cn }}', '{{ db }}', '{{ tbl }}_local', {{ sk }})
     {%- endset -%}
     {%- set ns.statements = ns.statements + [stmt] -%}
   {% endfor %}
@@ -362,34 +303,8 @@ ENGINE = Distributed('{{ cn }}', 'epm_gold', '{{ tbl }}_local', {{ sk }})
 
   {% set cn = cluster_name_arg %}
 
-  {% set all_tables = [
-    ('epm_bronze', 'bronze_general_journal_account_entries'),
-    ('epm_bronze', 'bronze_general_journal_entries'),
-    ('epm_bronze', 'bronze_budget_transaction_lines'),
-    ('epm_bronze', 'bronze_budget_register_entries'),
-    ('epm_bronze', 'bronze_main_accounts'),
-    ('epm_bronze', 'bronze_main_account_categories'),
-    ('epm_bronze', 'bronze_legal_entities'),
-    ('epm_bronze', 'bronze_fiscal_calendars'),
-    ('epm_bronze', 'bronze_fiscal_calendar_years'),
-    ('epm_bronze', 'bronze_financial_dimensions'),
-    ('epm_bronze', 'bronze_financial_dimension_values'),
-    ('epm_bronze', 'bronze_exchange_rate_currency_pairs'),
-    ('epm_bronze', 'bronze_exchange_rate_types'),
-    ('epm_bronze', 'bronze_consolidation_account_groups'),
-    ('epm_bronze', 'bronze_trial_balance_snapshot'),
-    ('epm_silver', 'silver_gl_entries'),
-    ('epm_silver', 'silver_budget_entries'),
-    ('epm_silver', 'silver_exchange_rates'),
-    ('epm_silver', 'silver_fiscal_periods'),
-    ('epm_silver', 'silver_financial_dimensions'),
-    ('epm_silver', 'silver_legal_entities'),
-    ('epm_silver', 'silver_main_accounts'),
-    ('epm_silver', 'silver_trial_balance'),
-    ('epm_gold', 'gold_trial_balance'),
-    ('epm_gold', 'gold_consolidated_trial_balance'),
-    ('epm_gold', 'gold_fully_consolidated_tb')
-  ] %}
+  {# Same source of truth as create_distributed_tables — never diverges. #}
+  {% set all_tables = cluster_sharded_tables() %}
 
   {% for (db, tbl) in all_tables %}
     {% do run_query('DROP TABLE IF EXISTS ' ~ db ~ '.' ~ tbl ~ ' ON CLUSTER ' ~ cn) %}

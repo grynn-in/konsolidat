@@ -34,7 +34,7 @@ Per-connector sync mode, replacing full-refresh for high-volume GL streams. Curs
 - High-volume streams (GL line items, GL headers) are incremental; low-volume masters (legal entities, accounts, dimensions, FX, fiscal calendar) may stay full-refresh.
 - dbt bronze/silver models that consume incremental sources must declare `materialized='incremental'` with `incremental_strategy` filtering on `_loaded_at > (select max(_loaded_at) from {{ this }})` so only new CDC deltas reprocess. Affected first: `bronze_general_journal_account_entries`, `bronze_general_journal_entries`, `bronze_budget_transaction_lines`.
 
-### 2. ClickHouse Cluster — Sharded by `entity_id`
+### 2. ClickHouse Cluster — Sharded by `data_area_id`
 
 > **Implementation status (PR #53):** BUILD-ONLY — macros, configs, and dbt
 > changes are in place and `dbt parse` passes with the single-node default
@@ -42,14 +42,14 @@ Per-connector sync mode, replacing full-refresh for high-volume GL streams. Curs
 > real multi-node setup).  See `docs/admin-guide/cluster-setup.md` and
 > the VERIFIED vs. NEEDS-A-CLUSTER section in the PR body.
 
-Horizontal scale for 50–500 LEs. Shard key derived from the canonical `entity_id` so a given LE's rows colocate.
+Horizontal scale for 50–500 LEs. Shard key derived from `data_area_id` (the materialized legal-entity column; canonical `entity_id` is renamed to `data_area_id` in bronze) so a given LE's rows colocate.
 
 | Item | Value |
 |------|-------|
 | Cluster name | `konsol_cluster` (defined in `remote_servers` of cluster config) |
-| Shard key | `cityHash64(entity_id)` |
+| Shard key | `cityHash64(data_area_id)` |
 | Engine (local tables) | `ReplicatedMergeTree` on each shard |
-| Engine (query tables) | `Distributed(konsol_cluster, <db>, <local_table>, cityHash64(entity_id))` |
+| Engine (query tables) | `Distributed(konsol_cluster, <db>, <local_table>, cityHash64(data_area_id))` |
 | Coordination | ClickHouse Keeper (replaces ZooKeeper) |
 | Sharded databases | `epm_bronze`, `epm_silver`, `epm_gold` |
 
@@ -118,8 +118,8 @@ New `konsol` doctype + API + Desk dashboard. One row per active connector (from 
 1. With CDC enabled, a sync after an initial backfill transfers only changed rows: a controlled test that posts 100 GL lines to one LE results in an Airbyte incremental sync whose `rows_emitted` is on the order of 100, not the full table.
 2. Re-delivered CDC rows do not duplicate: querying `bronze_general_journal_account_entries` for a known `_raw_id` returns exactly one active row after `OPTIMIZE ... FINAL` (ReplacingMergeTree dedup).
 3. Incremental dbt run on bronze processes only new `_loaded_at` deltas — `dbt run --select bronze_general_journal_account_entries` on an unchanged source touches 0 rows.
-4. On `konsol_cluster`, `SELECT count(distinct entity_id) FROM epm_gold.gold_trial_balance` returns the same total as the pre-cluster single-node baseline (no rows lost or double-counted across shards).
-5. Rows for a single `entity_id` reside on exactly one shard: `SELECT shardNum(), count() FROM ... GROUP BY 1` for one LE returns a single shard.
+4. On `konsol_cluster`, `SELECT count(distinct data_area_id) FROM epm_gold.gold_trial_balance` returns the same total as the pre-cluster single-node baseline (no rows lost or double-counted across shards).
+5. Rows for a single `data_area_id` reside on exactly one shard: `SELECT shardNum(), count() FROM ... GROUP BY 1` for one LE returns a single shard.
 6. All 144 existing dbt tests pass against the clustered warehouse (`dbt build` green in cluster mode).
 7. `GET konsol.api.connector_health` returns one object per active connector, each with non-null `last_sync_status`, `lag_minutes`, and `entities_loaded`.
 8. Stopping/failing one connector flips its `Connector Health.last_sync_status` to `Failed` within one scheduler cycle and fires a Frappe Notification; other connectors remain `Succeeded`.
@@ -127,7 +127,7 @@ New `konsol` doctype + API + Desk dashboard. One row per active connector (from 
 
 ## Open Questions
 
-- Shard key: `cityHash64(entity_id)` gives even distribution but a very large single LE could create a hot shard — do we need a composite key (e.g. `entity_id` + `fiscal_year`) for the largest tenants?
+- Shard key: `cityHash64(data_area_id)` gives even distribution but a very large single LE could create a hot shard — do we need a composite key (e.g. `entity_id` + `fiscal_year`) for the largest tenants?
 - SAP ECC log-based CDC depends on customer landscape (SLT vs. RFC polling); confirm whether ECC falls back to `AEDAT` cursor when log-based is unavailable.
 - Rebalancing: when a new LE is onboarded after sharding, do we accept skew or run a periodic reshard? Decide tolerance before GA.
 - Airbyte polling vs. webhook for `Connector Health` — does the deployed Airbyte version expose a job-status API stable enough to poll every 5 min, or do we tail Airbyte's own tables?
