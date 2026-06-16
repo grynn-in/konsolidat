@@ -46,7 +46,7 @@ RUN bench get-app /tmp/konsol
 # last asset-producing step (bench init + get-app) and before the VOLUME line.
 RUN mkdir -p /home/frappe/baked-assets \
     && cp sites/assets/assets.json /home/frappe/baked-assets/assets.json \
-    && cp sites/assets/assets-rtl.json /home/frappe/baked-assets/assets-rtl.json
+    && (cp sites/assets/assets-rtl.json /home/frappe/baked-assets/assets-rtl.json || true)
 
 # Install dbt + clickhouse adapter in bench venv (for pipeline runner)
 RUN ./env/bin/pip install dbt-core dbt-clickhouse
