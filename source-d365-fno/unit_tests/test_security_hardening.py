@@ -2,7 +2,7 @@
 
 Covers:
   - #26 OData $filter injection safety (odata_filter_literal)
-  - #30 throttle/transient retry with backoff
+  - #30 throttle/transient retry with backoff (via CDK error handler / backoff strategy)
   - #31 configurable cross-company
   - #27 auth error messages do not leak server response bodies
 
@@ -11,10 +11,12 @@ No monkeypatching: streams and the authenticator are constructed for real
 """
 import requests
 
+from airbyte_cdk.sources.streams.http.error_handlers.response_models import ResponseAction
 from source_d365_fno.auth import D365OAuth2Authenticator, auth_error_message
 from source_d365_fno.streams import (
     ExchangeRates,
     MainAccounts,
+    RetryAfterBackoffStrategy,
     odata_filter_literal,
 )
 
@@ -80,29 +82,32 @@ class TestCrossCompany:
 
 
 # ---------------------------------------------------------------------------
-# #30 retry / backoff
+# #30 retry / backoff  (migrated to CDK get_error_handler / get_backoff_strategy)
 # ---------------------------------------------------------------------------
 
 class TestRetryBackoff:
     def test_retries_on_429(self, config):
         stream = MainAccounts(authenticator=_authenticator(config), environment_url=ENV)
-        assert stream.should_retry(_response(429)) is True
+        resolution = stream.get_error_handler().interpret_response(_response(429))
+        assert resolution.response_action == ResponseAction.RATE_LIMITED
 
     def test_retries_on_5xx(self, config):
         stream = MainAccounts(authenticator=_authenticator(config), environment_url=ENV)
-        assert stream.should_retry(_response(503)) is True
+        resolution = stream.get_error_handler().interpret_response(_response(503))
+        assert resolution.response_action == ResponseAction.RETRY
 
     def test_no_retry_on_200(self, config):
         stream = MainAccounts(authenticator=_authenticator(config), environment_url=ENV)
-        assert stream.should_retry(_response(200)) is False
+        resolution = stream.get_error_handler().interpret_response(_response(200))
+        assert resolution.response_action == ResponseAction.SUCCESS
 
     def test_honours_retry_after(self, config):
-        stream = MainAccounts(authenticator=_authenticator(config), environment_url=ENV)
-        assert stream.backoff_time(_response(429, {"Retry-After": "7"})) == 7.0
+        strategy = RetryAfterBackoffStrategy()
+        assert strategy.backoff_time(_response(429, {"Retry-After": "7"}), attempt_count=1) == 7.0
 
     def test_falls_back_without_retry_after(self, config):
-        stream = MainAccounts(authenticator=_authenticator(config), environment_url=ENV)
-        assert stream.backoff_time(_response(429)) is None
+        strategy = RetryAfterBackoffStrategy()
+        assert strategy.backoff_time(_response(429), attempt_count=1) is None
 
 
 # ---------------------------------------------------------------------------
