@@ -16,6 +16,14 @@ clean-targets:
   - "dbt_packages"
 
 vars:
+  # ── Cluster mode (default OFF — single-node is the default deploy) ─────────
+  # Set to true *only* when targeting a multi-node ClickHouse cluster:
+  #   dbt build --target cluster --vars '{"cluster_enabled": true}'
+  # When false, all cluster_* macros return the same values as the original
+  # hardcoded literals; compiled SQL is byte-for-byte identical to pre-cluster.
+  # See docs/admin-guide/cluster-setup.md for the full procedure.
+  cluster_enabled: false
+
   erp_sources:
     - d365_fo
     - erpnext

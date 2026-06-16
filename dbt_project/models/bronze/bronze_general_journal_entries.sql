@@ -3,9 +3,10 @@
         materialized='incremental',
         incremental_strategy='delete+insert',
         unique_key='recid',
-        engine='ReplacingMergeTree(_airbyte_extracted_at)',
+        engine=cluster_engine('ReplacingMergeTree(_airbyte_extracted_at)'),
         order_by='(data_area_id, accounting_date, recid)',
-        partition_by='toYear(accounting_date)'
+        partition_by='toYear(accounting_date)',
+        cluster=cluster_name()
     )
 }}
 

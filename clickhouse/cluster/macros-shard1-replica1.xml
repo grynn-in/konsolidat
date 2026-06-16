@@ -1,0 +1,27 @@
+<!--
+  macros-shard1-replica1.xml — ClickHouse server macros for shard 1 replica 1
+
+  ClickHouse expands {shard}, {replica}, {database}, {table} in
+  ReplicatedMergeTree ZooKeeper path arguments at CREATE TABLE time.
+
+  Mount this file at:
+    /etc/clickhouse-server/config.d/macros.xml
+
+  on the FIRST shard node (ch-shard1).
+
+  Copy and edit for each node:
+    ch-shard1 : shard=01, replica=replica1
+    ch-shard2 : shard=02, replica=replica1
+    ch-shard3 : shard=03, replica=replica1
+
+  For 2-replica HA, add a second node per shard:
+    ch-shard1-r2 : shard=01, replica=replica2
+    etc.
+-->
+<clickhouse>
+  <macros>
+    <shard>01</shard>
+    <replica>replica1</replica>
+    <cluster>konsol_cluster</cluster>
+  </macros>
+</clickhouse>

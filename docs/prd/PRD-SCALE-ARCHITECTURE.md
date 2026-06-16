@@ -36,6 +36,12 @@ Per-connector sync mode, replacing full-refresh for high-volume GL streams. Curs
 
 ### 2. ClickHouse Cluster — Sharded by `entity_id`
 
+> **Implementation status (PR #53):** BUILD-ONLY — macros, configs, and dbt
+> changes are in place and `dbt parse` passes with the single-node default
+> unchanged.  End-to-end cluster correctness has NOT been verified (needs a
+> real multi-node setup).  See `docs/admin-guide/cluster-setup.md` and
+> the VERIFIED vs. NEEDS-A-CLUSTER section in the PR body.
+
 Horizontal scale for 50–500 LEs. Shard key derived from the canonical `entity_id` so a given LE's rows colocate.
 
 | Item | Value |
@@ -51,7 +57,28 @@ Horizontal scale for 50–500 LEs. Shard key derived from the canonical `entity_
 - Partition keys are preserved per shard (`toYear(accounting_date)` etc.) — sharding is orthogonal to partitioning.
 - Cross-shard consolidation (FX translation, IC elimination, NCI) runs as `GLOBAL`-aware queries; gold models that aggregate across entities (`gold_trial_balance`, consolidation outputs) must be validated for correctness on `Distributed` reads.
 - dbt targets the cluster via `cluster: konsol_cluster` in `profiles.yml`; `ON CLUSTER` DDL for replicated table creation.
-- Single-node remains the default deploy; cluster mode is enabled by a profile/var so small installs are unaffected.
+- Single-node remains the default deploy; cluster mode is enabled by a profile/var (`cluster_enabled: false` default in `dbt_project.yml`) and the `cluster` profile target so small installs are unaffected.
+
+**Implemented artefacts (konsolidat PR #53)**
+
+| Artefact | Path | Notes |
+|----------|------|-------|
+| Cluster macros | `dbt_project/macros/cluster.sql` | `cluster_engine()`, `cluster_name()`, `create_distributed_tables()` run-operation |
+| dbt var | `dbt_project/dbt_project.yml` | `cluster_enabled: false` (default OFF) |
+| dbt profile target | `dbt_project/profiles.yml` | `cluster:` target with `cluster: konsol_cluster` |
+| Remote servers config | `clickhouse/cluster/remote_servers.xml` | 3-shard topology (placeholder hostnames) |
+| ClickHouse Keeper config | `clickhouse/cluster/keeper.xml` | Co-located Keeper + ZK-compat client port |
+| Per-node macros example | `clickhouse/cluster/macros-shard1-replica1.xml` | `{shard}`, `{replica}` server macros |
+| Cluster Docker Compose | `docker-compose.cluster.yml` | Overlay for 3-node cluster deployment |
+| Admin guide | `docs/admin-guide/cluster-setup.md` | Step-by-step setup + open questions |
+| Opted-in models (3) | `bronze_general_journal_account_entries`, `bronze_general_journal_entries`, `gold_trial_balance` | Config block uses `cluster_engine()` + `cluster_name()` macros; SQL query unchanged |
+
+**Cluster activation command**
+
+```bash
+dbt build --target cluster --vars '{"cluster_enabled": true}'
+dbt run-operation create_distributed_tables --vars '{"cluster_enabled": true}'
+```
 
 ### 3. Per-Connector Health Dashboard (Frappe)
 

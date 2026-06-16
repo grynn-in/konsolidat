@@ -1,0 +1,107 @@
+# =============================================================================
+# Konsolidat — ClickHouse Cluster Overlay (3-shard, co-located Keeper)
+# =============================================================================
+#
+# NEEDS-A-CLUSTER: This compose file is documentation / scaffolding only.
+# It has NOT been tested on a real multi-node setup because this repository
+# runs on a single node.  Use it as a starting point and verify on actual
+# hardware or cloud VMs.
+#
+# Usage
+# ─────
+# Run on THREE separate hosts (or in a VM mesh with appropriate networking):
+#
+#   host 1 (ch-shard1):
+#     SHARD_ID=1 REPLICA_ID=1 docker compose -f docker-compose.cluster.yml up -d
+#
+#   host 2 (ch-shard2):
+#     SHARD_ID=2 REPLICA_ID=1 docker compose -f docker-compose.cluster.yml up -d
+#
+#   host 3 (ch-shard3):
+#     SHARD_ID=3 REPLICA_ID=1 docker compose -f docker-compose.cluster.yml up -d
+#
+# Then, on any host, initialise databases and run dbt in cluster mode:
+#
+#   docker compose -f docker-compose.cluster.yml exec clickhouse \
+#     clickhouse-client --query "$(cat clickhouse/init-db.sql)"
+#
+#   dbt build --target cluster --vars '{"cluster_enabled": true}'
+#   dbt run-operation create_distributed_tables --vars '{"cluster_enabled": true}'
+#
+# Environment
+# ───────────
+# SHARD_ID      — integer 1/2/3 (used in macros.xml <shard> value)
+# REPLICA_ID    — integer 1 (or 2 for HA second replica per shard)
+# CH_HOST_1..3  — hostnames/IPs of the three shard nodes
+# CLICKHOUSE_PASSWORD — shared secret (all nodes must use same password)
+#
+# Architecture
+# ────────────
+# Each node runs:
+#   - clickhouse-server  (listens on port 9000 native, 8123 HTTP)
+#   - clickhouse-keeper  (embedded, port 2181 ZK-compat, 9181 raft)
+#
+# Shard key    : cityHash64(entity_id)
+# Cluster name : konsol_cluster
+# Coordinator  : ClickHouse Keeper (replaces ZooKeeper)
+#
+# Open questions
+# ──────────────
+# - Hot-shard: a single large LE under cityHash64(entity_id) may skew one
+#   shard.  Consider composite key (entity_id, fiscal_year) for largest tenants.
+# - Rebalancing: accept distribution skew on new-LE onboarding or run
+#   periodic reshard.
+# - Cube.js pre-aggregation: confirm shard-aware refresh key for pre-agg layer.
+# - ON CLUSTER correctness for cross-shard gold models (consolidated TB, IC
+#   eliminations, NCI) — requires end-to-end cluster test.
+# =============================================================================
+
+x-clickhouse-common: &ch-common
+  image: clickhouse/clickhouse-server:24.8-alpine
+  ulimits:
+    nofile:
+      soft: 262144
+      hard: 262144
+  healthcheck:
+    test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 30s
+  restart: unless-stopped
+
+services:
+  clickhouse:
+    <<: *ch-common
+    container_name: konsolidat_ch_shard${SHARD_ID:-1}_replica${REPLICA_ID:-1}
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+      - clickhouse_keeper_data:/var/lib/clickhouse-keeper
+      - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+      # Remote servers — all nodes need the same topology config
+      - ./clickhouse/cluster/remote_servers.xml:/etc/clickhouse-server/config.d/remote_servers.xml:ro
+      # Keeper config — same file on all nodes; Keeper reads SHARD_ID from macros
+      - ./clickhouse/cluster/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+      # Macros — per-node; generated at deploy time (see generate-macros.sh below)
+      - ./clickhouse/cluster/macros-shard${SHARD_ID:-1}-replica${REPLICA_ID:-1}.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      # PostgreSQL wire protocol for Excel/ODBC (optional)
+      - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+    extra_hosts:
+      # Map shard hostnames to actual IPs.
+      # Replace with real IPs or use a DNS / overlay network.
+      - "ch-shard1:${CH_HOST_1:-127.0.0.1}"
+      - "ch-shard2:${CH_HOST_2:-127.0.0.2}"
+      - "ch-shard3:${CH_HOST_3:-127.0.0.3}"
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
+  clickhouse_keeper_data:
