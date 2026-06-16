@@ -1,6 +1,11 @@
 # PRD: Demo Data Source & Source-of-Truth Hygiene
 
-*Status: Design — ready for implementation. All decisions resolved (see Decisions / Resolved Decisions). Author handoff: code to be implemented separately.*
+**Status:** Design — ready for implementation
+**Date:** 2026-06-15
+**Phase:** Phase 3 — Multi-ERP / Source-of-Truth Hygiene
+**Repos:** `konsol` (fixtures, `dbt_config.py`, `install.py`), `konsolidat` (dbt staging models, seeds, CI)
+
+> All decisions resolved (see Resolved Decisions). Code to be implemented separately.
 
 ## Problem
 
@@ -53,11 +58,7 @@ The lifecycle plumbing already exists — `konsol/pipeline/doctype/connector/con
 calls `regenerate_vars()` from both `on_update` and `on_trash`. This PRD feeds it a principled
 default and removes the failure modes around the empty set.
 
-## Decisions (locked 2026-06-15)
-- **Dimension Mapping source of truth = Frappe fixtures.** Ship `konsol/fixtures/dimension_mapping.json`;
-  `dbt_project/seeds/dimension_mappings.csv` is a **generated** mirror, never hand-edited. (Resolves §4 SoT.)
-- **Guard the seed regenerator.** `_regenerate_dimension_mappings_seed()` must **no-op when 0 published
-  `Dimension Mapping` docs exist**, so a migrate can never empty a committed crosswalk. (Resolves §4 safety + AC#6.)
+> **Decisions** are consolidated in one place — see **[Resolved Decisions](#resolved-decisions-2026-06-15)** below. (An earlier draft carried a duplicate, separately-numbered "Decisions (locked)" block; it has been merged here to remove the conflicting numbering.)
 
 ## Scope
 
@@ -84,12 +85,17 @@ default and removes the failure modes around the empty set.
 - This is the safety net that makes "delete the last source" non-breaking; it is not optional once
   §2 removes the `d365_fo` mask.
 
-### 4. Dimension Mapping crosswalk — source of truth + safety (konsol + dbt)  *(decided — see Decisions)*
+### 4. Dimension Mapping crosswalk — source of truth + safety (konsol + dbt)  *(decided — see [Resolved Decisions](#resolved-decisions-2026-06-15))*
 - **DECIDED — Frappe is the source of truth**: ship **`konsol/fixtures/dimension_mapping.json`**; treat
   `dbt_project/seeds/dimension_mappings.csv` as a **generated artifact** of
   `_regenerate_dimension_mappings_seed()` (never hand-edited / committed-by-hand).
-- **DECIDED — guard the regenerator**: `_regenerate_dimension_mappings_seed()` must **no-op when there are
-  0 published `Dimension Mapping` docs**, so a migrate can never empty a committed crosswalk.
+- **DECIDED — the fixture is the safety, not a guard.** Shipping `dimension_mapping.json` means fixtures
+  load **before** `after_migrate` runs `_regenerate_dimension_mappings_seed()`, so a fresh migrate always
+  has published docs and regenerates a correct, **non-empty** crosswalk — this, not a no-op guard, is what
+  prevents the committed CSV being emptied. An empty crosswalk (0 docs) is a **valid** state — "no mappings,
+  everything passes through", per the regenerator's own contract — so it is deliberately **not** guarded
+  against; clearing all mappings legitimately yields an empty seed. *(This supersedes an earlier draft that
+  proposed no-op-on-0-docs, which contradicted the regenerator's documented behaviour.)*
 - **Provide demo_data crosswalk rows**: harmonization joins on `erp_source`
   (`dim_harmonize_joins('unioned.erp_source', …)` in `stg_gl_entries.sql`). Either (a) author the
   demo seeds as already-canonical (no `demo_data` crosswalk rows needed), or (b) ship `demo_data`
@@ -132,9 +138,10 @@ default and removes the failure modes around the empty set.
    (zero rows), the build does not error.
 5. `konsol/fixtures/connector.json` and `konsol/fixtures/dimension_mapping.json` exist and load on
    migrate; `bench export-fixtures` round-trips them without loss.
-6. `_regenerate_dimension_mappings_seed()` is a **no-op when 0 published Dimension Mapping docs**
-   exist; a migrate on an empty crosswalk registry does **not** modify a committed
-   `dimension_mappings.csv`.
+6. The shipped `dimension_mapping.json` fixture loads **before** `after_migrate`, so a fresh migrate
+   regenerates a **non-empty** `dimension_mappings.csv` matching the fixture (the committed crosswalk is
+   never silently emptied). Conversely, clearing all Dimension Mapping docs regenerates an **empty**
+   crosswalk **without error** (empty = "everything passes through").
 7. `demo_data` rows carry **un-harmonized source values** that reach gold **correctly harmonized**
    via the shipped `demo_data` crosswalk rows (Decision #1) — verifiable via `=EPM()`.
 8. Docs state which files are generated vs source-of-truth and the regenerate→commit workflow.
@@ -191,6 +198,12 @@ Defer modularity, but lock the interface now.**
    multi-entity consolidation without bloat; keeping the IDs identical everywhere makes
    `entities_loaded` / Connector Health counts and harmonization line up. The connector fixture is
    the canonical declaration of the list.
+
+## Open Questions
+
+None — all six design questions are resolved (see Resolved Decisions). Implementation may surface
+mechanical details (e.g. the exact entry point for the regenerator's build-from-fixtures mode used by the
+CI sync check); raise those on the implementing PR.
 
 ## Affected components (reference for the implementer)
 - `konsol/dbt_config.py` — `regenerate_vars()` fallback (§2); `_regenerate_dimension_mappings_seed()` guard (§4).
