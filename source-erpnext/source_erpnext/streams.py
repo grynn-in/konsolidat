@@ -67,6 +67,11 @@ class FrappeStream(HttpStream):
         return RetryAfterBackoffStrategy()
 
     def get_error_handler(self) -> ErrorHandler:
+        # 5xx -> RETRY (capped at max_retries=5); 429 -> RATE_LIMITED, which the
+        # CDK retries indefinitely paced by Retry-After (exit_on_rate_limit=False).
+        # Deliberate change from the old should_retry (which capped 429 at 5):
+        # endless-but-throttle-paced is standard Airbyte 7.x and better for a
+        # rate-limited API.
         return HttpStatusErrorHandler(logger=logger, max_retries=5)
 
     @property

@@ -109,6 +109,11 @@ class D365ODataStream(HttpStream):
         return RetryAfterBackoffStrategy()
 
     def get_error_handler(self) -> ErrorHandler:
+        # 5xx -> RETRY (capped at max_retries=5); 429 -> RATE_LIMITED, which the
+        # CDK retries indefinitely paced by Retry-After (exit_on_rate_limit=False).
+        # This is a deliberate change from the old should_retry (which capped 429
+        # at 5): endless-but-throttle-paced is the standard Airbyte 7.x behavior
+        # and is preferable for a rate-limited API.
         return HttpStatusErrorHandler(logger=logger, max_retries=5)
 
     @property

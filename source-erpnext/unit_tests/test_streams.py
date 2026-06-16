@@ -123,6 +123,14 @@ class TestBackoffMigration:
         exc = requests.exceptions.ConnectionError("timeout")
         assert strategy.backoff_time(exc, attempt_count=2) is None
 
+    def test_backoff_strategy_returns_none_for_http_date_retry_after(self):
+        # RFC-7231 allows an HTTP-date Retry-After; we don't parse it (ERPNext
+        # sends integer seconds) -> falls back to CDK exponential backoff.
+        strategy = RetryAfterBackoffStrategy()
+        resp = MagicMock(spec=requests.Response)
+        resp.headers = {"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}
+        assert strategy.backoff_time(resp, attempt_count=1) is None
+
     def test_no_cdk_adapter_deprecation_warnings_on_instantiation(self, auth):
         """Stream instantiation must not trigger CDK backoff/error-handler adapter warnings."""
         with warnings.catch_warnings(record=True) as recorded:
