@@ -1,6 +1,6 @@
 # PRDs — Index
 
-*Last updated: 2026-06-13*
+*Last updated: 2026-06-15*
 
 Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by roadmap phase. See [../reference/roadmap.md](../reference/roadmap.md) for the master plan.
 
@@ -23,6 +23,7 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | [Dimension Harmonization](PRD-DIMENSION-HARMONIZATION.md) | Map per-ERP dimensions to canonical dimensions across connectors. | ✅ Implemented (konsolidat #38, konsol #18) |
 | [Scale Architecture (50–500 LEs)](PRD-SCALE-ARCHITECTURE.md) | Incremental extraction, ClickHouse sharding, per-connector health for large multi-ERP estates. | Not Started |
 | [Connector Registry (Frappe)](PRD-CONNECTOR-REGISTRY.md) | Frappe-driven catalog of connectors, credentials, and sync configuration. | ✅ Implemented (konsol #15) |
+| [Demo Data Source & Source-of-Truth Hygiene](PRD-DEMO-DATA-SOURCE.md) | Seeded `demo_data` connector as the default source (replaces hardcoded `d365_fo` fallback); empty-union guard; Dimension Mapping fixtures as crosswalk source of truth + regenerator guard. | Not Started |
 
 ## Phase 4 — Security & SSO
 
