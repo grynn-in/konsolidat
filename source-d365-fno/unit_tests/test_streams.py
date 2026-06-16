@@ -1,10 +1,13 @@
 """Tests for D365 OData streams."""
 
 import json
+import warnings
 from unittest.mock import patch, MagicMock, PropertyMock
 
 import pytest
+import requests
 
+from airbyte_cdk.sources.streams.http.error_handlers import HttpStatusErrorHandler
 from source_d365_fno.auth import D365OAuth2Authenticator
 from source_d365_fno.streams import (
     D365ODataStream,
@@ -13,6 +16,7 @@ from source_d365_fno.streams import (
     GeneralJournalAccountEntryBiEntities,
     ExchangeRates,
     BudgetRegisterEntries,
+    RetryAfterBackoffStrategy,
     odata_filter_literal,
     cursor_is_greater,
 )
@@ -234,3 +238,71 @@ class TestIncrementalStream:
         assert records[0]["MainAccountId"] == "110100"
         assert records[0]["Name"] == "Cash"
         assert records[0]["MainAccountType"] == "BalanceSheet"
+
+
+class TestBackoffMigration:
+    """Verify the CDK backoff/error-handler migration away from deprecated methods."""
+
+    def test_get_backoff_strategy_returns_retry_after_strategy(self, mock_auth):
+        stream = MainAccounts(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        assert isinstance(stream.get_backoff_strategy(), RetryAfterBackoffStrategy)
+
+    def test_get_error_handler_returns_http_status_error_handler(self, mock_auth):
+        stream = MainAccounts(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        assert isinstance(stream.get_error_handler(), HttpStatusErrorHandler)
+
+    def test_backoff_strategy_returns_retry_after_seconds(self):
+        strategy = RetryAfterBackoffStrategy()
+        resp = MagicMock(spec=requests.Response)
+        resp.headers = {"Retry-After": "45"}
+        assert strategy.backoff_time(resp, attempt_count=1) == 45.0
+
+    def test_backoff_strategy_returns_none_when_no_header(self):
+        strategy = RetryAfterBackoffStrategy()
+        resp = MagicMock(spec=requests.Response)
+        resp.headers = {}
+        assert strategy.backoff_time(resp, attempt_count=1) is None
+
+    def test_backoff_strategy_returns_none_for_non_response(self):
+        strategy = RetryAfterBackoffStrategy()
+        assert strategy.backoff_time(None, attempt_count=1) is None
+        exc = requests.exceptions.ConnectionError("timeout")
+        assert strategy.backoff_time(exc, attempt_count=2) is None
+
+    def test_no_cdk_adapter_deprecation_warnings_on_instantiation(self, mock_auth):
+        """Stream instantiation must not trigger CDK backoff/error-handler adapter warnings."""
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            MainAccounts(
+                authenticator=mock_auth,
+                environment_url="https://test.operations.dynamics.com",
+            )
+        cdk_adapter_warns = [
+            str(w.message) for w in recorded
+            if issubclass(w.category, DeprecationWarning)
+            and (
+                "get_backoff_strategy" in str(w.message)
+                or "get_error_handler" in str(w.message)
+            )
+        ]
+        assert cdk_adapter_warns == [], f"Unexpected CDK adapter deprecation warnings: {cdk_adapter_warns}"
+
+    def test_stream_has_no_should_retry_method(self, mock_auth):
+        stream = MainAccounts(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        assert not hasattr(type(stream), "should_retry") or "should_retry" not in type(stream).__dict__
+
+    def test_stream_has_no_backoff_time_method(self, mock_auth):
+        stream = MainAccounts(
+            authenticator=mock_auth,
+            environment_url="https://test.operations.dynamics.com",
+        )
+        assert "backoff_time" not in type(stream).__dict__

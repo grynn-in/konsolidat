@@ -18,12 +18,35 @@ from typing import Any, Iterable, List, Mapping, MutableMapping
 
 import requests
 from airbyte_cdk.sources.streams.http import HttpStream
+from airbyte_cdk.sources.streams.http.error_handlers import (
+    BackoffStrategy,
+    ErrorHandler,
+    HttpStatusErrorHandler,
+)
 
 from .auth import FrappeTokenAuthenticator
 
 logger = logging.getLogger("airbyte")
 
 SCHEMAS_DIR = Path(__file__).parent / "schemas"
+
+
+class RetryAfterBackoffStrategy(BackoffStrategy):
+    """Return Retry-After header seconds when present; None defers to CDK exponential backoff."""
+
+    def backoff_time(
+        self,
+        response_or_exception: requests.Response | requests.RequestException | None,
+        attempt_count: int,
+    ) -> float | None:
+        if isinstance(response_or_exception, requests.Response):
+            retry_after = response_or_exception.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    return float(retry_after)
+                except (TypeError, ValueError):
+                    pass
+        return None
 
 
 class FrappeStream(HttpStream):
@@ -34,25 +57,17 @@ class FrappeStream(HttpStream):
     fields_list: List[str] = []  # Override: doctype fields to request
 
     page_size: int = 500
-    max_retries: int = 5
 
     def __init__(self, authenticator: FrappeTokenAuthenticator, page_size: int = 500, **kwargs):
         super().__init__(**kwargs)
         self._auth = authenticator
         self.page_size = page_size
 
-    def should_retry(self, response: requests.Response) -> bool:
-        """Retry on throttling (429) and transient server errors (5xx)."""
-        return response.status_code == 429 or 500 <= response.status_code < 600
+    def get_backoff_strategy(self) -> BackoffStrategy:
+        return RetryAfterBackoffStrategy()
 
-    def backoff_time(self, response: requests.Response) -> float | None:
-        retry_after = response.headers.get("Retry-After")
-        if retry_after:
-            try:
-                return float(retry_after)
-            except (TypeError, ValueError):
-                pass
-        return None  # fall back to the CDK's exponential backoff
+    def get_error_handler(self) -> ErrorHandler:
+        return HttpStatusErrorHandler(logger=logger, max_retries=5)
 
     @property
     def url_base(self) -> str:

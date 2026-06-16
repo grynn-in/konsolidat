@@ -1,16 +1,20 @@
 """Tests for ERPNext Frappe-REST streams."""
 
 import json
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
+from airbyte_cdk.sources.streams.http.error_handlers import HttpStatusErrorHandler
 from source_erpnext.auth import FrappeTokenAuthenticator
 from source_erpnext.streams import (
     Account,
     Budget,
     CurrencyExchange,
     GLEntry,
+    RetryAfterBackoffStrategy,
 )
 
 
@@ -90,6 +94,57 @@ class TestIncremental:
         ):
             list(stream.read_records(sync_mode=None))
         assert stream.state == {"modified": "2024-03-01 00:00:00"}
+
+
+class TestBackoffMigration:
+    """Verify the CDK backoff/error-handler migration away from deprecated methods."""
+
+    def test_get_backoff_strategy_returns_retry_after_strategy(self, auth):
+        assert isinstance(GLEntry(authenticator=auth).get_backoff_strategy(), RetryAfterBackoffStrategy)
+
+    def test_get_error_handler_returns_http_status_error_handler(self, auth):
+        assert isinstance(GLEntry(authenticator=auth).get_error_handler(), HttpStatusErrorHandler)
+
+    def test_backoff_strategy_returns_retry_after_seconds(self):
+        strategy = RetryAfterBackoffStrategy()
+        resp = MagicMock(spec=requests.Response)
+        resp.headers = {"Retry-After": "60"}
+        assert strategy.backoff_time(resp, attempt_count=1) == 60.0
+
+    def test_backoff_strategy_returns_none_when_no_header(self):
+        strategy = RetryAfterBackoffStrategy()
+        resp = MagicMock(spec=requests.Response)
+        resp.headers = {}
+        assert strategy.backoff_time(resp, attempt_count=1) is None
+
+    def test_backoff_strategy_returns_none_for_non_response(self):
+        strategy = RetryAfterBackoffStrategy()
+        assert strategy.backoff_time(None, attempt_count=1) is None
+        exc = requests.exceptions.ConnectionError("timeout")
+        assert strategy.backoff_time(exc, attempt_count=2) is None
+
+    def test_no_cdk_adapter_deprecation_warnings_on_instantiation(self, auth):
+        """Stream instantiation must not trigger CDK backoff/error-handler adapter warnings."""
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            GLEntry(authenticator=auth)
+        cdk_adapter_warns = [
+            str(w.message) for w in recorded
+            if issubclass(w.category, DeprecationWarning)
+            and (
+                "get_backoff_strategy" in str(w.message)
+                or "get_error_handler" in str(w.message)
+            )
+        ]
+        assert cdk_adapter_warns == [], f"Unexpected CDK adapter deprecation warnings: {cdk_adapter_warns}"
+
+    def test_stream_has_no_should_retry_method(self, auth):
+        stream = GLEntry(authenticator=auth)
+        assert "should_retry" not in type(stream).__dict__
+
+    def test_stream_has_no_backoff_time_method(self, auth):
+        stream = GLEntry(authenticator=auth)
+        assert "backoff_time" not in type(stream).__dict__
 
 
 class TestBudgetFlatten:
