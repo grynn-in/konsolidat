@@ -1,0 +1,84 @@
+<!--
+  remote_servers.xml — ClickHouse cluster topology for konsol_cluster
+
+  This file defines a 3-shard × 1-replica cluster.  Extend to 2 replicas per
+  shard by duplicating each <replica> block and adding a second ClickHouse node.
+
+  Mount at:
+    /etc/clickhouse-server/config.d/remote_servers.xml
+
+  on every ClickHouse node in the cluster.
+
+  NEEDS-A-CLUSTER: these addresses are placeholders.  Replace ch-shard1,
+  ch-shard2, ch-shard3 with the actual hostnames / IP addresses of your nodes.
+
+  Architecture
+  ─────────────
+  Cluster name   : konsol_cluster        (matches dbt profiles.yml cluster:)
+  Shards         : 3 (increase as entity count grows)
+  Replicas/shard : 1 (add second <replica> blocks for HA)
+  Shard key      : cityHash64(data_area_id) (dbt cluster_sharding_key macro)
+  Databases      : epm_bronze, epm_silver, epm_gold
+
+  Table naming convention
+  ───────────────────────
+  epm_bronze.bronze_general_journal_account_entries_local  ← ReplicatedMergeTree
+  epm_bronze.bronze_general_journal_account_entries        ← Distributed
+
+  The _local tables are created by dbt build (--target cluster).
+  The Distributed overlays are created by dbt run-operation create_distributed_tables.
+
+  Open questions (see docs/admin-guide/cluster-setup.md)
+  ───────────────────────────────────────────────────────
+  - Hot-shard: a single very large LE may saturate one shard.
+    Mitigate with composite key or per-LE routing.
+  - Rebalancing: new LE onboarding after initial shard allocation.
+-->
+<clickhouse>
+  <remote_servers>
+    <konsol_cluster>
+      <!-- Shard 1 -->
+      <shard>
+        <weight>1</weight>
+        <internal_replication>true</internal_replication>
+        <replica>
+          <host>ch-shard1</host>
+          <port>9000</port>
+          <user>default</user>
+          <!-- password via interserver_http_credentials or env SECRET -->
+          <password></password>
+        </replica>
+        <!-- Add a second <replica> block here for shard-level HA:
+        <replica>
+          <host>ch-shard1-replica</host>
+          <port>9000</port>
+          <user>default</user>
+          <password></password>
+        </replica>
+        -->
+      </shard>
+      <!-- Shard 2 -->
+      <shard>
+        <weight>1</weight>
+        <internal_replication>true</internal_replication>
+        <replica>
+          <host>ch-shard2</host>
+          <port>9000</port>
+          <user>default</user>
+          <password></password>
+        </replica>
+      </shard>
+      <!-- Shard 3 -->
+      <shard>
+        <weight>1</weight>
+        <internal_replication>true</internal_replication>
+        <replica>
+          <host>ch-shard3</host>
+          <port>9000</port>
+          <user>default</user>
+          <password></password>
+        </replica>
+      </shard>
+    </konsol_cluster>
+  </remote_servers>
+</clickhouse>

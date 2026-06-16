@@ -38,3 +38,35 @@ open_epm:
       send_receive_timeout: 300
       custom_settings:
         max_memory_usage: 10000000000
+
+    # ── Cluster mode (opt-in; requires a live konsol_cluster) ──────────────
+    # Usage:
+    #   dbt build --target cluster --vars '{"cluster_enabled": true}'
+    # or:
+    #   export DBT_TARGET=cluster
+    #   export CLUSTER_ENABLED=true   # pass via --vars or dbt_project.yml override
+    #
+    # The `cluster: konsol_cluster` key instructs dbt-clickhouse to add
+    # ON CLUSTER konsol_cluster to all CREATE TABLE DDL.
+    # Set cluster_enabled=true (via --vars) so the cluster_* macros also
+    # switch engines from MergeTree → ReplicatedMergeTree.
+    #
+    # NEEDS-A-CLUSTER: This target cannot be used without a running multi-node
+    # ClickHouse cluster + ClickHouse Keeper.
+    # See: docs/admin-guide/cluster-setup.md
+    cluster:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST') }}"
+      port: "{{ env_var('CLICKHOUSE_PORT', '8443') | int }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'default') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD') }}"
+      schema: "{{ env_var('CLICKHOUSE_SCHEMA', 'epm') }}"
+      secure: true
+      verify: true
+      connect_timeout: 30
+      send_receive_timeout: 300
+      # Cluster name — must match remote_servers config in ClickHouse XML.
+      # dbt-clickhouse appends ON CLUSTER konsol_cluster to CREATE TABLE DDL.
+      cluster: konsol_cluster
+      custom_settings:
+        max_memory_usage: 10000000000

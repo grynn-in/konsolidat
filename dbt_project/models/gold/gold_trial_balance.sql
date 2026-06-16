@@ -1,7 +1,8 @@
 {{
     config(
-        engine='MergeTree()',
-        order_by='tuple()'
+        engine=cluster_engine('MergeTree()'),
+        order_by='tuple()',
+        cluster=cluster_name()
     )
 }}
 
