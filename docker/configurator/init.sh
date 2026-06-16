@@ -90,6 +90,16 @@ bench --site "$SITE_NAME" execute konsol.install.setup_epm_settings \
     --kwargs "{\"ch_host\": \"${CH_HOST}\", \"ch_port\": ${CH_PORT}, \"ch_user\": \"${CLICKHOUSE_USER:-default}\", \"ch_password\": \"${CLICKHOUSE_PASSWORD:-open_epm_dev}\"}" \
     2>/dev/null || echo "EPM Settings setup skipped (install.py may not exist yet)"
 
+# Sync scheduled jobs from app hooks.
+# `bench migrate` does not reliably create the Scheduled Job Type rows for an
+# app's scheduler_events crons on an existing site, so konsol's cron jobs
+# (e.g. close_run reaper, connector-health refresh) silently never register.
+# Run sync_jobs explicitly so every deploy reconciles the cron registry.
+echo "Syncing scheduled jobs from hooks..."
+bench --site "$SITE_NAME" execute \
+    frappe.core.doctype.scheduled_job_type.scheduled_job_type.sync_jobs \
+    2>/dev/null || echo "WARN: scheduled job sync failed"
+
 # Restore the image-baked asset manifest into the persisted sites/ volume.
 #
 # Why this, not `bench build`: the hashed JS/CSS bundles live in the image
