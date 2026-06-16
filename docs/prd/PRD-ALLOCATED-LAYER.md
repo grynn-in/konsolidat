@@ -133,24 +133,35 @@ GROUP BY 1, 2, 3
 
 ### 4. Macro changes — scenario-aware source
 
-> **⚠️ Under review — the snippet below is illustrative, not final.** The allocation engine is
-> **set-based SQL**, not a per-rule Jinja loop, so there is no `rule.` object in macro scope (rules are
-> joined via `cross join stepN_rule as r`, and the TB is the `tb_base` CTE consumed by every step). A
-> per-rule `{% if %}` as written would not compile. The corrected, set-based approach — making `tb_base`
-> read a **scenario-keyed** source and joining rules on `scenario_id` — is drafted in a PR comment for
-> sign-off before implementation; this section will be replaced with it.
+The allocation engine is **set-based SQL** — rules are joined via `cross join stepN_rule as r`, and the
+trial balance is the `tb_base` CTE consumed by every step. So the source is made scenario-aware by changing
+`tb_base` itself (and joining each rule on `scenario_id`), **not** by a per-rule Jinja conditional.
 
-**allocation_engine_multistep.sql** (intent):
+**allocation_engine_multistep.sql:**
 
-Current pool CTE reads from `tb_base`, which reads:
+Today `tb_base` reads actuals only:
 ```sql
-FROM {{ ref('gold_trial_balance') }}
+... from {{ ref('gold_trial_balance') }}
 ```
 
-The change makes the base source scenario-aware (carry `scenario_id` through `tb_base` and join each
-rule to the matching scenario), rather than the per-rule conditional shown in the original draft. The
-`source_scenario` value comes from the `allocation_rules` seed/table — add the column to the seed CSV
-and the Frappe doctype sync.
+Change `tb_base` to read the scenario-keyed trial balance, carrying `scenario_id`, and join each rule to
+its `source_scenario`:
+```sql
+with tb_base as (
+    select scenario_id, data_area_id, fiscal_year, fiscal_period,
+           main_account, amount
+    from {{ ref('gold_scenario_trial_balance') }}
+)
+-- ... each step's pool then joins its rule on the matching scenario:
+... cross join stepN_rule as r
+where pool.scenario_id = r.source_scenario
+```
+
+This works because `gold_scenario_trial_balance` already unions **all three** scenarios in one model —
+`ACTUAL` (from `gold_trial_balance`), `BUDGET` (from `silver_budget_entries`), and write-back scenarios
+incl. `FORECAST` (from `epm_staging.budget_input`) — so a single source covers every `source_scenario`
+with **no double-count** (ACTUAL is not added twice). `source_scenario` comes from the `allocation_rules`
+seed/table — add the column to the seed CSV and the Frappe doctype sync.
 
 Same change applies to `allocation_engine_reciprocal.sql` and `allocation_engine_tiered.sql`.
 
@@ -301,11 +312,13 @@ PR 5 is optional guardrails.
 
 1. **Mixed-scenario runs.** §7 leaves "if a run mixes scenarios, use the dominant one or require
    single-scenario runs" unresolved — which is it? Determines `Allocation Run.scenario_id` semantics.
-2. **FORECAST source.** `gold_scenario_trial_balance` emits only `ACTUAL`/`BUDGET` today; FORECAST depends
-   on write-back rows in `epm_staging`. In v1, or deferred until forecast write-back data exists?
+2. **FORECAST source.** `gold_scenario_trial_balance` carries `ACTUAL`/`BUDGET` plus any write-back
+   scenarios from `epm_staging.budget_input`; `FORECAST` flows automatically once forecast write-back rows
+   exist. Open only on timing: ship `ACTUAL`/`BUDGET` in v1, enable `FORECAST` when that data lands?
 3. **Reconciliation grain / entity alignment.** Confirm `target_cost_center` (alloc "entity") aligns with
    `gold_spread_budget`'s entity dimension, and that an annual (period-collapsed) reconciliation is the
    intended grain.
-4. **§4 macro shape.** The illustrative §4 snippet assumes a per-rule loop; the engine is set-based. The
-   corrected scenario-keyed `tb_base` approach is drafted in a PR comment for sign-off before
-   implementation.
+
+> **Resolved:** §4 macro shape — the engine is set-based, so `tb_base` reads the scenario-keyed
+> `gold_scenario_trial_balance` and each rule joins on `scenario_id` (single source, no double-count).
+> Folded into §4 above.
