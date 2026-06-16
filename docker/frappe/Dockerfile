@@ -39,6 +39,15 @@ WORKDIR /home/frappe/frappe-bench
 COPY --chown=frappe:frappe konsol /tmp/konsol
 RUN bench get-app /tmp/konsol
 
+# Bake the freshly-built asset manifest to a path OUTSIDE the sites/ volume.
+# At runtime the persistent sites/ volume shadows sites/assets/assets.json with
+# a stale copy from a prior image; the configurator restores this baked copy so
+# the manifest matches the bundles in this image's app layer. Must run after the
+# last asset-producing step (bench init + get-app) and before the VOLUME line.
+RUN mkdir -p /home/frappe/baked-assets \
+    && cp sites/assets/assets.json /home/frappe/baked-assets/assets.json \
+    && (cp sites/assets/assets-rtl.json /home/frappe/baked-assets/assets-rtl.json || true)
+
 # Install dbt + clickhouse adapter in bench venv (for pipeline runner)
 RUN ./env/bin/pip install dbt-core dbt-clickhouse
 
