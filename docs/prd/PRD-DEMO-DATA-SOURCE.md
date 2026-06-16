@@ -45,6 +45,13 @@ the hardcoded `d365_fo` fallback. Make Frappe docs/fixtures the single source of
 the connector registry and the dimension crosswalk, and make the dbt canonical layer robust to an
 empty source set so the demo source can be deleted safely.
 
+> **Why a connector, not the standalone `clickhouse/demo-data.sql`?** That script (already on `main`)
+> only loads rows into `epm_raw` — it leaves defect #1 (the hardcoded `erp_sources` fallback) **unfixed**
+> and bypasses the connector registry + harmonization path, so it can't double as an integration
+> smoke-test. The `demo_data` connector makes `erp_sources` truly registry-derived (the actual fix) and
+> can **reuse the same seed rows** as that script. *(Decision: `demo_data` connector — the standalone
+> script alone was considered and rejected.)*
+
 **Lifecycle (target):**
 1. Fresh install → `demo_data` connector exists & enabled (fixture) → `erp_sources: [demo_data]`
    → demo seeds flow through `staging/demo_data` → bronze/silver/gold populated. App is usable
