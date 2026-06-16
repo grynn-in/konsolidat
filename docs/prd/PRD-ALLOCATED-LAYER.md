@@ -1,5 +1,10 @@
 # PRD: Allocated Layer
 
+**Status:** Design — proposed
+**Date:** 2026-06-16
+**Phase:** Phase 6 — Analytical Gaps (Allocation Enhancements)
+**Repos:** `konsolidat` (dbt models/macros, `clickhouse/init-db.sql`, Cube schema), `konsol` (Allocation Rule / Allocation Run doctypes)
+
 ## Problem
 
 Allocation results currently live in `epm_gold` alongside source-of-truth data
@@ -59,6 +64,10 @@ CREATE DATABASE IF NOT EXISTS epm_allocated;
 - `BUDGET` → `gold_scenario_trial_balance WHERE scenario_id = 'BUDGET'`
 - `FORECAST` → `gold_scenario_trial_balance WHERE scenario_id = 'FORECAST'`
 
+> **Note (FORECAST is contingent):** `gold_scenario_trial_balance` emits only `ACTUAL` and `BUDGET`
+> branches today; `FORECAST` rows exist only once forecast write-back data lands in `epm_staging`.
+> Ship `ACTUAL`/`BUDGET` in v1 and treat `FORECAST` as enabled-when-data-exists (see Open Questions).
+
 ### 3. dbt models — new `allocated` folder
 
 Move allocation models from `models/gold/` to `models/allocated/` and add
@@ -117,30 +126,33 @@ WHERE r.scenario_id = 'BUDGET'
 GROUP BY 1, 2, 3
 ```
 
+> **Grain note:** this is an **annual** reconciliation — the top-down side sums `allocated_amount` over
+> all periods/targets per entity-year, against the entity-year bottom-up total. It assumes the alloc
+> "entity" (`target_cost_center`) aligns with `gold_spread_budget`'s entity dimension; confirm that
+> mapping (see Open Questions). A period-level reconciliation, if needed, is a separate model.
+
 ### 4. Macro changes — scenario-aware source
 
-**allocation_engine_multistep.sql**:
+> **⚠️ Under review — the snippet below is illustrative, not final.** The allocation engine is
+> **set-based SQL**, not a per-rule Jinja loop, so there is no `rule.` object in macro scope (rules are
+> joined via `cross join stepN_rule as r`, and the TB is the `tb_base` CTE consumed by every step). A
+> per-rule `{% if %}` as written would not compile. The corrected, set-based approach — making `tb_base`
+> read a **scenario-keyed** source and joining rules on `scenario_id` — is drafted in a PR comment for
+> sign-off before implementation; this section will be replaced with it.
 
-Current pool CTE reads:
+**allocation_engine_multistep.sql** (intent):
+
+Current pool CTE reads from `tb_base`, which reads:
 ```sql
 FROM {{ ref('gold_trial_balance') }}
 ```
 
-Change to:
-```sql
-{% if rule.source_scenario == 'ACTUAL' %}
-  FROM {{ ref('gold_trial_balance') }}
-{% else %}
-  FROM {{ ref('gold_scenario_trial_balance') }}
-  WHERE scenario_id = '{{ rule.source_scenario }}'
-{% endif %}
-```
+The change makes the base source scenario-aware (carry `scenario_id` through `tb_base` and join each
+rule to the matching scenario), rather than the per-rule conditional shown in the original draft. The
+`source_scenario` value comes from the `allocation_rules` seed/table — add the column to the seed CSV
+and the Frappe doctype sync.
 
-The `source_scenario` value comes from the allocation_rules seed/table. Add
-the column to the seed CSV and the Frappe doctype sync.
-
-Same change applies to `allocation_engine_reciprocal.sql` and
-`allocation_engine_tiered.sql`.
+Same change applies to `allocation_engine_reciprocal.sql` and `allocation_engine_tiered.sql`.
 
 ### 5. dbt_project.yml
 
@@ -213,6 +225,11 @@ Exposes the fully loaded trial balance (base + allocated) to Excel.
 
 ### 8. Migration of existing data
 
+Both `alloc_results` and `alloc_audit_trail` **relocate existing gold models** (`gold_allocation_results`,
+`gold_allocation_audit_trail`) into `epm_allocated` and add `scenario_id` — they are not net-new audit
+infrastructure. (The "Audit: None → Full" row in the Layer contract refers to gold *fact* data, not the
+pre-existing allocation audit trail.)
+
 - `gold_allocation_results` → keep as deprecated alias (view over
   `epm_allocated.alloc_results WHERE scenario_id = 'ACTUAL'`) for one
   release cycle, then drop.
@@ -253,7 +270,7 @@ Exposes the fully loaded trial balance (base + allocated) to Excel.
 PRs 1-2 are the foundation. PRs 3-4 are independent reporting models.
 PR 5 is optional guardrails.
 
-## Non-goals
+## Out of Scope
 
 - **Product costing / COGS** — the allocated layer is entity-grain, not
   product-grain. Product cost allocation is a separate concern.
@@ -261,3 +278,34 @@ PR 5 is optional guardrails.
   Scheduled runs are a future enhancement.
 - **Multi-currency** — allocations use reporting currency. FX translation
   happens upstream in gold.
+
+## Acceptance Criteria
+
+1. `epm_allocated` database exists (created by `clickhouse/init-db.sql`) and `dbt ls --select tag:allocated`
+   returns the 4 models (`alloc_results`, `alloc_audit_trail`, `alloc_fully_loaded_tb`,
+   `alloc_budget_reconciliation`).
+2. `alloc_results` carries a `scenario_id` column; an `ACTUAL`-sourced rule and a `BUDGET`-sourced rule on
+   the same source produce rows distinguished only by `scenario_id`.
+3. The gold deprecation aliases (`gold_allocation_results`, `gold_allocation_audit_trail`) return rows
+   **identical** to the pre-migration models for `scenario_id = 'ACTUAL'` (no regression for existing
+   consumers).
+4. `alloc_fully_loaded_tb` filtered to `amount_type = 'base'` equals `gold_trial_balance`; including
+   `'allocated'` adds allocated overhead with no double-count.
+5. For a balanced test fixture (top-down target == bottom-up detail), `alloc_budget_reconciliation.gap`
+   sums to **zero** per entity-year.
+6. `source_scenario` on Allocation Rule syncs to `epm_staging.allocation_rules`, and the engine reads its
+   base from it — verified across the multistep, reciprocal, and tiered macros.
+7. Existing actuals-allocation output is unchanged after the move to `epm_allocated` (regression gate).
+
+## Open Questions
+
+1. **Mixed-scenario runs.** §7 leaves "if a run mixes scenarios, use the dominant one or require
+   single-scenario runs" unresolved — which is it? Determines `Allocation Run.scenario_id` semantics.
+2. **FORECAST source.** `gold_scenario_trial_balance` emits only `ACTUAL`/`BUDGET` today; FORECAST depends
+   on write-back rows in `epm_staging`. In v1, or deferred until forecast write-back data exists?
+3. **Reconciliation grain / entity alignment.** Confirm `target_cost_center` (alloc "entity") aligns with
+   `gold_spread_budget`'s entity dimension, and that an annual (period-collapsed) reconciliation is the
+   intended grain.
+4. **§4 macro shape.** The illustrative §4 snippet assumes a per-rule loop; the engine is set-based. The
+   corrected scenario-keyed `tb_base` approach is drafted in a PR comment for sign-off before
+   implementation.
