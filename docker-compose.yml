@@ -94,18 +94,20 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    entrypoint: ["/usr/local/bin/set-password.sh"]
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - clickhouse_logs:/var/log/clickhouse-server
       - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
       - ./clickhouse/demo-data.sql:/docker-entrypoint-initdb.d/02-demo-data.sql:ro
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+      - ./clickhouse/set-password.sh:/usr/local/bin/set-password.sh:ro
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      test: ["CMD-SHELL", "clickhouse-client --password \"${CLICKHOUSE_PASSWORD:-open_epm_dev}\" --query 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 5
