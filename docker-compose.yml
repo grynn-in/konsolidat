@@ -80,6 +80,12 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
     container_name: konsolidat_clickhouse
+    networks:
+      default:
+        # Pinned IP so the Airbyte kind cluster (which attaches to this network
+        # in scripts/setup-airbyte.sh) has a stable ClickHouse address. Airbyte
+        # pods use CoreDNS and cannot resolve the container name.
+        ipv4_address: 172.30.0.10
     ports:
       - "${CLICKHOUSE_BIND:-127.0.0.1}:${CLICKHOUSE_HTTP_PORT:-8123}:8123"    # HTTP API (loopback by default)
       - "${CLICKHOUSE_BIND:-127.0.0.1}:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"  # Native protocol (loopback by default)
@@ -237,3 +243,13 @@ volumes:
   frappe_logs:
   caddy_data:
   caddy_config:
+
+networks:
+  default:
+    name: open_epm
+    ipam:
+      config:
+        # Fixed subnet so ClickHouse can hold a stable IP (172.30.0.10) that the
+        # Airbyte kind cluster connects to. Change this block if it collides with
+        # an existing Docker network on the host.
+        - subnet: 172.30.0.0/24
