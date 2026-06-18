@@ -237,3 +237,7 @@ volumes:
   frappe_logs:
   caddy_data:
   caddy_config:
+
+networks:
+  default:
+    name: open_epm

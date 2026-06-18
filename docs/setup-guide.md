@@ -38,41 +38,58 @@ You should see: `epm`, `epm_bronze`, `epm_silver`, `epm_gold`, `epm_staging`.
 
 ## Step 3: Install Airbyte
 
-Airbyte runs via `abctl` (local Kubernetes), not inside Docker Compose.
+Airbyte runs as a **second stack** on the same server (via `abctl` / local Kubernetes),
+connected to ClickHouse through a shared Docker network (`open_epm`).
 
 ```bash
-# Install abctl
-curl -LsfS https://get.airbyte.com | bash
-
-# Start Airbyte
-abctl local install
-
-# Access Airbyte UI at http://localhost:8000
+bash scripts/setup-airbyte.sh
 ```
 
+The script will:
+1. Install `abctl` if not already present
+2. Verify the Open EPM stack is running (the `open_epm` network must exist)
+3. Run `abctl local install --network open_epm` to attach Airbyte to the shared network
+4. Print the Airbyte UI URL and ClickHouse connection details
+
+Access Airbyte UI at **http://localhost:8000** (default credentials: `airbyte` / `password`).
+
 ### Configure D365 Source
+
+**Option A: Custom D365 connector** (recommended for full OData coverage)
+
+1. In Airbyte UI → Settings → Custom Connectors → load from `source-d365-fno/`
+2. Create a new Source using the custom connector
+3. Enter your D365 OData URL: `https://your-env.operations.dynamics.com/data`
+4. Auth: OAuth2 with Azure AD app registration (credentials from `.env`)
+
+**Option B: Built-in connector**
 
 1. In Airbyte UI, create a new Source → "Dynamics 365 Finance & Operations (OData)"
 2. Enter your D365 OData URL: `https://your-env.operations.dynamics.com/data`
 3. Auth: OAuth2 with Azure AD app registration
-4. Select entities (15 total):
-   - `GeneralJournalAccountEntries`, `GeneralJournalEntries`
-   - `MainAccounts`, `MainAccountCategories`
-   - `LegalEntities`, `FiscalCalendars`, `FiscalCalendarYears`
-   - `FinancialDimensions`, `FinancialDimensionValues`
-   - `ExchangeRateCurrencyPairs`, `ExchangeRateTypes`
-   - `BudgetRegisterEntries`, `BudgetTransactionLines`
-   - `ConsolidationAccountGroups`
-   - `LedgerTrialBalanceFiscalYearSnapshotDataEntity`
-5. Set `cross_company=true` for all entities
+
+**Entities to sync** (15 total):
+- `GeneralJournalAccountEntries`, `GeneralJournalEntries`
+- `MainAccounts`, `MainAccountCategories`
+- `LegalEntities`, `FiscalCalendars`, `FiscalCalendarYears`
+- `FinancialDimensions`, `FinancialDimensionValues`
+- `ExchangeRateCurrencyPairs`, `ExchangeRateTypes`
+- `BudgetRegisterEntries`, `BudgetTransactionLines`
+- `ConsolidationAccountGroups`
+- `LedgerTrialBalanceFiscalYearSnapshotDataEntity`
+
+Set `cross_company=true` for all entities.
 
 ### Configure ClickHouse Destination
 
 1. Create Destination → ClickHouse
-2. Host: `host.docker.internal` (or your Docker host IP)
-3. Port: 8123
-4. Database: `epm_bronze`
-5. Username/Password: from `.env`
+2. Host: **`konsolidat_clickhouse`** (container name on the shared `open_epm` network)
+3. HTTP Port: **8123**
+4. Database: **`epm_raw`**
+5. Username/Password: from your `.env` (`CLICKHOUSE_USER` / `CLICKHOUSE_PASSWORD`)
+
+> **Note:** Because Airbyte runs on the same Docker network as Open EPM, use the
+> container name `konsolidat_clickhouse` — not `host.docker.internal` or `localhost`.
 
 ### Create Connection
 
@@ -80,6 +97,12 @@ abctl local install
 2. Schedule: every 6 hours (or as needed)
 3. Sync mode: Full Refresh | Overwrite (for initial load)
 4. Run initial sync
+
+### Webhook (optional)
+
+Configure Airbyte to call the sync-complete webhook so Frappe can track sync status:
+1. In Frappe → EPM Settings → set Airbyte API URL, Connection ID, and Webhook Secret
+2. Airbyte will POST to `/api/method/konsol.api.airbyte_sync_complete` on sync completion
 
 ## Step 4: Run dbt
 
