@@ -1,6 +1,37 @@
 version: 2
 
 seeds:
+  - name: cash_flow_categories
+    description: >
+      Phase 6.1 — maps each balance-sheet GL account to a cash flow category
+      (Operating / Investing / Financing) and a sub-line label. `is_cash = 1`
+      flags the cash/cash-equivalent account(s); they are excluded from the
+      activity lines and instead define the reconciliation target (net change in
+      cash). Consumed by gold_cash_flow_indirect and gold_consolidated_cash_flow,
+      both of which derive the cash-flow sign from the SIGNED trial balance
+      (period_debit − period_credit / signed consolidated amount) rather than
+      this seed. The `sign` column is retained for reference only — it encoded
+      the per-account-type sign needed when working from positive-magnitude
+      balances, an approach abandoned once the models moved to signed movements.
+    config:
+      column_types:
+        main_account: String
+        cf_category: String
+        cf_line_item: String
+        is_cash: UInt8
+        sign: Int8
+    columns:
+      - name: main_account
+        description: "GL account (matches gold_bs_movement.main_account)"
+      - name: cf_category
+        description: "Operating, Investing, or Financing"
+      - name: cf_line_item
+        description: "Sub-line label (e.g. Change in Receivables, Dividends Paid)"
+      - name: is_cash
+        description: "1 = this account IS cash/cash-equivalent (excluded from activity, used for reconciliation)"
+      - name: sign
+        description: "Retained for reference only (legacy magnitude-era sign); models use signed debit−credit"
+
   - name: dimension_mappings
     description: >
       Dimension harmonization crosswalk — maps raw, ERP-local dimension values
