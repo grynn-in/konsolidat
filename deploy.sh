@@ -29,6 +29,15 @@ ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
 err()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Portable in-place sed: GNU sed wants `-i`, BSD/macOS sed wants `-i ''`.
+sedi() {
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Sub-commands
 # ---------------------------------------------------------------------------
@@ -134,7 +143,7 @@ if ! docker compose version &>/dev/null; then
   exit 1
 fi
 
-ok "Docker $(docker --version | grep -oP '\d+\.\d+\.\d+')"
+ok "Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 ok "Docker Compose $(docker compose version --short)"
 
 # ---------------------------------------------------------------------------
@@ -150,20 +159,20 @@ if [ ! -f .env ]; then
   GENERATED_CH_PW=$(openssl rand -base64 12 | tr -d '/+=' | head -c 16)
   GENERATED_CUBEJS_SECRET=$(openssl rand -hex 16)
 
-  sed -i "s|ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${GENERATED_ADMIN_PW}|" .env
-  sed -i "s|DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${GENERATED_DB_PW}|" .env
-  sed -i "s|CLICKHOUSE_PASSWORD=.*|CLICKHOUSE_PASSWORD=${GENERATED_CH_PW}|" .env
-  sed -i "s|CUBEJS_API_SECRET=.*|CUBEJS_API_SECRET=${GENERATED_CUBEJS_SECRET}|" .env
+  sedi "s|ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${GENERATED_ADMIN_PW}|" .env
+  sedi "s|DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${GENERATED_DB_PW}|" .env
+  sedi "s|CLICKHOUSE_PASSWORD=.*|CLICKHOUSE_PASSWORD=${GENERATED_CH_PW}|" .env
+  sedi "s|CUBEJS_API_SECRET=.*|CUBEJS_API_SECRET=${GENERATED_CUBEJS_SECRET}|" .env
 
   if [ -n "$DOMAIN" ]; then
-    sed -i "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
+    sedi "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
   fi
 
   ok "Generated .env with secure passwords"
 else
   ok "Using existing .env"
   if [ -n "$DOMAIN" ]; then
-    sed -i "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
+    sedi "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
   fi
 fi
 
