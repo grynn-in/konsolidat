@@ -30,6 +30,10 @@ vars:
   # demo data is D365-only, so the default is d365_fo. ERPNext deployments add
   # 'erpnext' here, or override at run time:
   #   dbt build --vars '{erp_sources: [d365_fo, erpnext]}'
+  # NOTE: d365_fo must stay in this list. The bronze layer refs several
+  # stg_d365_fo__* models directly (not via the canonical erp_sources loop), so
+  # removing d365_fo would disable models that bronze still depends on. The
+  # switch is "D365 mandatory, ERPNext optional", not a symmetric toggle.
   erp_sources:
     - d365_fo
 
