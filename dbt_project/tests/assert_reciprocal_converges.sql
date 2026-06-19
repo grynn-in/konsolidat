@@ -1,5 +1,14 @@
 -- PRD-18 Test: Reciprocal allocations must converge (delta shrinks each iteration)
 -- Check that the last iteration's allocated amounts are < 0.01 of the first
+--
+-- DISABLED: this assertion can't be evaluated today. It reads gold_allocation_results,
+-- which is materialized only by allocation_engine_multistep() (step_down rules) and
+-- carries no reciprocal-solver output — there is no iteration counter column, and
+-- allocation_engine_reciprocal() (which emits `final_iteration`) is wired into no model.
+-- The convergence check needs that engine's `final_iteration` (NOT step_order, which is
+-- the multistep cascade order — a different concept). Re-enable once reciprocal results
+-- are materialized. Left enabled=false rather than rewritten to always-pass. See #70.
+{{ config(enabled=false) }}
 select
     'not_converged' as error
 from (
