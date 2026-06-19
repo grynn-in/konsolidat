@@ -1,6 +1,21 @@
 version: 2
 
 seeds:
+  - name: entity_fiscal_calendars
+    description: >
+      Maps each D365 legal entity (data_area_id) to the fiscal calendar it posts
+      against; silver_gl_entries joins on it to resolve fiscal_year/period. This
+      is realistic reference data — most rows are entities NOT present in the
+      D365 demo (e.g. CN01->Fiscal_CN, MYMF->Fiscal_MY), whose calendars aren't
+      loaded; those rows are inert (no GL activity) and intentionally retained as
+      a template for real multi-calendar deployments. Only entities that actually
+      have GL data must reference a calendar that is loaded in
+      silver_fiscal_periods — the demo's AMHQ/AMUS/AMDE map to `Standard`, the one
+      calendar the demo loads. assert_fiscal_calendar_is_loaded (see #77) enforces
+      that invariant for active entities, so a future activation of an entity
+      pointing at an unloaded calendar fails the build instead of silently
+      falling back to posting-date derivation. To support more calendars, load
+      their period data into the raw/staging fiscal-calendar source.
   - name: cash_flow_categories
     description: >
       Phase 6.1 — maps each balance-sheet GL account to a cash flow category
