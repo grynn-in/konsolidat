@@ -9,5 +9,5 @@ main_account,cf_category,cf_line_item,is_cash,sign
 2100,Operating,Change in Accrued Liabilities,0,1
 2500,Financing,Proceeds from / Repayment of Debt,0,1
 3010,Financing,Issuance of Share Capital,0,1
-3100,Operating,Net Income (Retained Earnings Movement),0,1
+3100,Financing,Retained Earnings Movement,0,1
 3200,Financing,Dividends Paid,0,-1

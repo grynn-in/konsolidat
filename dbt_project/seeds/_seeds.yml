@@ -4,16 +4,15 @@ seeds:
   - name: cash_flow_categories
     description: >
       Phase 6.1 — maps each balance-sheet GL account to a cash flow category
-      (Operating / Investing / Financing), a sub-line label, and the sign that
-      converts a BS account movement into its cash effect. Balances are stored
-      as positive magnitudes (not signed debit/credit), so the cash effect must
-      be made explicit per account: credit-natured accounts (liabilities,
-      equity, contra-assets like accumulated depreciation) use +1, debit-natured
-      accounts (assets, contra-equity like dividends declared) use -1 — an asset
-      increase is a cash outflow. `is_cash = 1` flags the cash/cash-equivalent
-      account(s); they are excluded from the activity lines and instead define
-      the reconciliation target (net change in cash). Consumed by
-      gold_cash_flow_indirect and gold_consolidated_cash_flow.
+      (Operating / Investing / Financing) and a sub-line label. `is_cash = 1`
+      flags the cash/cash-equivalent account(s); they are excluded from the
+      activity lines and instead define the reconciliation target (net change in
+      cash). Consumed by gold_cash_flow_indirect and gold_consolidated_cash_flow,
+      both of which derive the cash-flow sign from the SIGNED trial balance
+      (period_debit − period_credit / signed consolidated amount) rather than
+      this seed. The `sign` column is retained for reference only — it encoded
+      the per-account-type sign needed when working from positive-magnitude
+      balances, an approach abandoned once the models moved to signed movements.
     config:
       column_types:
         main_account: String
@@ -31,7 +30,7 @@ seeds:
       - name: is_cash
         description: "1 = this account IS cash/cash-equivalent (excluded from activity, used for reconciliation)"
       - name: sign
-        description: "+1 or -1 — converts a BS movement into its cash effect"
+        description: "Retained for reference only (legacy magnitude-era sign); models use signed debit−credit"
 
   - name: dimension_mappings
     description: >

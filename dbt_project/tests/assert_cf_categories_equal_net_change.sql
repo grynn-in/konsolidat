@@ -1,11 +1,12 @@
 -- Phase 6.1 Test (AC#4): per data_area_id / fiscal_year / fiscal_period, the
 -- sum of Operating + Investing + Financing cash flows must equal the net change
--- in cash (the period movement of is_cash = 1 accounts), within +/- 0.01.
+-- in cash (the signed movement of is_cash = 1 accounts), within +/- 0.01.
 --
--- This holds only when the balance sheet balances each period (Assets =
--- Liabilities + Equity). A failure on demo data is a data issue (the BS does
--- not balance), not a model bug — exactly what the Phase 6.10 assertion suite
--- exists to surface.
+-- This holds by construction: gold_cash_flow_indirect sums −(period_debit −
+-- period_credit) over every non-cash account, and the full trial balance is
+-- balanced double-entry, so Σ(cash) = −Σ(non-cash). A failure would mean a
+-- non-cash account was dropped or the books are not balanced for that period
+-- (a data issue surfaced by the Phase 6.10 assertion suite, not a model bug).
 with activity as (
     select
         data_area_id,
@@ -18,16 +19,16 @@ with activity as (
 
 cash_change as (
     select
-        m.data_area_id as data_area_id,
-        m.fiscal_year as fiscal_year,
-        m.fiscal_period as fiscal_period,
-        sum(m.period_movement) as net_cash_change
-    from {{ ref('gold_bs_movement') }} as m
+        t.data_area_id as data_area_id,
+        t.fiscal_year as fiscal_year,
+        t.fiscal_period as fiscal_period,
+        sum(t.period_debit - t.period_credit) as net_cash_change
+    from {{ ref('gold_trial_balance') }} as t
     inner join {{ ref('cash_flow_categories') }} as cf
-        on m.main_account = cf.main_account
+        on t.main_account = cf.main_account
     where cf.is_cash = 1
-        and m.fiscal_period > 0
-    group by m.data_area_id, m.fiscal_year, m.fiscal_period
+        and t.fiscal_period > 0
+    group by t.data_area_id, t.fiscal_year, t.fiscal_period
 )
 
 select
