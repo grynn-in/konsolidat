@@ -21,8 +21,13 @@ select
     gae.recid as recid,
     gae.data_area_id as data_area_id,
     gae.accounting_date as accounting_date,
-    coalesce(fp.fiscal_year, {{ extract_year('gae.accounting_date') }}) as fiscal_year,
-    coalesce(fp.fiscal_period, {{ extract_month('gae.accounting_date') }}) as fiscal_period,
+    {# ClickHouse LEFT JOIN fills an unmatched fp row with the column default
+       (0 for UInt), NOT NULL — so coalesce() never falls through. When the
+       entity's fiscal calendar isn't present in silver_fiscal_periods (e.g. the
+       seed maps entities to 'Fiscal' but only 'Standard' is loaded), fp.* is 0;
+       derive the period from accounting_date in that case. #}
+    if(fp.fiscal_year != 0, fp.fiscal_year, {{ extract_year('gae.accounting_date') }}) as fiscal_year,
+    if(fp.fiscal_period != 0, fp.fiscal_period, {{ extract_month('gae.accounting_date') }}) as fiscal_period,
     gae.main_account as main_account,
     ma.account_name as account_name,
     ma.account_type_name as account_type_name,
