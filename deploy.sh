@@ -143,7 +143,7 @@ if ! docker compose version &>/dev/null; then
   exit 1
 fi
 
-ok "Docker $(docker --version | grep -oP '\d+\.\d+\.\d+')"
+ok "Docker $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 ok "Docker Compose $(docker compose version --short)"
 
 # ---------------------------------------------------------------------------
