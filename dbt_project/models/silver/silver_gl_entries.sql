@@ -21,8 +21,14 @@ select
     gae.recid as recid,
     gae.data_area_id as data_area_id,
     gae.accounting_date as accounting_date,
-    coalesce(fp.fiscal_year, {{ extract_year('gae.accounting_date') }}) as fiscal_year,
-    coalesce(fp.fiscal_period, {{ extract_month('gae.accounting_date') }}) as fiscal_period,
+    -- ClickHouse LEFT JOIN fills unmatched right-side numeric columns with 0,
+    -- not NULL (join_use_nulls defaults to 0). So when the fiscal-calendar join
+    -- misses, fp.fiscal_year/period come back as 0 — and a plain coalesce() would
+    -- treat 0 as a real value and never reach the accounting-date fallback,
+    -- leaving every row in FY0/P0. nullIf(..., 0) restores the no-match sentinel
+    -- to NULL so the fallback (derive from the posting date) actually applies.
+    coalesce(nullIf(fp.fiscal_year, 0),   {{ extract_year('gae.accounting_date') }}) as fiscal_year,
+    coalesce(nullIf(fp.fiscal_period, 0), {{ extract_month('gae.accounting_date') }}) as fiscal_period,
     gae.main_account as main_account,
     ma.account_name as account_name,
     ma.account_type_name as account_type_name,
