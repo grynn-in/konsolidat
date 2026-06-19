@@ -378,8 +378,6 @@ models:
           - accepted_values:
               values: ['Operating', 'Investing', 'Financing']
       - name: cf_line_item
-        description: "Sub-line label from the seed"
-      - name: main_account
-        description: "Source BS account (the cash account is excluded)"
+        description: "Seed sub-line, or 'Net Income (Consolidated)' / 'Consolidation and Non-Cash Adjustments'"
       - name: cash_flow_amount
-        description: "FX-translated cash effect = amount * sign, summed over layers"
+        description: "FX-translated cash effect = -amount (signed TB), summed per line"
