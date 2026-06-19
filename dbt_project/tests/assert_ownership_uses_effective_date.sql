@@ -11,7 +11,9 @@ from {{ ref('gold_consolidated_trial_balance') }} as ctb
 inner join {{ source('epm_staging', 'ownership_periods') }} as op
     on ctb.consolidation_group = op.consolidation_group
     and ctb.data_area_id = op.data_area_id
-    and {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }}
+{# ClickHouse rejects a cross-table range condition inside JOIN ... ON
+   (INVALID_JOIN_ON_EXPRESSION); apply the period-in-range filter in WHERE. #}
+where {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }}
         between op.effective_date and op.end_date
-where abs(ctb.ownership_pct - op.ownership_pct / 100.0) > 0.001
+    and abs(ctb.ownership_pct - op.ownership_pct / 100.0) > 0.001
 limit 10
