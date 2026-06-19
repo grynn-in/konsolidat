@@ -84,6 +84,18 @@ else
     bench use "$SITE_NAME"
 fi
 
+# Alias `localhost` to this site so the Excel Office.js add-in works out of the
+# box. The add-in manifest targets http://localhost:8069 (Office.js only allows
+# plain HTTP for the literal host `localhost`), but Frappe routes by Host header
+# and does not serve the default site for a bare `Host: localhost` on the
+# gunicorn port — so those URLs 404 on a fresh deploy. A sites/localhost symlink
+# to the real site directory makes Frappe resolve `localhost` to this site.
+# Idempotent; skipped when the site already is `localhost`.
+if [ "$SITE_NAME" != "localhost" ]; then
+    echo "Aliasing host 'localhost' -> ${SITE_NAME} (Excel add-in / local access)..."
+    ln -sfn "$SITE_NAME" sites/localhost
+fi
+
 # Configure EPM Settings with ClickHouse connection
 echo "Configuring ClickHouse connection in EPM Settings..."
 bench --site "$SITE_NAME" execute konsol.install.setup_epm_settings \
