@@ -1,6 +1,38 @@
 version: 2
 
 seeds:
+  - name: cash_flow_categories
+    description: >
+      Phase 6.1 — maps each balance-sheet GL account to a cash flow category
+      (Operating / Investing / Financing), a sub-line label, and the sign that
+      converts a BS account movement into its cash effect. Balances are stored
+      as positive magnitudes (not signed debit/credit), so the cash effect must
+      be made explicit per account: credit-natured accounts (liabilities,
+      equity, contra-assets like accumulated depreciation) use +1, debit-natured
+      accounts (assets, contra-equity like dividends declared) use -1 — an asset
+      increase is a cash outflow. `is_cash = 1` flags the cash/cash-equivalent
+      account(s); they are excluded from the activity lines and instead define
+      the reconciliation target (net change in cash). Consumed by
+      gold_cash_flow_indirect and gold_consolidated_cash_flow.
+    config:
+      column_types:
+        main_account: String
+        cf_category: String
+        cf_line_item: String
+        is_cash: UInt8
+        sign: Int8
+    columns:
+      - name: main_account
+        description: "GL account (matches gold_bs_movement.main_account)"
+      - name: cf_category
+        description: "Operating, Investing, or Financing"
+      - name: cf_line_item
+        description: "Sub-line label (e.g. Change in Receivables, Dividends Paid)"
+      - name: is_cash
+        description: "1 = this account IS cash/cash-equivalent (excluded from activity, used for reconciliation)"
+      - name: sign
+        description: "+1 or -1 — converts a BS movement into its cash effect"
+
   - name: dimension_mappings
     description: >
       Dimension harmonization crosswalk — maps raw, ERP-local dimension values

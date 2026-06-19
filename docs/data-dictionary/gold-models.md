@@ -115,6 +115,62 @@ Balance sheet movement schedule: opening, movement, closing.
 | `period_movement` | Decimal | Net amount for the period | — |
 | `closing_balance` | Decimal | Cumulative balance at current period | — |
 
+## Cash Flow Models
+
+### gold_cash_flow_indirect
+
+Entity-level cash flow statement (indirect method). Each non-cash balance-sheet
+account's `period_movement` is converted to a cash effect via the
+`cash_flow_categories` seed (`cash_flow_amount = period_movement × sign`) and
+classified into Operating / Investing / Financing. Net income is captured by the
+retained-earnings (3100) movement, not a separate P&L pull, so nothing is
+double-counted. Cash accounts (`is_cash = 1`) are excluded from the activity
+lines and define the reconciliation target. Opening-balance artifact rows
+(`fiscal_period = 0`) are dropped.
+
+Grain: `data_area_id × fiscal_year × fiscal_period × cf_category × cf_line_item × main_account`.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `data_area_id` | String | Legal entity | not_null |
+| `fiscal_year` | UInt16 | Fiscal year | — |
+| `fiscal_period` | UInt8 | Fiscal period | — |
+| `cf_category` | String | Operating / Investing / Financing | accepted_values |
+| `cf_line_item` | String | Sub-line label from seed | — |
+| `main_account` | String | Source BS account | — |
+| `cash_flow_amount` | Decimal | `period_movement × sign`, summed over dimensions | — |
+
+Reconciliation (`assert_cf_categories_equal_net_change`): per entity/year/period,
+`Σ(Operating + Investing + Financing) = Σ period_movement of is_cash accounts`,
+within ±0.01. Holds only when the BS balances each period.
+
+### gold_consolidated_cash_flow
+
+Group-level cash flow statement built **after FX translation** from
+`gold_fully_consolidated_tb` (entity translated balances + IC elimination + CTA +
+topside + equity-method + acquisition/disposal). Because `amount` there is a
+per-period flow, it is the period movement directly — no consecutive-period
+delta is needed. Each layer's amount is folded into the underlying `main_account`
+and categorized identically via the seed, so CTA revaluations land in the
+affected account's category and the statement still ties to the change in
+translated cash.
+
+Grain: `consolidation_group × fiscal_year × fiscal_period × cf_category × cf_line_item × main_account`.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `consolidation_group` | String | Consolidation group | not_null |
+| `fiscal_year` | UInt16 | Fiscal year | — |
+| `fiscal_period` | UInt8 | Fiscal period | — |
+| `cf_category` | String | Operating / Investing / Financing | accepted_values |
+| `cf_line_item` | String | Sub-line label from seed | — |
+| `main_account` | String | Source BS account | — |
+| `cash_flow_amount` | Decimal | `amount × sign`, summed over layers | — |
+
+Reconciliation (`assert_consolidated_cf_reconciles`): per group/year/period,
+`Σ(O + I + F) = Σ amount of is_cash accounts across all layers`, within ±0.01.
+Holds when the consolidated BS balances (see `assert_end_to_end_bs_balances`).
+
 ## Consolidation Models
 
 ### gold_consolidated_trial_balance

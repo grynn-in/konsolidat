@@ -1,0 +1,13 @@
+main_account,cf_category,cf_line_item,is_cash,sign
+1010,Operating,Cash and cash equivalents,1,1
+1100,Operating,Change in Trade Receivables,0,-1
+1200,Operating,Change in Inventory,0,-1
+1300,Operating,Change in Intercompany Receivables,0,-1
+1500,Investing,Purchase of Fixed Assets,0,-1
+1510,Operating,Depreciation and Amortization,0,1
+2010,Operating,Change in Trade Payables,0,1
+2100,Operating,Change in Accrued Liabilities,0,1
+2500,Financing,Proceeds from / Repayment of Debt,0,1
+3010,Financing,Issuance of Share Capital,0,1
+3100,Operating,Net Income (Retained Earnings Movement),0,1
+3200,Financing,Dividends Paid,0,-1

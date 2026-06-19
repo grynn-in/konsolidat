@@ -228,6 +228,11 @@ models:
       - name: main_account
         tests:
           - not_null
+          # Phase 6.1 AC#6: every BS account must be categorized in the seed
+          # (no uncategorized accounts leak into the cash flow statement).
+          - relationships:
+              to: ref('cash_flow_categories')
+              field: main_account
       - name: opening_balance
         description: "Cumulative balance at prior period"
       - name: period_movement
@@ -334,3 +339,47 @@ models:
           - not_null
       - name: journal_id
         description: "Journal identifier linking to source adjustment"
+
+  # --- Phase 6.1: Cash Flow Statement (indirect method) ---
+
+  - name: gold_cash_flow_indirect
+    description: >
+      Phase 6.1: Entity-level cash flow statement (indirect method), derived from
+      balance-sheet account movements (gold_bs_movement) classified via the
+      cash_flow_categories seed. cash_flow_amount = period_movement * sign.
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: cf_category
+        description: "Operating / Investing / Financing"
+        tests:
+          - accepted_values:
+              values: ['Operating', 'Investing', 'Financing']
+      - name: cf_line_item
+        description: "Sub-line label from the seed"
+      - name: main_account
+        description: "Source BS account (the cash account is excluded)"
+      - name: cash_flow_amount
+        description: "Cash effect = period_movement * sign, summed over dimensions"
+
+  - name: gold_consolidated_cash_flow
+    description: >
+      Phase 6.1: Group-level cash flow statement built after FX translation from
+      gold_fully_consolidated_tb. Same categorization as the entity model; grain
+      adds consolidation_group and rolls data_area_id up to the group.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: cf_category
+        description: "Operating / Investing / Financing"
+        tests:
+          - accepted_values:
+              values: ['Operating', 'Investing', 'Financing']
+      - name: cf_line_item
+        description: "Sub-line label from the seed"
+      - name: main_account
+        description: "Source BS account (the cash account is excluded)"
+      - name: cash_flow_amount
+        description: "FX-translated cash effect = amount * sign, summed over layers"

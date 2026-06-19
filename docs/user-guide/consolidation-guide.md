@@ -158,6 +158,51 @@ The `gold_fully_consolidated_tb` model unions four layers:
 
 **Test**: `assert_fctb_entity_layer_ties` — entity layer sums tie to `gold_consolidated_trial_balance.group_amount`.
 
+## Cash Flow Statement (Indirect Method)
+
+The platform derives the third primary statement from balance-sheet account
+movements — no separate cash-flow ledger is required.
+
+**Entity level** — `gold_cash_flow_indirect`:
+
+- Every non-cash BS account's `period_movement` (from `gold_bs_movement`) is
+  classified into Operating / Investing / Financing via the
+  `cash_flow_categories` seed and converted to a cash effect:
+  `cash_flow_amount = period_movement × sign`.
+- Because balances are stored as positive magnitudes, the cash direction is set
+  explicitly per account in the seed's `sign` column: credit-natured accounts
+  (liabilities, equity, contra-assets like accumulated depreciation) are `+1`;
+  debit-natured accounts (assets, contra-equity like dividends declared) are
+  `-1` — an asset increase is a cash outflow.
+- Net income is **not** pulled separately from the P&L; the retained-earnings
+  movement already carries period net income on the balance sheet, so it is the
+  Operating "Net Income" line. Dividends declared go to Financing.
+
+**Group level** — `gold_consolidated_cash_flow`:
+
+- Built after FX translation from `gold_fully_consolidated_tb`, so group totals
+  reflect translated (closing-rate) amounts and differ from the simple sum of
+  entity local-currency cash flows.
+- Each consolidation layer's amount (entity, IC elimination, CTA, topside, …) is
+  folded into the underlying account and categorized identically. CTA is the
+  plug that keeps the translated balance sheet in balance, so the statement
+  still ties to the change in translated cash.
+
+### Categorizing accounts
+
+Edit `seeds/cash_flow_categories.csv` and re-run `dbt seed` to map a new GL
+account. The relationships test on `gold_bs_movement.main_account` fails the
+build if any balance-sheet account is left uncategorized.
+
+### Tests
+
+- `assert_cf_categories_equal_net_change` — entity: `Σ(O + I + F) = Σ period_movement of is_cash accounts`, per entity/period, within ±0.01.
+- `assert_consolidated_cf_reconciles` — group: same identity across all layers, per group/period.
+- `accepted_values` on `cf_category` ∈ {Operating, Investing, Financing}.
+
+Both reconciliations hold only when the (consolidated) balance sheet balances
+each period; a failure points at unbalanced source data, not the model.
+
 ## Reporting with EPM()
 
 Consolidated data is available via the gold models. For entity-level reporting:

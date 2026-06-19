@@ -1,6 +1,25 @@
 # Seeds Reference
 
-11 CSV seed files loaded into the `epm_gold` schema via `dbt seed`.
+12 CSV seed files loaded into the `epm_gold` schema via `dbt seed`.
+
+## cash_flow_categories.csv
+
+Maps each balance-sheet GL account to a cash flow category and the sign that
+converts a BS movement into its cash effect. Consumed by
+`gold_cash_flow_indirect` and `gold_consolidated_cash_flow` (Phase 6.1).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `main_account` | String | GL account (matches `gold_bs_movement.main_account`) |
+| `cf_category` | String | `Operating`, `Investing`, or `Financing` |
+| `cf_line_item` | String | Sub-line label (e.g. `Change in Trade Receivables`, `Dividends Paid`) |
+| `is_cash` | UInt8 | 1 = account *is* cash/cash-equivalent (excluded from activity, defines reconciliation target) |
+| `sign` | Int8 | `+1` (credit-natured: liabilities, equity, contra-assets) or `-1` (debit-natured: assets, contra-equity) — an asset increase is a cash outflow |
+
+**Default data**: 12 rows for the demo chart — cash (`1010`, `is_cash=1`);
+receivables/inventory/IC receivable, payables/accrued, accumulated depreciation,
+and retained earnings → Operating; fixed assets → Investing; long-term debt,
+share capital, and dividends declared → Financing.
 
 ## allocation_rules.csv
 
