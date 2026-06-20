@@ -1,1 +1,6 @@
 node_modules/
+
+# Legacy pipeline pane — not used for Excel Online =K.EPM(); kept locally only
+src/taskpane.html
+src/taskpane.js
+src/taskpane.css

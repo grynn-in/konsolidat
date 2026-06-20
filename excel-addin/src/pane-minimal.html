@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Konsolidat</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+    }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #323130;
+      background: #faf9f8;
+      padding: 16px;
+      line-height: 1.4;
+    }
+    h1 { font-size: 18px; color: #0078d4; margin-bottom: 4px; }
+    .version { color: #605e5c; font-size: 11px; margin-bottom: 12px; }
+    #boot-status {
+      color: #605e5c;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #605e5c;
+      margin: 10px 0 4px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #8a8886;
+      border-radius: 2px;
+      font-size: 13px;
+    }
+    button {
+      margin-top: 14px;
+      width: 100%;
+      padding: 8px 16px;
+      background: #0078d4;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .error { color: #a4262c; margin-top: 10px; font-size: 12px; }
+    .ok { color: #107c10; margin-top: 10px; font-size: 12px; }
+    #logged-in { display: none; }
+    body:not(.ready) #app { opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <h1>Konsolidat</h1>
+  <p class="version">v2.0.0.0 · login only (no formulas)</p>
+  <p id="boot-status">Connecting to Excel…</p>
+
+  <div id="app">
+    <div id="login-view">
+      <label for="email">Email</label>
+      <input id="email" type="text" placeholder="Administrator" autocomplete="username" />
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" />
+      <button id="login-btn" type="button">Log In</button>
+      <p id="login-error" class="error" hidden></p>
+    </div>
+
+    <div id="logged-in">
+      <p class="ok">Signed in as <strong id="user-label"></strong></p>
+      <p style="margin-top:12px;color:#a4262c;font-size:12px">
+        <strong>Login only — no formulas.</strong> =K.EPM() will show #NAME? with this add-in.
+        Upload <strong>Konsolidat-Excel-Full.xml</strong> (add-in name “Konsolidat”, not “Login”).
+      </p>
+      <button id="logout-btn" type="button" style="background:#fff;color:#0078d4;border:1px solid #0078d4;margin-top:16px">
+        Log Out
+      </button>
+    </div>
+  </div>
+
+  <!-- Must load before app script. Same pattern as Microsoft's hello-world sample. -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script>
+    (function () {
+      var API = window.location.origin;
+      var bootStatus = document.getElementById("boot-status");
+      var emailInput = document.getElementById("email");
+      var passwordInput = document.getElementById("password");
+      var loginBtn = document.getElementById("login-btn");
+      var logoutBtn = document.getElementById("logout-btn");
+      var loginError = document.getElementById("login-error");
+      var started = false;
+
+      function showLogin() {
+        document.getElementById("login-view").style.display = "block";
+        document.getElementById("logged-in").style.display = "none";
+      }
+
+      function showLoggedIn(user) {
+        document.getElementById("login-view").style.display = "none";
+        document.getElementById("logged-in").style.display = "block";
+        document.getElementById("user-label").textContent = user;
+      }
+
+      function setError(msg) {
+        loginError.textContent = msg || "";
+        loginError.hidden = !msg;
+      }
+
+      function api(path, options) {
+        return fetch(API + path, options || {});
+      }
+
+      function login() {
+        var email = emailInput.value.trim();
+        var password = passwordInput.value;
+        if (!email || !password) {
+          setError("Email and password are required.");
+          return;
+        }
+        setError("");
+        loginBtn.disabled = true;
+        api("/api/method/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ usr: email, pwd: password })
+        }).then(function (res) {
+          if (!res.ok) throw new Error("Invalid credentials (HTTP " + res.status + ")");
+          return res.json();
+        }).then(function () {
+          showLoggedIn(email);
+        }).catch(function (err) {
+          setError(err.message || "Login failed");
+        }).finally(function () {
+          loginBtn.disabled = false;
+        });
+      }
+
+      function logout() {
+        api("/api/method/logout", { method: "POST", credentials: "include" })
+          .finally(showLogin);
+      }
+
+      function checkSession() {
+        api("/api/method/frappe.auth.get_logged_user", { credentials: "include" })
+          .then(function (res) {
+            if (!res.ok) throw new Error("not logged in");
+            return res.json();
+          })
+          .then(function (data) {
+            if (data.message && data.message !== "Guest") {
+              showLoggedIn(data.message);
+            }
+          })
+          .catch(showLogin);
+      }
+
+      function start() {
+        if (started) return;
+        started = true;
+        document.body.classList.add("ready");
+        bootStatus.hidden = true;
+        loginBtn.addEventListener("click", login);
+        logoutBtn.addEventListener("click", logout);
+        passwordInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") login();
+        });
+        checkSession();
+        emailInput.focus();
+      }
+
+      if (typeof Office !== "undefined" && Office.onReady) {
+        Office.onReady(start);
+      } else {
+        start();
+      }
+      setTimeout(start, 5000);
+    })();
+  </script>
+</body>
+</html>

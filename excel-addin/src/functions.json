@@ -2,6 +2,13 @@
   "$schema": "https://developer.microsoft.com/json-schemas/office-js/custom-functions.schema.json",
   "functions": [
     {
+      "id": "PING",
+      "name": "PING",
+      "description": "Returns 1 when custom functions are registered.",
+      "parameters": [],
+      "result": { "type": "number" }
+    },
+    {
       "id": "EPM",
       "name": "EPM",
       "description": "Retrieve a financial value (actuals by default) for an entity / period / account.",
