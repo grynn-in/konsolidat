@@ -1,173 +1,93 @@
-# Excel Office.js Task Pane Add-in
+# Konsolidat Excel add-in
 
-Pipeline orchestration sidebar for Excel. Lets users log in to Frappe, trigger
-"Extract + dbt Build" runs, and monitor pipeline status -- all from a task pane
-inside the Excel ribbon.
+Office.js shared-runtime add-in for **live `=K.EPM()` custom functions** on Excel
+Desktop and Excel Online, plus a slim task pane for sign-in and diagnostics.
 
-This add-in **complements** the VBA macros in `excel/OpenEPM.bas`, which handle
-`=EPM()` data formulas and batch retrieval. The task pane handles orchestration;
-the VBA handles data.
+Verified on Excel Online (Mac) against `https://demo.konsolidat.com` (v2.0.0.0):
+`=K.PING()` → `1`, `=K.EPM("AMUS", 2024, 6, "4010")` → `861245`.
 
 ## Architecture
 
 ```
-+---------------------+          HTTPS (same origin)
-|  Excel (Desktop)    |  +---------------------------------+
-|                     |  |                                 |
-|  +--------------+   |  |   Frappe / konsol               |
-|  | VBA macros   |---|---->  /api/method/konsol.api.*     |
-|  | =EPM() cells |   |  |   (data formulas, batch query) |
-|  +--------------+   |  |                                 |
-|                     |  |                                 |
-|  +--------------+   |  |                                 |
-|  | Task Pane    |---|---->  /api/method/login             |
-|  | (Office.js   |   |  |   /api/method/logout            |
-|  |  webview)    |---|---->  /api/resource/Pipeline Run    |
-|  |              |   |  |   /api/method/konsol.pipeline.*  |
-|  +--------------+   |  |     .trigger_pipeline            |
-|                     |  |                                 |
-+---------------------+  +---------------------------------+
-                              https://epm.local
-                              Bare-metal Frappe bench
-                              /home/pd/frappe-bench
+Excel (Desktop / Online)
+  |
+  |-- Cells: =K.EPM() / =K.PING()  <-- functions.js (custom functions)
+  |
+  +-- Task pane: index.html        <-- login + diag (shared runtime)
+           |
+           v
+  https://demo.konsolidat.com
+    /assets/konsol/excel-addin/   (static: index.html, functions.js, functions.json)
+    /api/method/konsol.api.*      (epm_batch, excel_addin_auth, ...)
 ```
 
-The task pane HTML/JS/CSS is served by Frappe as static assets at
-`/assets/konsol/excel-addin/`. Because the webview loads from the same origin
-as the API, all `fetch()` calls use relative paths with `credentials: "include"`
--- no CORS configuration is needed.
+**Shared runtime:** `manifest.demo.xml` points the manifest Script, Page, and Runtime
+URLs at the same `index.html`. That page loads `office.js` then `functions.js`, so
+`CustomFunctions.associate` and the pane share one browser context.
 
-## File Structure
+**Auth (Excel Online):** Session cookies are unreliable in the Office iframe. The pane
+calls `excel_addin_auth`, stores `konsol_token` in `localStorage`, and `functions.js`
+sends `X-Konsolidat-Token` on `epm_batch` requests.
+
+**Excel Online CORS:** Excel web fetches `functions.json` cross-origin from `*.office.com`.
+Caddy must return `Access-Control-Allow-Origin: *` on add-in assets (see
+`docker/caddy/Caddyfile`).
+
+## File structure
 
 ```
 excel-addin/
-  manifest.xml          Office Add-in XML manifest (sideload this)
-  package.json          Deploy script only -- no build step
-  .gitignore            Excludes node_modules/, cert.pem, key.pem
+  manifest.demo.xml     Source of truth (deployed as manifest.xml)
+  manifest.xml          Copy of manifest.demo.xml for hosted/sideload URL
+  package.json          Legacy npm deploy helper (prefer deploy-excel-full.sh)
   src/
-    taskpane.html       Main HTML (login form + status card)
-    taskpane.js         All logic: auth, pipeline status, polling, trigger
-    taskpane.css        Fluent-UI-inspired styles
-    assets/
-      icon-16.png       Ribbon icon 16x16
-      icon-32.png       Ribbon icon 32x32
-      icon-80.png       Ribbon icon 80x80
+    index.html          Shared runtime page: login, diag, loads functions.js
+    functions.js        =K.* custom function implementations
+    functions.json      Custom function metadata (Excel name registration)
+    assets/             Ribbon icons (incl. icon-64.png for Admin Center)
 ```
 
-## API Endpoints Used
+Legacy `taskpane.html` / `taskpane.js` (pipeline UI) are gitignored locally — not used
+for the Excel Online formula path.
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/method/login` | POST | Authenticate with Frappe (cookie-based session) |
-| `/api/method/frappe.auth.get_logged_user` | GET | Check if session is still active |
-| `/api/method/logout` | POST | Destroy session |
-| `/api/resource/Pipeline Run` | GET | Fetch latest pipeline run (status, rows_synced, dbt_result) |
-| `/api/method/konsol.pipeline.doctype.pipeline_run.pipeline_run.trigger_pipeline` | POST | Trigger a new Extract + dbt Build run |
-| `/api/method/konsol.api.epm_batch` | POST | Batch value retrieval for the `=K.EPM()` Custom Functions |
-| `/api/method/konsol.api.budget_cell_save` | POST | Write-back for `=K.EPMSAVE()` |
-
-## Custom Functions (`=K.EPM()`)
-
-In addition to the task pane, this add-in registers **Office.js Custom Functions** —
-live, auto-recalculating worksheet formulas under the **`K`** namespace. They
-**complement** the VBA in `excel/OpenEPM.bas` (which stays in place); both can be used
-in the same workbook because `=EPM()` (VBA, bare) and `=K.EPM()` (add-in, namespaced)
-never collide. Unlike the VBA, the Custom Functions fetch on their own — no manual
-Refresh — and work on Windows, Mac, and Excel on the web.
+## Custom functions (`=K.EPM()`)
 
 | Function | Purpose |
 |----------|---------|
-| `=K.EPM(entity, year, period, account, [measure], [scenario], [costCenter], [department], [scenarioId])` | Value lookup (default `period_net_amount` / `actuals`). `period` accepts 1-12, Q1-Q4, H1-H2, FY. |
-| `=K.EPM_BUDGET(entity, year, period, account, [costCenter], [department], [scenarioId])` | Budget amount |
-| `=K.EPM_VARIANCE(...)` | Variance (absolute) |
-| `=K.EPM_DEBIT(entity, year, period, account, [costCenter], [department])` | Period debit |
-| `=K.EPM_CREDIT(...)` | Period credit |
-| `=K.EPMSAVE(amount, entity, year, period, account, scenarioId, layer, [costCenter], [department])` | Write a budget cell back on recalc (`layer` ∈ base/challenge/management/board) |
+| `=K.PING()` | Diagnostic — returns `1` when names registered |
+| `=K.EPM(entity, year, period, account, ...)` | Value lookup via `epm_batch` |
+| `=K.EPM_BUDGET(...)` | Budget amount |
+| `=K.EPM_VARIANCE(...)` | Variance |
+| `=K.EPM_DEBIT` / `=K.EPM_CREDIT` | Period debit/credit |
+| `=K.EPMSAVE(...)` | Budget write-back on recalc |
 
-All `=K.EPM*` reads in a recalc pass are debounced into a **single** `epm_batch` POST
-(chunked at 2000). Auth uses the same session cookie as the task pane — **sign in via the
-pane first**.
+Reads in one recalc pass are debounced into a single `epm_batch` POST. **Sign in via
+the pane first** so `functions.js` has a token.
 
-The manifest declares a **shared runtime** (`<Runtimes>` + the `SharedRuntime`
-requirement): the task pane and the custom functions run in one browser runtime, so the
-session cookie set at login is sent by the functions' `fetch()` calls. (The default
-JS-only custom-functions runtime does not support cookies, so cookie-based auth would
-401.) The shared page is `taskpane.html` / `index.html`, which loads `functions.js` to
-register the functions. Files: `src/functions.json` (metadata) and `src/functions.js`
-(logic); wired in `manifest.xml` via the `CustomFunctions` extension point under
-`<AllFormFactors>`.
+## Deploy to demo
 
-## Deploy
-
-No build step. Copy source files to the konsol Frappe app's `public/` directory
-(symlinked to `sites/assets/konsol/`):
+From a machine with SSH to the demo server:
 
 ```bash
-# From the repo root
-cp excel-addin/src/taskpane.html /home/pd/frappe-bench/apps/konsol/konsol/public/excel-addin/index.html
-cp excel-addin/src/taskpane.js   /home/pd/frappe-bench/apps/konsol/konsol/public/excel-addin/
-cp excel-addin/src/taskpane.css  /home/pd/frappe-bench/apps/konsol/konsol/public/excel-addin/
-cp excel-addin/src/assets/*.png  /home/pd/frappe-bench/apps/konsol/konsol/public/excel-addin/assets/
+konsol_cli/scripts/deploy-excel-full.sh
 ```
 
-Or use the npm script (adjusts paths from the excel-addin/ directory):
+That hot-copies add-in assets, Frappe auth modules, and the Caddyfile, then reloads
+Caddy and restarts Frappe workers.
 
-```bash
-cd excel-addin
-npm run deploy
+**Production (Excel Online):** deploy via **Microsoft 365 Admin Center → Integrated
+apps** using the hosted manifest URL:
+
+```
+https://demo.konsolidat.com/assets/konsol/excel-addin/manifest.xml
 ```
 
-After copying, clear the Frappe cache so the new files are served:
+Do not rely on Insert → Upload My Add-in for custom function registration on Excel web.
 
-```bash
-cd /home/pd/frappe-bench
-bench --site epm.local clear-cache
-```
+## Local / dev sideload
 
-## Sideload in Excel
+1. Serve assets from Frappe `public/excel-addin/` (or demo HTTPS).
+2. Sideload `manifest.xml` (must match `manifest.demo.xml` version and ID).
+3. Open pane, sign in, test `=K.PING()` then `=K.EPM(...)`.
 
-### Prerequisites
-
-- For local dev, the manifest uses `http://localhost:8069` (Office.js allows
-  HTTP on localhost). No HTTPS or certs needed.
-- For production, set up HTTPS via `bench setup production` (nginx) and update
-  the manifest URLs to `https://your-domain/assets/konsol/excel-addin/...`.
-- **Admin-managed orgs**: sideloading may be blocked. Ask IT to either enable
-  "Upload My Add-in" or deploy the manifest via Microsoft 365 Admin Center.
-
-### Windows (Excel Desktop)
-
-1. Open Excel and create or open a workbook.
-2. Go to **File > Options > Trust Center > Trust Center Settings > Trusted Add-in Catalogs**.
-3. Alternatively, use the faster method:
-   - Go to **Insert > My Add-ins > Upload My Add-in**.
-   - Browse to `excel-addin/manifest.xml` and click **OK**.
-4. The "OpenEPM" button appears on the **Home** tab in the ribbon.
-5. Click it to open the task pane.
-
-### Shared Network Catalog (multi-user)
-
-1. Place `manifest.xml` on a shared network folder (e.g., `\\server\addins\`).
-2. In Excel: **File > Options > Trust Center > Trust Center Settings > Trusted Add-in Catalogs**.
-3. Add the network path as a trusted catalog.
-4. Restart Excel. The add-in appears under **Insert > My Add-ins > Shared Folder**.
-
-### Microsoft 365 Admin Center (org-wide)
-
-1. Upload `manifest.xml` via the Microsoft 365 admin center under
-   **Settings > Integrated Apps > Upload custom apps**.
-2. The add-in becomes available to all users in the tenant.
-
-## How It Works
-
-1. **Login** -- User enters Frappe credentials. The task pane calls
-   `/api/method/login` which sets a session cookie.
-2. **Status display** -- On login (and on each poll), the pane fetches the most
-   recent `Pipeline Run` document from Frappe and renders status, start time,
-   rows synced, and dbt result.
-3. **Trigger** -- The "Run Extract + dbt Build" button calls the whitelisted
-   Frappe method `trigger_pipeline`, which creates a new Pipeline Run document
-   and kicks off the extract/transform background job.
-4. **Auto-refresh** -- While a run is in an active state (Queued, Extracting,
-   Transforming), the pane polls every 5 seconds. Polling stops when the run
-   reaches Success or Failed.
+See `konsol_cli/HANDOFF-EXCEL-ONLINE.md` for regression checklist and troubleshooting.
