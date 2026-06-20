@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Konsolidat</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; min-height: 100%; }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #323130;
+      background: #faf9f8;
+      padding: 16px;
+      line-height: 1.4;
+    }
+    h1 { font-size: 18px; color: #0078d4; margin-bottom: 4px; }
+    .version { color: #605e5c; font-size: 11px; margin-bottom: 12px; }
+    #boot-status { color: #605e5c; font-size: 12px; margin-bottom: 8px; }
+    #diag { color: #605e5c; font-size: 11px; margin-bottom: 8px; font-family: monospace; }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #605e5c;
+      margin: 10px 0 4px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #8a8886;
+      border-radius: 2px;
+      font-size: 13px;
+    }
+    button {
+      margin-top: 14px;
+      width: 100%;
+      padding: 8px 16px;
+      background: #0078d4;
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #fff;
+      color: #0078d4;
+      border: 1px solid #0078d4;
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .error { color: #a4262c; margin-top: 10px; font-size: 12px; }
+    .ok { color: #107c10; margin-top: 10px; font-size: 12px; }
+    .hint { color: #605e5c; font-size: 12px; margin-top: 12px; }
+    .warn { color: #a4262c; font-size: 12px; margin-top: 10px; }
+    #logged-in { display: none; }
+    #fn-status { font-size: 12px; margin-bottom: 10px; }
+    #fn-status.pending { color: #605e5c; }
+    #fn-status.ok { color: #107c10; }
+    #fn-status.err { color: #a4262c; }
+    body:not(.ready) #app { opacity: 0.55; }
+  </style>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="functions.js"></script>
+</head>
+<body>
+  <h1>Konsolidat</h1>
+  <p class="version">v2.0.0.0</p>
+  <p id="boot-status">Connecting to Excel…</p>
+  <p id="diag">diag: …</p>
+  <p class="hint">Sign in, then use <strong>=K.EPM()</strong> in cells. Deploy via M365 Admin Center for Excel Online.</p>
+
+  <p id="fn-status" class="pending" hidden>Checking =K.PING() name registration…</p>
+
+  <div id="app">
+    <div id="login-view">
+      <label for="email">Email</label>
+      <input id="email" type="text" placeholder="Administrator" autocomplete="username" />
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" />
+      <button id="login-btn" type="button">Log In</button>
+      <p id="login-error" class="error" hidden></p>
+    </div>
+
+    <div id="logged-in">
+      <p class="ok">Signed in as <strong id="user-label"></strong></p>
+      <p class="warn" id="reopen-hint" hidden>
+        =K.* not registered — deploy this add-in via M365 Admin Center (Integrated apps), not sideload.
+        Then try <strong>=K.PING()</strong> in a new cell.
+      </p>
+      <button id="recalc-btn" type="button" class="secondary">Re-probe =K.PING()</button>
+      <button id="logout-btn" type="button" class="secondary">Log Out</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var API = window.location.origin;
+      var bootStatus = document.getElementById("boot-status");
+      var diag = document.getElementById("diag");
+      var fnStatus = document.getElementById("fn-status");
+      var reopenHint = document.getElementById("reopen-hint");
+      var emailInput = document.getElementById("email");
+      var passwordInput = document.getElementById("password");
+      var loginBtn = document.getElementById("login-btn");
+      var logoutBtn = document.getElementById("logout-btn");
+      var recalcBtn = document.getElementById("recalc-btn");
+      var loginError = document.getElementById("login-error");
+      var started = false;
+      var PROBE_CELL = "ZZ999";
+
+      function associateLabel() {
+        return window.konsolFunctionsAssociated ? "yes" : "no";
+      }
+
+      function tokenLabel() {
+        try {
+          return localStorage.getItem("konsol_token") ? "stored" : "none";
+        } catch (e) {
+          return "blocked";
+        }
+      }
+
+      var currentSession = "…";
+
+      function setDiag(namesResult, sessionUser) {
+        if (sessionUser !== undefined) currentSession = sessionUser || "none";
+        var names = namesResult || "pending";
+        diag.textContent = "associate=" + associateLabel() + " · names=" + names +
+          " · token=" + tokenLabel() + " · session=" + currentSession;
+      }
+
+      function setFnStatus(state, msg) {
+        fnStatus.className = state;
+        fnStatus.textContent = msg;
+      }
+
+      function probeFormulaNames() {
+        if (typeof Excel === "undefined") {
+          setDiag("excel-api-unavailable");
+          fnStatus.hidden = false;
+          setFnStatus("err", "=K.PING() probe skipped (Excel API unavailable).");
+          return;
+        }
+        Excel.run(function (ctx) {
+          var sheet = ctx.workbook.worksheets.getActiveWorksheet();
+          var probe = sheet.getRange(PROBE_CELL);
+          probe.formulas = [["=K.PING()"]];
+          probe.load("values");
+          return ctx.sync().then(function () {
+            var namesOk = probe.values[0][0] === 1;
+            setDiag(namesOk ? "yes(=1)" : "no(#NAME?)");
+            if (namesOk) {
+              fnStatus.hidden = false;
+              setFnStatus("ok", "=K.PING() works — =K.EPM() available.");
+              reopenHint.hidden = true;
+            } else {
+              fnStatus.hidden = true;
+              reopenHint.hidden = false;
+            }
+            probe.clear();
+            return ctx.sync();
+          });
+        }).catch(function () {
+          setDiag("probe-failed");
+        });
+      }
+
+      var TOKEN_KEY = "konsol_token";
+
+      function getToken() {
+        try {
+          return localStorage.getItem(TOKEN_KEY) || "";
+        } catch (e) {
+          return "";
+        }
+      }
+
+      function setToken(token) {
+        try {
+          if (token) localStorage.setItem(TOKEN_KEY, token);
+          else localStorage.removeItem(TOKEN_KEY);
+        } catch (e) { /* localStorage blocked */ }
+      }
+
+      function authHeaders(extra) {
+        var headers = extra || {};
+        var token = getToken();
+        if (token) headers["X-Konsolidat-Token"] = token;
+        return headers;
+      }
+
+      function api(path, options) {
+        var opts = options || {};
+        opts.credentials = opts.credentials || "include";
+        opts.cache = "no-store";
+        opts.headers = authHeaders(opts.headers || {});
+        return fetch(API + path, opts);
+      }
+
+      function parseApiError(res, data) {
+        if (data && data.exception) return String(data.exception).replace(/<[^>]+>/g, "");
+        return "HTTP " + res.status;
+      }
+
+      function showLogin() {
+        document.getElementById("login-view").style.display = "block";
+        document.getElementById("logged-in").style.display = "none";
+      }
+
+      function showLoggedIn(user) {
+        document.getElementById("login-view").style.display = "none";
+        document.getElementById("logged-in").style.display = "block";
+        document.getElementById("user-label").textContent = user;
+      }
+
+      function whoami() {
+        return api("/api/method/konsol.api.excel_addin_whoami", { credentials: "omit" })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              var user = (data.message && data.message.user) || null;
+              setDiag(undefined, user);
+              return user;
+            });
+          })
+          .catch(function () {
+            setDiag(undefined, "error");
+            return null;
+          });
+      }
+
+      function login() {
+        var email = emailInput.value.trim();
+        var password = passwordInput.value;
+        if (!email || !password) {
+          loginError.textContent = "Email and password are required.";
+          loginError.hidden = false;
+          return;
+        }
+        loginError.hidden = true;
+        loginBtn.disabled = true;
+        fetch(API + "/api/method/konsol.api.excel_addin_auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "omit",
+          cache: "no-store",
+          body: JSON.stringify({ usr: email, pwd: password })
+        }).then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) throw new Error(parseApiError(res, data));
+            var msg = data.message || {};
+            if (!msg.token || !msg.user) throw new Error("Login response missing token");
+            setToken(msg.token);
+            showLoggedIn(msg.user);
+            setDiag(undefined, msg.user);
+          });
+        }).catch(function (err) {
+          loginError.textContent = err.message || "Login failed";
+          loginError.hidden = false;
+        }).finally(function () {
+          loginBtn.disabled = false;
+        });
+      }
+
+      function logout() {
+        var token = getToken();
+        setToken("");
+        var req = token
+          ? fetch(API + "/api/method/konsol.api.excel_addin_logout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Konsolidat-Token": token },
+              credentials: "omit",
+              body: JSON.stringify({ token: token })
+            })
+          : Promise.resolve();
+        req.finally(function () {
+          setDiag(undefined, "none");
+          showLogin();
+        });
+      }
+
+      function start() {
+        if (started) return;
+        started = true;
+        document.body.classList.add("ready");
+        bootStatus.hidden = true;
+        if (Office.addin && Office.addin.setStartupBehavior) {
+          Office.addin.setStartupBehavior(Office.StartupBehavior.load);
+        }
+        setDiag("pending", "…");
+        whoami().then(function (user) {
+          if (user) showLoggedIn(user);
+        });
+        setTimeout(probeFormulaNames, 1000);
+        loginBtn.addEventListener("click", login);
+        logoutBtn.addEventListener("click", logout);
+        recalcBtn.addEventListener("click", probeFormulaNames);
+        passwordInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") login();
+        });
+        emailInput.focus();
+      }
+
+      if (typeof Office !== "undefined" && Office.onReady) {
+        Office.onReady(start);
+      } else {
+        start();
+      }
+      setTimeout(start, 5000);
+    })();
+  </script>
+</body>
+</html>

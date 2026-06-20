@@ -110,7 +110,7 @@
       <bt:Urls>
         <bt:Url id="Taskpane.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/index.html" />
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/open-epm/open-epm" />
-        <bt:Url id="Functions.Script.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.js" />
+        <bt:Url id="Functions.Script.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/index.html" />
         <bt:Url id="Functions.Metadata.Url" DefaultValue="http://localhost:8069/assets/konsol/excel-addin/functions.json" />
       </bt:Urls>
       <bt:ShortStrings>
