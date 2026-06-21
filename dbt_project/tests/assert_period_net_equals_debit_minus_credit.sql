@@ -1,4 +1,5 @@
--- Test: period_net_amount must equal period_debit - period_credit per trial balance group
+-- Test: period_net_amount must equal period_debit - period_credit per trial balance row.
+-- Fails on pre-fix gold until a full refresh rebuilds gold_trial_balance with the new measure.
 select
     data_area_id,
     fiscal_year,
