@@ -45,14 +45,14 @@ EXPECTED_GOLD_TABLES = [
 
 @pytest.mark.parametrize("table", EXPECTED_GOLD_TABLES)
 def test_gold_table_exists_after_build(ch, dbt_run, table):
-    """After dbt build, gold tables should exist in epm schema."""
+    """After dbt build, gold tables should exist in epm_gold."""
     # Ensure dbt has run
     dbt_run()
     count = ch(
         f"SELECT count() FROM system.tables "
-        f"WHERE database = 'epm' AND name = '{table}' FORMAT TabSeparated"
+        f"WHERE database = 'epm_gold' AND name = '{table}' FORMAT TabSeparated"
     )
-    assert int(count) == 1, f"epm.{table} does not exist after dbt build"
+    assert int(count) == 1, f"epm_gold.{table} does not exist after dbt build"
 
 
 # ---------------------------------------------------------------------------
@@ -61,13 +61,13 @@ def test_gold_table_exists_after_build(ch, dbt_run, table):
 def test_gold_trial_balance_has_rows(ch, dbt_run):
     """gold_trial_balance should have rows from seed data."""
     dbt_run()
-    count = ch("SELECT count() FROM epm.gold_trial_balance FORMAT TabSeparated")
+    count = ch("SELECT count() FROM epm_gold.gold_trial_balance FORMAT TabSeparated")
     assert int(count) > 0, "gold_trial_balance is empty after dbt build"
 
 
 def test_gold_consolidated_trial_balance_has_rows(ch, dbt_run):
     """gold_consolidated_trial_balance should have rows (requires consolidation groups seed)."""
     dbt_run()
-    count = ch("SELECT count() FROM epm.gold_consolidated_trial_balance FORMAT TabSeparated")
+    count = ch("SELECT count() FROM epm_gold.gold_consolidated_trial_balance FORMAT TabSeparated")
     # May be 0 if no consolidation groups are seeded — that's OK, just check it doesn't error
     assert int(count) >= 0

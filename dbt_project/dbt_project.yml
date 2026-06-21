@@ -214,6 +214,20 @@ models:
       gold_allocation_audit_trail:
         +tags: ['gold', 'domain:consolidation']
 
+      # --- Domain: reporting (management hierarchy rollups) ---
+      gold_reporting_hierarchy:
+        +tags: ['gold', 'domain:reporting']
+      gold_reporting_hierarchy_closure:
+        +tags: ['gold', 'domain:reporting']
+      gold_tb_at_hierarchy_node:
+        +tags: ['gold', 'domain:reporting']
+      gold_unassigned_hierarchy_members:
+        +tags: ['gold', 'domain:reporting']
+      gold_budget_at_hierarchy_node:
+        +tags: ['gold', 'domain:reporting']
+      gold_variance_at_hierarchy_node:
+        +tags: ['gold', 'domain:reporting']
+
 seeds:
   open_epm:
     +schema: gold

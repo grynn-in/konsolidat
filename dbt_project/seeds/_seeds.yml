@@ -75,3 +75,39 @@ seeds:
         description: "Display label for the canonical value"
       - name: status
         description: "Draft / Published / Inactive — only Published rows are applied"
+
+  - name: reporting_hierarchies
+    description: >
+      Management reporting hierarchies — parent/child rollups on canonical
+      dimension values (BU, division, region, etc.). Distinct from the legal-
+      entity Consolidation Group tree. Generated from published
+      `Reporting Hierarchy` + `Reporting Hierarchy Member` docs in konsol.
+    config:
+      column_types:
+        hierarchy_name: String
+        dimension: String
+        member_code: String
+        member_label: String
+        parent_member_code: String
+        is_group: UInt8
+        hierarchy_level: UInt8
+        path: String
+        effective_from: Date
+        effective_to: Date
+        is_default: UInt8
+        status: String
+    columns:
+      - name: hierarchy_name
+        description: "Hierarchy identifier, e.g. MGMT_2026"
+      - name: dimension
+        description: "Canonical dimension axis, e.g. dim_business_unit"
+      - name: member_code
+        description: "Node code — leaves match harmonized GL dimension values"
+      - name: parent_member_code
+        description: "Parent node code (empty for root)"
+      - name: is_group
+        description: "1 = rollup-only group node"
+      - name: is_default
+        description: "1 = default hierarchy for unassigned-member checks"
+      - name: status
+        description: "Only Published rows are consumed by gold models"
