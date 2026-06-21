@@ -104,7 +104,7 @@ vars:
       label: "Credit"
       cube_type: sum
     - name: period_net_amount
-      expression: "sum(accounting_currency_amount)"
+      expression: "sum(debit_amount) - sum(credit_amount)"
       label: "Net Amount"
       cube_type: sum
     - name: transaction_count
