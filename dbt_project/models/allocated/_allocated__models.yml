@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: alloc_results
+    description: "Driver-based allocation output (all scenarios). PRD-ALLOCATED-LAYER."
+    columns:
+      - name: scenario_id
+        description: "ACTUAL, BUDGET, or FORECAST"
+        tests:
+          - not_null
+      - name: allocation_rule_id
+        tests:
+          - not_null
+      - name: allocated_amount
+        description: "Amount allocated to each target cost center"
+
+  - name: alloc_audit_trail
+    description: "PRD-21 allocation run audit trail in epm_allocated"
+    columns:
+      - name: scenario_id
+        tests:
+          - not_null
+      - name: allocation_run_id
+        description: "Run identifier for traceability"

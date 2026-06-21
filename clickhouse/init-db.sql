@@ -5,6 +5,7 @@ CREATE DATABASE IF NOT EXISTS epm;
 CREATE DATABASE IF NOT EXISTS epm_bronze;
 CREATE DATABASE IF NOT EXISTS epm_silver;
 CREATE DATABASE IF NOT EXISTS epm_gold;
+CREATE DATABASE IF NOT EXISTS epm_allocated;
 CREATE DATABASE IF NOT EXISTS epm_staging;
 
 -- Staging table for budget write-back from Excel/API

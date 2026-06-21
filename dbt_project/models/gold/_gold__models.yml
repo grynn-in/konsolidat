@@ -44,7 +44,7 @@ models:
         description: "Running sum of period_net_amount within the year"
 
   - name: gold_allocation_results
-    description: "Results of driver-based cost allocations"
+    description: "Deprecated view over epm_allocated.alloc_results (scenario_id=ACTUAL)"
     columns:
       - name: allocation_rule_id
         tests:
@@ -315,7 +315,7 @@ models:
         description: "matched or unmatched"
 
   - name: gold_allocation_audit_trail
-    description: "PRD-21: Allocation audit trail — all runs including reversed"
+    description: "Deprecated view over epm_allocated.alloc_audit_trail (scenario_id=ACTUAL)"
     columns:
       - name: allocation_run_id
         description: "Run identifier for traceability"
