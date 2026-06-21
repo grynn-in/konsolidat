@@ -1,0 +1,6 @@
+hierarchy_name,dimension,member_code,member_label,parent_member_code,is_group,hierarchy_level,path,effective_from,effective_to,is_default,status
+MGMT_DEMO,dim_business_unit,BU_ROOT,All Business Units,,1,1,BU_ROOT,2024-01-01,9999-12-31,1,Published
+MGMT_DEMO,dim_business_unit,OPS,Operations,BU_ROOT,1,2,BU_ROOT/OPS,2024-01-01,9999-12-31,1,Published
+MGMT_DEMO,dim_business_unit,CORP,Corporate,BU_ROOT,0,2,BU_ROOT/CORP,2024-01-01,9999-12-31,1,Published
+MGMT_DEMO,dim_business_unit,SERVICES,Services,OPS,0,3,BU_ROOT/OPS/SERVICES,2024-01-01,9999-12-31,1,Published
+MGMT_DEMO,dim_business_unit,MANUFACTURING,Manufacturing,OPS,0,3,BU_ROOT/OPS/MANUFACTURING,2024-01-01,9999-12-31,1,Published

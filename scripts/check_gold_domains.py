@@ -16,7 +16,7 @@ import sys
 import yaml
 
 # Keep in sync with konsol Build Domain fixtures / tasks.SCOPE_SELECTOR.
-KNOWN_DOMAINS = {"staging", "actuals", "scenarios", "consolidation"}
+KNOWN_DOMAINS = {"staging", "actuals", "scenarios", "consolidation", "reporting"}
 
 
 def _domain_tags(cfg):
