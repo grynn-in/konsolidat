@@ -4,6 +4,7 @@
 **Date:** 2026-06-16
 **Phase:** Phase 6 — Analytical Gaps (Allocation Enhancements)
 **Repos:** `konsolidat` (dbt models/macros, `clickhouse/init-db.sql`, Cube schema), `konsol` (Allocation Rule / Allocation Run doctypes)
+**Addendum:** [PRD-ALLOCATED-LAYER-ADDENDUM.md](PRD-ALLOCATED-LAYER-ADDENDUM.md) — grain spec, FCTB boundary, run semantics, build order (2026-06-21)
 
 ## Problem
 
