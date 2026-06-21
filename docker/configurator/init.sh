@@ -139,8 +139,15 @@ if [ -f /home/frappe/baked-assets/assets.json ]; then
     cp -f /home/frappe/baked-assets/assets.json sites/assets/assets.json
     cp -f /home/frappe/baked-assets/assets-rtl.json sites/assets/assets-rtl.json 2>/dev/null || true
     bench --site "$SITE_NAME" clear-cache >/dev/null 2>&1 || true
-    # clear-cache does not evict the global Redis assets_json key; stale hashes 404 CSS/JS
-    redis-cli -h "${REDIS_CACHE_HOST:-redis_cache}" DEL assets_json >/dev/null 2>&1 || true
+    # clear-cache does not evict the global Redis assets_json key; stale hashes 404 CSS/JS.
+    # redis-cli is not installed in the runtime image — use the bench venv instead.
+    ./env/bin/python - <<'PY' >/dev/null 2>&1 || true
+import os
+import redis
+
+host = os.environ.get("REDIS_CACHE_HOST", "redis_cache")
+redis.Redis(host=host, port=6379, socket_timeout=2).delete("assets_json")
+PY
 else
     echo "WARN: /home/frappe/baked-assets not found — rebuild the image so the manifest is baked (Desk CSS/JS may 404)"
 fi
