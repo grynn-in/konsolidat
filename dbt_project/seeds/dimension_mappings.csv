@@ -1,3 +1,6 @@
 dimension,erp_source,source_value,canonical_value,canonical_label,status
 dim_cost_center,d365_fo,001,CC-CORP,Corporate,Published
 dim_cost_center,erpnext,Main - AC,CC-CORP,Corporate,Published
+dim_business_unit,d365_fo,CORP,CORP,Corporate,Published
+dim_business_unit,d365_fo,SERVICES,SERVICES,Services,Published
+dim_business_unit,d365_fo,MANUFACTURING,MANUFACTURING,Manufacturing,Published
