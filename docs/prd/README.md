@@ -42,7 +42,7 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | [Multi-Step Budget Approval Chain](PRD-BUDGET-APPROVAL-CHAIN.md) | Extended budget workflow (Draft→Dept→Controller→CFO) with role-gated transitions and notifications. | Not Started |
 | [Consolidation Enhancements](PRD-CONSOLIDATION-ENHANCEMENTS.md) | Temporal equity rates, goodwill CTA, disposal recycling, NCI in business combinations, ownership changes. | Not Started |
 | [Allocation Enhancements (Circular & Reciprocal)](PRD-ALLOCATION-ENHANCEMENTS.md) | Iterative convergence and simultaneous-equations methods for reciprocal cost pools. | Not Started |
-| [Allocated Layer](PRD-ALLOCATED-LAYER.md) | New `epm_allocated` schema separating allocation output from gold; scenario-aware allocation (actuals + budget) + top-down vs bottom-up budget reconciliation. | Not Started |
+| [Allocated Layer](PRD-ALLOCATED-LAYER.md) | New `epm_allocated` schema separating allocation output from gold; scenario-aware allocation (actuals + budget) + top-down vs bottom-up budget reconciliation. [Addendum](PRD-ALLOCATED-LAYER-ADDENDUM.md) | Not Started |
 | [Planning Enhancements (Driver-Based & Recurring)](PRD-PLANNING-ENHANCEMENTS.md) | Driver-based planning, phasing templates, recurring topside journals with approval. | Not Started |
 | [Reporting Enhancements (Waterfall, Trend, Commentary)](PRD-REPORTING-ENHANCEMENTS.md) | Waterfall/bridge variance decomposition, trend analysis, commentary on variance cells. | Not Started |
 | [Close Assertion Suite (Reconciliation Gate)](PRD-CLOSE-ASSERTION-SUITE.md) | Per-close green/red assertion suite over the 60 dbt `assert_*` tests — row-level failures + sign-off gate. | Not Started |
