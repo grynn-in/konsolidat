@@ -139,6 +139,11 @@ models:
       +schema: silver
       +materialized: table
       +tags: ['silver']
+    allocated:
+      +schema: allocated
+      +materialized: table
+      +tags: ['allocated', 'domain:consolidation']
+
     gold:
       +schema: gold
       +materialized: table
@@ -210,9 +215,11 @@ models:
       gold_consolidated_ytd:
         +tags: ['gold', 'domain:consolidation']
       gold_allocation_results:
-        +tags: ['gold', 'domain:consolidation']
+        +materialized: view
+        +tags: ['gold', 'domain:consolidation', 'deprecated']
       gold_allocation_audit_trail:
-        +tags: ['gold', 'domain:consolidation']
+        +materialized: view
+        +tags: ['gold', 'domain:consolidation', 'deprecated']
 
 seeds:
   open_epm:
