@@ -257,7 +257,7 @@ This restores MariaDB, ClickHouse, and Frappe files, then restarts services.
 ```bash
 cd konsolidat
 git pull
-docker compose build frappe_backend
+docker compose --profile setup --profile backup build  # rebuild ALL Frappe services, not just the backend
 docker compose up -d
 ```
 
