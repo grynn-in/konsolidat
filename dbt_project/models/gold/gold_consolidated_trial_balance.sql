@@ -244,7 +244,13 @@ rated as (
             data_area_id,
             main_account,
             rate_date,
-            toFloat64(historical_rate) as historical_rate
+            {# Nullable so an ASOF miss (period before the first tranche) yields
+               NULL, not 0.0 — a non-nullable column would default to 0 on a
+               LEFT-join miss and make the `hr.historical_rate is not null`
+               fallback below wrongly translate equity at rate 0 (zeroing the
+               balance) instead of closing_rate. Same defaulting trap the
+               ownership block above guards against. #}
+            cast(toFloat64(historical_rate) as Nullable(Float64)) as historical_rate
         from {{ source('epm_staging', 'historical_equity_rates') }}
     ) as hr
         on eo.consolidation_group = hr.consolidation_group
