@@ -1,0 +1,15 @@
+<!--
+  macros-shard3-replica1.xml — ClickHouse server macros for shard 3 replica 1.
+
+  Mount at /etc/clickhouse-server/config.d/macros.xml on ch-shard3
+  (docker-compose.cluster.yml selects this file when SHARD_ID=3). ClickHouse
+  expands {shard}/{replica}/{cluster} in ReplicatedMergeTree paths at CREATE
+  TABLE time. See grynn-in/konsolidat#57 (only shard1 macros existed before).
+-->
+<clickhouse>
+  <macros>
+    <shard>03</shard>
+    <replica>replica1</replica>
+    <cluster>konsol_cluster</cluster>
+  </macros>
+</clickhouse>
