@@ -1,6 +1,16 @@
 version: 2
 
 sources:
+  - name: epm_gold
+    schema: epm_gold
+    description: "Gold tables the konsol app writes directly (not dbt-materialized)"
+    tables:
+      - name: budget_monthly_input
+        description: >
+          Manually-entered monthly budgets synced from Budget Sheets on cycle
+          lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
+          gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+
   - name: epm_staging
     schema: epm_staging
     description: "Write-back staging tables populated by the FastAPI budget input API and Frappe konsol app"
