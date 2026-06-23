@@ -55,6 +55,7 @@ set_env() {
 domain_scheme() {
   case "$1" in
     ""|localhost) echo "http" ;;
+    *:*)          echo "http" ;;   # contains ':' → IPv6 literal → http (#59)
     *[!0-9.]*)    echo "https" ;;  # has a non-(digit/dot) char → hostname
     *)            echo "http" ;;   # only digits/dots → IPv4 → http
   esac
