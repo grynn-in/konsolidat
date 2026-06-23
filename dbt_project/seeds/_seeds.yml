@@ -111,3 +111,30 @@ seeds:
         description: "1 = default hierarchy for unassigned-member checks"
       - name: status
         description: "Only Published rows are consumed by gold models"
+
+  - name: currencies
+    description: >
+      ISO 4217 currency reference (code, name, symbol, minor unit). Supplies the
+      currency dimension that FX data validates against: from_currency /
+      to_currency in silver_exchange_rates and entity accounting/reporting
+      currencies are bare ISO codes with no other source of truth. Covers the
+      major reserve / G20 / EU currencies plus every currency present in the demo
+      FX data; extensible to the full ISO 4217 set. Ref grynn-in/konsolidat#91.
+    config:
+      column_types:
+        currency_code: String
+        currency_name: String
+        symbol: String
+        minor_unit: UInt8
+    columns:
+      - name: currency_code
+        description: "ISO 4217 alphabetic code (3 letters), e.g. CHF"
+        data_tests:
+          - unique
+          - not_null
+      - name: currency_name
+        description: "English currency name"
+      - name: symbol
+        description: "Common currency symbol"
+      - name: minor_unit
+        description: "ISO 4217 minor unit (decimal places); JPY=0, most=2, KWD/BHD/OMR=3"
