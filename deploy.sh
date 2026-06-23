@@ -238,7 +238,14 @@ else
     git -C "$KONSOL_DIR" reset --hard FETCH_HEAD
 fi
 
-docker compose build frappe_backend
+# Rebuild every Frappe-based service, not just the backend: configurator,
+# frappe_backend, frappe_worker and frappe_scheduler all derive from the same
+# x-frappe-common build but resolve to SEPARATE images, so building only the
+# backend leaves worker/scheduler/configurator on the old app code after a
+# redeploy (version skew). Bare `build` only touches services with a build
+# context (the Frappe ones); image-only services (cubejs, clickhouse, …) are
+# untouched. See grynn-in/konsolidat#58.
+docker compose build
 
 # ---------------------------------------------------------------------------
 # Step 3: Run configurator (create site, install app)
