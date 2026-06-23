@@ -36,7 +36,7 @@
       each node a distinct id — previously hardcoded 1 on every node, which breaks
       the raft quorum (all nodes claim id 1). See grynn-in/konsolidat#57.
     -->
-    <server_id from_env="KEEPER_SERVER_ID">1</server_id>
+    <server_id replace="1" from_env="KEEPER_SERVER_ID">1</server_id>
 
     <listen_host>0.0.0.0</listen_host>
     <!-- Raft port: Keeper → Keeper communication -->
