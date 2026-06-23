@@ -230,24 +230,27 @@ rated as (
         on etb.accounting_currency = rl.from_currency
         and eo.reporting_currency = rl.to_currency
         and etb.period_date = rl.period_date
-    {# PRD-10: Historical equity rate — latest rate_date <= period_date #}
-    left join (
+    {# PRD-10: Historical equity rate — as-of the period: pick the latest tranche
+       whose rate_date <= period_date. The previous row_number()/rn=1 took the
+       single most-recent rate_date EVER, ignoring the period entirely, so an
+       early period got a future rate (grynn-in/konsolidat#92, finding #2). An
+       ASOF join (same pattern as ownership_staging above) selects the closest
+       rate_date not exceeding period_date — and yields no match (NULL rate, so
+       the case falls back to closing_rate) for periods before the first tranche,
+       instead of silently borrowing a future rate. #}
+    asof left join (
         select
             consolidation_group,
             data_area_id,
             main_account,
             rate_date,
-            toFloat64(historical_rate) as historical_rate,
-            row_number() over (
-                partition by consolidation_group, data_area_id, main_account
-                order by rate_date desc
-            ) as rn
+            toFloat64(historical_rate) as historical_rate
         from {{ source('epm_staging', 'historical_equity_rates') }}
     ) as hr
         on eo.consolidation_group = hr.consolidation_group
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
-        and hr.rn = 1
+        and etb.period_date >= hr.rate_date
     {# PRD-14: Exclude equity-method entities — handled in separate model.
        Use the same default-aware resolution as the column above. #}
     where if(os.consolidation_method != '', os.consolidation_method, eo.seed_method) != 'equity'
