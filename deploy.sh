@@ -38,6 +38,28 @@ sedi() {
   fi
 }
 
+# Upsert KEY=VALUE in .env (update in place, or append if the key is absent —
+# so an existing .env predating a new setting still gets it).
+set_env() {
+  local key="$1" val="$2"
+  if grep -q "^${key}=" .env; then
+    sedi "s|^${key}=.*|${key}=${val}|" .env
+  else
+    printf '%s=%s\n' "$key" "$val" >> .env
+  fi
+}
+
+# Pick the Caddy scheme for a site value: https for a real DNS hostname (enables
+# Caddy auto-HTTPS / Let's Encrypt), plain http for an IP or localhost — a bare
+# host/IP makes Caddy issue an internal-CA cert the browser rejects (#59).
+domain_scheme() {
+  case "$1" in
+    ""|localhost) echo "http" ;;
+    *[!0-9.]*)    echo "https" ;;  # has a non-(digit/dot) char → hostname
+    *)            echo "http" ;;   # only digits/dots → IPv4 → http
+  esac
+}
+
 # ---------------------------------------------------------------------------
 # Sub-commands
 # ---------------------------------------------------------------------------
@@ -165,14 +187,18 @@ if [ ! -f .env ]; then
   sedi "s|CUBEJS_API_SECRET=.*|CUBEJS_API_SECRET=${GENERATED_CUBEJS_SECRET}|" .env
 
   if [ -n "$DOMAIN" ]; then
-    sedi "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
+    SCHEME=$(domain_scheme "$DOMAIN")
+    set_env SITE_DOMAIN "$DOMAIN"
+    set_env SITE_SCHEME "$SCHEME"
   fi
 
   ok "Generated .env with secure passwords"
 else
   ok "Using existing .env"
   if [ -n "$DOMAIN" ]; then
-    sedi "s|SITE_DOMAIN=.*|SITE_DOMAIN=${DOMAIN}|" .env
+    SCHEME=$(domain_scheme "$DOMAIN")
+    set_env SITE_DOMAIN "$DOMAIN"
+    set_env SITE_SCHEME "$SCHEME"
   fi
 fi
 

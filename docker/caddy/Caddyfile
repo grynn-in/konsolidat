@@ -1,4 +1,9 @@
-{$SITE_DOMAIN:localhost} {
+# SITE_SCHEME controls auto-HTTPS. Default `http` so localhost / IP-based
+# (LAN, VM) deploys serve plain HTTP — a bare host or IP makes Caddy issue an
+# internal-CA cert the browser rejects (grynn-in/konsolidat#59). Production with
+# a real DNS name sets SITE_SCHEME=https to re-enable Caddy auto-HTTPS / Let's
+# Encrypt. deploy.sh picks the scheme automatically from the --domain value.
+{$SITE_SCHEME:http}://{$SITE_DOMAIN:localhost} {
     encode gzip
 
     handle /api/method/konsol.cube_proxy/* {
@@ -58,6 +63,6 @@
 }
 
 # Cube.js playground (optional, disable in production)
-{$SITE_DOMAIN:localhost}:4443 {
+{$SITE_SCHEME:http}://{$SITE_DOMAIN:localhost}:4443 {
     reverse_proxy cubejs:4000
 }

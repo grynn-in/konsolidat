@@ -207,6 +207,7 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+      SITE_SCHEME: ${SITE_SCHEME:-http}
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
