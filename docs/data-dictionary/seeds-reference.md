@@ -8,6 +8,10 @@ Maps each balance-sheet GL account to a cash flow category and the sign that
 converts a BS movement into its cash effect. Consumed by
 `gold_cash_flow_indirect` and `gold_consolidated_cash_flow` (Phase 6.1).
 
+> **Generated, not hand-maintained.** This seed is regenerated from Published
+> **Cash Flow Category** doctype records (konsolidat#63) — on publish and after
+> `bench migrate` — by `konsol.dbt_config`. Edit the doctype, not the CSV.
+
 | Column | Type | Description |
 |--------|------|-------------|
 | `main_account` | String | GL account (matches `gold_bs_movement.main_account`) |
