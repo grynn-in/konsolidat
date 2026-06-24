@@ -18,9 +18,6 @@ sources:
       warn_after: {count: 72, period: hour}
       error_after: {count: 168, period: hour}
     tables:
-      - name: budget_input
-        description: "Budget/forecast line items submitted via the API"
-        loaded_at_field: updated_at
       - name: scenario_definitions
         description: "Scenario metadata created via the API"
         loaded_at_field: updated_at

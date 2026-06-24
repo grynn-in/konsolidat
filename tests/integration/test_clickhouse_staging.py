@@ -9,7 +9,6 @@ import pytest
 # Staging table existence
 # ---------------------------------------------------------------------------
 EXPECTED_STAGING_TABLES = [
-    "budget_input",
     "scenario_definitions",
     "consolidation_hierarchy",
     "historical_equity_rates",
