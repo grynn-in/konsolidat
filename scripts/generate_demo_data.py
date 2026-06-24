@@ -1088,17 +1088,23 @@ for month_idx in range(12):
     m = month_idx + 1
     start = f"2024-{m:02d}-01"
     end = "2024-12-31" if m == 12 else f"2024-{m+1:02d}-01"
-    # ConversionFactor: JPY quoted per Hundred (Yen amounts large), others per One
+    # ConversionFactor: JPY quoted per Hundred (Yen amounts large), others per One.
+    # The D365 adapter (stg_d365_fo__exchange_rates) scales 'One'-factor rates
+    # ×100 into the canonical ×100 store but passes 'Hundred'-factor rates
+    # through unscaled, and silver_exchange_rates then divides everything by 100.
+    # So a 'Hundred' rate must already be quoted per 100 units: store base×100
+    # for JPY so the round-trip yields the true per-1 rate (1 JPY ≈ 0.0068 USD).
     for from_ccy, table in [("USD", CX_FX_USD_USD), ("EUR", CX_FX_EUR_USD),
                             ("GBP", CX_FX_GBP_USD), ("JPY", CX_FX_JPY_USD)]:
         base = table[month_idx]
         conv = "Hundred" if from_ccy == "JPY" else "One"
+        store_scale = 100 if conv == "Hundred" else 1
         for rtype in ["Default", "Closing", "Average"]:
-            r = base
+            r = round(base * store_scale, 9)
             if rtype == "Closing":
-                r = round(base * 1.005, 9)
+                r = round(base * store_scale * 1.005, 9)
             elif rtype == "Average":
-                r = round(base * 0.998, 9)
+                r = round(base * store_scale * 0.998, 9)
             rows.append(
                 f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
                 f"{r}, {val(end)}, {val(start)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
@@ -1128,7 +1134,7 @@ CX_OPENING_BALANCES = {
         "1010": 3000000, "1100": 1400000, "1200": 1000000,
         "1500": 2400000, "1510": -500000,
         "2010": -700000, "2100": -350000, "2500": -1600000,
-        "3010": -3000000, "3100": -1640000,
+        "3010": -3000000, "3100": -1650000,  # RE balances the opening TB to zero
     },
     "DEMF": {
         "1010": 1700000, "1100": 950000, "1200": 1150000,
@@ -1140,7 +1146,7 @@ CX_OPENING_BALANCES = {
         "1010": 1400000, "1100": 780000, "1200": 640000,
         "1500": 1900000, "1510": -360000,
         "2010": -380000, "2100": -210000, "2500": -1100000,
-        "3010": -2000000, "3100": -1110000,
+        "3010": -2000000, "3100": -670000,  # RE balances the opening TB to zero
     },
     "JPMF": {  # 51% owned — 49% NCI; amounts in JPY (large)
         "1010": 240000000, "1100": 130000000, "1200": 110000000,
@@ -1459,6 +1465,17 @@ for month_idx in range(12):
         f"  ('USMF', 'DEMF', 2024, {m}, {ic_sale}, {ending_inv}, now())"
     )
 w(",\n".join(cx_ic_bal_rows) + ";")
+
+# ── Contoso Fiscal Calendar ───────────────────────────────────────
+# entity_fiscal_calendars maps the Contoso entities to the 'Fiscal'
+# calendar, so its year boundaries must be loaded (silver_fiscal_periods
+# expands them into 12 monthly periods). Without this, GL still works via
+# the silver date-derivation fallback, but assert_fiscal_calendar_is_loaded
+# fails. Appended last so no earlier UUIDs shift.
+section("Contoso: Fiscal Calendar Years ('Fiscal')")
+w("INSERT INTO epm_raw.FiscalCalendarYears VALUES")
+w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+  f"'2024-12-31', 'Fiscal', '2024-01-01', '2024', 'Fiscal Year 2024');")
 
 # ── Write output ──────────────────────────────────────────────────
 output = "\n".join(lines) + "\n"
