@@ -1,0 +1,45 @@
+currency_code,currency_name,symbol,minor_unit
+AED,UAE Dirham,د.إ,2
+ARS,Argentine Peso,$,2
+AUD,Australian Dollar,$,2
+BHD,Bahraini Dinar,.د.ب,3
+BRL,Brazilian Real,R$,2
+CAD,Canadian Dollar,$,2
+CHF,Swiss Franc,Fr,2
+CLP,Chilean Peso,$,0
+CNY,Chinese Yuan Renminbi,¥,2
+COP,Colombian Peso,$,2
+CZK,Czech Koruna,Kč,2
+DKK,Danish Krone,kr,2
+EGP,Egyptian Pound,£,2
+EUR,Euro,€,2
+GBP,Pound Sterling,£,2
+HKD,Hong Kong Dollar,$,2
+HUF,Hungarian Forint,Ft,2
+IDR,Indonesian Rupiah,Rp,2
+ILS,Israeli New Shekel,₪,2
+INR,Indian Rupee,₹,2
+ISK,Iceland Krona,kr,0
+JPY,Japanese Yen,¥,0
+KRW,South Korean Won,₩,0
+KWD,Kuwaiti Dinar,د.ك,3
+MXN,Mexican Peso,$,2
+MYR,Malaysian Ringgit,RM,2
+NOK,Norwegian Krone,kr,2
+NZD,New Zealand Dollar,$,2
+OMR,Rial Omani,ر.ع.,3
+PHP,Philippine Peso,₱,2
+PLN,Polish Zloty,zł,2
+QAR,Qatari Rial,ر.ق,2
+RON,Romanian Leu,lei,2
+RUB,Russian Ruble,₽,2
+SAR,Saudi Riyal,ر.س,2
+SEK,Swedish Krona,kr,2
+SGD,Singapore Dollar,$,2
+THB,Thai Baht,฿,2
+TRY,Turkish Lira,₺,2
+TWD,New Taiwan Dollar,NT$,2
+UAH,Ukrainian Hryvnia,₴,2
+USD,US Dollar,$,2
+VND,Vietnamese Dong,₫,0
+ZAR,South African Rand,R,2
