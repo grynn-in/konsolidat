@@ -17,4 +17,4 @@ select
     coalesce(RateTypeName, '') as rate_type,
     _airbyte_extracted_at as _loaded_at,
     _airbyte_raw_id as _raw_id
-from {{ source('d365_raw', 'ExchangeRates') }}
+from {{ source('d365_raw', 'exchange_rates') }}

@@ -12,4 +12,4 @@ select
     coalesce(Closed, '') as IsClosed,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'MainAccountCategories') }}
+from {{ source('d365_raw', 'main_account_categories') }}

@@ -20,4 +20,4 @@ select
     '' as account_type,
     _airbyte_extracted_at as _loaded_at,
     _airbyte_raw_id as _raw_id
-from {{ source('d365_raw', 'TrialBalanceFiscalYearSnapshots') }}
+from {{ source('d365_raw', 'trial_balance_fiscal_year_snapshots') }}

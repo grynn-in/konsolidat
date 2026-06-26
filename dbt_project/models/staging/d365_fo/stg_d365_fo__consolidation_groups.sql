@@ -7,7 +7,7 @@ with numbered as (
     select
         *,
         row_number() over (partition by ConsolidationAccountGroup order by ConsolidationAccountGroup) as rn
-    from {{ source('d365_raw', 'ConsolidateAccountGroups') }}
+    from {{ source('d365_raw', 'consolidate_account_groups') }}
 ),
 
 deduplicated as (

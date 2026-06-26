@@ -12,4 +12,4 @@ select
     toString(substring(coalesce(toString(EndDate), '2099-12-31'), 1, 10)) as end_date,
     _airbyte_extracted_at as _loaded_at,
     _airbyte_raw_id as _raw_id
-from {{ source('d365_raw', 'FiscalCalendarYears') }}
+from {{ source('d365_raw', 'fiscal_calendar_years') }}

@@ -110,7 +110,7 @@ w("CREATE DATABASE IF NOT EXISTS epm_raw;")
 section("Table Creation (Airbyte-compatible schemas)")
 
 TABLES = {
-    "MainAccounts": """
+    "main_accounts": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -123,7 +123,7 @@ TABLES = {
     `DebitCreditDefault` Nullable(String),
     `MainAccountCategory` Nullable(String)""",
 
-    "MainAccountCategories": """
+    "main_account_categories": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -134,7 +134,7 @@ TABLES = {
     `MainAccountType` Nullable(String),
     `MainAccountCategory` Nullable(String)""",
 
-    "LegalEntities": """
+    "legal_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -144,7 +144,7 @@ TABLES = {
     `AddressCountryRegionId` Nullable(String),
     `PartyNumber` Nullable(String)""",
 
-    "Ledgers": """
+    "ledgers": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -155,7 +155,7 @@ TABLES = {
     `ReportingCurrency` Nullable(String),
     `AccountingCurrency` Nullable(String)""",
 
-    "FiscalCalendarYears": """
+    "fiscal_calendar_years": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -166,7 +166,7 @@ TABLES = {
     `FiscalYear` Nullable(String),
     `Description` Nullable(String)""",
 
-    "ExchangeRates": """
+    "exchange_rates": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -179,7 +179,7 @@ TABLES = {
     `RateTypeName` Nullable(String),
     `ConversionFactor` Nullable(String)""",
 
-    "ExchangeRateTypes": """
+    "exchange_rate_types": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -187,7 +187,7 @@ TABLES = {
     `Name` Nullable(String),
     `Description` Nullable(String)""",
 
-    "DimensionAttributes": """
+    "dimension_attributes": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -196,7 +196,7 @@ TABLES = {
     `UseValuesFrom` Nullable(String),
     `ReportColumnName` Nullable(String)""",
 
-    "FinancialDimensionValues": """
+    "financial_dimension_values": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -208,7 +208,7 @@ TABLES = {
     `DimensionValue` Nullable(String),
     `FinancialDimension` Nullable(String)""",
 
-    "ConsolidateAccountGroups": """
+    "consolidate_account_groups": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -216,7 +216,7 @@ TABLES = {
     `ConsolidationAccountGroup` Nullable(String),
     `ConsolidationAccountGroupName` Nullable(String)""",
 
-    "GeneralJournalEntryBiEntities": """
+    "general_journal_entry_bi_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -233,7 +233,7 @@ TABLES = {
     `FiscalCalendarPeriod` Nullable(Int64),
     `SubledgerVoucherDataAreaId` Nullable(String)""",
 
-    "GeneralJournalAccountEntryBiEntities": """
+    "general_journal_account_entry_bi_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -251,7 +251,7 @@ TABLES = {
     `LedgerDimensionValuesJson` Nullable(String),
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))""",
 
-    "BudgetRegisterEntries": """
+    "budget_register_entries": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -273,7 +273,7 @@ TABLES = {
     `IncludeInCashFlowForecast` Nullable(String),
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))""",
 
-    "TrialBalanceFiscalYearSnapshots": """
+    "trial_balance_fiscal_year_snapshots": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -306,7 +306,7 @@ def val(v):
 
 # ── Main Accounts ─────────────────────────────────────────────────
 section("Main Accounts (Chart of Accounts)")
-w("INSERT INTO epm_raw.MainAccounts VALUES")
+w("INSERT INTO epm_raw.main_accounts VALUES")
 rows = []
 for acct_id, name, atype, cat, dc, chart in ACCOUNTS:
     rows.append(
@@ -333,7 +333,7 @@ CATEGORIES = [
     ("CAT012", "OtherIncome", "Interest and other income", "ProfitAndLoss"),
     ("CAT013", "OtherExpense", "Interest and other expense", "ProfitAndLoss"),
 ]
-w("INSERT INTO epm_raw.MainAccountCategories VALUES")
+w("INSERT INTO epm_raw.main_account_categories VALUES")
 rows = []
 for ref_id, cat, desc, atype in CATEGORIES:
     rows.append(
@@ -344,7 +344,7 @@ w(",\n".join(rows) + ";")
 
 # ── Legal Entities ────────────────────────────────────────────────
 section("Legal Entities")
-w("INSERT INTO epm_raw.LegalEntities VALUES")
+w("INSERT INTO epm_raw.legal_entities VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in ENTITIES:
     rows.append(
@@ -355,7 +355,7 @@ w(",\n".join(rows) + ";")
 
 # ── Ledgers ───────────────────────────────────────────────────────
 section("Ledgers")
-w("INSERT INTO epm_raw.Ledgers VALUES")
+w("INSERT INTO epm_raw.ledgers VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in ENTITIES:
     rows.append(
@@ -366,20 +366,20 @@ w(",\n".join(rows) + ";")
 
 # ── Fiscal Calendar ───────────────────────────────────────────────
 section("Fiscal Calendar Years")
-w("INSERT INTO epm_raw.FiscalCalendarYears VALUES")
+w("INSERT INTO epm_raw.fiscal_calendar_years VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
   f"'2024-12-31', 'Standard', '2024-01-01', '2024', 'Fiscal Year 2024');")
 
 # ── Exchange Rate Types ───────────────────────────────────────────
 section("Exchange Rate Types")
-w("INSERT INTO epm_raw.ExchangeRateTypes VALUES")
+w("INSERT INTO epm_raw.exchange_rate_types VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Default', 'Default exchange rate'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Closing', 'Month-end closing rate'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Average', 'Monthly average rate');")
 
 # ── Exchange Rates ────────────────────────────────────────────────
 section("Exchange Rates (Monthly CHF/USD and CHF/EUR)")
-w("INSERT INTO epm_raw.ExchangeRates VALUES")
+w("INSERT INTO epm_raw.exchange_rates VALUES")
 rows = []
 for month_idx in range(12):
     m = month_idx + 1
@@ -419,7 +419,7 @@ w(",\n".join(rows) + ";")
 
 # ── Dimension Attributes ─────────────────────────────────────────
 section("Dimension Attributes")
-w("INSERT INTO epm_raw.DimensionAttributes VALUES")
+w("INSERT INTO epm_raw.dimension_attributes VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'CostCenter', 'CostCenter', 'CostCenter'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Department', 'Department', 'Department'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'BusinessUnit', 'BusinessUnit', 'BusinessUnit');")
@@ -440,7 +440,7 @@ DIM_VALUES = [
     ("BusinessUnit", "SERVICES", "Services"),
     ("BusinessUnit", "MANUFACTURING", "Manufacturing"),
 ]
-w("INSERT INTO epm_raw.FinancialDimensionValues VALUES")
+w("INSERT INTO epm_raw.financial_dimension_values VALUES")
 rows = []
 for dim, dval, desc in DIM_VALUES:
     rows.append(
@@ -451,7 +451,7 @@ w(",\n".join(rows) + ";")
 
 # ── Consolidation Account Groups ──────────────────────────────────
 section("Consolidation Account Groups")
-w("INSERT INTO epm_raw.ConsolidateAccountGroups VALUES")
+w("INSERT INTO epm_raw.consolidate_account_groups VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'AMG', 'Alpine Manufacturing Group');")
 
 # ── GL Journal Entries ────────────────────────────────────────────
@@ -809,12 +809,12 @@ for month_idx in range(12):
     )
 
 # Write GL headers
-w("INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES")
 w(",\n".join(gl_headers) + ";")
 w("")
 
 # Write GL lines
-w("INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES")
 w(",\n".join(gl_lines) + ";")
 
 # ── Trial Balance Snapshots ───────────────────────────────────────
@@ -822,7 +822,7 @@ section("Trial Balance Snapshots (annual summary per account per entity)")
 
 # We generate one snapshot row per account per entity
 # with accumulated yearly totals
-w("INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES")
+w("INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES")
 tb_rows = []
 for entity_id, ename, country, accy, rcy, party in ENTITIES:
     for acct_id, acct_name, atype, cat, dc, chart in ACCOUNTS:
@@ -876,7 +876,7 @@ w(",\n".join(tb_rows) + ";")
 # ── Budget Data ───────────────────────────────────────────────────
 section("Budget Register Entries (FY2024 annual budget)")
 
-w("INSERT INTO epm_raw.BudgetRegisterEntries VALUES")
+w("INSERT INTO epm_raw.budget_register_entries VALUES")
 budget_rows = []
 entry_num = 0
 
@@ -973,16 +973,527 @@ for month_idx in range(12):
     )
 w(",\n".join(ic_bal_rows) + ";")
 
+# ══════════════════════════════════════════════════════════════════
+# ╔════════════════════════════════════════════════════════════════╗
+# ║  CONTOSO GROUP (GROUP_CORP) — additive second group, USD report ║
+# ╚════════════════════════════════════════════════════════════════╝
+#
+# Everything above this line generates the Alpine Manufacturing Group
+# (AMG) and is emitted byte-for-byte identically regardless of what
+# follows. The Contoso block below only APPENDS new INSERT statements
+# into the same epm_raw / epm_staging tables (ClickHouse permits many
+# INSERTs per table), so AMG output is never perturbed. The global
+# `random` stream continues deterministically (random.seed(42) above),
+# keeping Contoso reproducible as well.
+#
+# Structure (USD reporting group):
+#   GROUP_CORP (Contoso Group, USD)
+#   ├── GROUP_EMEA (sub-group, USD)
+#   │   ├── DEMF — Contoso DE (EUR functional) 100%
+#   │   └── GBMF — Contoso UK (GBP functional)  80%  ← 20% NCI
+#   ├── USMF — Contoso US (USD functional)      100%
+#   └── JPMF — Contoso JP (JPY functional)      51%  ← 49% NCI
+# ══════════════════════════════════════════════════════════════════
+
+w("\n\n")
+w("-- " + "#" * 70)
+w("-- CONTOSO GROUP (GROUP_CORP) — second demo group, USD reporting")
+w("-- 4 legal entities (USD, EUR, GBP, JPY), 12 months FY2024")
+w("-- " + "#" * 70)
+
+# ── Contoso company structure ─────────────────────────────────────
+# (id, name, country, accounting_ccy, reporting_ccy, party_number)
+CX_ENTITIES = [
+    ("USMF", "Contoso US", "US", "USD", "USD", "CXP0001"),
+    ("DEMF", "Contoso DE", "DE", "EUR", "USD", "CXP0002"),
+    ("GBMF", "Contoso UK", "GB", "GBP", "USD", "CXP0003"),
+    ("JPMF", "Contoso JP", "JP", "JPY", "USD", "CXP0004"),
+]
+CX_CHART = "GROUP_CORP"
+
+# Cost centers / departments / business units per Contoso entity
+CX_COST_CENTERS = {"USMF": "SALES", "DEMF": "PROD", "GBMF": "SALES", "JPMF": "PROD"}
+CX_DEPARTMENTS = {"USMF": "SALES", "DEMF": "OPS", "GBMF": "SALES", "JPMF": "OPS"}
+CX_BIZ_UNITS = {
+    "USMF": "SERVICES", "DEMF": "MANUFACTURING",
+    "GBMF": "SERVICES", "JPMF": "MANUFACTURING",
+}
+
+# Monthly revenue base (in each entity's functional currency)
+CX_REVENUE_BASE = {"USMF": 900000, "DEMF": 650000, "GBMF": 500000, "JPMF": 90000000}
+
+# FX rates: functional → USD (reporting), monthly for 2024.
+# USD→USD is identity. Realistic 2024 levels.
+CX_FX_USD_USD = [1.0000] * 12
+CX_FX_EUR_USD = [1.0850, 1.0790, 1.0840, 1.0720, 1.0810, 1.0730,
+                 1.0840, 1.0900, 1.1050, 1.0830, 1.0680, 1.0500]
+CX_FX_GBP_USD = [1.2700, 1.2650, 1.2710, 1.2530, 1.2680, 1.2640,
+                 1.2850, 1.2920, 1.3200, 1.3020, 1.2700, 1.2570]
+CX_FX_JPY_USD = [0.006780, 0.006650, 0.006610, 0.006400, 0.006350, 0.006250,
+                 0.006300, 0.006900, 0.007050, 0.006690, 0.006560, 0.006350]
+
+CX_FX = {
+    "USD": CX_FX_USD_USD,
+    "EUR": CX_FX_EUR_USD,
+    "GBP": CX_FX_GBP_USD,
+    "JPY": CX_FX_JPY_USD,
+}
+
+
+def cx_fx(accy, month_idx):
+    """Functional currency → USD reporting rate for given month index."""
+    return CX_FX[accy][month_idx]
+
+
+# ── Contoso Main Accounts (reuse AMG account numbers under GROUP_CORP)
+section("Contoso: Main Accounts (chart GROUP_CORP)")
+w("INSERT INTO epm_raw.main_accounts VALUES")
+rows = []
+for acct_id, name, atype, cat, dc, _chart in ACCOUNTS:
+    rows.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{val(name)}, 'No', {val(acct_id)}, {val(CX_CHART)}, "
+        f"{val(atype)}, {val(dc)}, {val(cat)})"
+    )
+w(",\n".join(rows) + ";")
+
+# ── Contoso Legal Entities ────────────────────────────────────────
+section("Contoso: Legal Entities")
+w("INSERT INTO epm_raw.legal_entities VALUES")
+rows = []
+for eid, ename, country, accy, rcy, party in CX_ENTITIES:
+    rows.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{val(ename)}, {val(eid)}, {val(country)}, {val(party)})"
+    )
+w(",\n".join(rows) + ";")
+
+# ── Contoso Ledgers (functional ccy per entity, reporting USD) ────
+section("Contoso: Ledgers (chart GROUP_CORP, reporting USD)")
+w("INSERT INTO epm_raw.ledgers VALUES")
+rows = []
+for eid, ename, country, accy, rcy, party in CX_ENTITIES:
+    rows.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{val(ename + ' Ledger')}, {val(eid)}, {val(CX_CHART)}, {val(rcy)}, {val(accy)})"
+    )
+w(",\n".join(rows) + ";")
+
+# ── Contoso Exchange Rates (EUR/GBP/JPY/USD → USD) ────────────────
+section("Contoso: Exchange Rates (monthly EUR/GBP/JPY/USD → USD)")
+w("INSERT INTO epm_raw.exchange_rates VALUES")
+rows = []
+cx_fx_count = 0
+for month_idx in range(12):
+    m = month_idx + 1
+    start = f"2024-{m:02d}-01"
+    end = "2024-12-31" if m == 12 else f"2024-{m+1:02d}-01"
+    # ConversionFactor: JPY quoted per Hundred (Yen amounts large), others per One.
+    # The D365 adapter (stg_d365_fo__exchange_rates) scales 'One'-factor rates
+    # ×100 into the canonical ×100 store but passes 'Hundred'-factor rates
+    # through unscaled, and silver_exchange_rates then divides everything by 100.
+    # So a 'Hundred' rate must already be quoted per 100 units: store base×100
+    # for JPY so the round-trip yields the true per-1 rate (1 JPY ≈ 0.0068 USD).
+    for from_ccy, table in [("USD", CX_FX_USD_USD), ("EUR", CX_FX_EUR_USD),
+                            ("GBP", CX_FX_GBP_USD), ("JPY", CX_FX_JPY_USD)]:
+        base = table[month_idx]
+        conv = "Hundred" if from_ccy == "JPY" else "One"
+        store_scale = 100 if conv == "Hundred" else 1
+        for rtype in ["Default", "Closing", "Average"]:
+            r = round(base * store_scale, 9)
+            if rtype == "Closing":
+                r = round(base * store_scale * 1.005, 9)
+            elif rtype == "Average":
+                r = round(base * store_scale * 0.998, 9)
+            rows.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{r}, {val(end)}, {val(start)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
+            )
+            cx_fx_count += 1
+w(",\n".join(rows) + ";")
+
+# ── Contoso Consolidation Account Group ───────────────────────────
+section("Contoso: Consolidation Account Group")
+w("INSERT INTO epm_raw.consolidate_account_groups VALUES")
+w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'GROUP_CORP', 'Contoso Group');")
+
+# ── Contoso GL Journal Entries ────────────────────────────────────
+section("Contoso: GL Journal Entry Headers + Lines")
+
+# Continue SourceKey ranges well clear of AMG's (AMG ~ <2000 headers / <20000 lines)
+cx_header_key = 100000
+cx_line_key = 1000000
+cx_gl_headers = []
+cx_gl_lines = []
+
+# Opening balances per Contoso entity (functional currency).
+# GBMF (80%) and JPMF (51%) carry healthy equity + retained earnings so
+# NCI/minority interest is clearly visible post-consolidation.
+CX_OPENING_BALANCES = {
+    "USMF": {
+        "1010": 3000000, "1100": 1400000, "1200": 1000000,
+        "1500": 2400000, "1510": -500000,
+        "2010": -700000, "2100": -350000, "2500": -1600000,
+        "3010": -3000000, "3100": -1650000,  # RE balances the opening TB to zero
+    },
+    "DEMF": {
+        "1010": 1700000, "1100": 950000, "1200": 1150000,
+        "1500": 2600000, "1510": -520000,
+        "2010": -450000, "2100": -260000, "2500": -1900000,
+        "3010": -2700000, "3100": -570000,
+    },
+    "GBMF": {  # 80% owned — 20% NCI; sizeable equity + RE
+        "1010": 1400000, "1100": 780000, "1200": 640000,
+        "1500": 1900000, "1510": -360000,
+        "2010": -380000, "2100": -210000, "2500": -1100000,
+        "3010": -2000000, "3100": -670000,  # RE balances the opening TB to zero
+    },
+    "JPMF": {  # 51% owned — 49% NCI; amounts in JPY (large)
+        "1010": 240000000, "1100": 130000000, "1200": 110000000,
+        "1500": 300000000, "1510": -60000000,
+        "2010": -70000000, "2100": -35000000, "2500": -180000000,
+        "3010": -300000000, "3100": -135000000,
+    },
+}
+
+for entity_id, ename, country, accy, rcy, party in CX_ENTITIES:
+    cc = CX_COST_CENTERS[entity_id]
+    dept = CX_DEPARTMENTS[entity_id]
+    bu = CX_BIZ_UNITS[entity_id]
+
+    # Opening balance journal (Jan 1)
+    cx_header_key += 1
+    hk = cx_header_key
+    jnum = f"OB-{entity_id}-2024"
+    adate = "2024-01-01"
+    cx_gl_headers.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{hk}, {val(adate)}, 'Current', {val(jnum)}, {val(adate)}, "
+        f"'{jnum}', 'OpeningBalance', '{jnum}', 2024, 1, {val(entity_id)})"
+    )
+    for acct, bal in CX_OPENING_BALANCES[entity_id].items():
+        cx_line_key += 1
+        is_credit = "Yes" if bal < 0 else "No"
+        amt = abs(bal)
+        ledger_acct = f"{acct}-{cc}-{dept}"
+        dj = dim_json(acct, cc, dept, bu)
+        rpt_amt = round(amt * cx_fx(accy, 0), 2)
+        cx_gl_lines.append(
+            f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+            f"'Opening balance', {val(is_credit)}, {cx_line_key}, 'Normal', "
+            f"{val(ledger_acct)}, {val(adate)}, {hk}, "
+            f"{rpt_amt}, {val(accy)}, {amt}, {val(dj)}, {amt})"
+        )
+
+    # Monthly operational entries
+    for month_idx in range(12):
+        m = month_idx + 1
+        period_date = f"2024-{m:02d}-15"
+        seasonal = SEASONAL[month_idx]
+        base_rev = int(CX_REVENUE_BASE[entity_id] * seasonal)
+        variation = random.uniform(0.95, 1.05)
+        revenue = int(base_rev * variation)
+        cogs = int(revenue * 0.42)
+        salaries = int(revenue * 0.25)
+        rent = int(revenue * 0.04)
+        depreciation = int(revenue * 0.03)
+        marketing = int(revenue * random.uniform(0.02, 0.05))
+        utilities = int(revenue * 0.015)
+        travel = int(revenue * random.uniform(0.01, 0.025))
+
+        journal_entries = [
+            ("Product revenue", "1100", "4010", revenue),
+            ("Cost of goods sold", "5010", "1200", cogs),
+            ("Monthly payroll", "6010", "1010", salaries),
+            ("Office rent", "6020", "2010", rent),
+            ("Depreciation", "6030", "1510", depreciation),
+            ("Marketing spend", "6040", "1010", marketing),
+            ("Utilities", "6060", "2010", utilities),
+            ("Business travel", "6050", "1010", travel),
+        ]
+        cash_collected = int(revenue * 0.92)
+        journal_entries.append(("Cash collections", "1010", "1100", cash_collected))
+        ap_paid = int((rent + utilities) * 0.85)
+        journal_entries.append(("AP payments", "2010", "1010", ap_paid))
+
+        fx = cx_fx(accy, month_idx)
+        for desc, dr_acct, cr_acct, amount in journal_entries:
+            cx_header_key += 1
+            hk = cx_header_key
+            jnum = f"JE-{entity_id}-{m:02d}-{dr_acct}"
+            cx_gl_headers.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{hk}, {val(period_date)}, 'Current', {val(jnum)}, "
+                f"{val(period_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+                f"2024, {m}, {val(entity_id)})"
+            )
+            rpt_amt = round(amount * fx, 2)
+            ledger_dr = f"{dr_acct}-{cc}-{dept}"
+            ledger_cr = f"{cr_acct}-{cc}-{dept}"
+            dj_dr = dim_json(dr_acct, cc, dept, bu)
+            dj_cr = dim_json(cr_acct, cc, dept, bu)
+            cx_line_key += 1
+            cx_gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{val(desc)}, 'No', {cx_line_key}, 'Normal', "
+                f"{val(ledger_dr)}, {val(period_date)}, {hk}, "
+                f"{rpt_amt}, {val(accy)}, {amount}, {val(dj_dr)}, {amount})"
+            )
+            cx_line_key += 1
+            cx_gl_lines.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{val(desc)}, 'Yes', {cx_line_key}, 'Normal', "
+                f"{val(ledger_cr)}, {val(period_date)}, {hk}, "
+                f"{rpt_amt}, {val(accy)}, {amount}, {val(dj_cr)}, {amount})"
+            )
+
+# ── Contoso intercompany: USMF → DEMF monthly product sales ───────
+# USMF sells components to DEMF at 15% markup (IC accounts 4030 / 5030),
+# mirroring the AMG IC pattern. Both sides in their functional currency,
+# reporting amounts in USD.
+section("Contoso: Intercompany product sales (USMF -> DEMF)")
+CX_IC_MONTHLY_SALES = 100000  # USD base per month
+for month_idx in range(12):
+    m = month_idx + 1
+    ic_date = f"2024-{m:02d}-20"
+    seasonal = SEASONAL[month_idx]
+    ic_sale_usd = int(CX_IC_MONTHLY_SALES * seasonal)
+    eur_fx = cx_fx("EUR", month_idx)         # EUR→USD
+    ic_sale_eur = int(ic_sale_usd / eur_fx)  # USD → EUR for DEMF side
+    ic_sale_usd_rpt = round(ic_sale_usd * 1.0, 2)  # USD reporting (identity)
+
+    # USMF side: DR AR 1100 (IC receivable), CR IC Revenue 4030 (USD functional)
+    cx_header_key += 1
+    hk = cx_header_key
+    jnum = f"IC-SALE-USMF-{m:02d}"
+    cx_gl_headers.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{hk}, {val(ic_date)}, 'Current', {val(jnum)}, "
+        f"{val(ic_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+        f"2024, {m}, 'USMF')"
+    )
+    us_cc, us_dept, us_bu = "SALES", "SALES", "SERVICES"
+    cx_line_key += 1
+    cx_gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC product sale to DEMF', 'No', {cx_line_key}, 'Normal', "
+        f"'1100-{us_cc}-{us_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_usd_rpt}, 'USD', {ic_sale_usd}, "
+        f"{val(dim_json('1100', us_cc, us_dept, us_bu))}, {ic_sale_usd})"
+    )
+    cx_line_key += 1
+    cx_gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC product sale to DEMF', 'Yes', {cx_line_key}, 'Normal', "
+        f"'4030-{us_cc}-{us_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_usd_rpt}, 'USD', {ic_sale_usd}, "
+        f"{val(dim_json('4030', us_cc, us_dept, us_bu))}, {ic_sale_usd})"
+    )
+
+    # DEMF side: DR IC Expense 5030, CR AP 2010 (IC payable) (EUR functional)
+    cx_header_key += 1
+    hk = cx_header_key
+    jnum = f"IC-PURCH-DEMF-{m:02d}"
+    ic_sale_eur_rpt = round(ic_sale_eur * eur_fx, 2)
+    cx_gl_headers.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"{hk}, {val(ic_date)}, 'Current', {val(jnum)}, "
+        f"{val(ic_date)}, '{jnum}', 'LedgerJournal', '{jnum}', "
+        f"2024, {m}, 'DEMF')"
+    )
+    de_cc, de_dept, de_bu = "PROD", "OPS", "MANUFACTURING"
+    cx_line_key += 1
+    cx_gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC purchase from USMF', 'No', {cx_line_key}, 'Normal', "
+        f"'5030-{de_cc}-{de_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_eur_rpt}, 'EUR', {ic_sale_eur}, "
+        f"{val(dim_json('5030', de_cc, de_dept, de_bu))}, {ic_sale_eur})"
+    )
+    cx_line_key += 1
+    cx_gl_lines.append(
+        f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+        f"'IC purchase from USMF', 'Yes', {cx_line_key}, 'Normal', "
+        f"'2010-{de_cc}-{de_dept}', {val(ic_date)}, {hk}, "
+        f"{ic_sale_eur_rpt}, 'EUR', {ic_sale_eur}, "
+        f"{val(dim_json('2010', de_cc, de_dept, de_bu))}, {ic_sale_eur})"
+    )
+
+# Write Contoso GL headers + lines (separate INSERT statements)
+w("INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES")
+w(",\n".join(cx_gl_headers) + ";")
+w("")
+w("INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES")
+w(",\n".join(cx_gl_lines) + ";")
+
+# ── Contoso Trial Balance Snapshots ───────────────────────────────
+section("Contoso: Trial Balance Snapshots (annual summary per account)")
+w("INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES")
+cx_tb_rows = []
+for entity_id, ename, country, accy, rcy, party in CX_ENTITIES:
+    base_rev = CX_REVENUE_BASE[entity_id]
+    for acct_id, acct_name, atype, cat, dc, _chart in ACCOUNTS:
+        opening = CX_OPENING_BALANCES[entity_id].get(acct_id, 0)
+        if opening < 0:
+            opening = abs(opening)
+            open_sign = -1
+        else:
+            open_sign = 1
+        total_debit = 0
+        total_credit = 0
+        for month_idx in range(12):
+            seasonal = SEASONAL[month_idx]
+            rev = int(base_rev * seasonal)
+            if acct_id == "4010":
+                total_credit += rev
+            elif acct_id == "5010":
+                total_debit += int(rev * 0.42)
+            elif acct_id == "6010":
+                total_debit += int(rev * 0.25)
+            elif acct_id == "6020":
+                total_debit += int(rev * 0.04)
+            elif acct_id == "6030":
+                total_debit += int(rev * 0.03)
+            elif acct_id == "6040":
+                total_debit += int(rev * 0.035)
+            elif acct_id == "6060":
+                total_debit += int(rev * 0.015)
+            elif acct_id == "6050":
+                total_debit += int(rev * 0.018)
+        if total_debit == 0 and total_credit == 0 and opening == 0:
+            continue
+        ending = (opening * open_sign) + total_debit - total_credit
+        cx_tb_rows.append(
+            f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+            f"'2024', {val(entity_id)}, {total_debit}, {total_credit}, "
+            f"{ending}, {opening * open_sign}, {val(acct_id)}, '2024-01-01')"
+        )
+w(",\n".join(cx_tb_rows) + ";")
+
+# ── Contoso Budget Register Entries ───────────────────────────────
+section("Contoso: Budget Register Entries (FY2024 annual budget)")
+w("INSERT INTO epm_raw.budget_register_entries VALUES")
+cx_budget_rows = []
+cx_entry_num = 0
+for entity_id, ename, country, accy, rcy, party in CX_ENTITIES:
+    cc = CX_COST_CENTERS[entity_id]
+    dept = CX_DEPARTMENTS[entity_id]
+    bu = CX_BIZ_UNITS[entity_id]
+    base_rev = CX_REVENUE_BASE[entity_id]
+    budget_items = [
+        ("4010", -int(base_rev * 12 * 1.08 / 12)),
+        ("5010", int(base_rev * 12 * 0.40 / 12)),
+        ("6010", int(base_rev * 12 * 0.24 / 12)),
+        ("6020", int(base_rev * 12 * 0.04 / 12)),
+        ("6030", int(base_rev * 12 * 0.03 / 12)),
+        ("6040", int(base_rev * 12 * 0.03 / 12)),
+        ("6050", int(base_rev * 12 * 0.015 / 12)),
+        ("6060", int(base_rev * 12 * 0.015 / 12)),
+    ]
+    for m in range(1, 13):
+        for acct, amount in budget_items:
+            cx_entry_num += 1
+            bdate = f"2024-{m:02d}-01"
+            dim_display = f"{acct}-{cc}-{dept}"
+            cx_budget_rows.append(
+                f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+                f"{val(bdate)}, 'Completed', 'Annual budget FY2024', "
+                f"'Original', {val(dept)}, {val(entity_id)}, "
+                f"'BUD-{entity_id}-{cx_entry_num:04d}', {val(bu)}, {val(accy)}, "
+                f"'FY2024', {val(entity_id)}, 'Annual budget', "
+                f"{val(dim_display)}, {abs(amount)}, 'No', {abs(amount)})"
+            )
+w(",\n".join(cx_budget_rows) + ";")
+
+# ══════════════════════════════════════════════════════════════════
+# ── Contoso epm_staging data (NCI ownership, hierarchy, IC) ───────
+# ══════════════════════════════════════════════════════════════════
+
+section("Contoso: Ownership Periods (NCI — GBMF 80%, JPMF 51%)")
+w("INSERT INTO epm_staging.ownership_periods VALUES")
+cx_ownership_rows = []
+# Ownership is recorded against the consolidation group that directly
+# owns the entity (GROUP_EMEA owns DEMF/GBMF; GROUP_CORP owns USMF/JPMF).
+CX_OWNERSHIP = [
+    ("GROUP_CORP", "USMF", 100.00),
+    ("GROUP_EMEA", "DEMF", 100.00),
+    ("GROUP_EMEA", "GBMF", 80.00),
+    ("GROUP_CORP", "JPMF", 51.00),
+]
+for grp, eid, pct in CX_OWNERSHIP:
+    cx_ownership_rows.append(
+        f"  ({val(grp)}, {val(eid)}, '2020-01-01', '9999-12-31', {pct}, 'full', "
+        f"'2020-01-01', 1, 0, 0, '9999-12-31', 0, 0, now())"
+    )
+w(",\n".join(cx_ownership_rows) + ";")
+
+section("Contoso: Consolidation Hierarchy (GROUP_CORP / GROUP_EMEA)")
+w("INSERT INTO epm_staging.consolidation_hierarchy VALUES")
+cx_hier_rows = [
+    # Roots / sub-group nodes (data_area_id empty)
+    "  ('GROUP_CORP', '', '', 0, 100.00, 'GROUP_CORP', now())",
+    "  ('GROUP_EMEA', '', 'GROUP_CORP', 1, 100.00, 'GROUP_CORP/GROUP_EMEA', now())",
+    # Leaf entities
+    "  ('GROUP_CORP', 'USMF', '', 1, 100.00, 'GROUP_CORP/USMF', now())",
+    "  ('GROUP_CORP', 'JPMF', '', 1, 51.00, 'GROUP_CORP/JPMF', now())",
+    "  ('GROUP_EMEA', 'DEMF', '', 2, 100.00, 'GROUP_CORP/GROUP_EMEA/DEMF', now())",
+    "  ('GROUP_EMEA', 'GBMF', '', 2, 80.00, 'GROUP_CORP/GROUP_EMEA/GBMF', now())",
+]
+w(",\n".join(cx_hier_rows) + ";")
+
+section("Contoso: IC Elimination Rules")
+w("INSERT INTO epm_staging.ic_elimination_rules VALUES")
+cx_ic_rules = [
+    "  ('IC_CORP_001', 'IC AR/AP Elimination (Contoso)', '1100', '2010', '*', '*', "
+    "'Eliminate IC receivables against IC payables', 'balance', 0, '', now())",
+    "  ('IC_CORP_002', 'IC Revenue/Expense Elimination (Contoso)', '4030', '5030', '*', '*', "
+    "'Eliminate IC product revenue against IC expense', 'balance', 0, '', now())",
+    "  ('IC_CORP_003', 'IC Unrealized Profit (USMF->DEMF)', '4030', '5030', 'USMF', 'DEMF', "
+    "'Eliminate unrealized profit on IC inventory (15% margin)', 'unrealized_profit', 15.00, '1200', now())",
+]
+w(",\n".join(cx_ic_rules) + ";")
+
+section("Contoso: IC Balances (USMF -> DEMF monthly product sales)")
+w("INSERT INTO epm_staging.ic_balances VALUES")
+cx_ic_bal_rows = []
+for month_idx in range(12):
+    m = month_idx + 1
+    seasonal = SEASONAL[month_idx]
+    ic_sale = int(CX_IC_MONTHLY_SALES * seasonal)
+    ending_inv = int(ic_sale * 0.30)
+    cx_ic_bal_rows.append(
+        f"  ('USMF', 'DEMF', 2024, {m}, {ic_sale}, {ending_inv}, now())"
+    )
+w(",\n".join(cx_ic_bal_rows) + ";")
+
+# ── Contoso Fiscal Calendar ───────────────────────────────────────
+# entity_fiscal_calendars maps the Contoso entities to the 'Fiscal'
+# calendar, so its year boundaries must be loaded (silver_fiscal_periods
+# expands them into 12 monthly periods). Without this, GL still works via
+# the silver date-derivation fallback, but assert_fiscal_calendar_is_loaded
+# fails. Appended last so no earlier UUIDs shift.
+section("Contoso: Fiscal Calendar Years ('Fiscal')")
+w("INSERT INTO epm_raw.fiscal_calendar_years VALUES")
+w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+  f"'2024-12-31', 'Fiscal', '2024-01-01', '2024', 'Fiscal Year 2024');")
+
 # ── Write output ──────────────────────────────────────────────────
 output = "\n".join(lines) + "\n"
 with open("clickhouse/demo-data.sql", "w") as f:
     f.write(output)
 
 print(f"Generated clickhouse/demo-data.sql")
-print(f"  GL headers:  {len(gl_headers)}")
-print(f"  GL lines:    {len(gl_lines)}")
-print(f"  TB rows:     {len(tb_rows)}")
-print(f"  Budget rows: {len(budget_rows)}")
-print(f"  FX rates:    {12 * 6}")  # 12 months × 2 pairs × 3 types
-print(f"  Ownership:   {len(ownership_rows)}")
-print(f"  IC balances: {len(ic_bal_rows)}")
+print(f"  [AMG] GL headers:  {len(gl_headers)}")
+print(f"  [AMG] GL lines:    {len(gl_lines)}")
+print(f"  [AMG] TB rows:     {len(tb_rows)}")
+print(f"  [AMG] Budget rows: {len(budget_rows)}")
+print(f"  [AMG] FX rates:    {12 * 6}")  # 12 months × 2 pairs × 3 types
+print(f"  [AMG] Ownership:   {len(ownership_rows)}")
+print(f"  [AMG] IC balances: {len(ic_bal_rows)}")
+print(f"  [CORP] GL headers:  {len(cx_gl_headers)}")
+print(f"  [CORP] GL lines:    {len(cx_gl_lines)}")
+print(f"  [CORP] TB rows:     {len(cx_tb_rows)}")
+print(f"  [CORP] Budget rows: {len(cx_budget_rows)}")
+print(f"  [CORP] FX rates:    {cx_fx_count}")  # 12 months × 4 ccy × 3 types
+print(f"  [CORP] Ownership:   {len(cx_ownership_rows)}")
+print(f"  [CORP] IC balances: {len(cx_ic_bal_rows)}")

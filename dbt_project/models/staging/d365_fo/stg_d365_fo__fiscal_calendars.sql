@@ -12,5 +12,5 @@ select
     rowNumberInAllBlocks() as RecId,
     max(_airbyte_extracted_at) as _airbyte_extracted_at,
     any(_airbyte_raw_id) as _airbyte_raw_id
-from {{ source('d365_raw', 'FiscalCalendarYears') }}
+from {{ source('d365_raw', 'fiscal_calendar_years') }}
 group by Calendar
