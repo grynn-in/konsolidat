@@ -49,3 +49,9 @@ backups/
 .codegraph/
 site/
 docker/frappe/konsol/
+
+# Excel — generated report outputs and macro-saved working copies
+# (distributed templates/samples like Open_EPM_Template.xlsx, Budget_Forecast_2024.xlsx stay tracked)
+excel/*.xlsm
+excel/*_Report_*.xlsx
+excel/AMG_*.xlsx
