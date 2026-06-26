@@ -18,4 +18,4 @@ select
     coalesce(FiscalCalendarYear, 0) as FiscalCalendarYear,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'GeneralJournalEntryBiEntities') }}
+from {{ source('d365_raw', 'general_journal_entry_bi_entities') }}

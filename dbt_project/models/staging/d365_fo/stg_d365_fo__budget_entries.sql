@@ -10,7 +10,7 @@ with lines as (
     select
         *,
         dense_rank() over (order by EntryNumber) as header_recid
-    from {{ source('d365_raw', 'BudgetRegisterEntries') }}
+    from {{ source('d365_raw', 'budget_register_entries') }}
 )
 
 select

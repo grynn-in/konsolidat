@@ -8,7 +8,7 @@ CREATE DATABASE IF NOT EXISTS epm_raw;
 -- Table Creation (Airbyte-compatible schemas)
 -- ======================================================================
 
-CREATE TABLE IF NOT EXISTS epm_raw.MainAccounts
+CREATE TABLE IF NOT EXISTS epm_raw.main_accounts
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.MainAccounts
     `MainAccountCategory` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.MainAccountCategories
+CREATE TABLE IF NOT EXISTS epm_raw.main_account_categories
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.MainAccountCategories
     `MainAccountCategory` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.LegalEntities
+CREATE TABLE IF NOT EXISTS epm_raw.legal_entities
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.LegalEntities
     `PartyNumber` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.Ledgers
+CREATE TABLE IF NOT EXISTS epm_raw.ledgers
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.Ledgers
     `AccountingCurrency` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.FiscalCalendarYears
+CREATE TABLE IF NOT EXISTS epm_raw.fiscal_calendar_years
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.FiscalCalendarYears
     `Description` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.ExchangeRates
+CREATE TABLE IF NOT EXISTS epm_raw.exchange_rates
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.ExchangeRates
     `ConversionFactor` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.ExchangeRateTypes
+CREATE TABLE IF NOT EXISTS epm_raw.exchange_rate_types
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.ExchangeRateTypes
     `Description` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.DimensionAttributes
+CREATE TABLE IF NOT EXISTS epm_raw.dimension_attributes
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.DimensionAttributes
     `ReportColumnName` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.FinancialDimensionValues
+CREATE TABLE IF NOT EXISTS epm_raw.financial_dimension_values
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.FinancialDimensionValues
     `FinancialDimension` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.ConsolidateAccountGroups
+CREATE TABLE IF NOT EXISTS epm_raw.consolidate_account_groups
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.ConsolidateAccountGroups
     `ConsolidationAccountGroupName` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.GeneralJournalEntryBiEntities
+CREATE TABLE IF NOT EXISTS epm_raw.general_journal_entry_bi_entities
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.GeneralJournalEntryBiEntities
     `SubledgerVoucherDataAreaId` Nullable(String)
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.GeneralJournalAccountEntryBiEntities
+CREATE TABLE IF NOT EXISTS epm_raw.general_journal_account_entry_bi_entities
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.GeneralJournalAccountEntryBiEntities
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.BudgetRegisterEntries
+CREATE TABLE IF NOT EXISTS epm_raw.budget_register_entries
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.BudgetRegisterEntries
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))
 ) ENGINE = MergeTree ORDER BY _airbyte_raw_id;
 
-CREATE TABLE IF NOT EXISTS epm_raw.TrialBalanceFiscalYearSnapshots
+CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_fiscal_year_snapshots
 (
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
@@ -218,7 +218,7 @@ CREATE TABLE IF NOT EXISTS epm_raw.TrialBalanceFiscalYearSnapshots
 -- Main Accounts (Chart of Accounts)
 -- ======================================================================
 
-INSERT INTO epm_raw.MainAccounts VALUES
+INSERT INTO epm_raw.main_accounts VALUES
   ('bdd640fb-0667-4ad1-9c80-317fa3b1799d', '2024-12-31 23:59:59.000', '{}', 0, 'Cash and Cash Equivalents', 'No', '1010', 'AMG', 'BalanceSheet', 'Debit', 'Cash'),
   ('23b8c1e9-3924-46de-beb1-3b9046685257', '2024-12-31 23:59:59.000', '{}', 0, 'Accounts Receivable', 'No', '1100', 'AMG', 'BalanceSheet', 'Debit', 'AccountsReceivable'),
   ('bd9c66b3-ad3c-4d6d-9a3d-1fa7bc8960a9', '2024-12-31 23:59:59.000', '{}', 0, 'Inventory', 'No', '1200', 'AMG', 'BalanceSheet', 'Debit', 'Inventory'),
@@ -248,7 +248,7 @@ INSERT INTO epm_raw.MainAccounts VALUES
 -- Main Account Categories
 -- ======================================================================
 
-INSERT INTO epm_raw.MainAccountCategories VALUES
+INSERT INTO epm_raw.main_account_categories VALUES
   ('29a3b2e9-5d65-4441-9588-42dea2bc372f', '2024-12-31 23:59:59.000', '{}', 0, 'No', 'Cash and bank accounts', 'CAT001', 'BalanceSheet', 'Cash'),
   ('ab9099a4-35a2-40ae-9af3-05535ec42e08', '2024-12-31 23:59:59.000', '{}', 0, 'No', 'Trade receivables', 'CAT002', 'BalanceSheet', 'AccountsReceivable'),
   ('aefcfad8-efc8-4849-b3aa-7efe4458a885', '2024-12-31 23:59:59.000', '{}', 0, 'No', 'Raw materials and finished goods', 'CAT003', 'BalanceSheet', 'Inventory'),
@@ -267,7 +267,7 @@ INSERT INTO epm_raw.MainAccountCategories VALUES
 -- Legal Entities
 -- ======================================================================
 
-INSERT INTO epm_raw.LegalEntities VALUES
+INSERT INTO epm_raw.legal_entities VALUES
   ('e27a984d-6548-41d0-bfcd-9eb1a7cad415', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing HQ', 'AMHQ', 'CH', ''),
   ('24933b83-7577-40a9-a491-f0b2ea1fca65', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing US', 'AMUS', 'US', 'P00001'),
   ('beb79919-3f22-4af8-a3be-d01d43cf2fde', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing DE', 'AMDE', 'DE', 'P00002');
@@ -276,7 +276,7 @@ INSERT INTO epm_raw.LegalEntities VALUES
 -- Ledgers
 -- ======================================================================
 
-INSERT INTO epm_raw.Ledgers VALUES
+INSERT INTO epm_raw.ledgers VALUES
   ('bf3c4c06-4343-48bc-89fa-6a688fb5d27b', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing HQ Ledger', 'AMHQ', 'AMG', 'CHF', 'CHF'),
   ('956269f0-e5d7-4875-adad-d6c795a76d79', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing US Ledger', 'AMUS', 'AMG', 'CHF', 'USD'),
   ('ff50bde4-3825-47b8-9cab-cc97663f1c97', '2024-12-31 23:59:59.000', '{}', 0, 'Alpine Manufacturing DE Ledger', 'AMDE', 'AMG', 'CHF', 'EUR');
@@ -285,14 +285,14 @@ INSERT INTO epm_raw.Ledgers VALUES
 -- Fiscal Calendar Years
 -- ======================================================================
 
-INSERT INTO epm_raw.FiscalCalendarYears VALUES
+INSERT INTO epm_raw.fiscal_calendar_years VALUES
   ('7e570ddf-8270-40a8-a369-b584ff5e9ff0', '2024-12-31 23:59:59.000', '{}', 0, '2024-12-31', 'Standard', '2024-01-01', '2024', 'Fiscal Year 2024');
 
 -- ======================================================================
 -- Exchange Rate Types
 -- ======================================================================
 
-INSERT INTO epm_raw.ExchangeRateTypes VALUES
+INSERT INTO epm_raw.exchange_rate_types VALUES
   ('dc713d96-0c0f-4195-817a-f08a1745d6d8', '2024-12-31 23:59:59.000', '{}', 0, 'Default', 'Default exchange rate'),
   ('28f49481-a0a0-4dc4-a720-9bdf1c11f735', '2024-12-31 23:59:59.000', '{}', 0, 'Closing', 'Month-end closing rate'),
   ('98ae4334-6c12-4ce8-ae34-0454cac5b68c', '2024-12-31 23:59:59.000', '{}', 0, 'Average', 'Monthly average rate');
@@ -301,7 +301,7 @@ INSERT INTO epm_raw.ExchangeRateTypes VALUES
 -- Exchange Rates (Monthly CHF/USD and CHF/EUR)
 -- ======================================================================
 
-INSERT INTO epm_raw.ExchangeRates VALUES
+INSERT INTO epm_raw.exchange_rates VALUES
   ('988c24c9-61b1-4d22-a280-1c4510435a10', '2024-12-31 23:59:59.000', '{}', 0, 0.855, '2024-02-01', '2024-01-01', 'CHF', 'USD', 'Default', 'Hundred'),
   ('405cacec-8774-49a9-b7d2-1e02ff01cf99', '2024-12-31 23:59:59.000', '{}', 0, 0.8593, '2024-02-01', '2024-01-01', 'CHF', 'USD', 'Closing', 'Hundred'),
   ('f143262f-dc5c-4eed-8da0-365bf89897b9', '2024-12-31 23:59:59.000', '{}', 0, 0.8533, '2024-02-01', '2024-01-01', 'CHF', 'USD', 'Average', 'Hundred'),
@@ -379,7 +379,7 @@ INSERT INTO epm_raw.ExchangeRates VALUES
 -- Dimension Attributes
 -- ======================================================================
 
-INSERT INTO epm_raw.DimensionAttributes VALUES
+INSERT INTO epm_raw.dimension_attributes VALUES
   ('14fcdd54-9e8f-4965-8a2c-827e98326856', '2024-12-31 23:59:59.000', '{}', 0, 'CostCenter', 'CostCenter', 'CostCenter'),
   ('90b2b633-956b-4c0c-a849-9b926b5252e3', '2024-12-31 23:59:59.000', '{}', 0, 'Department', 'Department', 'Department'),
   ('42c18a62-ef48-48d5-90fd-9d3f85d51695', '2024-12-31 23:59:59.000', '{}', 0, 'BusinessUnit', 'BusinessUnit', 'BusinessUnit');
@@ -388,7 +388,7 @@ INSERT INTO epm_raw.DimensionAttributes VALUES
 -- Financial Dimension Values
 -- ======================================================================
 
-INSERT INTO epm_raw.FinancialDimensionValues VALUES
+INSERT INTO epm_raw.financial_dimension_values VALUES
   ('506e5a9a-b758-488d-ab73-295b344a54b8', '2024-12-31 23:59:59.000', '{}', 0, '2099-12-31', '2024-01-01', 'Headquarters', 'No', 'HQ', 'CostCenter'),
   ('21813d25-6552-48a6-83ff-50113d1a85dd', '2024-12-31 23:59:59.000', '{}', 0, '2099-12-31', '2024-01-01', 'Sales Division', 'No', 'SALES', 'CostCenter'),
   ('750cab75-4ccc-4bc2-a53f-8a28abf3e3fc', '2024-12-31 23:59:59.000', '{}', 0, '2099-12-31', '2024-01-01', 'Production', 'No', 'PROD', 'CostCenter'),
@@ -406,14 +406,14 @@ INSERT INTO epm_raw.FinancialDimensionValues VALUES
 -- Consolidation Account Groups
 -- ======================================================================
 
-INSERT INTO epm_raw.ConsolidateAccountGroups VALUES
+INSERT INTO epm_raw.consolidate_account_groups VALUES
   ('aaf91531-0200-41f0-8768-a84fa76afde6', '2024-12-31 23:59:59.000', '{}', 0, 'AMG', 'Alpine Manufacturing Group');
 
 -- ======================================================================
 -- GL Journal Entry Headers + Lines
 -- ======================================================================
 
-INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES
+INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES
   ('ee87905e-4ca4-45ea-8dfa-6a56d12dbc9a', '2024-12-31 23:59:59.000', '{}', 0, 1001, '2024-01-01', 'Current', 'OB-AMHQ-2024', '2024-01-01', 'OB-AMHQ-2024', 'OpeningBalance', 'OB-AMHQ-2024', 2024, 1, 'AMHQ'),
   ('8f9797b0-6d7c-43c9-b4a6-9f3c8d3aed99', '2024-12-31 23:59:59.000', '{}', 0, 1002, '2024-01-15', 'Current', 'JE-AMHQ-01-1100', '2024-01-15', 'JE-AMHQ-01-1100', 'LedgerJournal', 'JE-AMHQ-01-1100', 2024, 1, 'AMHQ'),
   ('5e84f058-d5a8-44eb-8939-23de8babce3b', '2024-12-31 23:59:59.000', '{}', 0, 1003, '2024-01-15', 'Current', 'JE-AMHQ-01-5010', '2024-01-15', 'JE-AMHQ-01-5010', 'LedgerJournal', 'JE-AMHQ-01-5010', 2024, 1, 'AMHQ'),
@@ -834,7 +834,7 @@ INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES
   ('cd6bb03b-eb35-47a0-ad6e-0291b7893986', '2024-12-31 23:59:59.000', '{}', 0, 1418, '2024-12-20', 'Current', 'IC-SALE-AMUS-12', '2024-12-20', 'IC-SALE-AMUS-12', 'LedgerJournal', 'IC-SALE-AMUS-12', 2024, 12, 'AMUS'),
   ('1c654aa2-c63c-421d-a443-5958eacf33a9', '2024-12-31 23:59:59.000', '{}', 0, 1419, '2024-12-20', 'Current', 'IC-PURCH-AMDE-12', '2024-12-20', 'IC-PURCH-AMDE-12', 'LedgerJournal', 'IC-PURCH-AMDE-12', 2024, 12, 'AMDE');
 
-INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES
+INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES
   ('e0ccedc5-f05d-476e-9a84-a51aa9d3d7c7', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 10001, 'Normal', '1010-HQ-MGMT', '2024-01-01', 1001, 2500000, 'CHF', 2500000, '[{\'MAINACCOUNT\': \'1010\', \'COSTCENTER\': \'HQ\', \'DEPARTMENT\': \'MGMT\', \'BUSINESSUNIT\': \'CORP\'}]', 2500000),
   ('e3c43657-1d8c-4bac-83b4-09ef2260e70f', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 10002, 'Normal', '1100-HQ-MGMT', '2024-01-01', 1001, 800000, 'CHF', 800000, '[{\'MAINACCOUNT\': \'1100\', \'COSTCENTER\': \'HQ\', \'DEPARTMENT\': \'MGMT\', \'BUSINESSUNIT\': \'CORP\'}]', 800000),
   ('27cb6f2a-8da0-4097-be0f-051b1b66b5a9', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 10003, 'Normal', '1200-HQ-MGMT', '2024-01-01', 1001, 1200000, 'CHF', 1200000, '[{\'MAINACCOUNT\': \'1200\', \'COSTCENTER\': \'HQ\', \'DEPARTMENT\': \'MGMT\', \'BUSINESSUNIT\': \'CORP\'}]', 1200000),
@@ -1702,7 +1702,7 @@ INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES
 -- Trial Balance Snapshots (annual summary per account per entity)
 -- ======================================================================
 
-INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES
+INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES
   ('96053035-6545-4030-a981-fa54f121e129', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'AMHQ', 0, 0, 2500000, 2500000, '1010', '2024-01-01'),
   ('52961fb3-4d40-4b28-9628-ddcd19dd3e8c', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'AMHQ', 0, 0, 800000, 800000, '1100', '2024-01-01'),
   ('bb7b6c05-2852-4ca2-b9d2-014a22ee7f07', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'AMHQ', 0, 0, 1200000, 1200000, '1200', '2024-01-01'),
@@ -1762,7 +1762,7 @@ INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES
 -- Budget Register Entries (FY2024 annual budget)
 -- ======================================================================
 
-INSERT INTO epm_raw.BudgetRegisterEntries VALUES
+INSERT INTO epm_raw.budget_register_entries VALUES
   ('788fd0cd-65c0-4b93-88ed-abdd4ef03f80', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'MGMT', 'AMHQ', 'BUD-AMHQ-0001', 'CORP', 'CHF', 'FY2024', 'AMHQ', 'Annual budget', '4010-HQ-MGMT', 540000, 'No', 540000),
   ('43d75413-a939-4bd1-a516-b0d47d3572cc', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'MGMT', 'AMHQ', 'BUD-AMHQ-0002', 'CORP', 'CHF', 'FY2024', 'AMHQ', 'Annual budget', '5010-HQ-MGMT', 200000, 'No', 200000),
   ('6334fa2a-8b4b-47e7-a451-5ae01754bf08', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'MGMT', 'AMHQ', 'BUD-AMHQ-0003', 'CORP', 'CHF', 'FY2024', 'AMHQ', 'Annual budget', '6010-HQ-MGMT', 120000, 'No', 120000),
@@ -2109,7 +2109,7 @@ INSERT INTO epm_staging.ic_balances VALUES
 -- Contoso: Main Accounts (chart GROUP_CORP)
 -- ======================================================================
 
-INSERT INTO epm_raw.MainAccounts VALUES
+INSERT INTO epm_raw.main_accounts VALUES
   ('0d95aaf5-2534-41bc-a180-b78a06783c34', '2024-12-31 23:59:59.000', '{}', 0, 'Cash and Cash Equivalents', 'No', '1010', 'GROUP_CORP', 'BalanceSheet', 'Debit', 'Cash'),
   ('4458b006-332c-4e0a-8e7d-a698ab95c72f', '2024-12-31 23:59:59.000', '{}', 0, 'Accounts Receivable', 'No', '1100', 'GROUP_CORP', 'BalanceSheet', 'Debit', 'AccountsReceivable'),
   ('fbc8c77e-2933-4fc4-8918-a346c00c200c', '2024-12-31 23:59:59.000', '{}', 0, 'Inventory', 'No', '1200', 'GROUP_CORP', 'BalanceSheet', 'Debit', 'Inventory'),
@@ -2139,7 +2139,7 @@ INSERT INTO epm_raw.MainAccounts VALUES
 -- Contoso: Legal Entities
 -- ======================================================================
 
-INSERT INTO epm_raw.LegalEntities VALUES
+INSERT INTO epm_raw.legal_entities VALUES
   ('bc2e2b59-2c7d-4667-b664-c7202fddb26a', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso US', 'USMF', 'US', 'CXP0001'),
   ('0a670143-6090-403c-9e8d-f8ad838b77ad', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso DE', 'DEMF', 'DE', 'CXP0002'),
   ('43a534d2-8e7d-4f5a-8773-e66a6db2b020', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso UK', 'GBMF', 'GB', 'CXP0003'),
@@ -2149,7 +2149,7 @@ INSERT INTO epm_raw.LegalEntities VALUES
 -- Contoso: Ledgers (chart GROUP_CORP, reporting USD)
 -- ======================================================================
 
-INSERT INTO epm_raw.Ledgers VALUES
+INSERT INTO epm_raw.ledgers VALUES
   ('77617d80-549f-434c-8171-f5a74148bd11', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso US Ledger', 'USMF', 'GROUP_CORP', 'USD', 'USD'),
   ('0a398bf7-27a1-48a0-afff-a2f4b5ae329d', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso DE Ledger', 'DEMF', 'GROUP_CORP', 'USD', 'EUR'),
   ('98cd2655-5297-41ad-adba-948427591ad4', '2024-12-31 23:59:59.000', '{}', 0, 'Contoso UK Ledger', 'GBMF', 'GROUP_CORP', 'USD', 'GBP'),
@@ -2159,7 +2159,7 @@ INSERT INTO epm_raw.Ledgers VALUES
 -- Contoso: Exchange Rates (monthly EUR/GBP/JPY/USD → USD)
 -- ======================================================================
 
-INSERT INTO epm_raw.ExchangeRates VALUES
+INSERT INTO epm_raw.exchange_rates VALUES
   ('4d187b75-a971-431f-97d8-05949d9887bc', '2024-12-31 23:59:59.000', '{}', 0, 1.0, '2024-02-01', '2024-01-01', 'USD', 'USD', 'Default', 'One'),
   ('8cd74c27-929a-4586-8a37-6c367d94bf10', '2024-12-31 23:59:59.000', '{}', 0, 1.005, '2024-02-01', '2024-01-01', 'USD', 'USD', 'Closing', 'One'),
   ('b52a9e6b-c8b6-48e0-92a8-50c55bab7f4a', '2024-12-31 23:59:59.000', '{}', 0, 0.998, '2024-02-01', '2024-01-01', 'USD', 'USD', 'Average', 'One'),
@@ -2309,7 +2309,7 @@ INSERT INTO epm_raw.ExchangeRates VALUES
 -- Contoso: Consolidation Account Group
 -- ======================================================================
 
-INSERT INTO epm_raw.ConsolidateAccountGroups VALUES
+INSERT INTO epm_raw.consolidate_account_groups VALUES
   ('95284c0a-cb6b-4562-a488-c84d99d090fd', '2024-12-31 23:59:59.000', '{}', 0, 'GROUP_CORP', 'Contoso Group');
 
 -- ======================================================================
@@ -2321,7 +2321,7 @@ INSERT INTO epm_raw.ConsolidateAccountGroups VALUES
 -- Contoso: Intercompany product sales (USMF -> DEMF)
 -- ======================================================================
 
-INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES
+INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES
   ('9f8acdeb-2e8f-45a8-847a-3b7ed209383b', '2024-12-31 23:59:59.000', '{}', 0, 100001, '2024-01-01', 'Current', 'OB-USMF-2024', '2024-01-01', 'OB-USMF-2024', 'OpeningBalance', 'OB-USMF-2024', 2024, 1, 'USMF'),
   ('004ea81a-d3d8-47a8-8a0e-a57a9a7d509d', '2024-12-31 23:59:59.000', '{}', 0, 100002, '2024-01-15', 'Current', 'JE-USMF-01-1100', '2024-01-15', 'JE-USMF-01-1100', 'LedgerJournal', 'JE-USMF-01-1100', 2024, 1, 'USMF'),
   ('b298b811-0b1e-4578-9ff4-7c515ed10e7f', '2024-12-31 23:59:59.000', '{}', 0, 100003, '2024-01-15', 'Current', 'JE-USMF-01-5010', '2024-01-15', 'JE-USMF-01-5010', 'LedgerJournal', 'JE-USMF-01-5010', 2024, 1, 'USMF'),
@@ -2831,7 +2831,7 @@ INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES
   ('14c62aba-89c2-4ba5-a48d-f4c0c330ec14', '2024-12-31 23:59:59.000', '{}', 0, 100507, '2024-12-20', 'Current', 'IC-SALE-USMF-12', '2024-12-20', 'IC-SALE-USMF-12', 'LedgerJournal', 'IC-SALE-USMF-12', 2024, 12, 'USMF'),
   ('71f71add-abee-45b2-90e9-15d4d50372a8', '2024-12-31 23:59:59.000', '{}', 0, 100508, '2024-12-20', 'Current', 'IC-PURCH-DEMF-12', '2024-12-20', 'IC-PURCH-DEMF-12', 'LedgerJournal', 'IC-PURCH-DEMF-12', 2024, 12, 'DEMF');
 
-INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES
+INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES
   ('2aefcf3b-43b7-40ef-82c4-1c54a8debd88', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 1000001, 'Normal', '1010-SALES-SALES', '2024-01-01', 100001, 3000000.0, 'USD', 3000000, '[{\'MAINACCOUNT\': \'1010\', \'COSTCENTER\': \'SALES\', \'DEPARTMENT\': \'SALES\', \'BUSINESSUNIT\': \'SERVICES\'}]', 3000000),
   ('ec1f41ce-57b9-4dfb-af82-e70cb9644e4f', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 1000002, 'Normal', '1100-SALES-SALES', '2024-01-01', 100001, 1400000.0, 'USD', 1400000, '[{\'MAINACCOUNT\': \'1100\', \'COSTCENTER\': \'SALES\', \'DEPARTMENT\': \'SALES\', \'BUSINESSUNIT\': \'SERVICES\'}]', 1400000),
   ('119fb03e-9731-4c91-98b6-691b74169e82', '2024-12-31 23:59:59.000', '{}', 0, 'Opening balance', 'No', 1000003, 'Normal', '1200-SALES-SALES', '2024-01-01', 100001, 1000000.0, 'USD', 1000000, '[{\'MAINACCOUNT\': \'1200\', \'COSTCENTER\': \'SALES\', \'DEPARTMENT\': \'SALES\', \'BUSINESSUNIT\': \'SERVICES\'}]', 1000000),
@@ -3885,7 +3885,7 @@ INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES
 -- Contoso: Trial Balance Snapshots (annual summary per account)
 -- ======================================================================
 
-INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES
+INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES
   ('d6d24227-2d5c-4a61-a302-1daa5ba3a49c', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'USMF', 0, 0, 3000000, 3000000, '1010', '2024-01-01'),
   ('fbda05ae-b270-4103-8fd6-b161c49968dd', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'USMF', 0, 0, 1400000, 1400000, '1100', '2024-01-01'),
   ('5ed7d1a6-7673-4495-9ff0-864c02288f07', '2024-12-31 23:59:59.000', '{}', 0, '2024', 'USMF', 0, 0, 1000000, 1000000, '1200', '2024-01-01'),
@@ -3963,7 +3963,7 @@ INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES
 -- Contoso: Budget Register Entries (FY2024 annual budget)
 -- ======================================================================
 
-INSERT INTO epm_raw.BudgetRegisterEntries VALUES
+INSERT INTO epm_raw.budget_register_entries VALUES
   ('20afaf9e-0f7c-49ad-8b48-3935cc09de64', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'SALES', 'USMF', 'BUD-USMF-0001', 'SERVICES', 'USD', 'FY2024', 'USMF', 'Annual budget', '4010-SALES-SALES', 972000, 'No', 972000),
   ('835c3541-6f93-4e2a-95a3-40d94fc9663f', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'SALES', 'USMF', 'BUD-USMF-0002', 'SERVICES', 'USD', 'FY2024', 'USMF', 'Annual budget', '5010-SALES-SALES', 360000, 'No', 360000),
   ('5b951652-c11e-416b-a6d6-2330f5b19be4', '2024-12-31 23:59:59.000', '{}', 0, '2024-01-01', 'Completed', 'Annual budget FY2024', 'Original', 'SALES', 'USMF', 'BUD-USMF-0003', 'SERVICES', 'USD', 'FY2024', 'USMF', 'Annual budget', '6010-SALES-SALES', 216000, 'No', 216000),
@@ -4402,5 +4402,5 @@ INSERT INTO epm_staging.ic_balances VALUES
 -- Contoso: Fiscal Calendar Years ('Fiscal')
 -- ======================================================================
 
-INSERT INTO epm_raw.FiscalCalendarYears VALUES
+INSERT INTO epm_raw.fiscal_calendar_years VALUES
   ('ef15b821-ade6-4f3c-8c2a-261d5d7233db', '2024-12-31 23:59:59.000', '{}', 0, '2024-12-31', 'Fiscal', '2024-01-01', '2024', 'Fiscal Year 2024');

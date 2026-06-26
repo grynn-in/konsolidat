@@ -17,4 +17,4 @@ select
     end as is_suspended,
     _airbyte_extracted_at as _loaded_at,
     _airbyte_raw_id as _raw_id
-from {{ source('d365_raw', 'MainAccounts') }}
+from {{ source('d365_raw', 'main_accounts') }}

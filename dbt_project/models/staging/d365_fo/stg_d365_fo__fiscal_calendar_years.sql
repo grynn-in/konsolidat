@@ -11,4 +11,4 @@ select
     rowNumberInAllBlocks() as RecId,
     _airbyte_extracted_at,
     _airbyte_raw_id
-from {{ source('d365_raw', 'FiscalCalendarYears') }}
+from {{ source('d365_raw', 'fiscal_calendar_years') }}

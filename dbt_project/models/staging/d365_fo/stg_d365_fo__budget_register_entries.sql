@@ -8,7 +8,7 @@ with numbered as (
     select
         *,
         row_number() over (partition by EntryNumber order by Date) as rn
-    from {{ source('d365_raw', 'BudgetRegisterEntries') }}
+    from {{ source('d365_raw', 'budget_register_entries') }}
 ),
 
 deduplicated as (

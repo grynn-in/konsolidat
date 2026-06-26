@@ -110,7 +110,7 @@ w("CREATE DATABASE IF NOT EXISTS epm_raw;")
 section("Table Creation (Airbyte-compatible schemas)")
 
 TABLES = {
-    "MainAccounts": """
+    "main_accounts": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -123,7 +123,7 @@ TABLES = {
     `DebitCreditDefault` Nullable(String),
     `MainAccountCategory` Nullable(String)""",
 
-    "MainAccountCategories": """
+    "main_account_categories": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -134,7 +134,7 @@ TABLES = {
     `MainAccountType` Nullable(String),
     `MainAccountCategory` Nullable(String)""",
 
-    "LegalEntities": """
+    "legal_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -144,7 +144,7 @@ TABLES = {
     `AddressCountryRegionId` Nullable(String),
     `PartyNumber` Nullable(String)""",
 
-    "Ledgers": """
+    "ledgers": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -155,7 +155,7 @@ TABLES = {
     `ReportingCurrency` Nullable(String),
     `AccountingCurrency` Nullable(String)""",
 
-    "FiscalCalendarYears": """
+    "fiscal_calendar_years": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -166,7 +166,7 @@ TABLES = {
     `FiscalYear` Nullable(String),
     `Description` Nullable(String)""",
 
-    "ExchangeRates": """
+    "exchange_rates": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -179,7 +179,7 @@ TABLES = {
     `RateTypeName` Nullable(String),
     `ConversionFactor` Nullable(String)""",
 
-    "ExchangeRateTypes": """
+    "exchange_rate_types": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -187,7 +187,7 @@ TABLES = {
     `Name` Nullable(String),
     `Description` Nullable(String)""",
 
-    "DimensionAttributes": """
+    "dimension_attributes": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -196,7 +196,7 @@ TABLES = {
     `UseValuesFrom` Nullable(String),
     `ReportColumnName` Nullable(String)""",
 
-    "FinancialDimensionValues": """
+    "financial_dimension_values": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -208,7 +208,7 @@ TABLES = {
     `DimensionValue` Nullable(String),
     `FinancialDimension` Nullable(String)""",
 
-    "ConsolidateAccountGroups": """
+    "consolidate_account_groups": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -216,7 +216,7 @@ TABLES = {
     `ConsolidationAccountGroup` Nullable(String),
     `ConsolidationAccountGroupName` Nullable(String)""",
 
-    "GeneralJournalEntryBiEntities": """
+    "general_journal_entry_bi_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -233,7 +233,7 @@ TABLES = {
     `FiscalCalendarPeriod` Nullable(Int64),
     `SubledgerVoucherDataAreaId` Nullable(String)""",
 
-    "GeneralJournalAccountEntryBiEntities": """
+    "general_journal_account_entry_bi_entities": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -251,7 +251,7 @@ TABLES = {
     `LedgerDimensionValuesJson` Nullable(String),
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))""",
 
-    "BudgetRegisterEntries": """
+    "budget_register_entries": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -273,7 +273,7 @@ TABLES = {
     `IncludeInCashFlowForecast` Nullable(String),
     `TransactionCurrencyAmount` Nullable(Decimal(38, 9))""",
 
-    "TrialBalanceFiscalYearSnapshots": """
+    "trial_balance_fiscal_year_snapshots": """
     `_airbyte_raw_id` String,
     `_airbyte_extracted_at` DateTime64(3),
     `_airbyte_meta` String,
@@ -306,7 +306,7 @@ def val(v):
 
 # ── Main Accounts ─────────────────────────────────────────────────
 section("Main Accounts (Chart of Accounts)")
-w("INSERT INTO epm_raw.MainAccounts VALUES")
+w("INSERT INTO epm_raw.main_accounts VALUES")
 rows = []
 for acct_id, name, atype, cat, dc, chart in ACCOUNTS:
     rows.append(
@@ -333,7 +333,7 @@ CATEGORIES = [
     ("CAT012", "OtherIncome", "Interest and other income", "ProfitAndLoss"),
     ("CAT013", "OtherExpense", "Interest and other expense", "ProfitAndLoss"),
 ]
-w("INSERT INTO epm_raw.MainAccountCategories VALUES")
+w("INSERT INTO epm_raw.main_account_categories VALUES")
 rows = []
 for ref_id, cat, desc, atype in CATEGORIES:
     rows.append(
@@ -344,7 +344,7 @@ w(",\n".join(rows) + ";")
 
 # ── Legal Entities ────────────────────────────────────────────────
 section("Legal Entities")
-w("INSERT INTO epm_raw.LegalEntities VALUES")
+w("INSERT INTO epm_raw.legal_entities VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in ENTITIES:
     rows.append(
@@ -355,7 +355,7 @@ w(",\n".join(rows) + ";")
 
 # ── Ledgers ───────────────────────────────────────────────────────
 section("Ledgers")
-w("INSERT INTO epm_raw.Ledgers VALUES")
+w("INSERT INTO epm_raw.ledgers VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in ENTITIES:
     rows.append(
@@ -366,20 +366,20 @@ w(",\n".join(rows) + ";")
 
 # ── Fiscal Calendar ───────────────────────────────────────────────
 section("Fiscal Calendar Years")
-w("INSERT INTO epm_raw.FiscalCalendarYears VALUES")
+w("INSERT INTO epm_raw.fiscal_calendar_years VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
   f"'2024-12-31', 'Standard', '2024-01-01', '2024', 'Fiscal Year 2024');")
 
 # ── Exchange Rate Types ───────────────────────────────────────────
 section("Exchange Rate Types")
-w("INSERT INTO epm_raw.ExchangeRateTypes VALUES")
+w("INSERT INTO epm_raw.exchange_rate_types VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Default', 'Default exchange rate'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Closing', 'Month-end closing rate'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Average', 'Monthly average rate');")
 
 # ── Exchange Rates ────────────────────────────────────────────────
 section("Exchange Rates (Monthly CHF/USD and CHF/EUR)")
-w("INSERT INTO epm_raw.ExchangeRates VALUES")
+w("INSERT INTO epm_raw.exchange_rates VALUES")
 rows = []
 for month_idx in range(12):
     m = month_idx + 1
@@ -419,7 +419,7 @@ w(",\n".join(rows) + ";")
 
 # ── Dimension Attributes ─────────────────────────────────────────
 section("Dimension Attributes")
-w("INSERT INTO epm_raw.DimensionAttributes VALUES")
+w("INSERT INTO epm_raw.dimension_attributes VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'CostCenter', 'CostCenter', 'CostCenter'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Department', 'Department', 'Department'),")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'BusinessUnit', 'BusinessUnit', 'BusinessUnit');")
@@ -440,7 +440,7 @@ DIM_VALUES = [
     ("BusinessUnit", "SERVICES", "Services"),
     ("BusinessUnit", "MANUFACTURING", "Manufacturing"),
 ]
-w("INSERT INTO epm_raw.FinancialDimensionValues VALUES")
+w("INSERT INTO epm_raw.financial_dimension_values VALUES")
 rows = []
 for dim, dval, desc in DIM_VALUES:
     rows.append(
@@ -451,7 +451,7 @@ w(",\n".join(rows) + ";")
 
 # ── Consolidation Account Groups ──────────────────────────────────
 section("Consolidation Account Groups")
-w("INSERT INTO epm_raw.ConsolidateAccountGroups VALUES")
+w("INSERT INTO epm_raw.consolidate_account_groups VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'AMG', 'Alpine Manufacturing Group');")
 
 # ── GL Journal Entries ────────────────────────────────────────────
@@ -809,12 +809,12 @@ for month_idx in range(12):
     )
 
 # Write GL headers
-w("INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES")
 w(",\n".join(gl_headers) + ";")
 w("")
 
 # Write GL lines
-w("INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES")
 w(",\n".join(gl_lines) + ";")
 
 # ── Trial Balance Snapshots ───────────────────────────────────────
@@ -822,7 +822,7 @@ section("Trial Balance Snapshots (annual summary per account per entity)")
 
 # We generate one snapshot row per account per entity
 # with accumulated yearly totals
-w("INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES")
+w("INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES")
 tb_rows = []
 for entity_id, ename, country, accy, rcy, party in ENTITIES:
     for acct_id, acct_name, atype, cat, dc, chart in ACCOUNTS:
@@ -876,7 +876,7 @@ w(",\n".join(tb_rows) + ";")
 # ── Budget Data ───────────────────────────────────────────────────
 section("Budget Register Entries (FY2024 annual budget)")
 
-w("INSERT INTO epm_raw.BudgetRegisterEntries VALUES")
+w("INSERT INTO epm_raw.budget_register_entries VALUES")
 budget_rows = []
 entry_num = 0
 
@@ -1047,7 +1047,7 @@ def cx_fx(accy, month_idx):
 
 # ── Contoso Main Accounts (reuse AMG account numbers under GROUP_CORP)
 section("Contoso: Main Accounts (chart GROUP_CORP)")
-w("INSERT INTO epm_raw.MainAccounts VALUES")
+w("INSERT INTO epm_raw.main_accounts VALUES")
 rows = []
 for acct_id, name, atype, cat, dc, _chart in ACCOUNTS:
     rows.append(
@@ -1059,7 +1059,7 @@ w(",\n".join(rows) + ";")
 
 # ── Contoso Legal Entities ────────────────────────────────────────
 section("Contoso: Legal Entities")
-w("INSERT INTO epm_raw.LegalEntities VALUES")
+w("INSERT INTO epm_raw.legal_entities VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in CX_ENTITIES:
     rows.append(
@@ -1070,7 +1070,7 @@ w(",\n".join(rows) + ";")
 
 # ── Contoso Ledgers (functional ccy per entity, reporting USD) ────
 section("Contoso: Ledgers (chart GROUP_CORP, reporting USD)")
-w("INSERT INTO epm_raw.Ledgers VALUES")
+w("INSERT INTO epm_raw.ledgers VALUES")
 rows = []
 for eid, ename, country, accy, rcy, party in CX_ENTITIES:
     rows.append(
@@ -1081,7 +1081,7 @@ w(",\n".join(rows) + ";")
 
 # ── Contoso Exchange Rates (EUR/GBP/JPY/USD → USD) ────────────────
 section("Contoso: Exchange Rates (monthly EUR/GBP/JPY/USD → USD)")
-w("INSERT INTO epm_raw.ExchangeRates VALUES")
+w("INSERT INTO epm_raw.exchange_rates VALUES")
 rows = []
 cx_fx_count = 0
 for month_idx in range(12):
@@ -1114,7 +1114,7 @@ w(",\n".join(rows) + ";")
 
 # ── Contoso Consolidation Account Group ───────────────────────────
 section("Contoso: Consolidation Account Group")
-w("INSERT INTO epm_raw.ConsolidateAccountGroups VALUES")
+w("INSERT INTO epm_raw.consolidate_account_groups VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'GROUP_CORP', 'Contoso Group');")
 
 # ── Contoso GL Journal Entries ────────────────────────────────────
@@ -1320,15 +1320,15 @@ for month_idx in range(12):
     )
 
 # Write Contoso GL headers + lines (separate INSERT statements)
-w("INSERT INTO epm_raw.GeneralJournalEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_entry_bi_entities VALUES")
 w(",\n".join(cx_gl_headers) + ";")
 w("")
-w("INSERT INTO epm_raw.GeneralJournalAccountEntryBiEntities VALUES")
+w("INSERT INTO epm_raw.general_journal_account_entry_bi_entities VALUES")
 w(",\n".join(cx_gl_lines) + ";")
 
 # ── Contoso Trial Balance Snapshots ───────────────────────────────
 section("Contoso: Trial Balance Snapshots (annual summary per account)")
-w("INSERT INTO epm_raw.TrialBalanceFiscalYearSnapshots VALUES")
+w("INSERT INTO epm_raw.trial_balance_fiscal_year_snapshots VALUES")
 cx_tb_rows = []
 for entity_id, ename, country, accy, rcy, party in CX_ENTITIES:
     base_rev = CX_REVENUE_BASE[entity_id]
@@ -1372,7 +1372,7 @@ w(",\n".join(cx_tb_rows) + ";")
 
 # ── Contoso Budget Register Entries ───────────────────────────────
 section("Contoso: Budget Register Entries (FY2024 annual budget)")
-w("INSERT INTO epm_raw.BudgetRegisterEntries VALUES")
+w("INSERT INTO epm_raw.budget_register_entries VALUES")
 cx_budget_rows = []
 cx_entry_num = 0
 for entity_id, ename, country, accy, rcy, party in CX_ENTITIES:
@@ -1473,7 +1473,7 @@ w(",\n".join(cx_ic_bal_rows) + ";")
 # the silver date-derivation fallback, but assert_fiscal_calendar_is_loaded
 # fails. Appended last so no earlier UUIDs shift.
 section("Contoso: Fiscal Calendar Years ('Fiscal')")
-w("INSERT INTO epm_raw.FiscalCalendarYears VALUES")
+w("INSERT INTO epm_raw.fiscal_calendar_years VALUES")
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
   f"'2024-12-31', 'Fiscal', '2024-01-01', '2024', 'Fiscal Year 2024');")
 

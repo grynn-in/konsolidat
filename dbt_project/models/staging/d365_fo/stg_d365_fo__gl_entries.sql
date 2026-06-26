@@ -10,11 +10,11 @@
 #}
 
 with entries as (
-    select * from {{ source('d365_raw', 'GeneralJournalAccountEntryBiEntities') }}
+    select * from {{ source('d365_raw', 'general_journal_account_entry_bi_entities') }}
 ),
 
 headers as (
-    select * from {{ source('d365_raw', 'GeneralJournalEntryBiEntities') }}
+    select * from {{ source('d365_raw', 'general_journal_entry_bi_entities') }}
 ),
 
 joined as (
