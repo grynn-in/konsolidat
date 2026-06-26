@@ -45,7 +45,7 @@ GROUP_CORP,JPMF,Contoso JP,51,USD,full
 |-------------|-----------|-----------|
 | Balance Sheet (Asset, Liability) | **Closing rate** | BS at period-end value |
 | P&L (Revenue, Expense) | **Average rate** | P&L at period average |
-| Equity | **Closing rate** | Simplified; historical rate for full IAS 21 |
+| Equity | **Historical rate** (when defined), else closing rate | IAS 21: equity is frozen at the rate on the date it was contributed — see [Historical Equity Rates](#historical-equity-rates-ias-21) |
 
 The rate is looked up from `silver_exchange_rates` using the `convert_currency()` macro with a fallback chain:
 1. Exact match on `from_currency`, `to_currency`, `valid_from ≤ date ≤ valid_to`
@@ -67,6 +67,52 @@ translated_amount = 100,000 × 1.27 = 127,000 USD
 group_amount      = 127,000 × 0.80 = 101,600 USD
 nci_amount        = 127,000 × 0.20 =  25,400 USD
 ```
+
+### Historical Equity Rates (IAS 21)
+
+Equity accounts (share capital, share premium, pre-acquisition reserves) must **not** move with exchange rates. Under IAS 21 they are frozen at the **historical rate** — the FX rate on the date the equity was originally contributed or acquired. Translating them at the closing rate instead would make share capital appear to grow or shrink purely from currency movement, even though no shareholder put in or withdrew anything.
+
+Konsolidat stores these frozen rates in the **Historical Equity Rate** doctype. Each record locks one rate for one equity account of one entity in one group. During translation, `gold_consolidated_trial_balance` applies it ahead of the closing rate:
+
+```
+when accounting_currency = reporting_currency  → 1.0
+when is_equity = 1 and a historical rate exists → historical rate   ← Historical Equity Rate
+when is_balance_sheet                           → closing rate
+when is_pnl                                      → average rate
+```
+
+#### Worked example
+
+GBMF (the UK subsidiary, 80% owned) was incorporated on **15 Jan 2020** with **GBP 1,000,000** of share capital, when the rate was **1.40 USD/GBP**. The group reports in **USD**. By **31 Dec 2024** the closing rate has fallen to **1.27 USD/GBP**, but the share capital on GBMF's books is still GBP 1,000,000 — nobody issued or bought back shares.
+
+| Rate | Value | Applies to |
+|------|-------|-----------|
+| Historical (15 Jan 2020) | **1.40** | equity ← this doctype |
+| Closing (31 Dec 2024) | 1.27 | assets & liabilities |
+| Average (FY2024) | 1.28 | P&L |
+
+Translating the GBP 1,000,000 of share capital:
+
+```
+✅ Historical rate:  1,000,000 × 1.40 = 1,400,000 USD   (frozen, correct under IAS 21)
+❌ Closing rate:     1,000,000 × 1.27 = 1,270,000 USD   (wrong — implies capital "shrank" 130,000)
+```
+
+The **USD 130,000** difference is not lost — it flows into the **Currency Translation Adjustment** (CTA / FCTR) in equity, isolating pure FX movement instead of distorting share capital. The usual ownership split then applies to the historically-translated amount (`group_amount = 1,400,000 × 0.80 = 1,120,000 USD`; `nci_amount = 280,000 USD`).
+
+#### Entering a historical rate
+
+Create a **Historical Equity Rate** record (Consolidation module) and **submit** it:
+
+| Field | Example | Meaning |
+|-------|---------|---------|
+| `consolidation_group` | `GROUP_CORP` | Group the rate applies to |
+| `data_area_id` | `GBMF` | Entity whose equity is being frozen |
+| `main_account` | `3000` | The equity account (e.g. Share Capital) |
+| `rate_date` | `2020-01-15` | Date the equity was contributed/acquired |
+| `historical_rate` | `1.40` | FX rate on that date |
+
+On submit, the rate syncs to `epm_staging.historical_equity_rates` and is picked up on the next `gold_consolidated_trial_balance` build. If no historical rate is defined for an equity account, translation falls back to the closing rate.
 
 ### Tests
 
@@ -103,11 +149,31 @@ The elimination engine:
 
 ## Currency Translation Adjustment (CTA)
 
-CTA arises because P&L is translated at the average rate but the balance sheet at the closing rate. The difference is posted as an equity adjustment.
+Each entity's *local* trial balance is balanced (signed debit − credit sums to zero). But once account classes are translated at **different rates** — balance sheet at closing, P&L at average, equity at historical — the translated balances no longer sum to zero. CTA is the **residual plug** that restores balance, posted to equity (FCTR), so that `Σ(translated group amount) + CTA = 0` for each entity/period by construction (IAS 21).
+
+It is computed in `gold_fx_revaluation` as the negative of the translated group-share residual — **not** a single-component formula:
 
 ```
-cta_amount = sum(local_amount × (closing_rate − average_rate) × ownership_pct)
+cta_amount = − Σ group_amount        (per entity / period, across all accounts)
+where  group_amount = local_amount × translation_rate × ownership_pct
 ```
+
+!!! note "Replaces the old P&L-only approximation"
+    An earlier version approximated CTA as `Σ(local × (closing − average) × ownership)`. That captured only the P&L timing component — the closing/average spread is ~0.00006 — and never captured the balance-sheet retranslation difference, so the consolidated TB did not balance for multi-currency groups (#66). The residual-plug definition above is correct for all rate differences.
+
+### What drives CTA
+
+CTA absorbs the *combined* effect of every input that translates an account at something other than a single uniform rate. The configurable drivers are:
+
+| Driver | Configured in | Effect on CTA |
+|--------|---------------|---------------|
+| Closing vs average rate | `silver_exchange_rates` (from D365) | BS/P&L timing difference |
+| Equity historical rate | **Historical Equity Rate** doctype | freezes equity → differs from closing |
+| Ownership % / method (temporal) | **Ownership Period** doctype | CTA is on the **group share**, so ownership scales it |
+| Reporting currency, base ownership | **Consolidation Group** | a same-currency entity translates at 1.0 → CTA = 0 |
+| Effective ownership (multi-level) | **Reporting Hierarchy** | rolls up indirect ownership feeding the group share |
+
+The NCI share of the translation difference does **not** go to CTA — it rides with `nci_amount` and is handled by the NCI schedule.
 
 ### Tests
 
