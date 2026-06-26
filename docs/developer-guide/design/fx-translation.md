@@ -41,5 +41,6 @@ Enhance `gold_consolidated_trial_balance.sql` and `silver_exchange_rates` to sup
 | `assert_group_amount_formula` | `group_amount = translated_amount × ownership_pct` within 0.01 |
 
 ## Out of Scope
-- Temporal (historical) rate for equity line items (CTA calculation covers this)
 - Remeasurement vs translation (single functional currency assumed)
+
+> **Update (PRD-10):** Temporal (historical) rate for equity line items was originally out of scope here but has since been implemented. Equity accounts now translate at a frozen historical rate held in the **Historical Equity Rate** doctype (`epm_staging.historical_equity_rates`), applied in `gold_consolidated_trial_balance` ahead of the closing rate. See the [Consolidation Guide → Historical Equity Rates (IAS 21)](../../user-guide/consolidation-guide.md#historical-equity-rates-ias-21) for the worked example.
