@@ -67,3 +67,8 @@ select
     unioned._raw_id as _raw_id
 from unioned
 {{ dim_harmonize_joins('unioned.erp_source', raw_alias='unioned') }}
+-- konsolidat#105: drop GL lines with no legal entity. Real D365 ships ~11% of GL
+-- headers with an empty SubledgerVoucherDataAreaId; those rows cannot be attributed
+-- to an entity or consolidated, and they fail test_canonical_gl_entries_not_null
+-- (which blocks every downstream model in the governed `dbt build`).
+where coalesce(unioned.entity_id, '') != ''

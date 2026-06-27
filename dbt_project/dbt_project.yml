@@ -238,6 +238,11 @@ models:
 seeds:
   open_epm:
     +schema: gold
+    # konsolidat#105: build the ISO-4217 currencies seed within the consolidation
+    # scope so assert_exchange_rate_currencies_are_iso can resolve ref('currencies')
+    # under `+tag:domain:consolidation` (the konsol governed-build selector).
+    currencies:
+      +tags: ['domain:consolidation']
     allocation_rules:
       +column_types:
         source_account: "String"
