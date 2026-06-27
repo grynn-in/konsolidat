@@ -30,7 +30,7 @@ inverse as (
         d.valid_to as valid_to,
         1.0 / d.exchange_rate as exchange_rate,
         d.exchange_rate_type as exchange_rate_type,
-        -toInt64(d.recid) as recid  -- distinct recid; avoid collision with the direct row
+        -toInt64(d.recid) - 1 as recid  -- distinct recid (bronze recid starts at 0, so offset by 1); avoid collision with the direct row
     from direct as d
     where d.from_currency != d.to_currency
 )
