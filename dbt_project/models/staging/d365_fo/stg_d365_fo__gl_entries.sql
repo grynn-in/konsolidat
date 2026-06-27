@@ -43,7 +43,9 @@ joined as (
         coalesce(entries.PostingType, '') as posting_type,
         coalesce(entries.LedgerAccount, '') as ledger_account,
         case
-            when lower(toString(coalesce(entries.IsCredit, ''))) in ('yes', 'true', '1') then 1
+            -- D365 ships IsCredit as a JSON-quoted string ("Yes"/"No"); strip
+            -- quotes/whitespace before matching, else it never equals 'yes'.
+            when lower(trim(both '"' from trim(toString(coalesce(entries.IsCredit, ''))))) in ('yes', 'true', '1') then 1
             else 0
         end as is_credit,
         coalesce(
