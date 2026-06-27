@@ -131,26 +131,10 @@ bench --site "$SITE_NAME" execute \
 # `bench build` cannot fix this here: esbuild does NOT run in the runtime image
 # (no dev toolchain), so `bench build` only compiles translations and *cleans*
 # dist/css without emitting replacements — making CSS worse, not better. The
-# real fix is to copy the manifest baked into the image at build time (see
-# docker/frappe/Dockerfile -> /home/frappe/baked-assets) over the stale volume
-# copy. Non-fatal so a missing bake never halts the deploy.
-echo "Restoring asset manifest from image bake..."
-if [ -f /home/frappe/baked-assets/assets.json ]; then
-    cp -f /home/frappe/baked-assets/assets.json sites/assets/assets.json
-    cp -f /home/frappe/baked-assets/assets-rtl.json sites/assets/assets-rtl.json 2>/dev/null || true
-    bench --site "$SITE_NAME" clear-cache >/dev/null 2>&1 || true
-    # clear-cache does not evict the global Redis assets_json key; stale hashes 404 CSS/JS.
-    # redis-cli is not installed in the runtime image — use the bench venv instead.
-    ./env/bin/python - <<'PY' >/dev/null 2>&1 || true
-import os
-import redis
-
-host = os.environ.get("REDIS_CACHE_HOST", "redis_cache")
-redis.Redis(host=host, port=6379, socket_timeout=2).delete("assets_json")
-PY
-else
-    echo "WARN: /home/frappe/baked-assets not found — rebuild the image so the manifest is baked (Desk CSS/JS may 404)"
-fi
+# real fix lives in the shared docker/frappe/refresh-assets.sh (baked into the
+# image), which the backend entrypoint also runs on every `web` start so a bare
+# `docker compose up` self-heals without the configurator.
+bash /home/frappe/refresh-assets.sh || true
 
 echo ""
 echo "=== Configurator Complete ==="

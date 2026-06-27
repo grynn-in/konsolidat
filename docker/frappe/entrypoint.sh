@@ -12,6 +12,13 @@ MODE="${1:-web}"
 
 case "$MODE" in
   web)
+    # Self-heal the asset manifest on every start: an image rebuild leaves the
+    # persisted sites/ volume pointing at hashes that no longer exist, so Desk
+    # loads unstyled until the manifest is restored. The configurator does this
+    # on deploy, but a bare `docker compose up` skips the configurator — so the
+    # backend repairs itself here too. Non-fatal; never blocks gunicorn.
+    bash /home/frappe/refresh-assets.sh || true
+
     echo "Starting Frappe web server on port 8069..."
     # Use application_with_statics to serve /assets/ via SharedDataMiddleware
     # (no separate nginx needed)
