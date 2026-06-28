@@ -33,6 +33,14 @@ with entity_tb as (
     from {{ ref('gold_trial_balance') }} as tb
     inner join {{ ref('silver_legal_entities') }} as le
         on tb.data_area_id = le.data_area
+    {# Orchestrator run filters (opt-in; no var => no predicate => full build).
+       period_filter = single-period close; scope_filter = one entity/group.
+       Applied here at the consolidation chokepoint so every downstream
+       consolidation model (fully-consolidated TB, cash flow, YTD, NCI) inherits
+       the slice, while foundational gold_trial_balance stays complete. #}
+    where 1 = 1
+        {{ period_filter('tb.fiscal_year', 'tb.fiscal_period') }}
+        {{ scope_filter('tb.data_area_id') }}
 ),
 
 {# PRD-9: Temporal ownership periods from staging — range lookup per entity per period #}
