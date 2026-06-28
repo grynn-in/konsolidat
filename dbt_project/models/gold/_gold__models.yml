@@ -142,13 +142,27 @@ models:
         description: "True if variance is favorable (revenue up or expense down)"
 
   - name: gold_spread_budget
-    description: "Annual budget spread across 12 periods using profile weights"
+    description: "Canonical monthly budget fact: annual spread + manual monthly, one row per budget layer (base/challenge/management/board). The final budget is the sum of layers."
     columns:
       - name: scenario_id
         tests:
           - not_null
+      - name: layer
+        description: "Budget layer: base / challenge / management / board"
       - name: period_amount
         description: "annual_amount * period_weight"
+
+  - name: gold_allocation_tb
+    description: "Allocation movements re-grained to trial-balance shape (scenario_key 'allocated'), so K.EPM can read the allocation layer separately from actuals. Each allocation posts two signed legs: target (+) and source (-)."
+    columns:
+      - name: scenario_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+      - name: period_net_amount
+        description: "Signed allocated amount: + on the target leg, - on the source leg"
 
   # --- New models (Phase 3) ---
 
