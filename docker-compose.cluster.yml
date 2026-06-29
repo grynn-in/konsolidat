@@ -78,6 +78,14 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?Set CLICKHOUSE_PASSWORD}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      # Unique Keeper raft id for THIS node = its shard id (1/2/3). keeper.xml
+      # reads this via from_env so the same mounted file yields a distinct
+      # server_id per node (else all nodes claim id 1 → broken quorum, #57).
+      # NOTE: this maps server_id = SHARD_ID, which is unique only with ONE
+      # Keeper per shard. Adding a 2nd replica per shard would reuse the shard's
+      # id → server_id collision (Keeper server_id must be globally unique per
+      # Keeper node). Revisit this mapping before scaling replicas.
+      KEEPER_SERVER_ID: ${SHARD_ID:-1}
     ports:
       - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
       - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
@@ -88,9 +96,10 @@ services:
       - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
       # Remote servers — all nodes need the same topology config
       - ./clickhouse/cluster/remote_servers.xml:/etc/clickhouse-server/config.d/remote_servers.xml:ro
-      # Keeper config — same file on all nodes; Keeper reads SHARD_ID from macros
+      # Keeper config — same file on all nodes; server_id comes from the
+      # KEEPER_SERVER_ID env var (from_env) so each node gets a distinct raft id.
       - ./clickhouse/cluster/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
-      # Macros — per-node; generated at deploy time (see generate-macros.sh below)
+      # Macros — per-node; static committed files (macros-shard{N}-replica{M}.xml)
       - ./clickhouse/cluster/macros-shard${SHARD_ID:-1}-replica${REPLICA_ID:-1}.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       # PostgreSQL wire protocol for Excel/ODBC (optional)
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro

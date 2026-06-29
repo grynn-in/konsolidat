@@ -9,7 +9,10 @@
   Mount at:
     /etc/clickhouse-server/config.d/keeper.xml
 
-  on EVERY node in the cluster, adjusting <server_id> to match the node.
+  on EVERY node in the cluster. For co-located Keeper the <server_id> is
+  auto-derived per node from the KEEPER_SERVER_ID env var (set to SHARD_ID in
+  docker-compose.cluster.yml) via from_env — no manual edit needed. Only the
+  standalone-Keeper path below requires setting <server_id> by hand.
 
   Substitute {KEEPER_HOST_1..3} with real hostnames or IPs.
 
@@ -23,16 +26,20 @@
   Standalone Keeper (recommended for production)
   ──────────────────────────────────────────────
   Run 3 dedicated Keeper nodes (no ClickHouse on them).
-  Start with: clickhouse-keeper --config /etc/clickhouse-keeper/keeper.xml
+  Start clickhouse-keeper with its config at /etc/clickhouse-keeper/keeper.xml
   Adjust <server_id> and remove this config from ClickHouse nodes.
 -->
 <clickhouse>
   <keeper_server>
     <!--
-      Unique ID for THIS node in the Keeper raft group.
-      Change to 2 on ch-shard2, 3 on ch-shard3.
+      Unique ID for THIS node in the Keeper raft group — MUST match this node's
+      <id> in <raft_configuration> below (ch-shard1=1, ch-shard2=2, ch-shard3=3).
+      Read from the KEEPER_SERVER_ID env var (set per node in
+      docker-compose.cluster.yml = SHARD_ID) so the SAME mounted keeper.xml gives
+      each node a distinct id — previously hardcoded 1 on every node, which breaks
+      the raft quorum (all nodes claim id 1). See grynn-in/konsolidat#57.
     -->
-    <server_id>1</server_id>
+    <server_id replace="1" from_env="KEEPER_SERVER_ID">1</server_id>
 
     <listen_host>0.0.0.0</listen_host>
     <!-- Raft port: Keeper → Keeper communication -->
