@@ -48,6 +48,39 @@ Red→green via a **dbt test**: add/extend a singular test (`tests/`) or schema 
 **Fix:** apply blocking findings, keep green + counts restored, commit `fix(dbt): A-N address review`, STOP.
 
 ## Current state
+**A2 (#116) DONE** — commit `e59f83f`. Made the 4 consolidation models
+(`gold_consolidated_trial_balance`, `gold_fully_consolidated_tb`,
+`gold_cash_flow_indirect`, `gold_ytd_trial_balance`) `materialized='incremental'`
++ `incremental_strategy='delete+insert'`, keyed on the close slice:
+`(consolidation_group, data_area_id, fiscal_year, fiscal_period)` for the two TBs,
+`(data_area_id, fiscal_year, fiscal_period)` for cash-flow/YTD. The key is
+intentionally COARSE (not the full grain) so the whole slice is replaced
+atomically. A scoped close (`entity_scope`/`fiscal_year`[/`fiscal_period`] vars)
+now delete+inserts ONLY its in-scope keys and leaves every other slice intact;
+no-var / `--full-refresh` touches every key ⇒ byte-for-byte equal to the old
+`table`. TDD gate `tests/assert_incremental_slice_preserved.sql` (opt-in via a
+DEDICATED var `assert_preserved_entity`, distinct from `entity_scope` so it never
+collides with A1): RED on old table mat (scoped DEMF/2024 close wiped USMF →
+FAIL 4) → GREEN after incremental. Slice-updated proof: deleted the DEMF/2024
+cash-flow slice, a scoped re-run rebuilt it to 107 rows while USMF stayed 948 and
+total returned to 5334. Live gold restored to baseline (13483/13954/5334/31102).
+
+**KNOWN FOLLOW-UP (file a new issue before C1):** A2's preservation contract
+*conflicts* with A1's whole-table confinement guard
+(`assert_scoped_cash_flow_ytd_confined`). Verified empirically: after a scoped
+DEMF/2024 incremental close, running that A1 test WITH `entity_scope=DEMF` FAILs
+(122 retained out-of-scope rows) — because incremental now KEEPS other entities
+by design. The no-var path is unaffected (both guards return 0 rows), so the
+standard/governed full build stays green; only a *scoped* full-suite `dbt build`
+(orchestrator assertions step with `entity_scope`) trips it. Reconcile A1 to
+confine only the FRESHLY-WRITTEN slice (e.g. add the same `period_filter`/
+`scope_filter` to the test's offender scan, or check the SELECT pre-persist)
+rather than the whole persisted table. NOT in A2's scope.
+
+NOTE re live-vs-origin drift: the 4 model files were in sync with origin/main
+before A2 (re-checked). Re-check drift on the files your PRD touches.
+
+---
 **A1 (#119) DONE** — commit `7ea7bb3`. Discovery: the *model* filters were already
 merged upstream via #121 (origin/main has cash-flow `period_filter()`/`scope_filter()`
 and YTD `period_filter(include_period=false)`/`scope_filter()`); the LIVE tree was
@@ -65,4 +98,5 @@ NOTE for the next agent: the LIVE tree (`/home/pd/open_epm/dbt_project`) was BEH
 origin/main on these 3 files before A1 and is now caught up. Re-check live-vs-origin
 drift on the files your PRD touches before assuming live == origin/main.
 ## Next
-A2 (#116) — incremental-by-period materialization of the chokepoint + downstream.
+C1 (#118) — GL sign refactor cleanup: retire dead `is_credit`, fix stale
+comments, escalate the GL balance singular test (warn → error).
