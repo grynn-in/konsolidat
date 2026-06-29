@@ -4,9 +4,10 @@
     Parses LedgerDimensionValuesJson for MainAccount and dimension values.
     Output matches canonical stg_gl_entries schema.
 
-    NOTE: D365 stores both debits and credits as the raw AccountingCurrencyAmount
-    with an IsCredit flag. We pass the raw amount through — bronze/silver handle
-    debit/credit splitting using is_credit.
+    NOTE: D365 stores both debits and credits as a SIGNED AccountingCurrencyAmount
+    (with an IsCredit flag alongside). We pass the signed amount through; silver
+    derives debit/credit from its sign (debit - credit = amount). The is_credit
+    column is carried for reference but no longer drives the split.
 #}
 
 with entries as (
@@ -43,7 +44,9 @@ joined as (
         coalesce(entries.PostingType, '') as posting_type,
         coalesce(entries.LedgerAccount, '') as ledger_account,
         case
-            when lower(toString(coalesce(entries.IsCredit, ''))) in ('yes', 'true', '1') then 1
+            -- D365 ships IsCredit as a JSON-quoted string ("Yes"/"No"); strip
+            -- quotes/whitespace before matching, else it never equals 'yes'.
+            when lower(trim(trim(both '"' from trim(toString(coalesce(entries.IsCredit, '')))))) in ('yes', 'true', '1') then 1
             else 0
         end as is_credit,
         coalesce(
