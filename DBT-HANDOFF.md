@@ -48,6 +48,21 @@ Red→green via a **dbt test**: add/extend a singular test (`tests/`) or schema 
 **Fix:** apply blocking findings, keep green + counts restored, commit `fix(dbt): A-N address review`, STOP.
 
 ## Current state
-None done yet.
+**A1 (#119) DONE** — commit `7ea7bb3`. Discovery: the *model* filters were already
+merged upstream via #121 (origin/main has cash-flow `period_filter()`/`scope_filter()`
+and YTD `period_filter(include_period=false)`/`scope_filter()`); the LIVE tree was
+stale and got those 3 files synced in. The genuinely-missing A1 work — the TDD gates —
+was added as two singular tests:
+- `tests/assert_scoped_cash_flow_ytd_confined.sql` — under `entity_scope`, every
+  `gold_cash_flow_indirect`/`gold_ytd_trial_balance` row must be inside the resolved
+  scope (RED 122 offenders on stale models → GREEN after scoped rebuild). No-var → 0 rows.
+- `tests/assert_scope_resolves_to_entities.sql` — a scope code resolving to zero
+  entities fails the test-gated build (no silent-empty). Verified: bogus→FAIL, DEMF→PASS.
+Both opt-in (no-var build byte-for-byte unchanged). Live gold restored to baseline
+(cash_flow=5334, ytd=31102, consolidated_tb=13483).
+
+NOTE for the next agent: the LIVE tree (`/home/pd/open_epm/dbt_project`) was BEHIND
+origin/main on these 3 files before A1 and is now caught up. Re-check live-vs-origin
+drift on the files your PRD touches before assuming live == origin/main.
 ## Next
-A1 (#119) — extend scope/period coverage to cash-flow + YTD.
+A2 (#116) — incremental-by-period materialization of the chokepoint + downstream.
