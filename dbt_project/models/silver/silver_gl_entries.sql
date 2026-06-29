@@ -37,13 +37,10 @@ select
     gae.reporting_currency_amount as reporting_currency_amount,
     gae.transaction_currency_amount as transaction_currency_amount,
     gae.transaction_currency_code as transaction_currency_code,
-    -- konsolidat: derive debit/credit from the SIGN of the (already-signed)
-    -- accounting_currency_amount, not from is_credit. D365 ships IsCredit as a
-    -- JSON-quoted string ("Yes"/"No") that the staging parser misses, so
-    -- is_credit is ~always 0 (every line booked as a debit) — and abs() then
-    -- discards the real sign on contra/reversal lines too. The raw signed
-    -- amount provably balances (every voucher nets to 0), so the sign is the
-    -- source of truth: positive = debit, negative = credit.
+    -- konsolidat#112: derive debit/credit from the SIGN of the (already-signed)
+    -- accounting_currency_amount. The raw signed amount provably balances (every
+    -- voucher nets to 0), so the sign is the source of truth: positive = debit,
+    -- negative = credit. (abs() would discard the sign on contra/reversal lines.)
     case
         when gae.accounting_currency_amount < 0 then -gae.accounting_currency_amount
         else 0

@@ -944,6 +944,33 @@ hier_rows = [
 ]
 w(",\n".join(hier_rows) + ";")
 
+# konsolidat#120(b): IAS 21 historical equity rates for AMG.
+# Equity (Share Capital 3010, Retained Earnings 3100) is translated at the
+# 2020-01-01 acquisition-date functional→CHF rate (the AMG group reports in CHF
+# per the consolidation_groups seed), NOT the period/closing rate — mirrors the
+# Contoso CX_HER block. consolidation_group MUST be 'AMG' to match the seed;
+# gold_consolidated_trial_balance joins historical_equity_rates on that group,
+# so a mismatch silently falls back to the closing rate. The table is read RAW
+# (no ÷100), so the true per-1 rate is stored directly. AMHQ is CHF-functional
+# (rate 1.0; the model's same-currency guard would force 1.0 anyway). The demo
+# carries no separate 2020 FX series, so the earliest 2024 CHF rate (index 0,
+# also used for opening-balance reporting conversion above) stands in for the
+# acquisition rate.
+section("epm_staging: Historical Equity Rates (IAS 21 — equity at acquisition FX)")
+w("INSERT INTO epm_staging.historical_equity_rates VALUES")
+AMG_ACQ_DATE = "2020-01-01"
+AMG_EQUITY_ACCOUNTS = ["3010", "3100"]
+# functional currency → CHF (AMG group reporting currency) at acquisition
+AMG_ACQ_RATE = {"CHF": 1.0, "USD": FX_CHF_USD[0], "EUR": FX_CHF_EUR[0]}
+amg_her_rows = []
+for eid, ename, country, accy, rcy, party in ENTITIES:
+    rate = AMG_ACQ_RATE[accy]
+    for acct in AMG_EQUITY_ACCOUNTS:
+        amg_her_rows.append(
+            f"  ('AMG', {val(eid)}, {val(acct)}, {val(AMG_ACQ_DATE)}, {rate}, now())"
+        )
+w(",\n".join(amg_her_rows) + ";")
+
 section("epm_staging: IC Elimination Rules (enhanced with rule_type + margin)")
 w("INSERT INTO epm_staging.ic_elimination_rules VALUES")
 ic_rules = [
@@ -1117,23 +1144,17 @@ for month_idx in range(12):
                 f"{r}, {val(end)}, {val(start)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
             )
             cx_fx_count += 1
-# Acquisition-date (2020-01-01) historical rates for IAS 21 equity
-# translation. One row per currency × rate type; point-in-time so the
-# same value is used across Default/Closing/Average.
-for from_ccy, acq_rate in CX_FX_ACQ_2020.items():
-    conv = "Hundred" if from_ccy == "JPY" else "One"
-    # Same store-scale convention as the monthly loop above: a 'Hundred'-factor
-    # rate (JPY) must be quoted per 100 units (base×100) because the adapter
-    # passes it through unscaled before silver divides by 100. Without this the
-    # JPY acq rate round-trips 100× too small.
-    store_scale = 100 if conv == "Hundred" else 1
-    stored = round(acq_rate * store_scale, 9)
-    for rtype in ["Default", "Closing", "Average"]:
-        rows.append(
-            f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
-            f"{stored}, '2020-12-31', {val(CX_ACQ_DATE)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
-        )
-        cx_fx_count += 1
+# konsolidat#120(a): the 2020 acquisition-date rows once written here into
+# epm_raw.exchange_rates were dead. IAS 21 equity translation reads
+# epm_staging.historical_equity_rates (the CX_HER block below), and the period
+# rate_lookup in gold_consolidated_trial_balance only matches 2024 valid_from
+# dates — so nothing ever consumed these rows. Removed.
+# uid() is seeded-random and sequential, so to keep every DOWNSTREAM UUID in
+# this file byte-for-byte stable we still draw the same 12 UUIDs the old loop
+# consumed (4 currencies × 3 rate types) rather than resequence the generator.
+for _from_ccy in CX_FX_ACQ_2020:
+    for _rtype in ("Default", "Closing", "Average"):
+        uid()  # discard: preserves the deterministic RNG sequence
 w(",\n".join(rows) + ";")
 
 # ── Contoso Consolidation Account Group ───────────────────────────
