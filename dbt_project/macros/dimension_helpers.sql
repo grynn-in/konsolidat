@@ -90,7 +90,7 @@
 
        with unioned as ( ...union all of stg_<erp>__gl_entries... )
        select
-           erp_source, record_id, ..., is_credit,
+           erp_source, record_id, ..., ledger_account,
            {{ dim_harmonize_select(raw_alias='unioned') }}
            _loaded_at, _raw_id
        from unioned

@@ -30,7 +30,6 @@ select
     {{ cast_to_string('gl.ledger_account') }} as ledger_account,
     {{ cast_to_string('gl.description') }} as description,
     {{ dim_select_from_source(prefix='gl.') }},
-    {{ cast_to_int8('gl.is_credit') }} as is_credit,
     {{ cast_to_datetime('gl._loaded_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('gl._raw_id') }} as _airbyte_raw_id
 from {{ ref('stg_gl_entries') }} gl

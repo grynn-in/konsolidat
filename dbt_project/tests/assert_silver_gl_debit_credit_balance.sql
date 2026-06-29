@@ -1,6 +1,9 @@
--- Test: Total debits should equal total credits across all GL entries
--- D365 sandbox/demo data is often unbalanced, so warn rather than fail
-{{ config(severity='warn') }}
+-- Test: Total debits should equal total credits across all GL entries.
+-- Since konsolidat#112 silver derives debit/credit from the SIGN of the
+-- (already-balanced) accounting amount, so every voucher nets to zero by
+-- construction. Escalated to error (konsolidat#118) — verified PASS against
+-- live data 2026-06-29. An unbalanced entity now fails the governed build.
+{{ config(severity='error') }}
 
 select
     data_area_id,

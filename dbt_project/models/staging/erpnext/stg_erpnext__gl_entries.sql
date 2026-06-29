@@ -11,9 +11,9 @@
     We derive a deterministic Int64 surrogate from the name hash so the column
     is numeric, stable across runs, and UNION-compatible with the D365 adapter.
 
-    amount/is_credit: silver takes abs(amount) and splits debit/credit by the
-    is_credit flag, so amount = debit - credit (signed) with is_credit derived
-    from the sign reproduces the canonical contract.
+    amount: ERPNext's per-row debit/credit collapse to a single SIGNED amount
+    (amount = debit - credit). Silver derives debit/credit from the SIGN of that
+    amount (positive = debit, negative = credit), so no separate flag is needed.
 
     Dimension values are emitted raw here; harmonization to canonical values
     happens centrally in the canonical stg_gl_entries model (keyed on the
@@ -36,10 +36,6 @@ select
     coalesce(voucher_no, '') as journal_number,
     coalesce(voucher_type, '') as posting_type,
     coalesce(account, '') as ledger_account,
-    case
-        when coalesce(credit, 0) > coalesce(debit, 0) then 1
-        else 0
-    end as is_credit,
     coalesce(cost_center, '') as dim_cost_center,
     '' as dim_department,
     coalesce(project, '') as dim_business_unit,

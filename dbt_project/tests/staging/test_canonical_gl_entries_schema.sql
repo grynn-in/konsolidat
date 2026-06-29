@@ -16,7 +16,6 @@ select
     amount,
     transaction_currency,
     description,
-    is_credit,
     dim_cost_center,
     dim_department,
     dim_business_unit,

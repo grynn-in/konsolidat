@@ -32,7 +32,6 @@ with unioned as (
         journal_number,
         posting_type,
         ledger_account,
-        is_credit,
         dim_cost_center,
         dim_department,
         dim_business_unit,
@@ -61,7 +60,6 @@ select
     journal_number,
     posting_type,
     ledger_account,
-    is_credit,
     {{ dim_harmonize_select(raw_alias='unioned') }}
     unioned._loaded_at as _loaded_at,
     unioned._raw_id as _raw_id
