@@ -9,7 +9,10 @@
   Mount at:
     /etc/clickhouse-server/config.d/keeper.xml
 
-  on EVERY node in the cluster, adjusting <server_id> to match the node.
+  on EVERY node in the cluster. For co-located Keeper the <server_id> is
+  auto-derived per node from the KEEPER_SERVER_ID env var (set to SHARD_ID in
+  docker-compose.cluster.yml) via from_env — no manual edit needed. Only the
+  standalone-Keeper path below requires setting <server_id> by hand.
 
   Substitute {KEEPER_HOST_1..3} with real hostnames or IPs.
 
