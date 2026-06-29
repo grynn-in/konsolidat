@@ -1039,6 +1039,13 @@ CX_FX = {
     "JPY": CX_FX_JPY_USD,
 }
 
+# Acquisition-date (2020-01-01) historical FX → USD for IAS 21 equity
+# translation. Equity is translated at the rate on the date the sub was
+# acquired (group inception, 2020-01-01) — NOT the period/closing rate.
+# Matches the ownership_periods effective_date of 2020-01-01. 2020 levels.
+CX_ACQ_DATE = "2020-01-01"
+CX_FX_ACQ_2020 = {"USD": 1.000000, "EUR": 1.121300, "GBP": 1.325700, "JPY": 0.009201}
+
 
 def cx_fx(accy, month_idx):
     """Functional currency → USD reporting rate for given month index."""
@@ -1110,6 +1117,23 @@ for month_idx in range(12):
                 f"{r}, {val(end)}, {val(start)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
             )
             cx_fx_count += 1
+# Acquisition-date (2020-01-01) historical rates for IAS 21 equity
+# translation. One row per currency × rate type; point-in-time so the
+# same value is used across Default/Closing/Average.
+for from_ccy, acq_rate in CX_FX_ACQ_2020.items():
+    conv = "Hundred" if from_ccy == "JPY" else "One"
+    # Same store-scale convention as the monthly loop above: a 'Hundred'-factor
+    # rate (JPY) must be quoted per 100 units (base×100) because the adapter
+    # passes it through unscaled before silver divides by 100. Without this the
+    # JPY acq rate round-trips 100× too small.
+    store_scale = 100 if conv == "Hundred" else 1
+    stored = round(acq_rate * store_scale, 9)
+    for rtype in ["Default", "Closing", "Average"]:
+        rows.append(
+            f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
+            f"{stored}, '2020-12-31', {val(CX_ACQ_DATE)}, 'USD', {val(from_ccy)}, {val(rtype)}, {val(conv)})"
+        )
+        cx_fx_count += 1
 w(",\n".join(rows) + ";")
 
 # ── Contoso Consolidation Account Group ───────────────────────────
@@ -1427,6 +1451,30 @@ for grp, eid, pct in CX_OWNERSHIP:
     )
 w(",\n".join(cx_ownership_rows) + ";")
 
+section("Contoso: Historical Equity Rates (IAS 21 — equity at acquisition FX)")
+w("INSERT INTO epm_staging.historical_equity_rates VALUES")
+# Equity accounts (Share Capital, Retained Earnings) translated at the
+# 2020-01-01 acquisition-date rate (functional → USD), per IAS 21 — not the
+# closing rate. consolidation_group MUST match the consolidation_groups seed,
+# which rolls every Contoso sub up to GROUP_CORP (there is no GROUP_EMEA node);
+# gold_consolidated_trial_balance joins historical_equity_rates on that group,
+# so a mismatched group silently drops the IAS 21 rate back to closing.
+CX_EQUITY_ACCOUNTS = ["3010", "3100"]
+CX_HER = [
+    ("GROUP_CORP", "USMF", "USD"),
+    ("GROUP_CORP", "DEMF", "EUR"),
+    ("GROUP_CORP", "GBMF", "GBP"),
+    ("GROUP_CORP", "JPMF", "JPY"),
+]
+cx_her_rows = []
+for grp, eid, accy in CX_HER:
+    acq_rate = CX_FX_ACQ_2020[accy]
+    for acct in CX_EQUITY_ACCOUNTS:
+        cx_her_rows.append(
+            f"  ({val(grp)}, {val(eid)}, {val(acct)}, {val(CX_ACQ_DATE)}, {acq_rate}, now())"
+        )
+w(",\n".join(cx_her_rows) + ";")
+
 section("Contoso: Consolidation Hierarchy (GROUP_CORP / GROUP_EMEA)")
 w("INSERT INTO epm_staging.consolidation_hierarchy VALUES")
 cx_hier_rows = [
@@ -1496,4 +1544,5 @@ print(f"  [CORP] TB rows:     {len(cx_tb_rows)}")
 print(f"  [CORP] Budget rows: {len(cx_budget_rows)}")
 print(f"  [CORP] FX rates:    {cx_fx_count}")  # 12 months × 4 ccy × 3 types
 print(f"  [CORP] Ownership:   {len(cx_ownership_rows)}")
+print(f"  [CORP] Equity rates:{len(cx_her_rows)}")
 print(f"  [CORP] IC balances: {len(cx_ic_bal_rows)}")
