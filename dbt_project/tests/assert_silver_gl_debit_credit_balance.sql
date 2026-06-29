@@ -1,6 +1,6 @@
 -- Test: Total debits should equal total credits across all GL entries.
--- Since konsolidat#112 silver derives debit/credit from the SIGN of the
--- (already-balanced) accounting amount, so every voucher nets to zero by
+-- Since konsolidat#112, silver derives debit/credit from the SIGN of the
+-- (already-balanced) accounting amount, every voucher nets to zero by
 -- construction. Escalated to error (konsolidat#118) — verified PASS against
 -- live data 2026-06-29. An unbalanced entity now fails the governed build.
 {{ config(severity='error') }}

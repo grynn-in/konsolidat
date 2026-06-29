@@ -64,7 +64,7 @@
                of the full materialised path, so grandchildren are included. The
                slash boundaries prevent prefix collisions (GROUP_COR vs GROUP_CORP).
                The seed-fallback path is intrinsically 2-segment (group/entity) and
-               flat, so it has no grandchildren to miss. -#}
+               flat, so it has no grandchildren to miss. #}
            or path like '{{ like_s }}/%'
            or path like '%/{{ like_s }}/%'
            or path like '%/{{ like_s }}'
