@@ -1,10 +1,10 @@
 # Design — konsol-exec as a Pipeline Orchestrator
 
-**Status:** Proposed · **Scope:** konsol app (`konsol-exec` SPA + `control_api.py` + pipeline doctypes) · **Related:** konsol #55 (year selector), konsolidat #91 (FX surfacing), #109/#110/#111 (data-quality follow-ups)
+**Status:** Proposed · **Scope:** konsol app (`konsol-exec` SPA + `control_api.py` + pipeline doctypes) · **Related:** konsol#55 (year selector), konsolidat#91 (FX surfacing), konsolidat#109/#110/#111 (data-quality follow-ups)
 
 ## Context
 
-The data platform runs a real pipeline: **D365 → Airbyte → ClickHouse `epm_raw` → dbt (staging→bronze→silver→gold) → consolidation/close → Cube/Excel**. But `konsol-exec` today is a *launcher*, not an *orchestrator*: three hardcoded process cards (`PROCESSES` = budgeting / forecasting / consolidation), each of which fires **one** backend function (`trigger_pipeline` / `run_governed_build` / `trigger_close_run`) and streams a single log. There is:
+The data platform runs a real pipeline: **D365 → Airbyte → ClickHouse `epm_raw` → dbt (staging→bronze→silver→gold) → consolidation/close → Cube/Excel**. But `konsol-exec` today is a *launcher*, not an *orchestrator*: four hardcoded process cards (`PROCESSES` = budgeting / forecasting / consolidation / assertions) — budgeting/forecasting/consolidation route through `run_governed_build` (via `build_scope`), close/assertions through `trigger_close_run` — each firing **one** backend function and streaming a single log. There is:
 
 - no decomposition into **steps** (you can't see or control extract vs transform vs test);
 - no **parameters** (can't pick fiscal year/period — #55 — or `dbt run` vs `build`, `--full-refresh`, scope, skip-sync);
@@ -56,8 +56,8 @@ close_assertions   signoff(gate)   cube_refresh   sql / script
 ```
    extract            transform                          validate          surface
  ┌──────────┐   ┌──────────────────────────────┐   ┌───────────────┐   ┌──────────┐
- │ airbyte  │──▶│ seed → staging → silver       │──▶│    close      │──▶│   cube   │
- │  sync    │   │      → bronze → gold          │   │  assertions   │   │ refresh  │
+ │ airbyte  │──▶│ seed → staging → bronze       │──▶│    close      │──▶│   cube   │
+ │  sync    │   │      → silver → gold          │   │  assertions   │   │ refresh  │
  └──────────┘   └──────────────────────────────┘   └──────┬────────┘   └──────────┘
    writes back                                            │
    last_sync_at                                      ┌─────▼──────┐

@@ -133,6 +133,8 @@ nav:
               - Variance Analysis: developer-guide/design/variance-analysis.md
           - Multi-ERP:
               - Canonical Staging Schema: developer-guide/design/canonical-staging-schema.md
+          - Platform:
+              - Konsol-Exec Orchestrator: developer-guide/design/konsol-exec-orchestrator.md
       - Testing Guide: developer-guide/testing-guide.md
       - Contributing: developer-guide/contributing.md
   - Help:
