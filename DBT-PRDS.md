@@ -1,0 +1,14 @@
+# Scoped consolidation (dbt) — PRD backlog (ralph loop)
+
+Follow-ups from merged PRs #112/#115 (all non-blocking). Context + edit/test/commit workflow + STATE SAFETY: `DBT-HANDOFF.md`. Branch `feat/scoped-consolidation`. One PRD per agent; TDD via dbt tests; each reviewed ≤2× then fixed. Order matters: A1 → A2 → C1 → C2.
+
+## A — finish scoped consolidation
+- [ ] **A1 — #119: scope/period coverage for cash-flow + YTD.** `gold_cash_flow_indirect.sql` and `gold_ytd_trial_balance.sql` `ref('gold_trial_balance')` directly, so a scoped close (`entity_scope`/`fiscal_year`/`fiscal_period` vars) narrows the consolidated TB but NOT these two → inconsistent scoped output. Apply the same `period_filter`/`scope_filter` predicates to both models (or re-source them through the already-filtered chokepoint) so a scoped run narrows them consistently. Add validation/guard if a scope code resolves to zero entities (don't silently emit empty). **TDD:** a singular test asserting that, under a scope var, cash-flow/YTD rows are confined to the scoped entities (and that a no-var build is unchanged). Restore full counts after.
+- [ ] **A2 — #116: incremental-by-period materialization.** Scoped closes currently OVERWRITE the full consolidated tables. Make the chokepoint (`gold_consolidated_trial_balance` and the affected downstream `gold_fully_consolidated_tb`/cash-flow/YTD) `materialized='incremental'` with `incremental_strategy='delete+insert'` keyed on the close slice (`fiscal_year`[, `fiscal_period`], and entity scope) so a scoped close updates ONLY its slice and leaves other slices intact; full `--full-refresh` (or no-var) rebuilds everything. **TDD:** build full → run a scoped incremental for one (year, scope) → assert that slice updated AND other slices' rows untouched (not zeroed). This is the larger PRD — keep the no-var/full path byte-for-byte equivalent. Restore full state after.
+
+## C — hygiene
+- [ ] **C1 — #118: GL sign refactor cleanup.** After #112, silver derives debit/credit from the SIGN of `accounting_currency_amount`; `is_credit` no longer drives the split. Retire the now-dead `is_credit` (drop the column or stop selecting it), fix the stale comment(s) that still describe the old is_credit logic, and escalate the GL balance singular test (warn → error, or tighten) so an unbalanced GL fails the build. **TDD:** the balance test errors on a deliberately-unbalanced fixture row and passes on real data; assert is_credit is gone from the model output.
+- [ ] **C2 — #120: equity-FX cleanup.** 12 acquisition-date `exchange_rates` rows have no consumer (equity translation reads `historical_equity_rates`; `rate_lookup` doesn't read them) — drop/quarantine them or document why retained. Add the missing AMG IAS-21 coverage noted in #120. **TDD:** assert no model references the dropped rows and the AMG entities have equity-translation coverage. Restore full state after.
+
+## Done
+(none yet)
