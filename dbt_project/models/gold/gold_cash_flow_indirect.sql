@@ -52,7 +52,11 @@ with tb as (
         is_pnl,
         period_debit - period_credit as signed_movement
     from {{ ref('gold_trial_balance') }}
+    {# Orchestrator run filters (opt-in; no var => no predicate => full build).
+       Cash flow is per-period, so both period and scope slicing are safe here. #}
     where fiscal_period > 0
+        {{ period_filter() }}
+        {{ scope_filter() }}
 ),
 
 classified as (

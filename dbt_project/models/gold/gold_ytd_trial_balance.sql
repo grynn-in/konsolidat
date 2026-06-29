@@ -22,3 +22,12 @@ select
         rows between unbounded preceding and current row
     ) as ytd_net_amount
 from {{ ref('gold_trial_balance') }}
+{# Orchestrator run filters (opt-in; no var => no predicate => full build).
+   scope_filter is safe (the YTD window partitions by data_area_id, so dropping
+   other entities never changes a kept entity's cumulative total). period_filter
+   uses include_period=false: the YTD running sum needs EVERY prior period within
+   the year, so a single-period predicate would corrupt it — the fiscal_year
+   predicate is still applied (year-bounded, and the sum partitions by year). #}
+where 1 = 1
+    {{ period_filter(include_period=false) }}
+    {{ scope_filter() }}
