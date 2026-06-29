@@ -25,7 +25,9 @@
 {% macro scope_filter(data_area_col='data_area_id') %}
     {%- set scope = var('entity_scope', '') -%}
     {%- if scope is not none and (scope | string | trim) != '' -%}
-        {%- set s = scope | string | trim %} and {{ data_area_col }} in (
+        {#- Escape single quotes so the scope value can't break out of the SQL
+            literal (entity_scope is orchestrator-set today; defence-in-depth). -#}
+        {%- set s = (scope | string | trim) | replace("'", "''") %} and {{ data_area_col }} in (
         select data_area_id
         from {{ ref('gold_consolidation_hierarchy') }}
         where data_area_id = '{{ s }}'
