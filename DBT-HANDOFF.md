@@ -48,6 +48,35 @@ Red→green via a **dbt test**: add/extend a singular test (`tests/`) or schema 
 **Fix:** apply blocking findings, keep green + counts restored, commit `fix(dbt): A-N address review`, STOP.
 
 ## Current state
+**C1 (#118) DONE** — commit `8c16d35`. GL sign-refactor cleanup. Discovery (same
+pattern as A1): the model-side work was ALREADY merged upstream into origin/main —
+`is_credit` is retired everywhere (stg_d365 code + canonical `stg_gl_entries`,
+erpnext, bronze, silver comments, `dimension_helpers` doc comment) and the GL
+balance test `assert_silver_gl_debit_credit_balance` is escalated to
+`severity='error'`. The LIVE tree (`/home/pd/open_epm/dbt_project`) was STALE on all
+8 of those files (still carried is_credit + `severity='warn'`) and got them synced
+back in from origin/main. The genuinely-missing C1 piece — the TDD gate — was added
+as one new singular test `tests/assert_is_credit_retired.sql`: it reads
+`system.columns` for the relations behind `ref('stg_gl_entries')` and
+`ref('bronze_general_journal_account_entries')` and returns a row per relation that
+still exposes an `is_credit` column (always-on schema-contract guard; 0 rows once
+gone; never touches model SQL so full builds are unchanged). RED = FAIL 2 against
+the stale built tables (is_credit on the canonical view + bronze table). Implement =
+sync the 8 stale files + `dbt build --full-refresh` the GL chain (`stg_*__gl_entries`
+→ `stg_gl_entries` → bronze → silver) to drop the column. GREEN = PASS=24/ERROR=0,
+including the now-error balance test PASS on **455,812** live rows (0 imbalance) and
+the canonical schema test. No data change (is_credit was carried-but-unused; silver
+derives the split from the amount sign), so silver stayed 455812 and live gold is
+unchanged at baseline **13483 / 13954 / 5334 / 31102** (gold was not rebuilt — C1
+only touches staging/bronze/silver, which are byte-equivalent in their data columns).
+Only the new test is in the worktree commit (the 8 synced files already match
+origin/main ⇒ no diff). Verified `git diff --cached HEAD` = the one new test file.
+
+NOTE for the next agent: the LIVE tree's 8 GL files (the 5 models + `dimension_helpers`
++ the 2 GL tests) were BEHIND origin/main before C1 and are now caught up. Re-check
+live-vs-origin drift on the files your PRD touches before assuming live == origin/main.
+
+---
 **A3 (reconcile) DONE** — commit `9ad34db`. Reconciled A1's confinement test with
 A2's incremental semantics. A2 made cash-flow/YTD `incremental` (delete+insert by
 slice), so a scoped close PRESERVES out-of-scope sibling slices by design — A1's
@@ -135,6 +164,8 @@ NOTE for the next agent: the LIVE tree (`/home/pd/open_epm/dbt_project`) was BEH
 origin/main on these 3 files before A1 and is now caught up. Re-check live-vs-origin
 drift on the files your PRD touches before assuming live == origin/main.
 ## Next
-C1 (#118) — GL sign refactor cleanup: retire dead `is_credit`, fix stale
-comments, escalate the GL balance singular test (warn → error). (A1→A2→A3 all
-done; the A-series scoped-consolidation reconciliation is complete.)
+C2 (#120) — equity-FX cleanup: drop/quarantine the 12 unconsumed acquisition-date
+`exchange_rates` rows (equity translation reads `historical_equity_rates`;
+`rate_lookup` doesn't read them), and add the missing AMG IAS-21 equity-translation
+coverage. **TDD:** assert no model references the dropped rows and the AMG entities
+have equity-translation coverage; restore full gold state after. (A1→A2→A3→C1 done.)
