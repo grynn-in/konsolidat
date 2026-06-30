@@ -48,6 +48,43 @@ Red→green via a **dbt test**: add/extend a singular test (`tests/`) or schema 
 **Fix:** apply blocking findings, keep green + counts restored, commit `fix(dbt): A-N address review`, STOP.
 
 ## Current state
+**C2 (#120) DONE** — commit `4d0cb91`. Equity-FX cleanup. Same pattern as A1/C1:
+the data work was ALREADY merged upstream into origin/main via #104/#121 — AMG
+`historical_equity_rates` block (AMHQ/AMUS/AMDE × 3010/3100, group `AMG`), the
+Contoso block re-keyed `GROUP_EMEA`→`GROUP_CORP` (the #104 review fix), and the 12
+dead acquisition-date `exchange_rates` rows dropped from the demo generator. The
+genuinely-missing piece — the TDD gate — is one new singular test
+`tests/assert_equity_rate_coverage.sql`: a source/seed contract returning an offender
+per (a) `consolidation_groups` seed subsidiary with NO `historical_equity_rates`
+coverage (`missing_equity_rate_coverage` = the #120 "AMG entities have equity coverage"
+check, and catches the #104 GROUP_EMEA dead-key bug), and (b) a `historical_equity_rates`
+(group,entity) matching no seed entity (`orphan_equity_rate` = the #120(b) no-dead/
+dropped-rows guard). Test-only ⇒ model builds byte-for-byte unchanged.
+
+**Live data is REAL D365** (gold = GROUP_CORP × DEMF/JPMF/USMF; no AMG, no GBMF, and
+NO 3010/3100 equity accounts — real equity accts are 300120/41500/71100/73300). The
+live `epm_staging.historical_equity_rates` SOURCE was STALE (8 rows: DEMF/GBMF
+mis-keyed `GROUP_EMEA`, JPMF/USMF correct `GROUP_CORP`, AMG absent). RED FAIL 7 (5
+missing AMHQ/AMUS/AMDE/DEMF/GBMF + 2 orphan GROUP_EMEA/DEMF,GBMF). Implement = surgically
+correct the live source to origin/main's 14-row state: `ALTER TABLE … DELETE WHERE
+consolidation_group='GROUP_EMEA'` (drops only the 4 dead rows; a `DELETE WHERE 1=1`
+table-wipe is BLOCKED by the auto-mode classifier — go surgical), kept the already-correct
+GROUP_CORP/USMF+JPMF, INSERT the 10 missing (GROUP_CORP DEMF/GBMF + 6 AMG). GREEN PASS.
+The equity join is INERT on real-D365 gold (no 3010/3100 → 0 rows carry
+`historical_equity_rate`), so a no-var `--full-refresh` of `gold_consolidated_trial_balance+`
+restored every count to baseline **13483 / 13954 / 5334 / 31102** (re-verified; gold
+still has 0 populated historical_equity_rate). Worktree commit = the new test file ONLY
+(origin/main demo-data.sql already carries the 14-row block; live demo-data.sql is on a
+divergent old branch and was NOT committed — verified `git diff --cached HEAD` = 1 file).
+The 6 existing equity/exchange tests still PASS.
+
+NOTE for the next agent: the live `epm_staging.historical_equity_rates` source was a
+hand-corrected data load (not a dbt seed/model) to match origin/main demo-data — if the
+container is redeployed from the divergent live `clickhouse/demo-data.sql` it may revert
+to the stale GROUP_EMEA/no-AMG state and the test will go RED again until reloaded.
+Re-check live-vs-origin drift on the files your PRD touches.
+
+---
 **C1 (#118) DONE** — commit `8c16d35`. GL sign-refactor cleanup. Discovery (same
 pattern as A1): the model-side work was ALREADY merged upstream into origin/main —
 `is_credit` is retired everywhere (stg_d365 code + canonical `stg_gl_entries`,
@@ -164,8 +201,9 @@ NOTE for the next agent: the LIVE tree (`/home/pd/open_epm/dbt_project`) was BEH
 origin/main on these 3 files before A1 and is now caught up. Re-check live-vs-origin
 drift on the files your PRD touches before assuming live == origin/main.
 ## Next
-C2 (#120) — equity-FX cleanup: drop/quarantine the 12 unconsumed acquisition-date
-`exchange_rates` rows (equity translation reads `historical_equity_rates`;
-`rate_lookup` doesn't read them), and add the missing AMG IAS-21 equity-translation
-coverage. **TDD:** assert no model references the dropped rows and the AMG entities
-have equity-translation coverage; restore full gold state after. (A1→A2→A3→C1 done.)
+**All PRDs in `DBT-PRDS.md` are DONE** (A1 → A2 → A3 → C1 → C2). No unchecked build
+items remain. The next agent should switch to the **Review** protocol: independently,
+adversarially re-inspect the most-recent PRD's worktree diff (`git show 4d0cb91` for
+C2), RE-RUN the relevant dbt test/build, and verify opt-in (no-var build unchanged) +
+state restored to baseline 13483/13954/5334/31102. If a new follow-up is needed, file
+it and append a new PRD; otherwise the backlog is complete.
