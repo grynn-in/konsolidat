@@ -1,9 +1,25 @@
 {{
     config(
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key=['consolidation_group', 'data_area_id', 'fiscal_year', 'fiscal_period'],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# A2 / grynn-in/konsolidat#116: incremental-by-period materialization.
+   This is the consolidation CHOKEPOINT, so a scoped orchestrator close
+   (entity_scope / fiscal_year[ / fiscal_period] vars) narrows the SELECT to its
+   slice. With delete+insert keyed on the close slice
+   (consolidation_group, data_area_id, fiscal_year, fiscal_period) a scoped run
+   deletes+reinserts ONLY the in-scope keys and leaves every other slice intact,
+   instead of OVERWRITING the whole table. The key is intentionally coarse (not
+   the full grain): it identifies the slice, so the whole slice is replaced
+   atomically (rows that disappear from a re-closed slice are removed too).
+   No vars => the SELECT returns every slice => delete+insert touches every key
+   => identical to a full table build (opt-in, byte-for-byte). `dbt --full-refresh`
+   (or the first build) drops + recreates the table from scratch. #}
 
 {# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL
    PRD-4: Minority interest — nci_amount column for partial ownership

@@ -1,9 +1,19 @@
 {{
     config(
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key=['data_area_id', 'fiscal_year', 'fiscal_period'],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# A2 / grynn-in/konsolidat#116: incremental-by-period materialization. A scoped
+   orchestrator close (entity_scope / fiscal_year[ / fiscal_period] vars) narrows
+   the SELECT to its slice; delete+insert keyed on the entity-period close slice
+   (data_area_id, fiscal_year, fiscal_period) replaces only the in-scope keys and
+   leaves every other entity/period intact, instead of OVERWRITING the table.
+   No vars => every key present => identical to a full table build (opt-in). #}
 
 {# Phase 6.1 — Entity-level cash flow statement (indirect method).
 
