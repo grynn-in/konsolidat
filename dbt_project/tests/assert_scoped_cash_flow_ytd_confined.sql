@@ -1,78 +1,66 @@
--- A3 / grynn-in/konsolidat: reconcile A1 confinement with A2 incremental semantics.
+-- A3 / grynn-in/konsolidat: confine the FRESHLY-WRITTEN slice of a scoped close.
 --
 -- A1 (#119) asserted that under an orchestrator scope close every row in the WHOLE
 -- persisted gold_cash_flow_indirect / gold_ytd_trial_balance table was confined to
--- the scoped entities. That whole-table invariant became FALSE once A2 (#116) made
--- both models `incremental` (delete+insert keyed on the close slice): a scoped
--- close now rewrites ONLY the in-scope entity's keys and PRESERVES every other
--- entity's slice BY DESIGN. So after e.g. a DEMF/2024 close, sibling entities
--- (USMF, GLMF, ...) legitimately remain in the table — and even within fiscal_year
--- 2024 (30 siblings share that year) — so the old whole-table scan false-fails
--- (122 offending groups). Period-bounding the persisted-table scan does NOT fix
--- it: the preserved siblings live in the same period. Entity presence in the
--- persisted table simply cannot tell a freshly-closed row from a preserved one.
+-- the scoped entities. A2 (#116) then made both models `incremental` (delete+insert
+-- keyed on the close slice), so a scoped close rewrites ONLY the in-scope entity's
+-- keys and PRESERVES every other entity's prior rows BY DESIGN. The whole-table
+-- invariant therefore became false and the A1 test false-failed.
 --
--- REAL invariant: the FRESHLY-WRITTEN slice — the rows the close actually
--- (re)derives and delete+inserts — must be confined to the resolved scope. That
--- slice is the model's SOURCE projection: gold_trial_balance filtered by the SAME
--- period_filter + scope_filter predicates the model applies. We check that
--- pre-persist projection here (per the handoff's "check the SELECT pre-persist"
--- reconciliation), which is robust to incremental preservation of sibling slices.
--- If scope_filter ever over-selected an out-of-scope entity, that entity would be
--- written into the close slice and would surface as an offender below.
+-- The review-1 fix replaced a re-derived-from-source check (which was a logical
+-- tautology — it re-ran the SAME scope_filter resolution on both sides, never read
+-- the actual models, and so could NEVER surface an offender) with a check on the
+-- ACTUAL model output. Two structural facts make this possible and non-vacuous:
 --
--- The two CTEs mirror each model's WHERE clause exactly (do NOT call the macros in
--- a SQL comment — Jinja still renders them and their multi-line output breaks out
--- of the `--` line):
---   gold_cash_flow_indirect: where fiscal_period > 0  + period_filter() + scope_filter()
---   gold_ytd_trial_balance:  where 1 = 1  + period_filter(include_period=false) + scope_filter()
--- (YTD uses include_period=false: the running sum needs every prior period of the
--- closed year, so only the year is bounded — matching the model.)
+--   1. We read the real models (ref(gold_cash_flow_indirect)/ref(gold_ytd_trial_balance)),
+--      so a model that DROPS scope_filter and writes out-of-scope entities into the
+--      close is now observable here (the old test re-projected a clean slice from
+--      gold_trial_balance and was decoupled from the models entirely).
 --
--- OPT-IN: with no entity_scope var this returns no rows (a normal full build always
--- passes, byte-for-byte). With entity_scope set it returns every entity a model's
--- scoped source projection selects that falls OUTSIDE the independently-resolved
--- scope (RED before A1's filters narrowed the models; GREEN once the freshly-closed
--- slice is confined to scope).
-{%- set scope = var('entity_scope', '') -%}
-{%- if scope is not none and (scope | string | trim) != '' -%}
-{%- set s = (scope | string | trim) | replace("'", "''") %}
+--   2. delete+insert is deterministic, so a preserved sibling and a freshly-leaked
+--      sibling are byte-identical on persisted state — they cannot be told apart by
+--      reading the table. We therefore isolate THIS run's freshly-written rows with
+--      the `_close_scope` load marker the models stamp at write time
+--      (close_scope_marker() = the run's entity_scope; '' on a full build). Only
+--      rows this scoped close actually wrote carry the marker; A2-preserved siblings
+--      carry '' (or a prior scope) and are correctly ignored.
+--
+-- The scope oracle is resolved INDEPENDENTLY from the consolidation_groups seed
+-- (the flat parent->entity source of truth), NOT from gold_consolidation_hierarchy
+-- or the scope_filter macro, and uses EXACT equality (no LIKE patterns). So it is
+-- not a superset-by-construction of the macro's selection: if the macro ever
+-- over-selected (e.g. an unescaped `_` LIKE wildcard) the extra entity would be
+-- stamped into the close yet absent from the oracle, and surface as an offender.
+--
+-- REACHABLE RED (verified): strip scope_filter from either model and run a scoped
+-- DEMF/2024 close — the model stamps `_close_scope='DEMF'` onto every 2024 entity,
+-- the seed oracle resolves to {DEMF}, and the out-of-scope siblings surface here.
+-- GREEN once the model confines its write to the scope. OPT-IN: with no entity_scope
+-- var the marker is '' on both sides and this returns no rows (full build unchanged).
+{%- set scope = (var('entity_scope', '') | string | trim) -%}
+{%- if scope != '' %}
+{%- set s = scope | replace("'", "''") %}
 with scoped_entities as (
+    -- Independent oracle: flat consolidation_groups seed. A scope code is either a
+    -- consolidation group (expand to its member entities) or an entity (itself).
+    -- Exact equality only — no hierarchy path / LIKE resolution shared with the macro.
     select data_area_id
-    from {{ ref('gold_consolidation_hierarchy') }}
-    where data_area_id = '{{ s }}'
-       or consolidation_group = '{{ s }}'
-       or path = '{{ s }}'
-       or path like '{{ s }}/%'
-       or path like '%/{{ s }}/%'
-       or path like '%/{{ s }}'
-),
--- Freshly-written slice fed to gold_cash_flow_indirect (per-period: period_filter
--- applies year AND single period).
-cash_flow_slice as (
-    select distinct data_area_id
-    from {{ ref('gold_trial_balance') }}
-    where fiscal_period > 0
-        {{ period_filter() }}
-        {{ scope_filter() }}
-),
--- Freshly-written slice fed to gold_ytd_trial_balance (cumulative: period_filter
--- bounds the year only, suppressing the single-period predicate).
-ytd_slice as (
-    select distinct data_area_id
-    from {{ ref('gold_trial_balance') }}
-    where 1 = 1
-        {{ period_filter(include_period=false) }}
-        {{ scope_filter() }}
+    from {{ ref('consolidation_groups') }}
+    where consolidation_group = '{{ s }}'
+       or data_area_id = '{{ s }}'
 ),
 offenders as (
+    -- Rows THIS scoped close freshly wrote (marker = the run's scope) that fall
+    -- outside the independently-resolved scope.
     select 'gold_cash_flow_indirect' as model, data_area_id
-    from cash_flow_slice
-    where data_area_id not in (select data_area_id from scoped_entities)
+    from {{ ref('gold_cash_flow_indirect') }}
+    where _close_scope = {{ close_scope_marker() }}
+      and data_area_id not in (select data_area_id from scoped_entities)
     union all
     select 'gold_ytd_trial_balance' as model, data_area_id
-    from ytd_slice
-    where data_area_id not in (select data_area_id from scoped_entities)
+    from {{ ref('gold_ytd_trial_balance') }}
+    where _close_scope = {{ close_scope_marker() }}
+      and data_area_id not in (select data_area_id from scoped_entities)
 )
 select model, data_area_id, count(*) as offending_rows
 from offenders

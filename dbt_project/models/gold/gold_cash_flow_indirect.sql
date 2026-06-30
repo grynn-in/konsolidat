@@ -110,7 +110,10 @@ select
     fiscal_period,
     cf_category,
     cf_line_item,
-    sum(cash_flow_amount) as cash_flow_amount
+    sum(cash_flow_amount) as cash_flow_amount,
+    {# A3: stamp this run's scope so the confinement test can isolate the rows THIS
+       close actually wrote from A2-preserved siblings (empty => full build). #}
+    {{ close_scope_marker() }} as _close_scope
 from lined
 group by
     data_area_id,

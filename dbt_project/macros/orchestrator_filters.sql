@@ -31,6 +31,29 @@
 {% endmacro %}
 
 
+{#- A3 / grynn-in/konsolidat: load marker for the freshly-written slice.
+
+    The consolidation models are A2-`incremental` (delete+insert keyed on the close
+    slice), so a scoped close re-derives ONLY its in-scope keys and PRESERVES every
+    other entity's prior rows by design. Because delete+insert is deterministic, the
+    persisted table after a CORRECT scoped close is byte-identical to one where a
+    BUGGY (scope_filter-less) model re-wrote the out-of-scope siblings — preserved
+    and freshly-leaked rows are indistinguishable on persisted state alone. So a
+    confinement test that reads the persisted table CANNOT catch genuine leakage
+    without a write-time marker.
+
+    This macro emits a literal stamping every row a run writes with that run's
+    entity_scope (empty string when no scope var => a normal full build is unchanged
+    in VALUES; one additive, constant column). The confinement test then isolates
+    THIS run's freshly-written rows (`_close_scope = close_scope_marker()`) and
+    checks only those against an independent scope oracle. Same expression on both
+    sides guarantees write/read agreement. -#}
+{% macro close_scope_marker() %}
+    {%- set scope = (var('entity_scope', '') | string | trim) | replace("'", "''") -%}
+    '{{ scope }}'
+{%- endmacro %}
+
+
 {% macro period_filter(year_col='fiscal_year', period_col='fiscal_period', include_period=true) %}
     {%- set fy = var('fiscal_year', '') -%}
     {%- set fp = var('fiscal_period', '') -%}
