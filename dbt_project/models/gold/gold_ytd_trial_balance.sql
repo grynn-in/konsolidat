@@ -32,10 +32,7 @@ select
         partition by data_area_id, fiscal_year, main_account, {{ dim_partition_by() }}
         order by fiscal_period
         rows between unbounded preceding and current row
-    ) as ytd_net_amount,
-    {# A3: stamp this run's scope so the confinement test can isolate the rows THIS
-       close actually wrote from A2-preserved siblings (empty => full build). #}
-    {{ close_scope_marker() }} as _close_scope
+    ) as ytd_net_amount
 from {{ ref('gold_trial_balance') }}
 {# Orchestrator run filters (opt-in; no var => no predicate => full build).
    scope_filter is safe (the YTD window partitions by data_area_id, so dropping
