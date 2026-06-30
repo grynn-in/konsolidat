@@ -48,6 +48,43 @@ Red→green via a **dbt test**: add/extend a singular test (`tests/`) or schema 
 **Fix:** apply blocking findings, keep green + counts restored, commit `fix(dbt): A-N address review`, STOP.
 
 ## Current state
+**A3 (reconcile) DONE** — commit `9ad34db`. Reconciled A1's confinement test with
+A2's incremental semantics. A2 made cash-flow/YTD `incremental` (delete+insert by
+slice), so a scoped close PRESERVES out-of-scope sibling slices by design — A1's
+`assert_scoped_cash_flow_ytd_confined` scanned the WHOLE persisted table and
+false-failed (FAIL 122 after a DEMF/2024 scoped close). **Empirically proven**
+that the spec's literal "add `period_filter` to the offenders scan" does NOT fix
+it: after a DEMF/2024 close, fiscal_year 2024 still holds 30 sibling entities
+(cf=937 / ytd=5256 out-of-scope rows), so a period-bounded persisted-table scan is
+still > 0. Entity presence in the persisted table cannot distinguish a
+freshly-closed row from a preserved sibling. Rewrote the test to assert the REAL
+invariant on the FRESHLY-WRITTEN slice = each model's SOURCE projection
+(`gold_trial_balance` filtered by the SAME `period_filter`+`scope_filter` the model
+applies — cash-flow single-period, YTD `period_filter(include_period=false)`),
+i.e. the handoff's "check the SELECT pre-persist" path, which is robust to
+incremental sibling preservation. `scoped_entities` is resolved independently of
+the `scope_filter` macro (raw hierarchy patterns), so a macro over-selection
+regression still surfaces as an offender (non-vacuous). Opt-in preserved (no
+`entity_scope` var ⇒ 0 rows). RED: old test FAIL 122. GREEN: new test PASS for
+`entity_scope=DEMF`, `+fiscal_year=2024`, `+fiscal_period=6`, `GROUP_CORP`,
+`GROUP_EMEA`, and no-var. A2 `assert_incremental_slice_preserved` (USMF) still
+PASS. **GOTCHA fixed mid-build:** do NOT call `{{ scope_filter() }}`/`{{ period_filter() }}`
+inside a `--` SQL comment — Jinja still renders the macro and its multi-line output
+breaks out of the comment line (ClickHouse syntax error). My change is
+test-file-only, so model builds are byte-for-byte unchanged. Live gold restored to
+baseline via no-var `--full-refresh` (deterministic, re-confirmed 2×):
+**13483 / 13954 / 5334 / 31102** (cash-flow & YTD back to 62 entities).
+
+NOTE re state on entry: the prior agent had left the live gold tables NARROWED
+(cf=299/ytd=2036/consolidated=2036) — a leftover scoped run. A no-var `--full-refresh`
+restored them. (First restore briefly read 13544/5339 because deeper upstreams were
+still settling; the canonical full set is 13483/13954/5334/31102.) Re-check live-vs-
+origin drift on the files your PRD touches (the test + macro were in sync this round).
+
+NOTE: A3 only touched the test, NOT the `scope_filter`/`period_filter` macro nor the
+models — they were already correct from A1/A2/#121.
+
+---
 **A2 (#116) DONE** — commit `e59f83f`. Made the 4 consolidation models
 (`gold_consolidated_trial_balance`, `gold_fully_consolidated_tb`,
 `gold_cash_flow_indirect`, `gold_ytd_trial_balance`) `materialized='incremental'`
@@ -99,4 +136,5 @@ origin/main on these 3 files before A1 and is now caught up. Re-check live-vs-or
 drift on the files your PRD touches before assuming live == origin/main.
 ## Next
 C1 (#118) — GL sign refactor cleanup: retire dead `is_credit`, fix stale
-comments, escalate the GL balance singular test (warn → error).
+comments, escalate the GL balance singular test (warn → error). (A1→A2→A3 all
+done; the A-series scoped-consolidation reconciliation is complete.)
