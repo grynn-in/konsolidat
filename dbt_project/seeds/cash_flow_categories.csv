@@ -1,13 +1,257 @@
 main_account,cf_category,cf_line_item,is_cash,sign
-1010,Operating,Cash and cash equivalents,1,1
-1100,Operating,Change in Trade Receivables,0,-1
-1200,Operating,Change in Inventory,0,-1
-1300,Operating,Change in Intercompany Receivables,0,-1
-1500,Investing,Purchase of Fixed Assets,0,-1
-1510,Operating,Depreciation and Amortization,0,1
-2010,Operating,Change in Trade Payables,0,1
-2100,Operating,Change in Accrued Liabilities,0,1
-2500,Financing,Proceeds from / Repayment of Debt,0,1
-3010,Financing,Issuance of Share Capital,0,1
-3100,Financing,Retained Earnings Movement,0,1
-3200,Financing,Dividends Paid,0,-1
+1000000,Operating,Clearing & Statistical,0,-1
+1000AG,Operating,Cash and cash equivalents,1,1
+1000BSW,Operating,Cash and cash equivalents,1,1
+1000CE,Operating,Cash and cash equivalents,1,1
+1000FA,Operating,Cash and cash equivalents,1,1
+1000MS,Operating,Cash and cash equivalents,1,1
+1000RL,Operating,Cash and cash equivalents,1,1
+100100,Operating,Cash and cash equivalents,1,1
+100101,Operating,Cash and cash equivalents,1,1
+100106,Operating,Change in Trade Payables,0,1
+100107,Operating,Change in Trade Receivables,0,-1
+110110,Operating,Cash and cash equivalents,1,1
+110112,Operating,Cash and cash equivalents,1,1
+110114,Operating,Cash and cash equivalents,1,1
+110115,Operating,Cash and cash equivalents,1,1
+110119,Operating,Cash and cash equivalents,1,1
+110120,Operating,Cash and cash equivalents,1,1
+110125,Operating,Cash and cash equivalents,1,1
+110130,Operating,Cash and cash equivalents,1,1
+110132,Operating,Cash and cash equivalents,1,1
+110140,Operating,Cash and cash equivalents,1,1
+110150,Operating,Cash and cash equivalents,1,1
+110160,Operating,Cash and cash equivalents,1,1
+110166,Operating,Cash and cash equivalents,1,1
+110167,Operating,Cash and cash equivalents,1,1
+110170,Operating,Clearing & Statistical,0,-1
+110171,Operating,Cash and cash equivalents,1,1
+110180,Operating,Cash and cash equivalents,1,1
+11110,Operating,Cash and cash equivalents,1,1
+11120,Operating,Cash and cash equivalents,1,1
+112000,Operating,Cash and cash equivalents,1,1
+11210,Operating,Change in Intercompany Balances,0,-1
+112100,Operating,Change in Accrued Liabilities,0,1
+112110,Operating,Change in Accrued Liabilities,0,1
+112120,Operating,Change in Accrued Liabilities,0,1
+112150,Operating,Change in Accrued Liabilities,0,1
+112170,Operating,Change in Prepaid & Other Current Assets,0,-1
+11220,Operating,Change in Trade Receivables,0,-1
+11310,Operating,Change in Trade Receivables,0,-1
+11400,Investing,Purchase / Sale of Fixed Assets,0,-1
+11500,Investing,Goodwill & Intangibles,0,-1
+1200,Operating,Change in Trade Receivables,0,-1
+120000,Operating,Change in Prepaid & Other Current Assets,0,-1
+120100,Investing,Purchase / Sale of Investments,0,-1
+120200,Investing,Purchase / Sale of Investments,0,-1
+120400,Operating,Change in Trade Receivables,0,-1
+120501,Operating,Clearing & Statistical,0,-1
+120600,Operating,Change in Trade Receivables,0,-1
+12100,Investing,Purchase / Sale of Fixed Assets,0,-1
+12200,Investing,Purchase / Sale of Fixed Assets,0,-1
+12210,Operating,Change in Inventory,0,-1
+12500,Investing,Purchase / Sale of Fixed Assets,0,-1
+130100,Operating,Change in Trade Receivables,0,-1
+130300,Operating,Change in Trade Receivables,0,-1
+130400,Operating,Change in Trade Receivables,0,-1
+130500,Operating,Change in Trade Receivables,0,-1
+130600,Operating,Change in Trade Receivables,0,-1
+130700,Operating,Change in Trade Receivables,0,-1
+130701,Operating,Change in Trade Receivables,0,-1
+130725,Operating,Clearing & Statistical,0,-1
+130726,Operating,Clearing & Statistical,0,-1
+130730,Operating,Change in Trade Receivables,0,-1
+130750,Operating,Change in Trade Receivables,0,-1
+130800,Operating,Change in Trade Receivables,0,-1
+132100,Operating,Change in Prepaid & Other Current Assets,0,-1
+132190,Operating,Change in Prepaid & Other Current Assets,0,-1
+133100,Operating,Change in Intercompany Balances,0,-1
+133150,Operating,Change in Intercompany Balances,0,-1
+133300,Operating,Change in Intercompany Balances,0,-1
+133330,Operating,Change in Intercompany Balances,0,-1
+133340,Operating,Change in Intercompany Balances,0,-1
+133345,Operating,Change in Intercompany Balances,0,-1
+133355,Operating,Change in Intercompany Balances,0,-1
+133500,Operating,Change in Intercompany Balances,0,-1
+140000,Operating,Clearing & Statistical,0,-1
+140100,Operating,Change in Inventory,0,-1
+140190,Operating,Change in Prepaid & Other Current Assets,0,-1
+140191,Operating,Change in Prepaid & Other Current Assets,0,-1
+140200,Operating,Change in Prepaid & Other Current Assets,0,-1
+14100,Investing,Purchase / Sale of Fixed Assets,0,-1
+14210,Operating,Change in Intercompany Balances,0,-1
+14270,Operating,Change in Intercompany Balances,0,-1
+14410,Operating,Change in Intercompany Balances,0,-1
+14450,Operating,Change in Prepaid & Other Current Assets,0,-1
+14470,Operating,Change in Intercompany Balances,0,-1
+14900,Investing,Purchase / Sale of Fixed Assets,0,-1
+150000,Operating,Clearing & Statistical,0,-1
+150100,Operating,Change in Inventory,0,-1
+150150,Operating,Change in Inventory,0,-1
+150200,Operating,Change in Inventory,0,-1
+150250,Operating,Change in Inventory,0,-1
+155555,Operating,Cash and cash equivalents,1,1
+160100,Operating,Change in Inventory,0,-1
+160200,Operating,Change in Inventory,0,-1
+160300,Operating,Change in Inventory,0,-1
+160500,Operating,Change in Inventory,0,-1
+160600,Operating,Change in Inventory,0,-1
+161300,Operating,Change in Inventory,0,-1
+166666,Investing,Purchase / Sale of Fixed Assets,0,-1
+170150,Investing,Goodwill & Intangibles,0,-1
+1800,Investing,Purchase / Sale of Fixed Assets,0,-1
+180100,Investing,Purchase / Sale of Fixed Assets,0,-1
+180140,Investing,Purchase / Sale of Fixed Assets,0,-1
+180141,Investing,Purchase / Sale of Fixed Assets,0,-1
+180150,Investing,Purchase / Sale of Fixed Assets,0,-1
+180200,Operating,Depreciation & Amortisation,0,-1
+180240,Operating,Depreciation & Amortisation,0,-1
+180250,Operating,Depreciation & Amortisation,0,-1
+180290,Operating,Non-Cash & FX Adjustments,0,-1
+180292,Operating,Non-Cash & FX Adjustments,0,-1
+180295,Investing,Purchase / Sale of Fixed Assets,0,-1
+180300,Investing,Purchase / Sale of Fixed Assets,0,-1
+180301,Operating,Depreciation & Amortisation,0,-1
+180304,Investing,Purchase / Sale of Fixed Assets,0,-1
+180305,Investing,Purchase / Sale of Fixed Assets,0,-1
+180306,Investing,Purchase / Sale of Fixed Assets,0,-1
+180307,Investing,Purchase / Sale of Fixed Assets,0,-1
+180308,Investing,Purchase / Sale of Fixed Assets,0,-1
+180309,Investing,Purchase / Sale of Fixed Assets,0,-1
+180310,Operating,Depreciation & Amortisation,0,-1
+180311,Operating,Depreciation & Amortisation,0,-1
+180312,Operating,Depreciation & Amortisation,0,-1
+180313,Operating,Depreciation & Amortisation,0,-1
+180314,Operating,Depreciation & Amortisation,0,-1
+180315,Operating,Depreciation & Amortisation,0,-1
+180316,Operating,Depreciation & Amortisation,0,-1
+180317,Operating,Depreciation & Amortisation,0,-1
+191000,Operating,Change in Trade Receivables,0,-1
+200100,Operating,Change in Trade Payables,0,1
+200110A,Operating,Change in Trade Payables,0,1
+200115,Operating,Change in Trade Payables,0,1
+200125,Operating,Change in Trade Payables,0,1
+200126,Operating,Change in Trade Payables,0,1
+200130,Operating,Change in Accrued Liabilities,0,1
+200140,Operating,Change in Accrued Liabilities,0,1
+200180,Operating,Clearing & Statistical,0,-1
+200190,Operating,Change in Accrued Liabilities,0,1
+200200,Operating,Change in Trade Payables,0,1
+200210,Operating,Change in Accrued Liabilities,0,1
+200221,Operating,Change in Accrued Liabilities,0,1
+200511,Operating,Change in Accrued Liabilities,0,1
+201100,Investing,Purchase / Sale of Fixed Assets,0,-1
+201110,Operating,Change in Accrued Liabilities,0,1
+201120,Operating,Change in Accrued Liabilities,0,1
+201130,Operating,Change in Accrued Liabilities,0,1
+201140,Operating,Change in Accrued Liabilities,0,1
+201150,Operating,Change in Accrued Liabilities,0,1
+201160,Operating,Change in Accrued Liabilities,0,1
+201170,Operating,Change in Accrued Liabilities,0,1
+201175,Operating,Change in Tax Balances,0,1
+201180,Operating,Change in Tax Balances,0,1
+201190,Operating,Change in Tax Balances,0,1
+201200,Operating,Change in Accrued Liabilities,0,1
+202100,Operating,Change in Tax Balances,0,1
+202110,Operating,Change in Tax Balances,0,1
+202120,Operating,Change in Tax Balances,0,1
+202130,Operating,Change in Tax Balances,0,1
+202150,Operating,Change in Tax Balances,0,1
+202170,Operating,Change in Tax Balances,0,1
+202180,Operating,Change in Tax Balances,0,1
+202210,Operating,Change in Tax Balances,0,1
+202220,Operating,Change in Tax Balances,0,1
+202250,Operating,Change in Tax Balances,0,1
+202260,Operating,Change in Tax Balances,0,1
+202270,Operating,Change in Tax Balances,0,1
+202290,Operating,Change in Tax Balances,0,1
+202300,Operating,Change in Tax Balances,0,1
+202310,Operating,Change in Tax Balances,0,1
+202500,Operating,Change in Tax Balances,0,1
+202520,Operating,Change in Tax Balances,0,1
+202700,Operating,Change in Tax Balances,0,1
+2100,Operating,Change in Tax Balances,0,1
+21110,Investing,Purchase / Sale of Fixed Assets,0,-1
+211650,Operating,Change in Accrued Liabilities,0,1
+21190,Operating,Depreciation & Amortisation,0,-1
+21195,Operating,Depreciation & Amortisation,0,-1
+21210,Investing,Purchase / Sale of Fixed Assets,0,-1
+212100,Operating,Change in Accrued Liabilities,0,1
+212150,Operating,Change in Prepaid & Other Current Assets,0,-1
+212160,Operating,Change in Accrued Liabilities,0,1
+21220,Investing,Purchase / Sale of Fixed Assets,0,-1
+21290,Operating,Depreciation & Amortisation,0,-1
+21295,Operating,Depreciation & Amortisation,0,-1
+21310,Investing,Purchase / Sale of Fixed Assets,0,-1
+21320,Investing,Purchase / Sale of Fixed Assets,0,-1
+21390,Operating,Depreciation & Amortisation,0,-1
+21510,Investing,Purchase / Sale of Fixed Assets,0,-1
+21590,Operating,Depreciation & Amortisation,0,-1
+21595,Operating,Depreciation & Amortisation,0,-1
+21610,Investing,Purchase / Sale of Fixed Assets,0,-1
+21690,Operating,Depreciation & Amortisation,0,-1
+22100,Operating,Change in Inventory,0,-1
+22120,Operating,Depreciation & Amortisation,0,-1
+221850,Operating,Change in Accrued Liabilities,0,1
+22200,Operating,Change in Inventory,0,-1
+222100,Operating,Change in Tax Balances,0,1
+222170,Operating,Change in Deferred Balances,0,1
+222180,Financing,Proceeds from / Repayment of Debt,0,1
+222190,Operating,Change in Accrued Liabilities,0,1
+222200,Operating,Change in Tax Balances,0,1
+222210,Operating,Change in Accrued Liabilities,0,1
+22290,Operating,Depreciation & Amortisation,0,-1
+22700,Investing,Purchase / Sale of Fixed Assets,0,-1
+231300,Investing,Purchase / Sale of Fixed Assets,0,-1
+231350,Operating,Change in Intercompany Balances,0,-1
+231365,Operating,Change in Intercompany Balances,0,-1
+231370,Operating,Change in Intercompany Balances,0,-1
+231371,Operating,Change in Intercompany Balances,0,-1
+231500,Operating,Change in Intercompany Balances,0,-1
+23200,Investing,Purchase / Sale of Fixed Assets,0,-1
+23210,Operating,Depreciation & Amortisation,0,-1
+24400,Investing,Goodwill & Intangibles,0,-1
+250200,Financing,Proceeds from / Repayment of Debt,0,1
+250400,Financing,Proceeds from / Repayment of Debt,0,1
+250500,Operating,Change in Deferred Balances,0,1
+250600,Operating,Change in Deferred Balances,0,1
+250601,Financing,Proceeds from / Repayment of Debt,0,1
+250606,Operating,Change in Deferred Balances,0,1
+261101,Operating,Change in Tax Balances,0,1
+264101,Operating,Change in Trade Receivables,0,-1
+264319,Operating,Change in Trade Receivables,0,-1
+265001,Operating,Change in Tax Balances,0,1
+266666,Operating,Depreciation & Amortisation,0,-1
+300110,Financing,Issuance of Share Capital,0,1
+300120,Financing,Issuance of Share Capital,0,1
+300160,Financing,Retained Earnings & Reserves Movement,0,1
+300200,Financing,Issuance of Share Capital,0,1
+31300,Investing,Purchase / Sale of Fixed Assets,0,-1
+31800,Investing,Purchase / Sale of Fixed Assets,0,-1
+4030,Operating,Change in Accrued Liabilities,0,1
+411100,Operating,Change in Trade Receivables,0,-1
+411200,Operating,Change in Trade Receivables,0,-1
+411300,Operating,Change in Trade Receivables,0,-1
+41210,Operating,Change in Trade Payables,0,1
+41299,Operating,Change in Trade Payables,0,1
+41500,Financing,Retained Earnings & Reserves Movement,0,1
+41550,Operating,Change in Accrued Liabilities,0,1
+41600,Operating,Change in Accrued Liabilities,0,1
+45900,Operating,Change in Accrued Liabilities,0,1
+491000,Operating,Change in Trade Receivables,0,-1
+51350,Financing,Proceeds from / Repayment of Debt,0,1
+51410,Operating,Change in Intercompany Balances,0,-1
+550101,Operating,Cash and cash equivalents,1,1
+600180,Operating,Change in Inventory,0,-1
+6070,Operating,Change in Prepaid & Other Current Assets,0,-1
+71100,Financing,Issuance of Share Capital,0,1
+73300,Financing,Retained Earnings & Reserves Movement,0,1
+801201,Operating,Non-Cash & FX Adjustments,0,-1
+801400,Operating,Change in Trade Receivables,0,-1
+801600,Operating,Non-Cash & FX Adjustments,0,-1
+999000,Operating,Clearing & Statistical,0,-1
+999902,Operating,Clearing & Statistical,0,-1
+999903,Operating,Clearing & Statistical,0,-1
+999904,Operating,Clearing & Statistical,0,-1
+999906,Operating,Clearing & Statistical,0,-1
+CTA,Operating,Non-Cash & FX Adjustments,0,-1
