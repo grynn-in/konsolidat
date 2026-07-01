@@ -138,6 +138,20 @@ nav:
               - Canonical Staging Schema: developer-guide/design/canonical-staging-schema.md
           - Platform:
               - Konsol-Exec Orchestrator: developer-guide/design/konsol-exec-orchestrator.md
+      - Open-Issue Decisions:
+          - Overview: developer-guide/decisions/index.md
+          - "#130 Membership divergence": developer-guide/decisions/konsolidat-130-membership-divergence.md
+          - "#93 Consolidation currency": developer-guide/decisions/konsolidat-93-consolidation-currency.md
+          - "#92 Historical Equity Rate": developer-guide/decisions/konsolidat-92-historical-equity-rate.md
+          - "#91 Surface FX rates": developer-guide/decisions/konsolidat-91-surface-fx.md
+          - "#131 Asset self-heal staleness": developer-guide/decisions/konsolidat-131-selfheal-staleness.md
+          - "#90 Productionize Airbyte": developer-guide/decisions/konsolidat-90-airbyte-prod.md
+          - "#57 ClickHouse cluster mode": developer-guide/decisions/konsolidat-57-clickhouse-cluster.md
+          - "konsol #56 Orchestrator epic": developer-guide/decisions/konsol-56-orchestrator-epic.md
+          - "konsol #58 Orchestrator P2": developer-guide/decisions/konsol-58-orchestrator-p2.md
+          - "konsol #59 Orchestrator P3": developer-guide/decisions/konsol-59-orchestrator-p3.md
+          - "konsol #74 Orchestrator hardening": developer-guide/decisions/konsol-74-orchestrator-hardening.md
+          - "konsol #55 Past-FY close": developer-guide/decisions/konsol-55-past-fy-close.md
       - Testing Guide: developer-guide/testing-guide.md
       - Contributing: developer-guide/contributing.md
   - Help:
