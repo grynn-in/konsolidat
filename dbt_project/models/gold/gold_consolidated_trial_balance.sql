@@ -174,7 +174,13 @@ average_rate_lookup as (
     group by rk.from_currency, rk.to_currency, rk.period_date
 ),
 
-{# Default fallback rate #}
+{# Default fallback rate. The rate type is the literal 'Default' (D365's default
+   rate type) — the previous filter `= ''` matched no rows, so this fallback was
+   dead and closing/average misses fell straight through to the 1.0 parity rate.
+   That silently mistranslated pairs whose Closing/Average quotes start later than
+   their history (e.g. JPY->USD Closing begins 2014-02, but Default covers
+   2001-2025), so every JPMF period before 2014 got rate 1.0 (~100x). Matching
+   'Default' lets those periods use the real ~0.008-0.013 rate. #}
 default_rate_lookup as (
     select
         rk.from_currency,
@@ -191,7 +197,7 @@ default_rate_lookup as (
     inner join all_rates as ar
         on rk.from_currency = ar.from_currency
         and rk.to_currency = ar.to_currency
-    where ar.exchange_rate_type = ''
+    where ar.exchange_rate_type = 'Default'
         and ar.valid_from <= rk.period_date
     group by rk.from_currency, rk.to_currency, rk.period_date
 ),
