@@ -122,6 +122,8 @@ nav:
           - Adding Dimensions: developer-guide/adding-dimensions.md
           - Extending API: developer-guide/extending-api.md
       - Design Documents:
+          - Close:
+              - Entity Close & Reconciliation: developer-guide/design/entity-close-and-reconciliation.md
           - Consolidation:
               - FX Translation: developer-guide/design/fx-translation.md
               - CTA Calculation: developer-guide/design/cta-calculation.md
