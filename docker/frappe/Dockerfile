@@ -51,9 +51,10 @@ RUN mkdir -p /home/frappe/baked-assets \
 # Install dbt + clickhouse adapter in bench venv (for pipeline runner)
 RUN ./env/bin/pip install dbt-core dbt-clickhouse
 
-# Copy entrypoint
+# Copy entrypoint + shared asset-manifest self-heal script
 COPY --chown=frappe:frappe entrypoint.sh /home/frappe/entrypoint.sh
-RUN chmod +x /home/frappe/entrypoint.sh
+COPY --chown=frappe:frappe refresh-assets.sh /home/frappe/refresh-assets.sh
+RUN chmod +x /home/frappe/entrypoint.sh /home/frappe/refresh-assets.sh
 
 # Volumes for persistent data
 VOLUME ["/home/frappe/frappe-bench/sites"]
