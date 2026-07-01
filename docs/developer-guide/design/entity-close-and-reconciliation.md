@@ -5,9 +5,12 @@ konsol consolidates entity trial balances into a group result, but it has no mod
 of the **legal-entity close** that must happen *before* consolidation — the
 controls that make each entity's numbers trustworthy. Today the whole thing runs
 as **one group build**: every entity's TB is computed and immediately
-consolidated in the same dbt pass, with no per-entity lock, no sub-ledger
-reconciliations, and no sign-off gate. A wrong or unreconciled entity silently
-flows into the group.
+consolidated in the same dbt pass. A *group-level* sign-off gate does exist (the
+**Close Run** doctype runs the dbt close-assertion suite and records green/red,
+via `Assertion Result` / the Assertions process) — but there is **no per-entity
+lock**, **no sub-ledger reconciliations**, and no per-entity gate before an
+entity flows into the group. A wrong or unreconciled entity is caught only after
+consolidation, if at all.
 
 This document specifies the entity-close control layer and how it feeds
 consolidation, native to konsol (dbt gold models + doctypes + the konsol-exec
@@ -33,7 +36,9 @@ These are routinely confused; the platform must keep them distinct.
 |---|---|---|
 | When | Entity close | Consolidation |
 | What | Revalue an entity's *own* open foreign-currency monetary balances at the period-end rate → unrealized FX gain/loss on its books | Translate a foreign subsidiary's whole TB into group currency (BS=closing, P&L=avg, equity=historical) → CTA |
-| Model | `gold_fx_revaluation` | `gold_consolidated_trial_balance` |
+| Model | *(none — proposed; runs in D365 today)* | `gold_consolidated_trial_balance` (+ `gold_fx_revaluation`, the CTA residual plug) |
+
+> Note: `gold_fx_revaluation` is a **translation-side** model — it computes the CTA plug on `gold_consolidated_trial_balance`, *not* entity-level monetary revaluation. There is no gold model performing entity FX revaluation today; that step runs in D365 and arrives as GL.
 
 **Intercompany — reconciliation vs. elimination**
 
@@ -52,7 +57,7 @@ entity's TB can lock. Status is against the current platform.
 | 1 | Sub-ledger cut-off & posting (AP/AR/inv/FA/payroll) | D365 | consumes resulting GL | ✅ upstream |
 | 2 | Depreciation / amortization | D365 | arrives as GL | ✅ upstream |
 | 3 | Accruals / prepaids / deferrals / provisions | D365 or topside | `Consolidation Adjustment` doctype (manual) | ✅ |
-| 4 | **FX revaluation** | D365 posts | `gold_fx_revaluation` (surface / validate) | ✅ |
+| 4 | **FX revaluation** | D365 posts | *(none — D365 posts it; arrives as GL. `gold_fx_revaluation` is CTA/translation, not this)* | 🔲 surface/validate |
 | 5 | **Bank reconciliation** | — | *proposed* `gold_bank_recon` | 🔲 needs bank feed (MT940 / camt.053) |
 | 6 | **Payment / cash-application rec** | — | *proposed* `gold_payment_recon` | 🔲 needs settlement/payment tables |
 | 7 | **AP/AR sub-ledger → GL tie-out** | GL side present | *proposed* `gold_ap_subledger_recon` / `gold_ar_subledger_recon` | 🔲 first cut — needs `VendTrans`/`CustTrans` |
@@ -108,12 +113,15 @@ The sub-ledger detail is not ingested today (`epm_raw` is GL + dimensions + rate
   are green (or explicitly waived with a reason).
 - Group consolidation for a period should refuse (or warn loudly) if a
   participating entity is unlocked or has open exceptions.
-- Reuse `Pipeline Run` / `Pipeline Step` for the run record; the lock is a new
-  per-(entity, period) state.
+- Reuse `Pipeline Run` / `Pipeline Step` for the run record. Persist the lock in
+  a **new `Entity Close` doctype** keyed by (entity, fiscal_year, fiscal_period)
+  holding lock status + per-control results + a waiver reason (the existing
+  `Close Run` is keyed by period only, with no entity field).
 
 ### R4: konsol-exec plane
-- New **Entity Close** domain: scoped per entity (the plane already supports
-  `scope`), its Layer Rail = the control checklist
+- New **Entity Close** domain: scoped per entity. (Today's build scope is a
+  coarse dbt-tag `build_scope` — staging/actuals/consolidation/… — *not* a
+  per-entity scope; this extends it.) Its Layer Rail = the control checklist
   (`Reconcile → Review → Lock`), each stage green/red from R1.
 - The controls surface in the **Assertions** domain too (a rec is an assertion
   that also carries its unmatched detail).
@@ -133,8 +141,9 @@ The sub-ledger detail is not ingested today (`epm_raw` is GL + dimensions + rate
 3. **Payment rec**, then **operational IC rec**.
 4. **Bank rec** — last, because it needs a new external data source.
 
-## Out of scope
+## Out of Scope
 - Running the transactional close itself (depreciation, accruals, tax, payment
   processing) — those stay in D365.
-- Any external reconciliation engine — reconciliations are built native to
-  konsol.
+- Any external reconciliation engine (including the separate `insta_close`
+  effort) — reconciliations are built **native to konsol** (gold
+  `*_reconciliation` models + doctypes + the exec plane).
