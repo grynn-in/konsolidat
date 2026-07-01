@@ -14,6 +14,7 @@
 
 {% set stg = ref('stg_gl_entries') %}
 {% set bronze = ref('bronze_general_journal_account_entries') %}
+{% set silver = ref('silver_gl_entries') %}
 
 select concat(database, '.', table) as model
 from system.columns
@@ -21,4 +22,7 @@ where name = 'is_credit'
   and (
     (database = '{{ stg.schema }}' and table = '{{ stg.identifier }}')
     or (database = '{{ bronze.schema }}' and table = '{{ bronze.identifier }}')
+    -- konsolidat#124: silver is where the debit/credit split actually lives, so
+    -- lock the retirement in there too (already absent — closes the coverage gap).
+    or (database = '{{ silver.schema }}' and table = '{{ silver.identifier }}')
   )

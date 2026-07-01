@@ -37,6 +37,13 @@
 -- oracle is empty, so we suppress the check rather than false-fail — a genuinely
 -- bogus/zero-entity scope is already guarded by assert_scope_resolves_to_entities.
 --
+-- ASSUMPTION (konsolidat#124): the flat seed and gold_consolidation_hierarchy
+-- AGREE on TOP-LEVEL group membership. If the hierarchy ever held a member under a
+-- top-level group that the flat seed omits, this oracle would under-select and
+-- could false-fail. That divergence is itself the bug tracked in #130 (doctype
+-- GROUP_EMEA vs seed GROUP_CORP); reconciling seed<->hierarchy there also removes
+-- this assumption. Until then, top-level membership is verified consistent.
+--
 -- Tradeoff (vs. the rejected write-time marker): this guards against the scope_filter
 -- MACRO over-selecting, not against a model dropping the scope_filter call entirely.
 -- The latter would need a persisted load marker on the gold tables, which violates
