@@ -11,8 +11,13 @@
 {# A2 / grynn-in/konsolidat#116: incremental-by-period materialization. Inherits
    the scoped slice from the gold_consolidated_trial_balance chokepoint (Layer 1
    entity balances). delete+insert keyed on the close slice
-   (consolidation_group, data_area_id, fiscal_year, fiscal_period) replaces only
-   the in-scope keys, preserving other slices instead of OVERWRITING the table.
+   (consolidation_group, data_area_id, fiscal_year, fiscal_period).
+
+   NOTE (konsolidat#124): unlike the chokepoint models this one carries NO
+   scope_filter/period_filter of its own — its SELECT is always full and it relies
+   entirely on the already-scoped upstream. So there is no slice-pruning perf
+   benefit here: the delete+insert replaces exactly the keys the (scoped) upstream
+   yields — correct, but a scoped close still re-derives this model in full.
    No vars => every key present => identical to a full table build (opt-in). #}
 
 {# PRD-5 R4: Unified consolidated trial balance
