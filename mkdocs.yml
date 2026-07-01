@@ -134,6 +134,7 @@ nav:
               - Budget Spreading: developer-guide/design/budget-spreading.md
               - Variance Analysis: developer-guide/design/variance-analysis.md
           - Multi-ERP:
+              - Multi-ERP Consolidation: developer-guide/design/multi-erp-consolidation.md
               - Canonical Staging Schema: developer-guide/design/canonical-staging-schema.md
           - Platform:
               - Konsol-Exec Orchestrator: developer-guide/design/konsol-exec-orchestrator.md
