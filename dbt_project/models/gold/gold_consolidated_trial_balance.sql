@@ -136,7 +136,13 @@ closing_rate_lookup as (
         rk.from_currency,
         rk.to_currency,
         rk.period_date,
-        {{ latest_value_by('ar.rate', 'ar.valid_from') }} as rate
+        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
+           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
+           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
+           silently collapses a fully-unquoted currency pair to a rate of 0
+           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
+           and ownership blocks guard against. #}
+        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
     from rate_keys as rk
     inner join all_rates as ar
         on rk.from_currency = ar.from_currency
@@ -152,7 +158,13 @@ average_rate_lookup as (
         rk.from_currency,
         rk.to_currency,
         rk.period_date,
-        {{ latest_value_by('ar.rate', 'ar.valid_from') }} as rate
+        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
+           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
+           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
+           silently collapses a fully-unquoted currency pair to a rate of 0
+           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
+           and ownership blocks guard against. #}
+        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
     from rate_keys as rk
     inner join all_rates as ar
         on rk.from_currency = ar.from_currency
@@ -168,7 +180,13 @@ default_rate_lookup as (
         rk.from_currency,
         rk.to_currency,
         rk.period_date,
-        {{ latest_value_by('ar.rate', 'ar.valid_from') }} as rate
+        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
+           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
+           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
+           silently collapses a fully-unquoted currency pair to a rate of 0
+           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
+           and ownership blocks guard against. #}
+        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
     from rate_keys as rk
     inner join all_rates as ar
         on rk.from_currency = ar.from_currency
