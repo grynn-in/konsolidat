@@ -1,7 +1,7 @@
 {{
     config(
         engine=cluster_engine('MergeTree()'),
-        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account)',
+        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account, layer)',
         cluster=cluster_name()
     )
 }}
@@ -41,6 +41,10 @@ select
     b.fiscal_year,
     b.fiscal_period,
     b.main_account,
+    {# Budget layer preserved through the rollup so hierarchy reads can filter to
+       one layer (base/challenge/management/board); omitting the filter sums all
+       layers = the final budget, matching the flat path (grynn-in/konsol#63). #}
+    b.layer,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %},
@@ -62,6 +66,7 @@ group by
     b.fiscal_year,
     b.fiscal_period,
     b.main_account,
+    b.layer,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}
