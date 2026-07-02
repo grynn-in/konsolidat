@@ -2,7 +2,9 @@
 
 All **42 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; publishes regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry.
 
-> **Naming updated 2026-07** (doctype-naming cleanup): Pipeline Step → **Run Step**, Step Definition → **Pipeline Step**, Pipeline Definition → **Pipeline**, Build Domain → **Build Scope**, Gold Model → **Build Model**, Close Run → **Period Close**, Pipeline Build Request → **Build Approval**, Fact Table (+ children) → **Dataset** (+ Dataset Measure / Dataset Dimension). **Budget Input** and **Budget Input Child** were retired — the live budget chain is Budget Cycle → Budget Sheet → Budget Line.
+> **Naming updated 2026-07** (doctype-naming cleanup): Pipeline Step → **Run Step**, Step Definition → **Pipeline Step**, Pipeline Definition → **Pipeline**, Build Domain → **Build Scope**, Gold Model → **Build Model**, Close Run → **Period Close** → **Assertion Run**, Pipeline Build Request → **Build Approval**, Fact Table (+ children) → **Dataset** (+ Dataset Measure / Dataset Dimension). **Budget Input** and **Budget Input Child** were retired — the live budget chain is Budget Cycle → Budget Sheet → Budget Line.
+>
+> **Naming updated 2026-07 (2nd pass):** the close-assertion doctype was mis-named — it runs the dbt assertion suite, it does not close entities. `Period Close` → **Assertion Run**, `Assertion Result` → **Assertion Step**, `Scenario Definition` → **Scenario**. The "Close"/"Period Close" name is now reserved for a future real entity-close doctype.
 
 ```
 ERP SOURCES (D365 F&O / ERPNext)
@@ -54,7 +56,7 @@ ERP SOURCES (D365 F&O / ERPNext)
     ◦ Dataset Measure               ◦ Dataset Dimension
 ● Fiscal Period
 ● Cash Flow Category        └ Lifecycle
-● Scenario Definition
+● Scenario
 ● Reporting Hierarchy       └ Lifecycle
 ● Reporting Hierarchy Member
 
@@ -84,9 +86,9 @@ ERP SOURCES (D365 F&O / ERPNext)
     ├ Entity Patterns  ├ Unrealized Profit (PRD-15)  └ Details
 ● Consolidation Adjustment
     ├ Amounts  ├ Details  └ Workflow (PRD-16)
-● Period Close
+● Assertion Run
     ├ Summary  ├ Sign-off  ├ Timing  ├ Assertions  └ Log
-    ◦ Assertion Result
+    ◦ Assertion Step
 ```
 
 Doctypes shown with only a name have no labeled section breaks (flat field lists).
@@ -116,7 +118,7 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Dataset Dimension | epm | child | Dimension for a dataset |
 | Fiscal Period | epm | DOC | Fiscal calendar config → dbt_project.yml vars |
 | Cash Flow Category | epm | DOC | Maps balance-sheet accounts to cash-flow statement lines (generates the cash_flow_categories seed) |
-| Scenario Definition | epm | DOC | Budget / forecast / other scenarios |
+| Scenario | epm | DOC | Budget / forecast / other scenarios |
 | Reporting Hierarchy | epm | DOC | Management reporting trees on canonical dimensions |
 | Reporting Hierarchy Member | epm | DOC | Nodes in a reporting tree |
 | Budget Cycle | epm | DOC | Single lock gate for a scenario × fiscal year |
@@ -135,7 +137,7 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | IC Balance | consolidation | DOC | Intercompany sales/inventory balances (entity pairs) |
 | IC Elimination Rule | consolidation | DOC | Intercompany elimination rules |
 | Consolidation Adjustment | consolidation | DOC | Topside journals with status workflow |
-| Period Close | consolidation | DOC | Runs the dbt close-assertion suite for a fiscal period, records each result + sign-off |
-| Assertion Result | consolidation | child | One close-assertion outcome |
+| Assertion Run | consolidation | DOC | Runs the dbt close-assertion suite for a fiscal period, records each result + sign-off |
+| Assertion Step | consolidation | child | One close-assertion outcome |
 
-_Counts: Pipeline 13 · EPM Model 11 · Budget 6 · Allocation 4 · Consolidation 8 = 42. Generated from konsol @ b10702a._
+_Counts: Pipeline 13 · EPM Model 11 · Budget 6 · Allocation 4 · Consolidation 8 = 42. Generated from konsol @ 31b9d8d (feat/assertion-run-naming)._
