@@ -55,7 +55,7 @@ Konsolidat exposes data through Cube's SQL API, which speaks PostgreSQL wire pro
 - Manual: Data → Refresh All
 - Automatic: Data → Connections → Properties → Refresh every X minutes
 
-## Budget Input
+## Budget Entry
 
 ### Using the Budget Template
 
@@ -76,5 +76,5 @@ Use Power Query M formula to POST budget data:
 ### Budget Validation
 
 After submitting, verify your data:
-1. Open Frappe Desk (http://epm.local:8069) and check Budget Input records
+1. Open Frappe Desk (http://epm.local:8069) and check Budget Sheet records
 2. Or query directly: `SELECT * FROM v_budget_vs_actual WHERE fiscal_year = 2024`

@@ -18,7 +18,7 @@
      measure      -> consolidated_amount
 
    Serves both consolidated P&L and Balance Sheet — the account chosen in the
-   sheet decides which statement. Registered as Fact Table `consolidated` so
+   sheet decides which statement. Registered as Dataset `consolidated` so
    =K.EPM("GROUP_CORP", 2024, 6, "510500", "consolidated_amount", "consolidated")
    reads the group figure live (companion to entity-level actuals via K.EPM and
    the cash flow via gold_cashflow_fact / K.CF). #}

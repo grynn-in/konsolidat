@@ -2,7 +2,7 @@
 
 Step-by-step guide to adding a new Gold model to Konsolidat.
 
-## Adding a Gold Model
+## Adding a Gold dbt Model
 
 ### 1. Create the SQL File
 
@@ -72,6 +72,10 @@ dbt run --select gold_your_model    # Build just this model
 dbt test --select gold_your_model   # Run tests
 dbt build --select gold_your_model  # Both in one command
 ```
+
+### 5. Register for Governed Builds
+
+Register the model as a konsol **Build Model** doc, assigning its **Build Scope** — this generates the model's `domain:<scope>` tag in `dbt_project.yml` so scoped governed builds select it. A gold model with no scope is only built by a full build; `scripts/check_gold_domains.py` fails CI for untagged gold models.
 
 ## Adding a Seed-Driven Model
 
@@ -183,11 +187,11 @@ from {{ ref('gold_ic_eliminations') }}
 
 ## Making a Model API-Queryable
 
-To expose a new model through the `=EPM()` function:
+To expose a new model through the `=EPM()` function, register it in the **Dataset** registry (Frappe Desk → Dataset) — no code change needed:
 
-1. Add the table to `SCENARIO_TABLES` in `konsol/api.py`
-2. Add allowed measures to `ALLOWED_MEASURES`
-3. The API's `_batch_query_clickhouse()` will automatically handle it
+1. Create a Dataset with `clickhouse_table` pointing at the model's table
+2. Add its allowed measures and dimensions (Dataset Measure / Dataset Dimension child rows)
+3. Publish the Dataset — the API resolves `fact` / `scenario` through the registry
 
 See [Extending the API](extending-api.md) for details.
 

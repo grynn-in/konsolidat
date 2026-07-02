@@ -33,7 +33,7 @@ The Sales team enters their monthly plan in Frappe Desk — $100k/month:
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | **base** | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | **1,200,000** |
 
-Workflow state: **Draft** → submitter clicks *Submit for Review* → **Submitted**
+The save lands in the **base** Budget Sheet for USMF under the **Open** Budget Cycle for BUDGET_2025 × 2025 (the cycle is auto-created on first save).
 
 ### 2. Finance Challenges (challenge)
 
@@ -69,7 +69,7 @@ The board adds Q4 contingency for year-end push:
 | | | | | | | | | | | | | | |
 | **EFFECTIVE** | **95,000** | **95,000** | **95,000** | **95,000** | **95,000** | **95,000** | **110,000** | **110,000** | **105,000** | **100,000** | **100,000** | **100,000** | **1,195,000** |
 
-The approver clicks **Approve** → ClickHouse sync fires → `dbt build` runs.
+The controller **locks the Budget Cycle** → ClickHouse sync fires for every sheet in the cycle → `dbt build` runs.
 
 ---
 
@@ -77,7 +77,7 @@ The approver clicks **Approve** → ClickHouse sync fires → `dbt build` runs.
 
 Every row from every layer is persisted. Nothing is aggregated at write time:
 
-**`gold.budget_monthly_input`**
+**`epm_gold.budget_monthly_input`**
 
 | scenario_id | data_area_id | fiscal_year | main_account | fiscal_period | amount | layer |
 |:---|:---|---:|:---|---:|---:|:---|
@@ -151,19 +151,19 @@ Assume actuals for P5 came in at $92,000 against the $95,000 budget:
 
 ---
 
-## Workflow States
+## Cycle Locking
 
-| State | Who Can Act | What Happens |
-|:------|:------------|:-------------|
-| **Draft** | Budget Submitter edits base layer | Not synced to ClickHouse |
-| **Submitted** | Budget Controller reviews, edits challenge layer | Read-only for submitter |
-| **Approved** | Budget Approver approves | Syncs all layers to ClickHouse |
-| **Rejected** | Returns to Budget Submitter | Back to Draft for correction |
+Budget Sheets carry no workflow of their own — editing is gated by the **Budget Cycle** (one per scenario × fiscal year):
+
+| Cycle Status | Who Can Act | What Happens |
+|:-------------|:------------|:-------------|
+| **Open** | Each role edits its own layer's sheets | Data stays in Frappe — not synced to ClickHouse |
+| **Locked** | Budget manager locks (submits) the cycle | All sheets sync to ClickHouse; further edits are refused |
 
 ```
-Draft ──[Submit for Review]──→ Submitted ──[Approve]──→ Approved ──→ CH Sync ──→ dbt build
-                                    │
-                                    └──[Reject]──→ Rejected ──[Resubmit]──→ Submitted
+Open ──[Lock cycle]──→ Locked ──→ CH Sync (all layers) ──→ dbt build
+  ▲                       │
+  └──[Cancel cycle]───────┘   (withdraws the synced budget so it can be amended)
 ```
 
 ---
@@ -174,13 +174,13 @@ Draft ──[Submit for Review]──→ Submitted ──[Approve]──→ Appr
 FRAPPE DESK                      CLICKHOUSE                         EXCEL
 ───────────                      ──────────                         ─────
 
-Budget Input doc
+Budget Sheets (one per layer)
  ┌─ base:       +100k/mo  ─┐
- ├─ challenge:  -5k/mo     ├──→  gold.budget_monthly_input
+ ├─ challenge:  -5k/mo     ├──→  epm_gold.budget_monthly_input
  ├─ management: +40k Q3    │     (48 rows: 12mo x 4 layers)
  └─ board:      +15k Q4    ┘
                                         │
-     [Approve]                     dbt build
+     [Lock cycle]                  dbt build
                                         │
                                         ▼
                                  gold_spread_budget             =EPM("USMF",2025,5,
@@ -195,7 +195,7 @@ Budget Input doc
 
 ## Forecast Uses the Same Structure
 
-The Budget Input doctype handles both budget and forecast. The `scenario_id` field links to a Scenario Definition where `scenario_type` = `budget` or `forecast`. Everything else — layers, workflow, roles, Excel retrieval — works identically:
+The budget chain (Budget Cycle → Budget Sheet → Budget Line) handles both budget and forecast. The cycle's `scenario_id` field links to a Scenario Definition where `scenario_type` = `budget` or `forecast`. Everything else — layers, cycle locking, roles, Excel retrieval — works identically:
 
 | Formula | What It Returns |
 |:--------|:----------------|
@@ -211,9 +211,9 @@ The Budget Input doctype handles both budget and forecast. The `scenario_id` fie
 | Principle | Detail |
 |:----------|:-------|
 | **Layers are additive** | No separate "final" row — the sum across layers IS the final budget |
-| **Only Approved budgets sync** | Draft and Submitted stay in Frappe only — no stale data in ClickHouse |
+| **Only locked cycles sync** | Open-cycle edits stay in Frappe only — no stale data in ClickHouse |
 | **dbt always aggregates** | `gold_spread_budget` returns one `period_amount` per period (sum of all layers) |
 | **EPM() returns the aggregate** | Excel users see the effective budget, not individual layers |
-| **Full audit trail** | Raw layer data persists in `gold.budget_monthly_input` — query by layer for reporting |
+| **Full audit trail** | Raw layer data persists in `epm_gold.budget_monthly_input` — query by layer for reporting |
 | **Role-based editing** | Each layer locked to its role; System Manager can edit all |
-| **Budget = Forecast** | Same doctype, same layers, same workflow — distinguished by scenario_id |
+| **Budget = Forecast** | Same doctypes, same layers, same cycle locking — distinguished by the cycle's scenario_id |

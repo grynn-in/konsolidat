@@ -1,6 +1,6 @@
 # POST budget_save
 
-Save a single budget line — creates or updates a Budget Input document in Draft status.
+Save a single budget line — creates or updates Budget Line rows in the matching (cycle × entity × layer) Budget Sheet(s).
 
 ## Endpoint
 
@@ -34,7 +34,7 @@ JSON object with the following fields:
 
 ## Upsert Behavior
 
-The endpoint upserts by the unique key `(scenario_id, data_area_id, fiscal_year, main_account)`. If a matching Budget Input document exists, its period rows are replaced. Otherwise, a new document is created.
+The endpoint resolves the **Budget Cycle** for `(scenario_id, fiscal_year)` — auto-created **Open** if absent — then writes each period into the **Budget Sheet** for `(cycle, data_area_id, layer)`, creating the sheet if new. A payload mixing layers fans out across sheets. Within a sheet, the **Budget Line** is matched by `(main_account, dimensions)`; only the supplied periods are touched — unspecified months on an existing line are preserved. Writes are refused once the cycle is **Locked**.
 
 ## Example
 
@@ -61,10 +61,13 @@ curl -X POST http://localhost:8069/api/method/konsol.api.budget_save \
 ```json
 {
   "message": {
-    "name": "BUD-BUDGET_2025-USMF-2025-6100"
+    "sheets": ["BSHT-bcyc-budget-2025-2025-usmf-base-1a2b3c4d"],
+    "name": "BSHT-bcyc-budget-2025-2025-usmf-base-1a2b3c4d"
   }
 }
 ```
+
+`sheets` lists every Budget Sheet the payload touched (one per layer); `name` is the first for backward compatibility. Sheet names are digest-suffixed (`BSHT-<cycle>-<entity>-<layer>-<sha8>`).
 
 ## Error Responses
 

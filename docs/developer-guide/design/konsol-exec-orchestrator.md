@@ -2,6 +2,8 @@
 
 **Status:** Proposed · **Scope:** konsol app (`konsol-exec` SPA + `control_api.py` + pipeline doctypes) · **Related:** konsol#55 (year selector), konsolidat#91 (FX surfacing), konsolidat#109/#110/#111 (data-quality follow-ups)
 
+> **Naming updated 2026-07:** the doctypes proposed here shipped and were then renamed — "Pipeline Definition" is now the **Pipeline** doctype, its template steps are **Pipeline Step** (formerly "Step Definition"), and the per-run execution rows are **Run Step**. "Close Run" is now **Period Close**. This doc uses the current names.
+
 ## Context
 
 The data platform runs a real pipeline: **D365 → Airbyte → ClickHouse `epm_raw` → dbt (staging→bronze→silver→gold) → consolidation/close → Cube/Excel**. But `konsol-exec` today is a *launcher*, not an *orchestrator*: four hardcoded process cards (`PROCESSES` = budgeting / forecasting / consolidation / assertions) — budgeting/forecasting/consolidation route through `run_governed_build` (via `build_scope`), close/assertions through `trigger_close_run` — each firing **one** backend function and streaming a single log. There is:
@@ -23,10 +25,10 @@ This doc proposes turning `konsol-exec` into a first-class orchestrator modeled 
 ### Data model (Frappe doctypes)
 
 ```
-Pipeline Definition  (the DAG template)
-   └─< Step Definition        type · depends_on · default params
+Pipeline             (the DAG template)
+   └─< Pipeline Step         type · depends_on · default params
 
-Pipeline Run         (one execution = definition + run params)
+Pipeline Run         (one execution = pipeline + run params)
    ├─ params:  fiscal_year · fiscal_period · scope · full_refresh · skip_sync
    └─< Run Step               type · status · depends_on · params
                               · log · started_at · ended_at · rows · retry_count
@@ -37,7 +39,7 @@ Resource  ──  Airbyte Connection | dbt Project | ClickHouse Target
 
 | Doctype | Role | Status today |
 |---|---|---|
-| **Pipeline Definition** | DAG template: ordered steps + dependencies + default params | new |
+| **Pipeline** | DAG template: ordered steps + dependencies + default params | new |
 | **Pipeline Run** | run aggregate + params | exists, thin → promoted |
 | **Run Step** | per-step status/logs/deps/retry/params | **new — the missing core** |
 | **Resource / Connection** | Airbyte conn, dbt project, CH target | scattered → formalized |
@@ -68,7 +70,7 @@ close_assertions   signoff(gate)   cube_refresh   sql / script
 ### Executor
 
 A worker process (`konsol.orchestrator.run`) that:
-1. resolves the Run's DAG from its Definition + params,
+1. resolves the Run's DAG from its Pipeline + params,
 2. walks steps in dependency order, running each handler in a subprocess (dbt) or client (Airbyte),
 3. checkpoints each Run Step's status and streams logs via `frappe.publish_realtime`,
 4. supports **resume-from-step**, **retry-failed-step**, **cancel**, and a **per-scope concurrency lock** (today's binary guard in `trigger_close_run` generalized),
@@ -100,7 +102,7 @@ A worker process (`konsol.orchestrator.run`) that:
 ```
 
 - **Param form** to launch (year/period/scope/flags) → kills #55.
-- **DAG / timeline** with per-step status + **live per-step logs** (the Press "build steps" view, for real — `close_run.js` already aspires to this).
+- **DAG / timeline** with per-step status + **live per-step logs** (the Press "build steps" view, for real — `period_close.js` already aspires to this).
 - **Retry / resume / cancel** per step; **run history**; **schedules** (Frappe Scheduler cron); **Connections** management view.
 
 ## How this subsumes the current gaps
@@ -126,7 +128,7 @@ A worker process (`konsol.orchestrator.run`) that:
 ## Phasing
 
 - **P1 — Step engine over the existing pipeline.** Run Step + executor; decompose today's sync→dbt→close into visible, retryable, parameterized steps with live logs (year/period/scope/full-refresh/skip-sync). Unifies the three buttons and delivers ~all the missing control. *Highest value.*
-- **P2 — Editable Pipeline Definitions, schedules, resume-from-step.** DAG authoring; cron triggers; restart a failed run from any step.
+- **P2 — Editable Pipelines, schedules, resume-from-step.** DAG authoring; cron triggers; restart a failed run from any step.
 - **P3 — Lineage/metrics, Connection-management UI, FX surfacing (#91 B/C), multi-ERP.** Per-step row/duration metrics + lineage; managed resources; surface gold/FX; multiple ERP sources.
 
 ## Acceptance (P1)

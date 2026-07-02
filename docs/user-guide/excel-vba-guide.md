@@ -119,8 +119,8 @@ Shorthand for `=EPM(..., "period_credit", "actuals", ...)`.
 1. Formula evaluates → cell displays the amount (pass-through)
 2. VBA checks if the value changed since last save (skip-unchanged cache)
 3. If changed → `POST /api/method/konsol.api.budget_cell_save` with the parameters
-4. Server upserts a single period+layer row in the Budget Input doc (creates the doc if new)
-5. Budget Input doc stays in **Draft** until approved via Frappe workflow
+4. Server sets that period on the matching Budget Line in the (cycle × entity × layer) Budget Sheet — creating the sheet, and an Open Budget Cycle, if new
+5. The data stays in Frappe only until the Budget Cycle is **locked** — locking syncs all its sheets to ClickHouse
 
 ```mermaid
 sequenceDiagram
@@ -153,7 +153,7 @@ Layers are **additive** — the effective budget is always the sum across all la
 | `management` | Executive overrides (e.g., Q3 launch funding) |
 | `board` | Board-level final adjustments |
 
-Any authorized user can write to any layer — the `layer` parameter is data, not security. Access to the budget module is controlled by Frappe's standard role permissions.
+Each layer is role-gated: editing a layer's Budget Sheet requires its owning role — `base` → Budget Submitter, `challenge` → Budget Controller, `management` → Budget Manager, `board` → Budget Approver (System Manager can edit all).
 
 See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers build up across 12 periods.
 
@@ -192,12 +192,11 @@ A common pattern: read the current approved budget on one row, write your adjust
 
 #### What Happens After Save
 
-EPMSAVE creates Budget Input docs in **Draft** state. To make them live:
+EPMSAVE writes into Budget Sheets under an **Open** Budget Cycle. To make them live:
 
-1. Open Frappe Desk → Budget Input list
-2. Review the entries
-3. Click **Submit for Review** → **Approve**
-4. On approval: ClickHouse sync fires → dbt rebuild → EPM() formulas return updated values on next Ctrl+Shift+R
+1. Open Frappe Desk → Budget Sheet list and review the entries (one sheet per entity × layer)
+2. Lock the **Budget Cycle** for the scenario × year (Lists → EPM → Budget Cycle)
+3. On lock: ClickHouse sync fires → dbt rebuild → EPM() formulas return updated values on next Ctrl+Shift+R
 
 ## Measures
 
@@ -388,7 +387,7 @@ The batch mechanism means 500 EPM cells = 1 HTTP request, not 500.
 | `ClickHouse connection failed` | ClickHouse is down | Check `docker ps` for healthy container |
 | EPMSAVE not saving | Not logged in | Run EPM_Login first — EPMSAVE skips if no session |
 | EPMSAVE saving duplicates | Value unchanged but re-saving | Check save cache — run EPM_ToggleLog to verify skip behavior |
-| Budget not visible in EPM_BUDGET | Not approved yet | Budget Input docs start as Draft — approve in Frappe Desk first |
+| Budget not visible in EPM_BUDGET | Cycle not locked yet | Budget Sheets sync to ClickHouse when their Budget Cycle is locked — lock it in Frappe Desk first |
 
 ## Next Steps
 

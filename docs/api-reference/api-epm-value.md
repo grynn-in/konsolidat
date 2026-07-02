@@ -26,7 +26,7 @@ All parameters are passed as query string arguments.
 | `scenario` | string | No | `actuals` | Resolves the fact via its `scenario_key` when `fact` is not supplied. |
 | `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to facts whose `has_scenario_id` flag is set (e.g. `budget_input`). When empty, returns the sum across all scenario IDs. |
 
-> **Dynamic schema (Phase 2.4):** dimensions, measures, and facts are registry-driven (Frappe `Dimension`, `Measure`, `Fact Table` doctypes). Adding a dimension/measure/fact is a registry operation — the API requires no code change. There is no fixed scenario→table map; `fact` (or legacy `scenario`) resolves to a `Fact Table.clickhouse_table`.
+> **Dynamic schema (Phase 2.4):** dimensions, measures, and facts are registry-driven (Frappe `Dimension`, `Measure`, `Dataset` doctypes). Adding a dimension/measure/fact is a registry operation — the API requires no code change. There is no fixed scenario→table map; `fact` (or legacy `scenario`) resolves to a `Dataset.clickhouse_table`.
 
 ## Period Resolution
 

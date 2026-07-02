@@ -6,7 +6,7 @@
 }}
 
 {# Allocation movements re-grained to trial-balance shape so K.EPM can read the
-   allocation layer SEPARATELY from actuals (Fact Table scenario_key 'allocated').
+   allocation layer SEPARATELY from actuals (Dataset scenario_key 'allocated').
 
    alloc_results is at a rule/source->target grain (no main_account). Here each
    allocation posts two signed legs at TB grain:
