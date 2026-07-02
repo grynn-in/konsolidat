@@ -18,7 +18,7 @@
    Budget LAYERS (base / challenge / management / board): the final budget is the
    sum of all layers. All layers are carried here as separate rows with a `layer`
    column; K.EPM sums them by default (no layer filter) and filters to one when a
-   layer is passed (Fact Table.has_layer). Annual-spread inputs have no layer of
+   layer is passed (Dataset.has_layer). Annual-spread inputs have no layer of
    their own (the seed predates layering) and are treated as the 'base' layer. #}
 
 with annual_input as (

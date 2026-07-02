@@ -1,6 +1,8 @@
 # Konsol — DocType Map
 
-All **40 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; saves regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry.
+All **42 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; publishes regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry.
+
+> **Naming updated 2026-07** (doctype-naming cleanup): Pipeline Step → **Run Step**, Step Definition → **Pipeline Step**, Pipeline Definition → **Pipeline**, Build Domain → **Build Scope**, Gold Model → **Build Model**, Close Run → **Period Close**, Pipeline Build Request → **Build Approval**, Fact Table (+ children) → **Dataset** (+ Dataset Measure / Dataset Dimension). **Budget Input** and **Budget Input Child** were retired — the live budget chain is Budget Cycle → Budget Sheet → Budget Line.
 
 ```
 ERP SOURCES (D365 F&O / ERPNext)
@@ -24,27 +26,34 @@ ERP SOURCES (D365 F&O / ERPNext)
     ◦ Connector Legal Entity        ◦ Connector Dimension Map
 ● Connector Health
     └ Last Error
-● Pipeline Run
-    ├ Extract (Airbyte)  ├ Transform (dbt)  ├ Steps  ├ Log  └ Error Details
+● Pipeline
+    └ Steps
     ◦ Pipeline Step
-● Pipeline Build Request
+● Pipeline Run
+    ├ Run Parameters  ├ Extract (Airbyte)  ├ Transform (dbt)
+    ├ Steps  ├ Log  └ Error Details
+    ◦ Run Step
+● Pipeline Schedule
+    └ Schedule State
+● Build Approval
     ├ People  ├ Airbyte Sync Info  ├ Timing  └ Build Output
-● Build Domain
-● Gold Model
+● Build Scope
+● Build Model
 ⚙ EPM Settings
     ├ ClickHouse Connection   ├ Airbyte Connection
     ├ D365 F&O Budget Write-Back (Legacy)   ├ Airbyte Sync Status
-    ├ dbt Configuration       └ Access Control
+    ├ dbt Configuration       ├ Access Control   └ Group Reporting
 
 ═══════════════ 2. EPM MODEL / REGISTRY ═════════════════════ module: epm ══
 ● Dimension                 └ Lifecycle
 ● Dimension Mapping         └ Lifecycle
 ● Measure                   └ Lifecycle
-● Fact Table
+● Dataset
     ├ Measures & Dimensions  ├ Generation & Grain
     ├ Measure Reroute        └ Lifecycle
-    ◦ Fact Table Measure            ◦ Fact Table Dimension
+    ◦ Dataset Measure               ◦ Dataset Dimension
 ● Fiscal Period
+● Cash Flow Category        └ Lifecycle
 ● Scenario Definition
 ● Reporting Hierarchy       └ Lifecycle
 ● Reporting Hierarchy Member
@@ -54,9 +63,6 @@ ERP SOURCES (D365 F&O / ERPNext)
 ● Budget Sheet
     ├ Lines  └ D365 Write-Back
     ◦ Budget Line
-● Budget Input
-    ├ Spread  ├ Monthly Periods  └ D365 Write-Back
-    ◦ Budget Input Child
 ● Spread Profile
 👻 Budget Cost Center
 👻 Main Account Category
@@ -78,7 +84,7 @@ ERP SOURCES (D365 F&O / ERPNext)
     ├ Entity Patterns  ├ Unrealized Profit (PRD-15)  └ Details
 ● Consolidation Adjustment
     ├ Amounts  ├ Details  └ Workflow (PRD-16)
-● Close Run
+● Period Close
     ├ Summary  ├ Sign-off  ├ Timing  ├ Assertions  └ Log
     ◦ Assertion Result
 ```
@@ -93,41 +99,43 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Connector Legal Entity | pipeline | child | Legal entity_ids the connector serves |
 | Connector Dimension Map | pipeline | child | Per-ERP dimension → column mappings |
 | Connector Health | pipeline | DOC | Derived per-connector sync-health snapshot |
-| Pipeline Run | pipeline | DOC | Creates + enqueues a background pipeline (Airbyte+dbt) job |
-| Pipeline Step | pipeline | child | Steps within a pipeline/build run |
-| Pipeline Build Request | pipeline | DOC | Governed dbt build workflow (Draft → Approved → Built) |
-| Build Domain | pipeline | DOC | Build-Governance domains (single source of truth) |
-| Gold Model | pipeline | DOC | Maps each gold dbt model to a Build domain |
+| Pipeline | pipeline | DOC | DAG template: ordered steps + dependencies + default params |
+| Pipeline Step | pipeline | child | Template step of a Pipeline (type, depends_on, default params) |
+| Pipeline Run | pipeline | DOC | One execution of a Pipeline (params + status), enqueued as a background job |
+| Run Step | pipeline | child | Per-run execution step: status, log, timing, retries |
+| Pipeline Schedule | pipeline | DOC | Cron trigger that launches a Pipeline on a schedule |
+| Build Approval | pipeline | DOC | Approval gate for governed dbt builds (Draft → Pending Review → Approved) |
+| Build Scope | pipeline | DOC | Build-Governance scopes (single source of truth) |
+| Build Model | pipeline | DOC | Maps each gold dbt model to a Build Scope |
 | EPM Settings | pipeline | Single | Global config: ClickHouse, Airbyte, dbt path, access control |
 | Dimension | epm | DOC | EPM dimension config (metadata → dbt vars + ClickHouse DDL) |
 | Dimension Mapping | epm | DOC | Crosswalk from raw ERP dimension value → canonical value |
 | Measure | epm | DOC | EPM measure config (expressions) |
-| Fact Table | epm | DOC | Registry of ClickHouse fact tables for dynamic schema |
-| Fact Table Measure | epm | child | Allowed measure for a fact table |
-| Fact Table Dimension | epm | child | Dimension for a fact table |
+| Dataset | epm | DOC | Registry of queryable ClickHouse fact datasets for dynamic schema |
+| Dataset Measure | epm | child | Allowed measure for a dataset |
+| Dataset Dimension | epm | child | Dimension for a dataset |
 | Fiscal Period | epm | DOC | Fiscal calendar config → dbt_project.yml vars |
+| Cash Flow Category | epm | DOC | Maps balance-sheet accounts to cash-flow statement lines (generates the cash_flow_categories seed) |
 | Scenario Definition | epm | DOC | Budget / forecast / other scenarios |
 | Reporting Hierarchy | epm | DOC | Management reporting trees on canonical dimensions |
 | Reporting Hierarchy Member | epm | DOC | Nodes in a reporting tree |
 | Budget Cycle | epm | DOC | Single lock gate for a scenario × fiscal year |
 | Budget Sheet | epm | DOC | One entity × layer of wide budget lines |
 | Budget Line | epm | child | Wide budget row per (main_account, dimensions) |
-| Budget Input | epm | DOC | Legacy parent for monthly budget/forecast data |
-| Budget Input Child | epm | child | Monthly budget amounts |
 | Spread Profile | epm | DOC | Allocation weights for top-down budget entry |
 | Budget Cost Center | epm | Virtual | Read-only budget permission-target proxy |
 | Main Account Category | epm | Virtual | Read-only budget permission-target proxy |
 | Allocation Rule | allocation | DOC | Cost allocation rules → ClickHouse (N-step engine) |
 | Allocation Tier | allocation | child | Tiered allocation rate bands |
 | Allocation Driver | allocation | DOC | Driver values → ClickHouse |
-| Allocation Run | allocation | DOC | Run metadata for traceability / reversibility |
+| Allocation Run | allocation | DOC | Run metadata for traceability / reversibility; on submit requests a scoped governed build (links its Build Approval) |
 | Consolidation Group | consolidation | DOC | Entity groupings, multi-level hierarchy |
 | Ownership Period | consolidation | DOC | Temporal ownership (acquisition / disposal) |
 | Historical Equity Rate | consolidation | DOC | IAS 21 historical FX rates for equity accounts |
 | IC Balance | consolidation | DOC | Intercompany sales/inventory balances (entity pairs) |
 | IC Elimination Rule | consolidation | DOC | Intercompany elimination rules |
 | Consolidation Adjustment | consolidation | DOC | Topside journals with status workflow |
-| Close Run | consolidation | DOC | Runs the dbt close-assertion suite, records each result |
+| Period Close | consolidation | DOC | Runs the dbt close-assertion suite for a fiscal period, records each result + sign-off |
 | Assertion Result | consolidation | child | One close-assertion outcome |
 
-_Counts: Pipeline 10 · EPM Model 10 · Budget 8 · Allocation 4 · Consolidation 8 = 40. Generated from konsol @ 54a9dd0._
+_Counts: Pipeline 13 · EPM Model 11 · Budget 6 · Allocation 4 · Consolidation 8 = 42. Generated from konsol @ b10702a._

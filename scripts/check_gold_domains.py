@@ -4,7 +4,7 @@
 Build Governance runs scoped builds via `dbt build --select tag:domain:<domain>`.
 A gold model with no `domain:` tag is built by NO scope (only a full build), so it
 silently goes stale; a model with an unknown domain is never selected. konsol's
-Gold Model doctype is the source of truth that generates these tags — this check
+Build Model doctype is the source of truth that generates these tags — this check
 guards the result so a model added to dbt_project.yml without a domain fails CI
 instead of disappearing from governed builds.
 
@@ -15,7 +15,7 @@ import sys
 
 import yaml
 
-# Keep in sync with konsol Build Domain fixtures / tasks.SCOPE_SELECTOR.
+# Keep in sync with konsol Build Scope fixtures / tasks.SCOPE_SELECTOR.
 KNOWN_DOMAINS = {"staging", "actuals", "scenarios", "consolidation", "reporting"}
 
 
@@ -57,7 +57,7 @@ def check(path):
     if problems:
         print("FAIL: gold model domain coverage\n")
         print("\n\n".join(problems))
-        print(f"\nRegister each gold model as a konsol 'Gold Model' doc (which "
+        print(f"\nRegister each gold model as a konsol 'Build Model' doc (which "
               f"generates its domain: tag) — do not hand-edit the generated YAML.")
         return 1
 

@@ -1,6 +1,6 @@
 # POST budget_cell_save
 
-Save a single budget cell — upserts one period+layer row in a Budget Input document. Designed for `EPMSAVE()` immediate writes from Excel.
+Save a single budget cell — sets one period on a Budget Sheet's Budget Line. Designed for `EPMSAVE()` immediate writes from Excel.
 
 ## Endpoint
 
@@ -26,10 +26,11 @@ POST /api/method/konsol.api.budget_cell_save
 
 ## Upsert Behavior
 
-Finds or creates the Budget Input document by `(scenario_id, data_area_id, fiscal_year, main_account)`, then upserts the specific period+layer row within it:
+Resolves the **Budget Cycle** for `(scenario_id, fiscal_year)` — auto-created **Open** if absent — then finds or creates the **Budget Sheet** for `(cycle, data_area_id, layer)` and sets the `fiscal_period` cell on the **Budget Line** matching `(main_account, dimensions)`:
 
-- If a row with the same `fiscal_period` + `layer` exists, its amount is updated.
-- If no matching row exists, a new period row is appended.
+- If a matching line exists, that period's amount is updated (other months are preserved).
+- If no matching line exists, a new line is appended.
+- Once the cycle is **Locked**, the write is refused.
 
 ## Example
 
@@ -54,11 +55,14 @@ curl -X POST http://localhost:8069/api/method/konsol.api.budget_cell_save \
 {
   "message": {
     "status": "ok",
-    "name": "BUD-BUDGET_2025-USMF-2025-6100",
-    "value": 15000
+    "name": "BSHT-bcyc-budget-2025-2025-usmf-base-1a2b3c4d",
+    "value": 15000,
+    "modified": "2026-07-02 10:15:00.000000"
   }
 }
 ```
+
+`name` is the Budget Sheet the cell landed in (digest-suffixed: `BSHT-<cycle>-<entity>-<layer>-<sha8>`); `modified` is the new optimistic-locking baseline — pass it back as `base_modified` on the next save of the same sheet to get a `409 conflict` payload instead of a silent overwrite when someone else changed the sheet in between.
 
 ## Error Responses
 

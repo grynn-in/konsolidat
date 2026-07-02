@@ -59,10 +59,11 @@ cmd_state() {
   echo "----- STATE -----"
   bx "cd $APP && echo HEAD=\$(git rev-parse --short HEAD 2>/dev/null) \$(git log -1 --format=%s 2>/dev/null | cut -c1-50)"
   echo "doctypes(konsol): $(mysql_site "SELECT COUNT(*) FROM tabDocType WHERE module IN ('Pipeline','EPM','Consolidation','Allocation','Budget','Data Pipeline','EPM Registry')")"
-  for dt in 'Fact Table' 'Budget Cycle' 'Budget Sheet' 'Reporting Hierarchy'; do
+  for dt in 'Dataset' 'Budget Cycle' 'Budget Sheet' 'Reporting Hierarchy'; do
     printf "  exists[%s]=%s\n" "$dt" "$(mysql_site "SELECT COUNT(*) FROM tabDocType WHERE name='$dt'")"
   done
-  echo "Budget Input rows:  $(mysql_site "SELECT COUNT(*) FROM \`tabBudget Input\`")"
+  # Budget Input was retired (doctype + tables dropped, PRD-08); 0 leftover tables = healthy.
+  echo "Budget Input:       retired (PRD-08); leftover tables: $(mysql_site "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('tabBudget Input','tabBudget Input Child')")"
   echo "Budget Sheet rows:  $(mysql_site "SELECT COUNT(*) FROM \`tabBudget Sheet\`" 2>/dev/null)"
   echo "status col(Dim):    $(mysql_site "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='tabDimension' AND column_name='status'")"
   echo "patches logged:     $(mysql_site "SELECT GROUP_CONCAT(SUBSTRING_INDEX(patch,'.',-1)) FROM \`tabPatch Log\` WHERE patch LIKE 'konsol.patches%'")"

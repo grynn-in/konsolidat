@@ -17,7 +17,7 @@
      account arg  -> main_account  = cf_line_item           (e.g. "Change in Inventory")
      measure      -> cash_flow_amount
 
-   Registered as Fact Table `cashflow` so =K.EPM("GROUP_CORP", 2024, 6,
+   Registered as Dataset `cashflow` so =K.EPM("GROUP_CORP", 2024, 6,
    "Change in Inventory", "cash_flow_amount", "cashflow") — and the K.CF()
    wrapper — read it live. #}
 

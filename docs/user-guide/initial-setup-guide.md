@@ -247,16 +247,16 @@ Define how annual amounts distribute across 12 months:
 | `EVEN` | Equal weights (1.0 each) | $1.2M annual → $100K/month |
 | `SEASONAL_RETAIL` | Q4-heavy (0.5–2.5) | $600K annual → $23K low / $117K peak |
 
-### Budget Input
+### Budget Sheets
 
-**Lists → EPM → Budget Input**
+**Lists → EPM → Budget Sheet**
 
-Enter budget lines with monthly amounts or spread profiles:
+Budget data lives in the chain **Budget Cycle → Budget Sheet → Budget Line**: one cycle per scenario × fiscal year, one sheet per entity × layer, one wide line per account + dimensions with 12 monthly period columns.
 
-1. Select **Scenario** (e.g., Budget 2025)
-2. Set **Entity**, **Account**, and **Dimensions**
-3. Either enter monthly amounts directly, or select a **Spread Profile** and enter an annual total
-4. Optionally set a **Layer** (base, challenge, management, board) for collaborative budgeting
+1. A **Budget Cycle** is auto-created Open on first save (or create one under Lists → EPM → Budget Cycle)
+2. Enter monthly amounts on a sheet's **Budget Lines** — or write cells straight from Excel with `EPMSAVE()`
+3. Each sheet carries one **Layer** (base, challenge, management, board) for collaborative budgeting
+4. **Lock the cycle** when input is final — locking syncs all sheets to ClickHouse
 
 See the [Budgeting Guide](budgeting-guide.md) and [Budget Layers](budget-layers.md) for details.
 
@@ -366,7 +366,7 @@ After the first successful run, your data is available in:
 | 8 | Allocation Rules | Lists → Allocation → Allocation Rule | If allocating costs | 10 min |
 | 9 | Allocation Drivers | Lists → Allocation → Allocation Driver | If allocating costs | 10 min |
 | 10 | Spread Profiles | Lists → EPM → Spread Profile | If budgeting | 5 min |
-| 11 | Budget Input | Lists → EPM → Budget Input | If budgeting | varies |
+| 11 | Budget Sheets | Lists → EPM → Budget Sheet | If budgeting | varies |
 | 12 | Airbyte Connection | Airbyte UI + EPM Settings | For live ERP data | 15 min |
 | 13 | Pipeline Run | Lists → Pipeline → Pipeline Run | Yes | 5 min |
 

@@ -15,9 +15,9 @@ graph LR
     SPREAD --> API[Frappe API<br/>scenario=budget]
 ```
 
-## Budget Input
+## Budget Seed Input
 
-Budget data is defined in `seeds/budget_annual_input.csv`:
+Demo/seed budget data is defined in `seeds/budget_annual_input.csv` (app-entered budgets flow through Budget Cycle → Budget Sheet → Budget Line instead — see the [Budget Layers Guide](budget-layers.md)):
 
 ```csv
 scenario_id,data_area_id,fiscal_year,main_account,dim_cost_center,dim_department,annual_amount,spread_profile_id,submitted_by
