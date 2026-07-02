@@ -132,7 +132,7 @@ These become available as the `measure` parameter in `=EPM()` formulas and the A
 
 ## Step 3: Scenarios
 
-**Lists → EPM → Scenario Definition**
+**Lists → EPM → Scenario**
 
 Scenarios tag data by its purpose — actual vs. budget vs. forecast:
 
@@ -360,7 +360,7 @@ After the first successful run, your data is available in:
 | 2 | Fiscal Periods | Lists → EPM → Fiscal Period | Yes | 5 min |
 | 3 | Dimensions | Lists → EPM → Dimension | Yes | 5 min |
 | 4 | Measures | Lists → EPM → Measure | Yes | 5 min |
-| 5 | Scenarios | Lists → EPM → Scenario Definition | Yes | 2 min |
+| 5 | Scenarios | Lists → EPM → Scenario | Yes | 2 min |
 | 6 | Consolidation Groups | Lists → Consolidation → Consolidation Group | Multi-entity only | 10 min |
 | 7 | IC Elimination Rules | Lists → Consolidation → IC Elimination Rule | Multi-entity only | 5 min |
 | 8 | Allocation Rules | Lists → Allocation → Allocation Rule | If allocating costs | 10 min |
