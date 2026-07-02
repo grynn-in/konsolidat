@@ -1,6 +1,6 @@
 # Konsol — DocType Map
 
-All **40 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; saves regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry.
+All **42 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; saves regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry. Updated doctype names as of 2026-07 (PRD-01–11).
 
 ```
 ERP SOURCES (D365 F&O / ERPNext)
@@ -26,11 +26,11 @@ ERP SOURCES (D365 F&O / ERPNext)
     └ Last Error
 ● Pipeline Run
     ├ Extract (Airbyte)  ├ Transform (dbt)  ├ Steps  ├ Log  └ Error Details
-    ◦ Pipeline Step
-● Pipeline Build Request
+    ◦ Run Step
+● Build Approval
     ├ People  ├ Airbyte Sync Info  ├ Timing  └ Build Output
-● Build Domain
-● Gold Model
+● Build Scope
+● Build Model
 ⚙ EPM Settings
     ├ ClickHouse Connection   ├ Airbyte Connection
     ├ D365 F&O Budget Write-Back (Legacy)   ├ Airbyte Sync Status
@@ -40,10 +40,10 @@ ERP SOURCES (D365 F&O / ERPNext)
 ● Dimension                 └ Lifecycle
 ● Dimension Mapping         └ Lifecycle
 ● Measure                   └ Lifecycle
-● Fact Table
+● Dataset
     ├ Measures & Dimensions  ├ Generation & Grain
     ├ Measure Reroute        └ Lifecycle
-    ◦ Fact Table Measure            ◦ Fact Table Dimension
+    ◦ Dataset Measure            ◦ Dataset Dimension
 ● Fiscal Period
 ● Scenario Definition
 ● Reporting Hierarchy       └ Lifecycle
@@ -54,9 +54,6 @@ ERP SOURCES (D365 F&O / ERPNext)
 ● Budget Sheet
     ├ Lines  └ D365 Write-Back
     ◦ Budget Line
-● Budget Input
-    ├ Spread  ├ Monthly Periods  └ D365 Write-Back
-    ◦ Budget Input Child
 ● Spread Profile
 👻 Budget Cost Center
 👻 Main Account Category
@@ -78,7 +75,7 @@ ERP SOURCES (D365 F&O / ERPNext)
     ├ Entity Patterns  ├ Unrealized Profit (PRD-15)  └ Details
 ● Consolidation Adjustment
     ├ Amounts  ├ Details  └ Workflow (PRD-16)
-● Close Run
+● Period Close
     ├ Summary  ├ Sign-off  ├ Timing  ├ Assertions  └ Log
     ◦ Assertion Result
 ```
@@ -94,17 +91,17 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Connector Dimension Map | pipeline | child | Per-ERP dimension → column mappings |
 | Connector Health | pipeline | DOC | Derived per-connector sync-health snapshot |
 | Pipeline Run | pipeline | DOC | Creates + enqueues a background pipeline (Airbyte+dbt) job |
-| Pipeline Step | pipeline | child | Steps within a pipeline/build run |
-| Pipeline Build Request | pipeline | DOC | Governed dbt build workflow (Draft → Approved → Built) |
-| Build Domain | pipeline | DOC | Build-Governance domains (single source of truth) |
-| Gold Model | pipeline | DOC | Maps each gold dbt model to a Build domain |
+| Run Step | pipeline | child | Steps within a pipeline/build run |
+| Build Approval | pipeline | DOC | Governed dbt build workflow (Draft → Approved → Built) |
+| Build Scope | pipeline | DOC | Build-Governance domains (single source of truth) |
+| Build Model | pipeline | DOC | Maps each gold dbt model to a Build Scope |
 | EPM Settings | pipeline | Single | Global config: ClickHouse, Airbyte, dbt path, access control |
 | Dimension | epm | DOC | EPM dimension config (metadata → dbt vars + ClickHouse DDL) |
 | Dimension Mapping | epm | DOC | Crosswalk from raw ERP dimension value → canonical value |
 | Measure | epm | DOC | EPM measure config (expressions) |
-| Fact Table | epm | DOC | Registry of ClickHouse fact tables for dynamic schema |
-| Fact Table Measure | epm | child | Allowed measure for a fact table |
-| Fact Table Dimension | epm | child | Dimension for a fact table |
+| Dataset | epm | DOC | Registry of ClickHouse fact tables for dynamic schema |
+| Dataset Measure | epm | child | Allowed measure for a dataset |
+| Dataset Dimension | epm | child | Dimension for a dataset |
 | Fiscal Period | epm | DOC | Fiscal calendar config → dbt_project.yml vars |
 | Scenario Definition | epm | DOC | Budget / forecast / other scenarios |
 | Reporting Hierarchy | epm | DOC | Management reporting trees on canonical dimensions |
@@ -112,8 +109,6 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Budget Cycle | epm | DOC | Single lock gate for a scenario × fiscal year |
 | Budget Sheet | epm | DOC | One entity × layer of wide budget lines |
 | Budget Line | epm | child | Wide budget row per (main_account, dimensions) |
-| Budget Input | epm | DOC | Legacy parent for monthly budget/forecast data |
-| Budget Input Child | epm | child | Monthly budget amounts |
 | Spread Profile | epm | DOC | Allocation weights for top-down budget entry |
 | Budget Cost Center | epm | Virtual | Read-only budget permission-target proxy |
 | Main Account Category | epm | Virtual | Read-only budget permission-target proxy |
@@ -127,7 +122,7 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | IC Balance | consolidation | DOC | Intercompany sales/inventory balances (entity pairs) |
 | IC Elimination Rule | consolidation | DOC | Intercompany elimination rules |
 | Consolidation Adjustment | consolidation | DOC | Topside journals with status workflow |
-| Close Run | consolidation | DOC | Runs the dbt close-assertion suite, records each result |
+| Period Close | consolidation | DOC | Runs the dbt close-assertion suite, records each result |
 | Assertion Result | consolidation | child | One close-assertion outcome |
 
-_Counts: Pipeline 10 · EPM Model 10 · Budget 8 · Allocation 4 · Consolidation 8 = 40. Generated from konsol @ 54a9dd0._
+_Counts: Pipeline 10 · EPM Model 10 · Budget 7 · Allocation 4 · Consolidation 8 = 42 (PRD-08: retired Budget Input; PRD-09 renamed Fact Table → Dataset; PRD-04/05/06/07 renamed Build Domain/Model/Close Run/Build Approval; PRD-01-03 renamed Pipeline hierarchy). Generated from konsol @ 6596534._
