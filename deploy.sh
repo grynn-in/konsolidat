@@ -308,7 +308,28 @@ done
 # ---------------------------------------------------------------------------
 echo ""
 info "Step 5/5: Running dbt build (seeding demo data + building gold models)..."
-docker compose --profile setup run --rm dbt_init || warn "dbt build had warnings (this is normal for demo data)"
+# A bare `|| warn` here swallowed everything, including a Compilation Error that
+# meant dbt parsed nothing and built no models at all — while the deploy still
+# printed "Konsolidat is ready!". Data-quality test failures on demo data are
+# genuinely tolerable; a build that produced nothing is not. Tell them apart.
+DBT_LOG="$(mktemp -t konsolidat-dbt)"
+docker compose --profile setup run --rm dbt_init 2>&1 | tee "$DBT_LOG"
+DBT_STATUS=${PIPESTATUS[0]}   # exit status of dbt, not of tee
+if [ "$DBT_STATUS" -eq 0 ]; then
+    ok "dbt build completed"
+else
+    if grep -qE "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG"; then
+        err "dbt build FAILED — no models were built. Deploy aborted."
+        echo ""
+        grep -E -A3 "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG" | head -20
+        echo ""
+        err "The stack is up but the warehouse is stale. Fix the error above and re-run."
+        rm -f "$DBT_LOG"
+        exit 1
+    fi
+    warn "dbt build had test failures (tolerated for demo data); models were built"
+fi
+rm -f "$DBT_LOG"
 
 # ---------------------------------------------------------------------------
 # Done!
