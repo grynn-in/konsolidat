@@ -11,15 +11,9 @@ with direct as (
         to_currency,
         valid_from,
         valid_to,
-        -- Rates arrive TRUE from staging. The D365 adapter resolves
-        -- ConversionFactor at the source (#138); the ERPNext adapter always
-        -- emitted true rates. Silver must not scale — the old unconditional
-        -- /100 here, on top of staging's conditional x100, made every
-        -- 'Hundred'-tagged rate (and every ERPNext rate) wrong by two orders
-        -- of magnitude.
-        -- toFloat64: the old /100.0 made this Float64 as a side effect, and the
-        -- inverse CTE below (1.0 / rate) is Float64 — keep the UNION's type
-        -- explicit instead of relying on arithmetic accidents.
+        -- Contract: rates arrive TRUE from staging and no layer after staging
+        -- may scale one (#138). toFloat64 keeps the UNION's type aligned with
+        -- the inverse CTE (1.0 / rate) below.
         toFloat64(exchange_rate) as exchange_rate,
         exchange_rate_type,
         recid

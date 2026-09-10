@@ -81,13 +81,13 @@ Dimension value master with active status.
 
 ## silver_exchange_rates
 
-Cleaned exchange rates. D365 stores rates multiplied by 100; this model divides by 100.
+Cleaned exchange rates, held as TRUE rates. Scaling conventions (D365's `ConversionFactor`) are resolved once in the source adapter; no layer after staging scales a rate (#138).
 
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
 | `from_currency` | String | Source currency code |  |
 | `to_currency` | String | Target currency code |  |
-| `exchange_rate` | Float64 | Rate (D365 value ÷ 100) | not_null |
+| `exchange_rate` | Float64 | TRUE rate (scaling resolved in the source adapter, #138) | not_null |
 | `exchange_rate_type` | String | Rate type (e.g., Default) |  |
 | `valid_from` | Date | Rate effective start date |  |
 | `valid_to` | Date | Rate effective end date |  |

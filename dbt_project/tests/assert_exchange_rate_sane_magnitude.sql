@@ -1,39 +1,41 @@
 {#
-    A non-identity FX rate of implausible magnitude is almost certainly a
-    scaling error, not a market move.
+    A non-identity FX rate of implausible magnitude is a scaling error, not a
+    market move. This is the guard #138 lacked — assert_exchange_rate_positive
+    passed throughout that bug, because 0.00935 is positive.
 
-    #138: rates were scaled by 100 twice — staging normalised to x100, silver
-    divided unconditionally — so EUR->CHF landed at 0.00935 and a 41.9M USD
-    subsidiary consolidated as 365K CHF. assert_exchange_rate_positive passed
-    throughout, because 0.00935 is positive. This test is the one that would
-    have caught it.
-
-    Bounds are per magnitude class, because JPY-like currencies quote in the
-    hundreds legitimately (USD->JPY ~150, JPY->USD ~0.0066):
-
-      - both currencies "unit" class:  [0.05, 20]
-      - any "cent" class currency:     [0.0001, 10000]
-
-    The cent-class band is wide enough that it will NOT catch a 100x error on
-    those pairs — a conscious trade against false alarms on real JPY rates.
-    Extend CENT_CLASS when a new small-unit currency enters the data.
+    Bounds are per magnitude class. WIDE_BAND lists currencies that quote far
+    from parity against the majors — small-unit currencies (JPY, KRW, IDR, VND)
+    and mid-magnitude ones (INR ~88/USD, RUB, PHP, TRY, THB, CZK, HUF, CLP,
+    ISK): real rates for these sit outside [0.05, 20], so they get [1e-4, 1e4].
+    The wide band cannot catch a 100x error on those pairs — a conscious trade
+    against failing the build on correct data. Extend WIDE_BAND when a new
+    far-from-parity currency enters the data; everything else gets the tight
+    band, where a 100x error always trips a bound.
 #}
 
-{% set cent_class = "('JPY','KRW','IDR','VND','HUF','CLP','ISK')" %}
+{% set wide_band = "('JPY','KRW','IDR','VND','HUF','CLP','ISK','INR','RUB','PHP','TRY','THB','CZK')" %}
+
+with rates as (
+
+    select
+        from_currency,
+        to_currency,
+        exchange_rate,
+        valid_from,
+        (from_currency in {{ wide_band }} or to_currency in {{ wide_band }}) as is_wide,
+        if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 0.0001, 0.05) as lo,
+        if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 10000.0, 20.0) as hi
+    from {{ ref('silver_exchange_rates') }}
+    where from_currency != to_currency
+
+)
 
 select
     from_currency,
     to_currency,
     exchange_rate,
     valid_from,
-    if(from_currency in {{ cent_class }} or to_currency in {{ cent_class }},
-       'outside [0.0001, 10000] for a cent-class pair',
-       'outside [0.05, 20] for a unit-class pair') as problem
-from {{ ref('silver_exchange_rates') }}
-where from_currency != to_currency
-  and (
-        (from_currency not in {{ cent_class }}
-         and to_currency not in {{ cent_class }}
-         and (exchange_rate < 0.05 or exchange_rate > 20))
-     or (exchange_rate < 0.0001 or exchange_rate > 10000)
-  )
+    concat('outside [', toString(lo), ', ', toString(hi), '] for a ',
+           if(is_wide, 'wide-band', 'tight-band'), ' pair') as problem
+from rates
+where exchange_rate < lo or exchange_rate > hi

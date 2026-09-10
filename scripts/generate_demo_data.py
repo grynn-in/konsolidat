@@ -378,6 +378,11 @@ w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Closing', 'Month-end closing rat
 w(f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, 'Average', 'Monthly average rate');")
 
 # ── Exchange Rates ────────────────────────────────────────────────
+# 'Hundred' rows are quoted per 100 units of from-currency, exactly as a real
+# D365 export encodes them (100 USD = 85.50 CHF -> Rate 85.5). The staging
+# adapter divides 'Hundred' rows by 100; nothing downstream scales (#138).
+# This file once emitted TRUE rates tagged 'Hundred', which is the encoding
+# mismatch that made the old double-scaling look plausible.
 section("Exchange Rates (Monthly CHF/USD and CHF/EUR)")
 w("INSERT INTO epm_raw.exchange_rates VALUES")
 rows = []
@@ -400,7 +405,7 @@ for month_idx in range(12):
             r = round(usd_rate * 0.998, 4)
         rows.append(
             f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
-            f"{r}, {val(end)}, {val(start)}, 'CHF', 'USD', {val(rtype)}, 'Hundred')"
+            f"{round(r * 100, 2)}, {val(end)}, {val(start)}, 'CHF', 'USD', {val(rtype)}, 'Hundred')"
         )
 
     # EUR → CHF rates
@@ -413,7 +418,7 @@ for month_idx in range(12):
             r = round(eur_rate * 0.997, 4)
         rows.append(
             f"  ({val(uid())}, '{NOW}', '{META}', {GEN}, "
-            f"{r}, {val(end)}, {val(start)}, 'CHF', 'EUR', {val(rtype)}, 'Hundred')"
+            f"{round(r * 100, 2)}, {val(end)}, {val(start)}, 'CHF', 'EUR', {val(rtype)}, 'Hundred')"
         )
 w(",\n".join(rows) + ";")
 
@@ -1123,11 +1128,10 @@ for month_idx in range(12):
     start = f"2024-{m:02d}-01"
     end = "2024-12-31" if m == 12 else f"2024-{m+1:02d}-01"
     # ConversionFactor: JPY quoted per Hundred (Yen amounts large), others per One.
-    # The D365 adapter (stg_d365_fo__exchange_rates) scales 'One'-factor rates
-    # ×100 into the canonical ×100 store but passes 'Hundred'-factor rates
-    # through unscaled, and silver_exchange_rates then divides everything by 100.
-    # So a 'Hundred' rate must already be quoted per 100 units: store base×100
-    # for JPY so the round-trip yields the true per-1 rate (1 JPY ≈ 0.0068 USD).
+    # The D365 adapter divides 'Hundred' rows by 100 and passes 'One' rows
+    # through as true rates; nothing downstream scales (#138). So a 'Hundred'
+    # row stores base×100 (the per-100 quote: 100 JPY = 0.68 USD -> Rate 0.68)
+    # and a 'One' row stores the true rate directly.
     for from_ccy, table in [("USD", CX_FX_USD_USD), ("EUR", CX_FX_EUR_USD),
                             ("GBP", CX_FX_GBP_USD), ("JPY", CX_FX_JPY_USD)]:
         base = table[month_idx]

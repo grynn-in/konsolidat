@@ -41,7 +41,7 @@ models:
     description: "Clean dimension values with active status"
 
   - name: silver_exchange_rates
-    description: "Cleaned exchange rates (D365 rate / 100)"
+    description: "Cleaned exchange rates — TRUE rates; scaling is resolved once in the source adapter (D365 ConversionFactor, #138) and no later layer may scale"
     columns:
       - name: exchange_rate
         tests:

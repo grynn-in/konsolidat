@@ -117,7 +117,7 @@ Exchange rate data.
 |--------|------|-------------|
 | `from_currency` | String | Source currency |
 | `to_currency` | String | Target currency |
-| `exchange_rate` | Float64 | Rate (D365 stores × 100) |
+| `exchange_rate` | Decimal(38,12) | TRUE rate (D365 `ConversionFactor` resolved in staging, #138) |
 | `valid_from` | Date | Effective start |
 | `valid_to` | Date | Effective end |
 
