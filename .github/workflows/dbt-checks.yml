@@ -28,3 +28,26 @@ jobs:
       - run: pip install pyyaml
       - name: Every gold model has a known Build Governance domain
         run: python scripts/check_gold_domains.py dbt_project/dbt_project.yml
+
+  dbt-parse:
+    name: dbt project parses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Pinned to what the running stack installs (docker/frappe/Dockerfile).
+      - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
+      # No connection needed: parse compiles the DAG without touching
+      # ClickHouse, and profiles.yml's dev target defaults every env var.
+      #
+      # This is the check that was missing when the whole build silently
+      # stopped producing models (#139): a Compilation Error — an enabled flag
+      # disagreeing with a ref, a model renamed but still referenced, a stray
+      # file with a space in its name — fails here instead of being discovered
+      # on a live stack that had been stale for hours.
+      - name: dbt parse
+        run: >
+          dbt parse --no-partial-parse
+          --profiles-dir dbt_project --project-dir dbt_project
