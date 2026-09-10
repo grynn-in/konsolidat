@@ -68,3 +68,49 @@ left join {{ ref('entity_fiscal_calendars') }} as efc
 left join fiscal_dates as fp
     on gae.accounting_date = fp.calendar_date
     and fp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
+
+{# F8: submitted trial balances enter the ledger flow HERE, as one GL-shaped
+   row per account. A submission is already at trial-balance grain (period
+   totals per account), which is exactly what gold_trial_balance aggregates GL
+   entries down to — so shaping each claimed row as a single synthetic entry
+   lets every downstream model (consolidation, variance, cash flow, the
+   var-driven measures) work unchanged, with no fork in the gold layer.
+
+   Only CLAIMED batches reach bronze_trial_balance_submissions (the control-
+   table join), so cancellation removes a submission from here without any
+   delete. Column list and ORDER mirror the select above exactly — UNION ALL
+   is positional. #}
+
+union all
+
+select
+    toInt64(cityHash64(tbs.batch_id, tbs.main_account)) as recid,
+    tbs.data_area_id as data_area_id,
+    makeDate(tbs.fiscal_year, tbs.fiscal_period, 1) as accounting_date,
+    tbs.fiscal_year as fiscal_year,
+    tbs.fiscal_period as fiscal_period,
+    tbs.main_account as main_account,
+    ma.account_name as account_name,
+    ma.account_type_name as account_type_name,
+    ma.is_balance_sheet as is_balance_sheet,
+    ma.is_pnl as is_pnl,
+    tbs.debit_amount - tbs.credit_amount as accounting_currency_amount,
+    tbs.debit_amount - tbs.credit_amount as reporting_currency_amount,
+    tbs.debit_amount - tbs.credit_amount as transaction_currency_amount,
+    '' as transaction_currency_code,
+    {# a TB row carries explicit debit and credit columns — no sign derivation #}
+    tbs.credit_amount as credit_amount,
+    tbs.debit_amount as debit_amount,
+    'Trial Balance Submission' as posting_type,
+    tbs.description as description,
+    {% for d in var('dimensions') %}
+    '' as {{ d.name }}{{ ',' if not loop.last }}
+    {%- endfor %},
+    concat('TBS-', tbs.batch_id) as journal_number,
+    'Trial Balance Submission' as journal_category,
+    tbs.submission_name as document_number,
+    makeDate(tbs.fiscal_year, tbs.fiscal_period, 1) as document_date,
+    '' as posting_layer
+from {{ ref('bronze_trial_balance_submissions') }} as tbs
+left join {{ ref('silver_main_accounts') }} as ma
+    on tbs.main_account = ma.main_account_id

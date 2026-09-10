@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: submission_raw
+    description: >
+      Trial balances landed by konsol's Trial Balance Submission doctype (F8) —
+      the intake for entities without an ERP connector. Raw rows carry a
+      batch_id; the control table holds one row per CLAIMED batch, written by
+      on_submit and deleted by on_cancel. ClickHouse has no transactions, so
+      the claim is the commit point: bronze reads raw INNER JOIN control and a
+      crash mid-landing leaves rows nobody ever reads (konsol reaps them after
+      seven days). Both tables are created by the doctype on first use and by
+      the on-run-start hook for fresh installs.
+    database: epm_raw
+    schema: ""
+    tables:
+      - name: trial_balance_submissions
+        loaded_at_field: submitted_at
+      - name: trial_balance_submission_control
+        loaded_at_field: claimed_at
