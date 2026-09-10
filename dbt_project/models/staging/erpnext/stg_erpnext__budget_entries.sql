@@ -1,3 +1,11 @@
+{{ config(enabled = 'erpnext' in var('erp_sources', ['d365_fo'])) }}
+{#
+    Enabled here, not in dbt_project.yml: var() inside a dbt_project.yml
+    +enabled config does not see the project's own vars: block and silently
+    falls back to the default, while this model body does see it. That
+    disagreement disabled these models while the canonical loop still
+    ref'd them, which failed the whole dbt parse.
+#}
 {#
     ERPNext budget entries adapter.
     Maps the `Budget` doctype (flattened to one row per `Budget Account` child

@@ -25,8 +25,10 @@ vars:
   cluster_enabled: false
 
   # Active ERP source systems. This is the single switch that controls BOTH
-  # which per-ERP staging models are built (see models.*.staging.<erp>.+enabled
-  # below) AND which sources the canonical models UNION together. The shipped
+  # which per-ERP staging models are built (see the {{ config(enabled=...) }}
+  # block at the top of each models/staging/<erp>/ model — it CANNOT live here,
+  # because var() inside a dbt_project.yml config does not see this vars: block)
+  # AND which sources the canonical models UNION together. The shipped
   # demo data is D365-only, so the default is d365_fo. ERPNext deployments add
   # 'erpnext' here, or override at run time:
   #   dbt build --vars '{erp_sources: [d365_fo, erpnext]}'
@@ -124,10 +126,8 @@ models:
       # what caused the cascade of skipped downstream models (#60). The canonical
       # models UNION over the same var, so enablement and the union stay in sync.
       d365_fo:
-        +enabled: "{{ 'd365_fo' in var('erp_sources', ['d365_fo']) }}"
         +tags: ['staging', 'd365_fo']
       erpnext:
-        +enabled: "{{ 'erpnext' in var('erp_sources', ['d365_fo']) }}"
         +tags: ['staging', 'erpnext']
       canonical:
         +tags: ['staging', 'canonical']
