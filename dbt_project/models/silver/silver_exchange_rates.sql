@@ -11,8 +11,10 @@ with direct as (
         to_currency,
         valid_from,
         valid_to,
-        -- D365 stores exchange rates multiplied by 100
-        exchange_rate / 100.0 as exchange_rate,
+        -- Contract: rates arrive TRUE from staging and no layer after staging
+        -- may scale one (#138). toFloat64 keeps the UNION's type aligned with
+        -- the inverse CTE (1.0 / rate) below.
+        toFloat64(exchange_rate) as exchange_rate,
         exchange_rate_type,
         recid
     from {{ ref('bronze_exchange_rate_currency_pairs') }}

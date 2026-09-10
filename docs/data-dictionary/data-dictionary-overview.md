@@ -67,7 +67,7 @@ graph TD
 Raw D365 OData data, type-cast to ClickHouse types and renamed to snake_case. No business logic. See [Bronze Models](bronze-models.md).
 
 ### Silver
-Cleaned, deduplicated, and joined data. Key transformations: GL entries joined with journal headers, exchange rates normalized (D365 rate ÷ 100), account types mapped to readable labels. See [Silver Models](silver-models.md).
+Cleaned, deduplicated, and joined data. Key transformations: GL entries joined with journal headers, exchange rates held as true rates (scaling resolved once in the source adapter, #138), account types mapped to readable labels. See [Silver Models](silver-models.md).
 
 ### Gold
 Business-ready models consumed by the API and Excel reports. Includes trial balance, P&L, balance sheet, consolidation, allocation, budgeting, and variance analysis. See [Gold Models](gold-models.md).

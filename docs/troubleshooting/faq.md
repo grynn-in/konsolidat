@@ -48,7 +48,7 @@ ClickHouse data volumes + Frappe `bench backup`. See [Operations Runbook](../adm
 Edit `seeds/consolidation_groups.csv`, then `dbt seed && dbt build`.
 
 **Q: How do I update exchange rates?**
-Exchange rates come from D365 via Airbyte. Run a sync to pull the latest rates. The `silver_exchange_rates` model normalizes them (D365 stores rates × 100).
+Exchange rates come from D365 via Airbyte. Run a sync to pull the latest rates. Rates flow through as TRUE rates — the staging adapter resolves D365's `ConversionFactor` (per-100 quotes etc.) and nothing downstream scales (#138). If a rate looks 100× off, check the raw row's `ConversionFactor` against its magnitude; `assert_exchange_rate_sane_magnitude` should already be failing.
 
 **Q: Can I use ClickHouse Cloud instead of self-hosted?**
 Yes. Update the EPM Settings in Frappe with the cloud hostname, port, and credentials. See [Deployment Guide](../admin-guide/deployment-guide.md).
