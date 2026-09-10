@@ -11,8 +11,16 @@ with direct as (
         to_currency,
         valid_from,
         valid_to,
-        -- D365 stores exchange rates multiplied by 100
-        exchange_rate / 100.0 as exchange_rate,
+        -- Rates arrive TRUE from staging. The D365 adapter resolves
+        -- ConversionFactor at the source (#138); the ERPNext adapter always
+        -- emitted true rates. Silver must not scale — the old unconditional
+        -- /100 here, on top of staging's conditional x100, made every
+        -- 'Hundred'-tagged rate (and every ERPNext rate) wrong by two orders
+        -- of magnitude.
+        -- toFloat64: the old /100.0 made this Float64 as a side effect, and the
+        -- inverse CTE below (1.0 / rate) is Float64 — keep the UNION's type
+        -- explicit instead of relying on arithmetic accidents.
+        toFloat64(exchange_rate) as exchange_rate,
         exchange_rate_type,
         recid
     from {{ ref('bronze_exchange_rate_currency_pairs') }}
