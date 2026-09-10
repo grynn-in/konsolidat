@@ -17,7 +17,11 @@ select distinct
     efc.fiscal_calendar_id
 from {{ ref('entity_fiscal_calendars') }} as efc
 where efc.data_area_id in (
+        -- TBS rows carry explicit fiscal_year/fiscal_period and never go
+        -- through the date->period calendar join, so a submission-only
+        -- entity does not need its calendar loaded (F8)
         select distinct data_area_id from {{ ref('silver_gl_entries') }}
+        where posting_type != 'Trial Balance Submission'
     )
   and efc.fiscal_calendar_id not in (
         select distinct calendar_id from {{ ref('silver_fiscal_periods') }}
