@@ -44,7 +44,7 @@ cash_change as (
         f.fiscal_period as fiscal_period,
         sum(f.amount) as net_cash_change
     from {{ ref('gold_fully_consolidated_tb') }} as f
-    inner join {{ ref('cash_flow_categories') }} as cf
+    inner join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on f.main_account = cf.main_account
     where cf.is_cash = 1
         and f.fiscal_period > 0

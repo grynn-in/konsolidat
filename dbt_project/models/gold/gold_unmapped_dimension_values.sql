@@ -22,10 +22,10 @@ with vals as (
 
 mapped as (
     select erp_source, dimension, canonical_value as v
-    from {{ ref('dimension_mappings') }} where status = 'Published'
+    from {{ source('epm_staging', 'dimension_mappings') }} where status = 'Published'
     union all
     select erp_source, dimension, source_value as v
-    from {{ ref('dimension_mappings') }} where status = 'Published'
+    from {{ source('epm_staging', 'dimension_mappings') }} where status = 'Published'
 )
 
 select distinct

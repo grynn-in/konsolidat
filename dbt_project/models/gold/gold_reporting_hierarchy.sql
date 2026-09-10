@@ -18,5 +18,5 @@ select
     effective_from,
     effective_to,
     toUInt8(is_default) as is_default
-from {{ ref('reporting_hierarchies') }}
+from {{ source('epm_staging', 'reporting_hierarchies') }}
 where status = 'Published'

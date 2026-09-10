@@ -80,7 +80,7 @@ classified as (
         cf.cf_category as seed_category,
         cf.cf_line_item as seed_line_item
     from tb as t
-    left join {{ ref('cash_flow_categories') }} as cf
+    left join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on t.main_account = cf.main_account
 ),
 

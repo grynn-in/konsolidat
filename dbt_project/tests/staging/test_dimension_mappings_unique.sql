@@ -9,7 +9,7 @@ select
     erp_source,
     source_value,
     count(*) as n
-from {{ ref('dimension_mappings') }}
+from {{ source('epm_staging', 'dimension_mappings') }}
 where status = 'Published'
 group by dimension, erp_source, source_value
 having count(*) > 1

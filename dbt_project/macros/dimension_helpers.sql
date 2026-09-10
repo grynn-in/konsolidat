@@ -117,7 +117,7 @@
 {% macro dim_harmonize_joins(erp_source_col, raw_alias='unioned', map_prefix='dmap_', dims=none) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
-    left join {{ ref('dimension_mappings') }} as {{ map_prefix }}{{ d.name }}
+    left join {{ source('epm_staging', 'dimension_mappings') }} as {{ map_prefix }}{{ d.name }}
         on {{ map_prefix }}{{ d.name }}.status = 'Published'
         and {{ map_prefix }}{{ d.name }}.dimension = '{{ d.name }}'
         and {{ map_prefix }}{{ d.name }}.erp_source = {{ erp_source_col }}

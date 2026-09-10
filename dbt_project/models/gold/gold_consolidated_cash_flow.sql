@@ -60,7 +60,7 @@ classified as (
         cf.cf_line_item as seed_line_item,
         ma.is_pnl as is_pnl
     from fctb as f
-    left join {{ ref('cash_flow_categories') }} as cf
+    left join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on f.main_account = cf.main_account
     left join {{ ref('silver_main_accounts') }} as ma
         on f.main_account = ma.main_account_id

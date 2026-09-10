@@ -222,3 +222,25 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
     fiscal_year UInt16, fiscal_period UInt8, row_count UInt32,
     claimed_at DateTime
 ) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;
+
+-- F3: governed reference data written through from konsol (Dimension Mapping,
+-- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated
+-- into the dbt repo on every save and migrate. One metadata path now: Frappe
+-- doctype -> epm_staging -> dbt source. konsol's sync (TRUNCATE+INSERT of
+-- Published rows) populates them; reconcile_all repairs after fixture import.
+CREATE TABLE IF NOT EXISTS epm_staging.dimension_mappings (
+    dimension String, erp_source String, source_value String,
+    canonical_value String, canonical_label String, status String
+) ENGINE = MergeTree ORDER BY (dimension, erp_source, source_value);
+
+CREATE TABLE IF NOT EXISTS epm_staging.cash_flow_categories (
+    main_account String, cf_category String, cf_line_item String,
+    is_cash UInt8, sign Int8, status String
+) ENGINE = MergeTree ORDER BY main_account;
+
+CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
+    hierarchy_name String, dimension String, member_code String,
+    member_label String, parent_member_code String, is_group UInt8,
+    hierarchy_level UInt16, path String, effective_from String,
+    effective_to String, is_default UInt8, status String
+) ENGINE = MergeTree ORDER BY (hierarchy_name, member_code);
