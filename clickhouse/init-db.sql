@@ -199,3 +199,26 @@ CREATE TABLE IF NOT EXISTS epm_staging.allocation_runs (
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY (allocation_run_id);
+
+-- F8: trial-balance submission landing + control tables. Two owners, two jobs:
+-- this file bootstraps a fresh install; konsol's Trial Balance Submission
+-- doctype (_ensure_tables) self-heals at runtime. KEEP THE TWO IN SYNC — the
+-- schemas are IF NOT EXISTS, so drift never errors at creation time, only at
+-- konsol's INSERT or bronze's SELECT.
+CREATE DATABASE IF NOT EXISTS epm_raw;
+
+CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submissions (
+    batch_id String, data_area_id String, fiscal_year UInt16,
+    fiscal_period UInt8, main_account String,
+    debit_amount Float64, credit_amount Float64,
+    description String, submission_name String, submitted_at DateTime
+) ENGINE = MergeTree ORDER BY (batch_id, main_account);
+
+-- ReplacingMergeTree keyed on batch_id: a duplicated claim (an at-least-once
+-- retry of konsol's on_submit) collapses to one row instead of fanning out the
+-- bronze join — the same idempotency choice as epm_staging.sync_watermark.
+CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
+    batch_id String, submission_name String, data_area_id String,
+    fiscal_year UInt16, fiscal_period UInt8, row_count UInt32,
+    claimed_at DateTime
+) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;

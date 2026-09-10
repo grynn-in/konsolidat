@@ -73,20 +73,36 @@ left join fiscal_dates as fp
    row per account. A submission is already at trial-balance grain (period
    totals per account), which is exactly what gold_trial_balance aggregates GL
    entries down to — so shaping each claimed row as a single synthetic entry
-   lets every downstream model (consolidation, variance, cash flow, the
-   var-driven measures) work unchanged, with no fork in the gold layer.
+   lets every downstream model work unchanged, with no fork in the gold layer.
 
-   Only CLAIMED batches reach bronze_trial_balance_submissions (the control-
-   table join), so cancellation removes a submission from here without any
-   delete. Column list and ORDER mirror the select above exactly — UNION ALL
-   is positional. #}
+   Only CLAIMED batches reach bronze_trial_balance_submissions, so
+   cancellation removes a submission from here without any delete.
+
+   POSITIONAL TWIN: UNION ALL binds by position and ignores aliases — this
+   column list MUST mirror the select above exactly, in order and type. Any
+   column added there needs its twin here, or TBS values land in the wrong
+   columns silently. Dimensions come from dim_empty_strings(), the same macro
+   family dim_select() belongs to, so the dimension block stays width-aligned
+   from one source of truth.
+
+   accounting_date comes from the entity's OWN fiscal calendar
+   (entity_fiscal_calendars -> silver_fiscal_periods.period_start_date), the
+   same machinery the branch above uses in reverse — an April-March entity's
+   FY2026 P1 is 2025-04-01, not 2026-01-01. When the calendar or period is not
+   loaded, build_date_from_year_period() is the guarded fallback (it clamps,
+   so an out-of-range period from a manual insert cannot make an invalid
+   date). One computed date serves accounting_date and document_date. #}
 
 union all
 
+{% set tbs_marker = 'Trial Balance Submission' %}
 select
-    toInt64(cityHash64(tbs.batch_id, tbs.main_account)) as recid,
+    -- strictly negative synthetic id: no collision with real (positive) ERP
+    -- recids; hash includes description so two legitimate rows for one
+    -- account differ even if landed outside the doctype's dedup validation
+    -toInt64(bitShiftRight(cityHash64(tbs.batch_id, tbs.main_account, tbs.description), 1)) as recid,
     tbs.data_area_id as data_area_id,
-    makeDate(tbs.fiscal_year, tbs.fiscal_period, 1) as accounting_date,
+    tbs.period_start as accounting_date,
     tbs.fiscal_year as fiscal_year,
     tbs.fiscal_period as fiscal_period,
     tbs.main_account as main_account,
@@ -94,23 +110,48 @@ select
     ma.account_type_name as account_type_name,
     ma.is_balance_sheet as is_balance_sheet,
     ma.is_pnl as is_pnl,
-    tbs.debit_amount - tbs.credit_amount as accounting_currency_amount,
-    tbs.debit_amount - tbs.credit_amount as reporting_currency_amount,
-    tbs.debit_amount - tbs.credit_amount as transaction_currency_amount,
+    tbs.net_amount as accounting_currency_amount,
+    {# ERP rows carry D365's already-translated figure here; a submission has
+       none, and the non-D365 convention is 0 — NOT the local amount, which
+       would let a consumer sum untranslated currencies believing them
+       translated. Consolidation retranslates from debit/credit itself. #}
+    toDecimal128(0, 2) as reporting_currency_amount,
+    tbs.net_amount as transaction_currency_amount,
     '' as transaction_currency_code,
     {# a TB row carries explicit debit and credit columns — no sign derivation #}
     tbs.credit_amount as credit_amount,
     tbs.debit_amount as debit_amount,
-    'Trial Balance Submission' as posting_type,
+    '{{ tbs_marker }}' as posting_type,
     tbs.description as description,
-    {% for d in var('dimensions') %}
-    '' as {{ d.name }}{{ ',' if not loop.last }}
-    {%- endfor %},
+    {{ dim_empty_strings() }},
     concat('TBS-', tbs.batch_id) as journal_number,
-    'Trial Balance Submission' as journal_category,
+    '{{ tbs_marker }}' as journal_category,
     tbs.submission_name as document_number,
-    makeDate(tbs.fiscal_year, tbs.fiscal_period, 1) as document_date,
+    tbs.period_start as document_date,
     '' as posting_layer
-from {{ ref('bronze_trial_balance_submissions') }} as tbs
+from (
+    select
+        b.batch_id as batch_id,
+        b.data_area_id as data_area_id,
+        b.fiscal_year as fiscal_year,
+        b.fiscal_period as fiscal_period,
+        b.main_account as main_account,
+        b.debit_amount as debit_amount,
+        b.credit_amount as credit_amount,
+        b.description as description,
+        b.submission_name as submission_name,
+        b.debit_amount - b.credit_amount as net_amount,
+        coalesce(
+            sfp.period_start_date,
+            {{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }}
+        ) as period_start
+    from {{ ref('bronze_trial_balance_submissions') }} as b
+    left join {{ ref('entity_fiscal_calendars') }} as efc
+        on b.data_area_id = efc.data_area_id
+    left join {{ ref('silver_fiscal_periods') }} as sfp
+        on sfp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
+        and {{ extract_year('sfp.year_start_date') }} = b.fiscal_year
+        and sfp.calendar_month = b.fiscal_period
+) as tbs
 left join {{ ref('silver_main_accounts') }} as ma
     on tbs.main_account = ma.main_account_id
