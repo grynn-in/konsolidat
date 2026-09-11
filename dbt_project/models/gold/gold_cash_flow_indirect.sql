@@ -80,8 +80,14 @@ classified as (
         cf.cf_category as seed_category,
         cf.cf_line_item as seed_line_item
     from tb as t
-    left join {{ ref('cash_flow_categories') }} as cf
+    -- status='Published' is part of the join, not an afterthought: konsol
+    -- TRUNCATE+INSERTs only Published rows, but reconcile_all used to re-fill
+    -- this table with every Draft and Inactive Cash Flow Category on migrate.
+    -- Both sides are guarded now — konsol reads CH_SYNC_FILTERS on both write
+    -- paths, and the consumer refuses anything but Published regardless.
+    left join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on t.main_account = cf.main_account
+        and cf.status = 'Published'
 ),
 
 lined as (

@@ -60,8 +60,12 @@ classified as (
         cf.cf_line_item as seed_line_item,
         ma.is_pnl as is_pnl
     from fctb as f
-    left join {{ ref('cash_flow_categories') }} as cf
+    -- Published only — see gold_cash_flow_indirect. An Inactive mapping left
+    -- in the table would re-classify an account the business deliberately
+    -- retired, and a second (Draft) row for the same account fans this join out.
+    left join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on f.main_account = cf.main_account
+        and cf.status = 'Published'
     left join {{ ref('silver_main_accounts') }} as ma
         on f.main_account = ma.main_account_id
 ),

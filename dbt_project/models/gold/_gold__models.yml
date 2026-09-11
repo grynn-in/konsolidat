@@ -245,7 +245,7 @@ models:
           # Phase 6.1 AC#6: every BS account must be categorized in the seed
           # (no uncategorized accounts leak into the cash flow statement).
           - relationships:
-              to: ref('cash_flow_categories')
+              to: source('epm_staging', 'cash_flow_categories')
               field: main_account
       - name: opening_balance
         description: "Cumulative balance at prior period"

@@ -107,21 +107,37 @@
 {% macro dim_harmonize_select(raw_alias='unioned', map_prefix='dmap_', dims=none) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
-    if({{ map_prefix }}{{ d.name }}.canonical_value != '', {{ map_prefix }}{{ d.name }}.canonical_value, {{ raw_alias }}.{{ d.name }}) as {{ d.name }},
+    {# precedence: entity-specific mapping beats the ERP-wide default (entity='')
+       beats passthrough. Cost centre 100 can be Sales in USMF and Manufacturing
+       in DEMF — konsol #111. #}
+    multiIf({{ map_prefix }}{{ d.name }}.canonical_value != '', {{ map_prefix }}{{ d.name }}.canonical_value,
+            {{ map_prefix }}{{ d.name }}_dflt.canonical_value != '', {{ map_prefix }}{{ d.name }}_dflt.canonical_value,
+            {{ raw_alias }}.{{ d.name }}) as {{ d.name }},
     {%- endfor %}
 {% endmacro %}
 
 {# LEFT JOINs against the dimension_mappings seed, one per dimension.
    erp_source_col is a SQL expression — the per-row erp_source column
    (e.g. 'unioned.erp_source') so each source's values map correctly. #}
-{% macro dim_harmonize_joins(erp_source_col, raw_alias='unioned', map_prefix='dmap_', dims=none) %}
+{% macro dim_harmonize_joins(erp_source_col, raw_alias='unioned', map_prefix='dmap_', dims=none, entity_col=none) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% set entity_expr = entity_col if entity_col is not none else raw_alias ~ '.entity_id' %}
     {% for d in dimensions %}
-    left join {{ ref('dimension_mappings') }} as {{ map_prefix }}{{ d.name }}
+    {# TWO joins, not one OR-predicate: a value with BOTH an entity-specific row
+       and a blank (ERP-wide) row would match twice through an OR and fan the
+       fact rows out. The select's multiIf gives specific-beats-default. #}
+    left join {{ source('epm_staging', 'dimension_mappings') }} as {{ map_prefix }}{{ d.name }}
         on {{ map_prefix }}{{ d.name }}.status = 'Published'
         and {{ map_prefix }}{{ d.name }}.dimension = '{{ d.name }}'
         and {{ map_prefix }}{{ d.name }}.erp_source = {{ erp_source_col }}
+        and {{ map_prefix }}{{ d.name }}.entity = {{ entity_expr }}
         and {{ map_prefix }}{{ d.name }}.source_value = {{ raw_alias }}.{{ d.name }}
+    left join {{ source('epm_staging', 'dimension_mappings') }} as {{ map_prefix }}{{ d.name }}_dflt
+        on {{ map_prefix }}{{ d.name }}_dflt.status = 'Published'
+        and {{ map_prefix }}{{ d.name }}_dflt.dimension = '{{ d.name }}'
+        and {{ map_prefix }}{{ d.name }}_dflt.erp_source = {{ erp_source_col }}
+        and {{ map_prefix }}{{ d.name }}_dflt.entity = ''
+        and {{ map_prefix }}{{ d.name }}_dflt.source_value = {{ raw_alias }}.{{ d.name }}
     {%- endfor %}
 {% endmacro %}
 

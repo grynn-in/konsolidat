@@ -24,8 +24,9 @@ cash_change as (
         t.fiscal_period as fiscal_period,
         sum(t.period_debit - t.period_credit) as net_cash_change
     from {{ ref('gold_trial_balance') }} as t
-    inner join {{ ref('cash_flow_categories') }} as cf
+    inner join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on t.main_account = cf.main_account
+        and cf.status = 'Published'
     where cf.is_cash = 1
         and t.fiscal_period > 0
     group by t.data_area_id, t.fiscal_year, t.fiscal_period
