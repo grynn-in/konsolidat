@@ -76,6 +76,10 @@ models:
           - not_null
       - name: elimination_amount
         description: "Lesser of debit/credit IC balances to eliminate"
+      - name: debit_entity
+        description: "The entity on the debit side of the eliminated pair."
+      - name: credit_entity
+        description: "The entity on the credit side of the eliminated pair."
 
   - name: gold_fx_revaluation
     description: "Currency translation adjustment (CTA) entries"

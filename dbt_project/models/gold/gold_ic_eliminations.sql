@@ -78,6 +78,13 @@ balance_eliminations as (
         db.fiscal_period as fiscal_period,
         icr.debit_account as debit_account,
         icr.credit_account as credit_account,
+        {# F2: the two entities whose balances this cancels. They were computed
+           here and thrown away, which left assert_equity_method_no_ic_elim
+           unable to key on anything finer than the group — so one equity-method
+           node in a group failed every elimination in it. Also the audit trail
+           F10 wants: which pair a rule actually fired on. #}
+        db.data_area_id as debit_entity,
+        cr.data_area_id as credit_entity,
         least(abs(db.account_balance), abs(cr.account_balance)) as elimination_amount,
         -least(abs(db.account_balance), abs(cr.account_balance)) as debit_elimination,
         least(abs(db.account_balance), abs(cr.account_balance)) as credit_elimination
@@ -124,6 +131,8 @@ unrealized_profit_eliminations as (
         icb.fiscal_period as fiscal_period,
         icr.debit_account as debit_account,
         icr.asset_account as credit_account,
+        icb.selling_entity as debit_entity,
+        icb.buying_entity as credit_entity,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as elimination_amount,
         -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination

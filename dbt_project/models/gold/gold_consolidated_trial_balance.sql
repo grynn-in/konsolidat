@@ -78,6 +78,7 @@ entity_ownership as (
         eo.effective_ownership_pct as ownership_pct,
         eo.consolidation_method as consolidation_method,
         eo.has_complete_chain as has_complete_chain,
+        eo.owner_group as owner_group,
         {# The GROUP's presentation currency, taken from the group node — not
            from the entity's own row, whose reporting_currency in the old seed
            was the group's anyway (it is NOT the entity's functional currency;
@@ -290,7 +291,14 @@ rated as (
             cast(toFloat64(historical_rate) as Nullable(Float64)) as historical_rate
         from {{ source('epm_staging', 'historical_equity_rates') }}
     ) as hr
-        on eo.consolidation_group = hr.consolidation_group
+        {# F2: on the entity's OWNING group, not the consolidating one. A
+           historical equity rate is recorded once, under the node that owns the
+           entity; keying on eo.consolidation_group after the multi-level
+           fan-out missed at every ancestor above it, so the same equity account
+           translated at the acquisition rate in the sub-group and silently fell
+           through to the closing rate in the parent — two different CTAs for
+           one entity. #}
+        on eo.owner_group = hr.consolidation_group
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
         and etb.period_date >= hr.rate_date
@@ -298,9 +306,15 @@ rated as (
        method is the WEAKEST link on the chain, so an entity below an
        equity-held sub-group is excluded from that group's line consolidation
        too — while still line-consolidating into the sub-group itself.
+
+       'none' is excluded as well: it is a real option on Ownership Period, and
+       it is also gold_entity_ownership's catch-all rank for an unrecognised
+       method — so a typo must not line-consolidate an entity at its full share
+       with no NCI schedule row behind it (that model filters on 'full').
+
        A chain with an unresolved link consolidates nothing rather than
        something plausible; assert_ownership_chain_complete names it. #}
-    where eo.consolidation_method != 'equity'
+    where eo.consolidation_method not in ('equity', 'none')
       and eo.has_complete_chain = 1
 ),
 

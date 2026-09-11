@@ -33,14 +33,26 @@
    a plausible-looking number — assert_ownership_chain_complete fails the build
    and names the entity. #}
 
-with periods_needed as (
+{# The periods an entity actually HAS data in — per entity, not a global spine.
+   A global spine crossed every link with every period in the warehouse, so an
+   entity acquired in 2025 came out with an unresolvable chain for every period
+   back to 2019 and a disposed one for every period after it left, and
+   assert_ownership_chain_complete failed the build on all of them.
+
+   No period_filter here either. This model is materialized `table`, and
+   gold_nci_movement_schedule and gold_equity_method_associates are plain tables
+   that now inner-join it on (fiscal_year, fiscal_period): filtering to one
+   period during a scoped close would rebuild both holding that period alone and
+   silently drop every prior period's NCI schedule and equity entries. The
+   consolidation chokepoint downstream still applies its own filter, and
+   gold_trial_balance is deliberately unscoped. #}
+with entity_periods as (
     select distinct
+        data_area_id,
         fiscal_year,
         fiscal_period,
         {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
     from {{ ref('gold_trial_balance') }}
-    where 1 = 1
-        {{ period_filter('fiscal_year', 'fiscal_period') }}
 ),
 
 ancestry as (
@@ -83,7 +95,28 @@ ancestry_periods as (
         p.fiscal_period as fiscal_period,
         p.period_date as period_date
     from ancestry as a
-    cross join periods_needed as p
+    inner join entity_periods as p
+        on a.data_area_id = p.data_area_id
+),
+
+{# Does the ENTITY's own node have any ownership history at all, and does it
+   cover this period? "We know when we owned it and this is not it" (before an
+   acquisition, after a disposal) is a deliberate 0, not a missing percentage —
+   consolidation excludes it either way, but only the latter is worth failing a
+   build over. #}
+entity_windows as (
+    select
+        ap.consolidation_group as consolidation_group,
+        ap.data_area_id as data_area_id,
+        ap.fiscal_year as fiscal_year,
+        ap.fiscal_period as fiscal_period,
+        max(o.consolidation_group != '') as node_has_any_period
+    from ancestry_periods as ap
+    left join {{ source('epm_staging', 'ownership_periods') }} as o
+        on ap.link_group = o.consolidation_group
+        and ap.link_data_area_id = o.data_area_id
+        and ap.link_depth = ap.depth
+    group by ap.consolidation_group, ap.data_area_id, ap.fiscal_year, ap.fiscal_period
 ),
 
 {# ASOF picks the latest period whose effective_date <= period_date; end_date is
@@ -96,6 +129,7 @@ links as (
         ap.fiscal_year as fiscal_year,
         ap.fiscal_period as fiscal_period,
         ap.period_date as period_date,
+        ap.link_group as link_group,
         ap.link_depth as link_depth,
         ap.depth as depth,
         if(o.end_date >= ap.period_date, o.ownership_pct, null) as link_pct,
@@ -115,6 +149,10 @@ resolved as (
         fiscal_period,
         period_date,
         any(depth) as chain_depth,
+        {# the entity's IMMEDIATE parent group: a historical equity rate and an
+           entity name are recorded once, under the node that owns the entity —
+           not under every ancestor that consolidates it #}
+        anyIf(link_group, link_depth = depth) as owner_group,
         countIf(link_pct is null) as unresolved_links,
         arrayProduct(groupArray(coalesce(link_pct, 0.0) / 100.0)) as chain_product,
         {# the entity's own link: what its IMMEDIATE parent owns of it #}
@@ -135,19 +173,30 @@ resolved as (
 )
 
 select
-    consolidation_group,
-    data_area_id,
-    fiscal_year,
-    fiscal_period,
-    period_date,
-    chain_depth,
-    toUInt8(unresolved_links = 0) as has_complete_chain,
-    if(unresolved_links = 0, chain_product, 0.0) as effective_ownership_pct,
-    if(unresolved_links = 0, direct_pct, 0.0) as direct_ownership_pct,
+    r.consolidation_group as consolidation_group,
+    r.data_area_id as data_area_id,
+    r.fiscal_year as fiscal_year,
+    r.fiscal_period as fiscal_period,
+    r.period_date as period_date,
+    r.chain_depth as chain_depth,
+    r.owner_group as owner_group,
+    toUInt8(r.unresolved_links = 0) as has_complete_chain,
+    {# 1 when the entity's node HAS ownership history but none of it covers this
+       period — i.e. we did not own it then. Distinguishes a deliberate gap from
+       an unrecorded one; assert_ownership_chain_complete only fails on the
+       latter. #}
+    toUInt8(r.unresolved_links > 0 and w.node_has_any_period > 0) as outside_ownership_window,
+    if(r.unresolved_links = 0, r.chain_product, 0.0) as effective_ownership_pct,
+    if(r.unresolved_links = 0, r.direct_pct, 0.0) as direct_ownership_pct,
     multiIf(
-        method_rank = 1, 'full',
-        method_rank = 2, 'proportional',
-        method_rank = 3, 'equity',
+        r.method_rank = 1, 'full',
+        r.method_rank = 2, 'proportional',
+        r.method_rank = 3, 'equity',
         'none'
     ) as consolidation_method
-from resolved
+from resolved as r
+left join entity_windows as w
+    on r.consolidation_group = w.consolidation_group
+    and r.data_area_id = w.data_area_id
+    and r.fiscal_year = w.fiscal_year
+    and r.fiscal_period = w.fiscal_period

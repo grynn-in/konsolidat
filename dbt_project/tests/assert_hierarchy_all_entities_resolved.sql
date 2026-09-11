@@ -10,14 +10,16 @@
     traverses: an entity missing from it reaches no group at all.
 #}
 
+{# NOT a `left join ... where a.data_area_id is null`: with join_use_nulls=0 —
+   which this project relies on throughout — an unmatched LEFT JOIN fills a
+   non-nullable String with '', never NULL, so that form can return no rows at
+   all and the test passes while entities are genuinely missing. #}
 select
-    cg.consolidation_group,
-    cg.data_area_id
-from {{ source('epm_gold', 'consolidation_groups') }} as cg
-left join (
-    select distinct data_area_id
-    from {{ source('epm_staging', 'consolidation_ancestry') }}
-) as a
-    on cg.data_area_id = a.data_area_id
-where cg.data_area_id != ''
-  and a.data_area_id is null
+    consolidation_group,
+    data_area_id
+from {{ source('epm_gold', 'consolidation_groups') }}
+where data_area_id != ''
+  and data_area_id not in (
+      select distinct data_area_id
+      from {{ source('epm_staging', 'consolidation_ancestry') }}
+  )

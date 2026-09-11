@@ -25,9 +25,15 @@ with nci_entities as (
         grp.reporting_currency as reporting_currency,
         eo.consolidation_method as consolidation_method
     from {{ ref('gold_entity_ownership') }} as eo
+    {# On data_area_id ALONE: the node carrying an entity's name is the one that
+       owns it, and an entity is a node exactly once
+       (ConsolidationGroup._validate_entity_in_one_node,
+       assert_entity_in_one_consolidation_node). Keying on the consolidating
+       group as well matched only the immediate parent, so every entity reached
+       through a sub-group — the rows this work exists to produce — came out
+       with a blank name in the top group's schedule. #}
     left join {{ source('epm_gold', 'consolidation_groups') }} as cg
-        on cg.consolidation_group = eo.consolidation_group
-        and cg.data_area_id = eo.data_area_id
+        on cg.data_area_id = eo.data_area_id
     left join {{ source('epm_gold', 'consolidation_groups') }} as grp
         on grp.consolidation_group = eo.consolidation_group
         and grp.data_area_id = ''

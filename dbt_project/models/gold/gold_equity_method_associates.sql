@@ -87,7 +87,11 @@ equity_entries as (
         reporting_currency,
         equity_income_amount as amount,
         'equity_method' as adjustment_type,
-        concat('EQ_', data_area_id, '_', toString(fiscal_year), '_P', toString(fiscal_period)) as journal_id
+        {# consolidation_group is part of the key since F2: an associate held
+           through a sub-group emits entries for the sub-group AND every
+           ancestor above it, and without the group they shared one id. #}
+        concat('EQ_', consolidation_group, '_', data_area_id, '_',
+               toString(fiscal_year), '_P', toString(fiscal_period)) as journal_id
     from equity_income
     where abs(equity_income_amount) > 0.01
 
@@ -104,7 +108,11 @@ equity_entries as (
         reporting_currency,
         equity_income_amount as amount,
         'equity_method' as adjustment_type,
-        concat('EQ_', data_area_id, '_', toString(fiscal_year), '_P', toString(fiscal_period)) as journal_id
+        {# consolidation_group is part of the key since F2: an associate held
+           through a sub-group emits entries for the sub-group AND every
+           ancestor above it, and without the group they shared one id. #}
+        concat('EQ_', consolidation_group, '_', data_area_id, '_',
+               toString(fiscal_year), '_P', toString(fiscal_period)) as journal_id
     from equity_income
     where abs(equity_income_amount) > 0.01
 )
