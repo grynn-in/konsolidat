@@ -57,7 +57,12 @@ tb_base as (
 
 {# PRD-17: Unified driver lookup — supports all driver types from seed or staging #}
 drivers_unified as (
-    {# From staging (preferred) #}
+    {# konsolidat#146: the Allocation Driver doctype, and only it. Three seed
+       fallbacks used to follow — one per driver type, each applying when
+       staging held no row of that type. They were also the SAME ClickHouse
+       relations konsol writes: allocation/bootstrap.py builds the table name
+       with an f-string, `epm_gold.allocation_drivers_{dtype}`, so the CSVs and
+       the doctype overwrote each other exactly like the other five seeds. #}
     select
         driver_type,
         data_area_id,
@@ -67,56 +72,7 @@ drivers_unified as (
         {{ cast_to_float64('driver_value') }} as driver_value
     from {{ source('epm_staging', 'allocation_drivers') }}
 
-    union all
 
-    {# Seed fallback: headcount #}
-    select
-        'headcount' as driver_type,
-        data_area_id,
-        cost_center,
-        {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
-        {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
-        {{ cast_to_float64('driver_value') }} as driver_value
-    from {{ ref('allocation_drivers_headcount') }}
-    where not exists (
-        select 1 from {{ source('epm_staging', 'allocation_drivers') }}
-        where driver_type = 'headcount'
-        limit 1
-    )
-
-    union all
-
-    {# Seed fallback: sqm #}
-    select
-        'sqm' as driver_type,
-        data_area_id,
-        cost_center,
-        {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
-        {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
-        {{ cast_to_float64('driver_value') }} as driver_value
-    from {{ ref('allocation_drivers_sqm') }}
-    where not exists (
-        select 1 from {{ source('epm_staging', 'allocation_drivers') }}
-        where driver_type = 'sqm'
-        limit 1
-    )
-
-    union all
-
-    {# Seed fallback: revenue #}
-    select
-        'revenue' as driver_type,
-        data_area_id,
-        cost_center,
-        {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
-        {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
-        {{ cast_to_float64('driver_value') }} as driver_value
-    from {{ ref('allocation_drivers_revenue') }}
-    where not exists (
-        select 1 from {{ source('epm_staging', 'allocation_drivers') }}
-        where driver_type = 'revenue'
-        limit 1
-    )
 ),
 
 {# Driver weights: value / sum(value) partitioned by type, entity, period #}
