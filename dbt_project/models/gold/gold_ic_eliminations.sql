@@ -10,27 +10,17 @@
    and create offsetting entries
    PRD-15: Enhanced with unrealized profit elimination (rule_type = 'unrealized_profit') #}
 
-{# PRD-15: IC elimination rules — prefer staging if populated, else seed #}
+{# PRD-15: IC elimination rules, from the IC Elimination Rule doctype.
+
+   konsolidat#146: this used to union a seed half that applied only when the
+   staging table happened to be empty. The seed read
+   `ref('ic_elimination_rules')`, a CSV materialising into
+   epm_gold.ic_elimination_rules — the same relation konsol's legacy
+   write-through targeted, so the two overwrote each other. It is also the
+   silent fallback F3 removed from gold_consolidation_hierarchy: which rules a
+   build trusts must not depend on whether some table was populated at the time.
+   The doctype's staging table is the only source. #}
 with ic_rules as (
-    select
-        rule_id,
-        rule_name,
-        debit_account,
-        credit_account,
-        debit_entity_pattern,
-        credit_entity_pattern,
-        'balance' as rule_type,
-        toDecimal64(0, 2) as margin_pct,
-        '' as asset_account
-    from {{ ref('ic_elimination_rules') }}
-    where not exists (
-        select 1 from {{ source('epm_staging', 'ic_elimination_rules') }}
-        where rule_id != ''
-        limit 1
-    )
-
-    union all
-
     select
         rule_id,
         rule_name,

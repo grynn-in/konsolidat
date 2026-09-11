@@ -273,3 +273,19 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_ancestry (
     consolidation_group String, data_area_id String, link_group String,
     link_data_area_id String, link_depth UInt8, depth UInt8, path String
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id, link_depth);
+
+-- konsolidat#146: two more relations that a dbt seed and a konsol write-through
+-- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so
+-- seeds/spread_profiles.csv WAS epm_gold.spread_profiles — the same table the
+-- Spread Profile doctype TRUNCATE+INSERTs, and whichever of `dbt seed` and
+-- `bench migrate` ran last won. The seeds are deleted; konsol is the source and
+-- konsol's ensure_reference_tables() creates these on volumes that predate the
+-- change. Keep both in step with _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_gold.spread_profiles (
+    profile_id String, profile_name String, fiscal_period Int32, weight Float32
+) ENGINE = MergeTree ORDER BY (profile_id, fiscal_period);
+
+CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
+    scenario_id String, scenario_name String, scenario_type String, is_active Int32
+) ENGINE = MergeTree ORDER BY scenario_id;
+

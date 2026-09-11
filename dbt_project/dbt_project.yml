@@ -253,25 +253,3 @@ seeds:
     # under `+tag:domain:consolidation` (the konsol governed-build selector).
     currencies:
       +tags: ['domain:consolidation']
-    allocation_rules:
-      +column_types:
-        source_account: "String"
-        target_account: "String"
-        step_order: "UInt8"
-    ic_elimination_rules:
-      +column_types:
-        debit_account: "String"
-        credit_account: "String"
-    consolidation_adjustments:
-      +column_types:
-        consolidation_group: "String"
-        adjustment_type: "String"
-        journal_id: "String"
-        data_area_id: "String"
-        fiscal_year: "UInt16"
-        fiscal_period: "UInt8"
-        main_account: "String"
-        debit_amount: "Decimal(18,2)"
-        credit_amount: "Decimal(18,2)"
-        description: "String"
-        posted_by: "String"

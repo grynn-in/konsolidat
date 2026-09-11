@@ -14,34 +14,20 @@
 {# Max steps we support via Jinja unrolling. Rules beyond this are ignored. #}
 {% set max_steps = 1 %}
 {% if execute %}
-    {% set _r = run_query('select max(step_order) as m from ' ~ ref('allocation_rules')) %}
+    {% set _r = run_query('select max(step_order) as m from ' ~ source('epm_staging', 'allocation_rules')) %}
     {% if _r and _r.rows and (_r.rows | length) > 0 and _r.rows[0][0] is not none %}
         {% set max_steps = _r.rows[0][0] | int %}
     {% endif %}
 {% endif %}
 
 with all_rules as (
-    {# PRD-17: Prefer staging rules if populated, else seed fallback #}
-    select
-        allocation_rule_id,
-        rule_name,
-        step_order,
-        source_account,
-        source_cost_center,
-        driver_type,
-        target_account,
-        description,
-        'step_down' as allocation_method,
-        '' as driver_formula
-    from {{ ref('allocation_rules') }}
-    where not exists (
-        select 1 from {{ source('epm_staging', 'allocation_rules') }}
-        where allocation_rule_id != ''
-        limit 1
-    )
-
-    union all
-
+    {# PRD-17: the Allocation Rule doctype. konsolidat#146 removed the seed half
+       of this union — it applied only when the staging table happened to be
+       empty, and it hardcoded allocation_method='step_down' and an empty
+       driver_formula, so a formula-driven rule silently became a step-down one
+       on any build where staging was momentarily empty. The seed also shared a
+       relation with konsol's legacy write-through, so the CSV and the doctype
+       overwrote each other. #}
     select
         allocation_rule_id,
         rule_name,

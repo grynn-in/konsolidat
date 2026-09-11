@@ -43,7 +43,11 @@ profiles as (
         {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
         weight,
         weight / sum(weight) over (partition by profile_id) as period_weight
-    from {{ ref('spread_profiles') }}
+    {# konsolidat#146: the seed behind this ref materialised into
+       epm_gold.spread_profiles — the same relation konsol's Spread Profile
+       doctype TRUNCATE+INSERTs, so whichever of `dbt seed` and `bench migrate`
+       ran last won. The doctype is the source. #}
+    from {{ source('epm_gold', 'spread_profiles') }}
 ),
 
 {# (b) Manually-entered monthly budgets as an identity spread. ALL layers are

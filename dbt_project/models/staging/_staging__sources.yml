@@ -10,6 +10,19 @@ sources:
           Manually-entered monthly budgets synced from Budget Sheets on cycle
           lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
           gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+      - name: scenario_definitions
+        description: >
+          Scenario metadata from konsol's Scenario doctype. This was
+          `ref('scenario_definitions')`, a seed, and seeds materialise into
+          epm_gold — the same relation konsol writes, so `dbt seed` and
+          `bench migrate` overwrote each other (konsolidat#146). The doctype is
+          the source: it carried 17 scenarios where the CSV had 4 with stale
+          names.
+      - name: spread_profiles
+        description: >
+          Period weights from konsol's Spread Profile doctype. Same collision:
+          the seed and the write-through were one relation. konsol's
+          ensure_reference_tables() owns the DDL now.
       - name: consolidation_groups
         description: >
           F2: the consolidation STRUCTURE — who and where, no ownership. This

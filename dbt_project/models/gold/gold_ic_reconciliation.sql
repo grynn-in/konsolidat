@@ -46,7 +46,8 @@ entity_pairs as (
         on a.consolidation_group = b.consolidation_group
         and a.fiscal_year = b.fiscal_year
         and a.fiscal_period = b.fiscal_period
-    inner join {{ ref('ic_elimination_rules') }} as icr
+    {# konsolidat#146: the doctype's staging table, not the deleted seed. #}
+    inner join {{ source('epm_staging', 'ic_elimination_rules') }} as icr
         on a.main_account = {{ cast_to_string('icr.debit_account') }}
         and b.main_account = {{ cast_to_string('icr.credit_account') }}
     where a.data_area_id < b.data_area_id
