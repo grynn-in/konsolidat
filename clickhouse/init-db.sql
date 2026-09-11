@@ -228,10 +228,15 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
 -- into the dbt repo on every save and migrate. One metadata path now: Frappe
 -- doctype -> epm_staging -> dbt source. konsol's sync (TRUNCATE+INSERT of
 -- Published rows) populates them; reconcile_all repairs after fixture import.
+-- entity in the KEY, between erp_source and source_value: D365 gives each
+-- legal entity its own dimension value set (cost centre 100 = Sales in USMF,
+-- Manufacturing in DEMF), and ClickHouse cannot insert a column into the
+-- middle of an existing MergeTree sort key later. entity='' = the ERP-wide
+-- default; entity-specific rows take precedence (konsol #111).
 CREATE TABLE IF NOT EXISTS epm_staging.dimension_mappings (
-    dimension String, erp_source String, source_value String,
+    dimension String, erp_source String, entity String, source_value String,
     canonical_value String, canonical_label String, status String
-) ENGINE = MergeTree ORDER BY (dimension, erp_source, source_value);
+) ENGINE = MergeTree ORDER BY (dimension, erp_source, entity, source_value);
 
 CREATE TABLE IF NOT EXISTS epm_staging.cash_flow_categories (
     main_account String, cf_category String, cf_line_item String,
