@@ -7,6 +7,7 @@
 select
     dimension,
     erp_source,
+    entity,
     source_value,
     count(*) as n
 from {{ source('epm_staging', 'dimension_mappings') }}
