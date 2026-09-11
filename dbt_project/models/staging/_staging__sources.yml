@@ -10,6 +10,17 @@ sources:
           Manually-entered monthly budgets synced from Budget Sheets on cycle
           lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
           gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+      - name: budget_annual_input
+        description: >
+          Top-down annual budget figures from konsol's Budget Annual Input
+          doctype, spread into months by gold_spread_budget. konsolidat#146:
+          this was seeds/budget_annual_input.csv, the last seed this repo owned.
+      - name: entity_fiscal_calendars
+        description: >
+          Which fiscal calendar each ERP legal entity posts against, from
+          konsol's Entity Fiscal Calendar doctype. konsolidat#146: this was
+          seeds/entity_fiscal_calendars.csv. silver_gl_entries falls back to
+          'Fiscal' for an entity with no row.
       - name: currencies
         description: >
           ISO 4217 reference list, published from Frappe's Currency records by

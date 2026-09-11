@@ -32,7 +32,11 @@ with annual_input as (
         annual_amount,
         spread_profile_id,
         submitted_by
-    from {{ ref('budget_annual_input') }}
+    {# konsolidat#146: konsol's Budget Annual Input doctype, not a seed in this
+       repo. The other branch of this model already reads konsol's
+       epm_gold.budget_monthly_input, so both halves of budget input are the
+       app's now. #}
+    from {{ source('epm_gold', 'budget_annual_input') }}
 ),
 
 {# Normalize profile weights so they sum to 1.0 per profile #}

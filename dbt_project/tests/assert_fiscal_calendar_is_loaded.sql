@@ -15,7 +15,7 @@
 select distinct
     efc.data_area_id,
     efc.fiscal_calendar_id
-from {{ ref('entity_fiscal_calendars') }} as efc
+from {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
 where efc.data_area_id in (
         -- TBS rows carry explicit fiscal_year/fiscal_period and never go
         -- through the date->period calendar join, so a submission-only
