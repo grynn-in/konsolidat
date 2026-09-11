@@ -26,6 +26,7 @@ cash_change as (
     from {{ ref('gold_trial_balance') }} as t
     inner join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on t.main_account = cf.main_account
+        and cf.status = 'Published'
     where cf.is_cash = 1
         and t.fiscal_period > 0
     group by t.data_area_id, t.fiscal_year, t.fiscal_period

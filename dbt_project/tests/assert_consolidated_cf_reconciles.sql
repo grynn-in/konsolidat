@@ -46,6 +46,7 @@ cash_change as (
     from {{ ref('gold_fully_consolidated_tb') }} as f
     inner join {{ source('epm_staging', 'cash_flow_categories') }} as cf
         on f.main_account = cf.main_account
+        and cf.status = 'Published'
     where cf.is_cash = 1
         and f.fiscal_period > 0
     group by f.consolidation_group, f.fiscal_year, f.fiscal_period
