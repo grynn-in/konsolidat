@@ -10,6 +10,14 @@ sources:
           Manually-entered monthly budgets synced from Budget Sheets on cycle
           lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
           gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+      - name: currencies
+        description: >
+          ISO 4217 reference list, published from Frappe's Currency records by
+          konsol.currency_sync. konsolidat#146: this was seeds/currencies.csv —
+          the one seed with no second writer, but still a list the warehouse
+          validates against living in the dbt repo rather than in the app, free
+          to drift from what Frappe itself says a currency is. konsol ships the
+          six ISO codes Frappe lacks (ANG, AZN, GEL, TJS, TMT, XDR).
       - name: scenario_definitions
         description: >
           Scenario metadata from konsol's Scenario doctype. This was

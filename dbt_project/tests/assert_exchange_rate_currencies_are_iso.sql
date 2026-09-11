@@ -15,4 +15,8 @@ with used as (
 select currency_code
 from used
 where currency_code != ''
-  and currency_code not in (select currency_code from {{ ref('currencies') }})
+  {# konsolidat#146: published by konsol.currency_sync from Frappe's Currency
+     records, not a seed in this repo. #}
+  and currency_code not in (
+      select currency_code from {{ source('epm_gold', 'currencies') }}
+  )

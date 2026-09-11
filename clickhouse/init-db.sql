@@ -289,3 +289,9 @@ CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
     scenario_id String, scenario_name String, scenario_type String, is_active Int32
 ) ENGINE = MergeTree ORDER BY scenario_id;
 
+-- konsolidat#146: the ISO 4217 reference list, published from Frappe's Currency
+-- records by konsol.currency_sync. It was seeds/currencies.csv.
+CREATE TABLE IF NOT EXISTS epm_gold.currencies (
+    currency_code String, currency_name String, symbol String, minor_unit UInt8
+) ENGINE = MergeTree ORDER BY currency_code;
+
