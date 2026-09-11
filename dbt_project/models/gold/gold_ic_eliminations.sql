@@ -78,6 +78,13 @@ balance_eliminations as (
         db.fiscal_period as fiscal_period,
         icr.debit_account as debit_account,
         icr.credit_account as credit_account,
+        {# F2: the two entities whose balances this cancels. They were computed
+           here and thrown away, which left assert_equity_method_no_ic_elim
+           unable to key on anything finer than the group — so one equity-method
+           node in a group failed every elimination in it. Also the audit trail
+           F10 wants: which pair a rule actually fired on. #}
+        db.data_area_id as debit_entity,
+        cr.data_area_id as credit_entity,
         least(abs(db.account_balance), abs(cr.account_balance)) as elimination_amount,
         -least(abs(db.account_balance), abs(cr.account_balance)) as debit_elimination,
         least(abs(db.account_balance), abs(cr.account_balance)) as credit_elimination
@@ -93,12 +100,21 @@ balance_eliminations as (
       and cr.data_area_id != db.data_area_id
       and (icr.debit_entity_pattern = '*' or db.data_area_id = icr.debit_entity_pattern)
       and (icr.credit_entity_pattern = '*' or cr.data_area_id = icr.credit_entity_pattern)
-      {# PRD-14: Exclude equity-method entities from IC eliminations #}
-      and db.data_area_id not in (
-          select data_area_id from {{ ref('consolidation_groups') }} where consolidation_method = 'equity'
+      {# PRD-14: Exclude equity-method entities from IC eliminations.
+         F2: the method is dated and per-group, so the exclusion is too — it read
+         the consolidation_groups seed, which had one method per entity for all
+         time and none of the chain. An entity below an equity-held sub-group is
+         equity-method at the top group while still line-consolidating into the
+         sub-group, and only the (group, entity, period) key can say that. #}
+      and (db.consolidation_group, db.data_area_id, db.fiscal_year, db.fiscal_period) not in (
+          select consolidation_group, data_area_id, fiscal_year, fiscal_period
+          from {{ ref('gold_entity_ownership') }}
+          where consolidation_method = 'equity' or has_complete_chain = 0
       )
-      and cr.data_area_id not in (
-          select data_area_id from {{ ref('consolidation_groups') }} where consolidation_method = 'equity'
+      and (cr.consolidation_group, cr.data_area_id, cr.fiscal_year, cr.fiscal_period) not in (
+          select consolidation_group, data_area_id, fiscal_year, fiscal_period
+          from {{ ref('gold_entity_ownership') }}
+          where consolidation_method = 'equity' or has_complete_chain = 0
       )
 ),
 
@@ -115,12 +131,23 @@ unrealized_profit_eliminations as (
         icb.fiscal_period as fiscal_period,
         icr.debit_account as debit_account,
         icr.asset_account as credit_account,
+        icb.selling_entity as debit_entity,
+        icb.buying_entity as credit_entity,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as elimination_amount,
         -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination
     from ic_rules as icr
     cross join {{ source('epm_staging', 'ic_balances') }} as icb
-    inner join {{ ref('consolidation_groups') }} as cg
+    {# F2: which group an entity rolls into is now one row per ANCESTOR group, so
+       an unrealized-profit elimination is raised in every group that holds the
+       buyer — including a parent group, which the single-level seed join never
+       reached. distinct because the ownership model is period-grained and this
+       join only needs the membership. #}
+    inner join (
+        select distinct consolidation_group, data_area_id
+        from {{ ref('gold_entity_ownership') }}
+        where has_complete_chain = 1 and consolidation_method != 'equity'
+    ) as cg
         on icb.buying_entity = cg.data_area_id
     where icr.rule_type = 'unrealized_profit'
       and icb.ending_inventory_from_ic > 0

@@ -9,18 +9,37 @@
    Reconciliation: opening → share_of_profit → OCI → dividends → acquisition → disposal → closing
    Supports full vs partial goodwill methods #}
 
+{# F2: ownership comes from gold_entity_ownership — dated, chain-multiplied and
+   resolved once. This read the consolidation_groups seed, so an entity's NCI was
+   computed from a June CSV and only ever against its immediate parent group; a
+   sub-group's minority interest never reached the top group at all. #}
 with nci_entities as (
     select
-        cg.consolidation_group,
-        cg.data_area_id,
-        cg.entity_name,
-        cg.ownership_pct / 100.0 as ownership_pct,
-        1.0 - cg.ownership_pct / 100.0 as nci_pct,
-        cg.reporting_currency,
-        coalesce(cg.consolidation_method, 'full') as consolidation_method
-    from {{ ref('consolidation_groups') }} as cg
-    where cg.ownership_pct < 100
-      and cg.consolidation_method = 'full'
+        eo.consolidation_group as consolidation_group,
+        eo.data_area_id as data_area_id,
+        eo.fiscal_year as fiscal_year,
+        eo.fiscal_period as fiscal_period,
+        cg.entity_name as entity_name,
+        eo.effective_ownership_pct as ownership_pct,
+        1.0 - eo.effective_ownership_pct as nci_pct,
+        grp.reporting_currency as reporting_currency,
+        eo.consolidation_method as consolidation_method
+    from {{ ref('gold_entity_ownership') }} as eo
+    {# On data_area_id ALONE: the node carrying an entity's name is the one that
+       owns it, and an entity is a node exactly once
+       (ConsolidationGroup._validate_entity_in_one_node,
+       assert_entity_in_one_consolidation_node). Keying on the consolidating
+       group as well matched only the immediate parent, so every entity reached
+       through a sub-group — the rows this work exists to produce — came out
+       with a blank name in the top group's schedule. #}
+    left join {{ source('epm_gold', 'consolidation_groups') }} as cg
+        on cg.data_area_id = eo.data_area_id
+    left join {{ source('epm_gold', 'consolidation_groups') }} as grp
+        on grp.consolidation_group = eo.consolidation_group
+        and grp.data_area_id = ''
+    where eo.has_complete_chain = 1
+      and eo.effective_ownership_pct < 1.0
+      and eo.consolidation_method = 'full'
 ),
 
 {# NCI share of profit per period #}
@@ -35,6 +54,8 @@ nci_profit as (
     inner join nci_entities as ne
         on ctb.consolidation_group = ne.consolidation_group
         and ctb.data_area_id = ne.data_area_id
+        and ctb.fiscal_year = ne.fiscal_year
+        and ctb.fiscal_period = ne.fiscal_period
     where ctb.is_pnl = 1
     group by ctb.consolidation_group, ctb.data_area_id, ctb.fiscal_year, ctb.fiscal_period
 ),
@@ -51,6 +72,8 @@ nci_bs_balance as (
     inner join nci_entities as ne
         on ctb.consolidation_group = ne.consolidation_group
         and ctb.data_area_id = ne.data_area_id
+        and ctb.fiscal_year = ne.fiscal_year
+        and ctb.fiscal_period = ne.fiscal_period
     where ctb.is_balance_sheet = 1
     group by ctb.consolidation_group, ctb.data_area_id, ctb.fiscal_year, ctb.fiscal_period
 ),
@@ -74,8 +97,12 @@ movement_schedule as (
         coalesce(np.nci_share_of_profit, 0) as share_of_profit,
         ne.consolidation_method as consolidation_method
     from nci_entities as ne
+    {# nci_entities is period-grained since F2 (ownership is dated), so this
+       join carries the period too — without it every entity-period row would
+       pair with every period and fan the schedule out. #}
     inner join nci_periods as pr
         on pr.consolidation_group = ne.consolidation_group and pr.data_area_id = ne.data_area_id
+        and pr.fiscal_year = ne.fiscal_year and pr.fiscal_period = ne.fiscal_period
     left join nci_profit as np
         on np.consolidation_group = ne.consolidation_group and np.data_area_id = ne.data_area_id
         and np.fiscal_year = pr.fiscal_year and np.fiscal_period = pr.fiscal_period

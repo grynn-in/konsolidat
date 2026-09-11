@@ -76,6 +76,10 @@ models:
           - not_null
       - name: elimination_amount
         description: "Lesser of debit/credit IC balances to eliminate"
+      - name: debit_entity
+        description: "The entity on the debit side of the eliminated pair."
+      - name: credit_entity
+        description: "The entity on the credit side of the eliminated pair."
 
   - name: gold_fx_revaluation
     description: "Currency translation adjustment (CTA) entries"
@@ -266,13 +270,37 @@ models:
   # --- PRD-8 through PRD-22 models ---
 
   - name: gold_consolidation_hierarchy
-    description: "PRD-8: Multi-level consolidation group hierarchy with effective ownership"
+    description: >
+      PRD-8: the consolidation tree — parent, level, path. Structure only:
+      F2 removed effective_ownership_pct, which held the DIRECT percentage and
+      had no date grain. Ownership lives in gold_entity_ownership.
     columns:
       - name: consolidation_group
         tests:
           - not_null
+
+  - name: gold_entity_ownership
+    description: >
+      F2: the one resolved answer to how much of an entity a group owns in a
+      period, and how it is consolidated. One row per (ancestor group, entity,
+      period): the effective share is the product of each link's dated
+      percentage along the consolidation_ancestry chain, which is what makes
+      consolidation multi-level.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
       - name: effective_ownership_pct
-        description: "Effective ownership percentage through hierarchy chain"
+        description: "Chain product, as a fraction. 0 when the chain is incomplete."
+      - name: direct_ownership_pct
+        description: "What the entity's IMMEDIATE parent owns of it, as a fraction."
+      - name: has_complete_chain
+        description: "0 when some link has no Ownership Period covering the period."
+      - name: consolidation_method
+        description: "The weakest method on the chain: full < proportional < equity < none."
 
   - name: gold_equity_method_associates
     description: "PRD-14: Equity method entries for associates (20-50% ownership)"

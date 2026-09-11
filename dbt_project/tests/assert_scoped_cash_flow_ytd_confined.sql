@@ -30,19 +30,18 @@
 -- resolvable scope makes the over-selected entity an offender; GREEN once the macro
 -- selects exactly the scope.
 --
--- The flat seed resolves an ENTITY scope (matches itself) or a TOP-LEVEL group
--- (expand to its seeded members: GROUP_CORP -> {USMF,DEMF,GBMF,JPMF}, AMG -> {...}).
--- It cannot independently resolve an INTERMEDIATE sub-group (e.g. GROUP_EMEA, which
--- exists only in gold_consolidation_hierarchy, not the seed); for such a scope the
--- oracle is empty, so we suppress the check rather than false-fail — a genuinely
--- bogus/zero-entity scope is already guarded by assert_scope_resolves_to_entities.
+-- The oracle resolves an ENTITY scope (matches itself) or ANY consolidation
+-- group, top-level or intermediate, to every entity that rolls into it — the
+-- ancestry closure carries one row per (ancestor group, entity), so a sub-group
+-- needs no special case. An unresolvable scope yields an empty oracle and the
+-- check is suppressed rather than false-failing; a genuinely bogus/zero-entity
+-- scope is already guarded by assert_scope_resolves_to_entities.
 --
--- ASSUMPTION (konsolidat#124): the flat seed and gold_consolidation_hierarchy
--- AGREE on TOP-LEVEL group membership. If the hierarchy ever held a member under a
--- top-level group that the flat seed omits, this oracle would under-select and
--- could false-fail. That divergence is itself the bug tracked in #130 (doctype
--- GROUP_EMEA vs seed GROUP_CORP); reconciling seed<->hierarchy there also removes
--- this assumption. Until then, top-level membership is verified consistent.
+-- F2 removed the previous ASSUMPTION (konsolidat#124) that the flat seed and the
+-- hierarchy agree on top-level group membership. They did not — the seed put
+-- DEMF and GBMF under GROUP_CORP, the doctype under GROUP_EMEA (#130) — and the
+-- seed is gone. Oracle and macro now read the same tree by two different
+-- mechanisms: a parent-link closure here, a path-string LIKE there.
 --
 -- Tradeoff (vs. the rejected write-time marker): this guards against the scope_filter
 -- MACRO over-selecting, not against a model dropping the scope_filter call entirely.
@@ -59,18 +58,31 @@
 {%- if scope is not none and (scope | string | trim) != '' -%}
 {%- set s = (scope | string | trim) | replace("'", "''") %}
 with scoped_entities as (
-    -- Independent oracle: flat consolidation_groups seed, EXACT equality only.
-    -- A scope code is either a top-level consolidation group (expand to its seeded
-    -- member entities) or an entity data_area_id (matches itself). No LIKE / no
-    -- `path` resolution shared with scope_filter, so this is not a superset of the
-    -- macro's selection by construction.
+    -- Independent oracle: the ancestry closure, EXACT equality only. A scope
+    -- code is either a consolidation group (every entity that rolls into it, at
+    -- any depth) or an entity data_area_id (matches itself). Still no LIKE and
+    -- no `path` — scope_filter resolves descendants by matching the
+    -- materialised path string, this resolves them from a closure konsol builds
+    -- by walking parent links — so the projection is not a subset of the oracle
+    -- by construction and an over-selecting macro still surfaces below.
+    --
+    -- F2 replaced the flat consolidation_groups seed here. That seed listed
+    -- DEMF and GBMF under GROUP_CORP while the real tree puts them under
+    -- GROUP_EMEA, and the header above recorded the resulting assumption ("the
+    -- flat seed and gold_consolidation_hierarchy AGREE on TOP-LEVEL group
+    -- membership… that divergence is itself the bug tracked in #130"). Reading
+    -- the structure table directly made that divergence the normal case: a
+    -- GROUP_CORP close would have pulled DEMF and GBMF in through `path` while
+    -- the oracle held only USMF and JPMF, and both would have false-failed.
+    -- The closure resolves an INTERMEDIATE sub-group too, so the suppression
+    -- clause below is now only reached for a scope that resolves to nothing.
     select data_area_id
-    from {{ ref('consolidation_groups') }}
-    where consolidation_group = '{{ s }}'
+    from {{ source('epm_staging', 'consolidation_ancestry') }}
+    where consolidation_group = '{{ s }}' and data_area_id != ''
     union distinct
     select data_area_id
-    from {{ ref('consolidation_groups') }}
-    where data_area_id = '{{ s }}'
+    from {{ source('epm_gold', 'consolidation_groups') }}
+    where data_area_id = '{{ s }}' and data_area_id != ''
 ),
 -- Source projection fed to gold_cash_flow_indirect (per-period: period_filter
 -- applies year AND single period; matches the model's WHERE exactly).

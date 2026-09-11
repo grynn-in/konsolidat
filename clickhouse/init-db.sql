@@ -36,12 +36,15 @@ ORDER BY (scenario_id);
 -- ============================================================
 -- PRD-8: Consolidation hierarchy (multi-level groups)
 -- ============================================================
+-- F2: no ownership column here. It used to carry effective_ownership_pct, which
+-- in fact held the DIRECT percentage (konsol wrote `ownership_pct or 100`) and
+-- had no date grain, so it could never expire. Ownership is temporal and lives
+-- only in epm_staging.ownership_periods.
 CREATE TABLE IF NOT EXISTS epm_staging.consolidation_hierarchy (
     consolidation_group String,
     data_area_id String,
     parent_group String DEFAULT '',
     hierarchy_level UInt8 DEFAULT 1,
-    effective_ownership_pct Decimal(5,2) DEFAULT 100.00,
     path String DEFAULT '',
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
@@ -249,3 +252,24 @@ CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
     hierarchy_level UInt16, path String, effective_from String,
     effective_to String, is_default UInt8, status String
 ) ENGINE = MergeTree ORDER BY (hierarchy_name, member_code);
+
+-- F2: the consolidation structure and its link closure.
+--
+-- epm_gold.consolidation_groups was created by `dbt seed` from
+-- seeds/consolidation_groups.csv — the SAME relation konsol TRUNCATE+INSERTs,
+-- so a governed build and a bench migrate overwrote each other's ownership
+-- figures. The seed is deleted and this is the DDL; konsol's
+-- ensure_reference_tables() creates it on volumes that predate F2.
+CREATE TABLE IF NOT EXISTS epm_gold.consolidation_groups (
+    consolidation_group String, data_area_id String, entity_name String,
+    reporting_currency String
+) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id);
+
+-- One row per (ancestor group, entity, link on the chain between them), written
+-- by konsol's tree walk. gold_entity_ownership multiplies each link's dated
+-- percentage, which is how a 60%-owned subsidiary of an 80%-owned sub-group
+-- reaches the top group at 48% instead of not reaching it at all.
+CREATE TABLE IF NOT EXISTS epm_staging.consolidation_ancestry (
+    consolidation_group String, data_area_id String, link_group String,
+    link_data_area_id String, link_depth UInt8, depth UInt8, path String
+) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id, link_depth);
