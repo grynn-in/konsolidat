@@ -59,18 +59,20 @@
 {%- if scope is not none and (scope | string | trim) != '' -%}
 {%- set s = (scope | string | trim) | replace("'", "''") %}
 with scoped_entities as (
-    -- Independent oracle: flat consolidation_groups seed, EXACT equality only.
-    -- A scope code is either a top-level consolidation group (expand to its seeded
-    -- member entities) or an entity data_area_id (matches itself). No LIKE / no
-    -- `path` resolution shared with scope_filter, so this is not a superset of the
-    -- macro's selection by construction.
+    -- Independent oracle: the flat consolidation structure, EXACT equality only.
+    -- A scope code is either a consolidation group (expand to its member
+    -- entities) or an entity data_area_id (matches itself). No LIKE / no `path`
+    -- resolution shared with scope_filter, so this is not a superset of the
+    -- macro's selection by construction. F2: reads the structure table directly
+    -- (the seed behind ref('consolidation_groups') is deleted); data_area_id !=
+    -- '' drops the group nodes, which the seed never carried.
     select data_area_id
-    from {{ ref('consolidation_groups') }}
-    where consolidation_group = '{{ s }}'
+    from {{ source('epm_gold', 'consolidation_groups') }}
+    where consolidation_group = '{{ s }}' and data_area_id != ''
     union distinct
     select data_area_id
-    from {{ ref('consolidation_groups') }}
-    where data_area_id = '{{ s }}'
+    from {{ source('epm_gold', 'consolidation_groups') }}
+    where data_area_id = '{{ s }}' and data_area_id != ''
 ),
 -- Source projection fed to gold_cash_flow_indirect (per-period: period_filter
 -- applies year AND single period; matches the model's WHERE exactly).

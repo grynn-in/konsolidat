@@ -27,9 +27,13 @@
 -- The equity rate join is inert on real-D365 gold (no 3010/3100 equity accounts), so
 -- correcting the source never moves gold row counts.
 
+{# F2: the seed is deleted; this reads the structure table konsol writes. The
+   data_area_id != '' guard drops group nodes, which the seed never carried —
+   without it every group node would read as an entity with no equity rate. #}
 with seed_entities as (
     select consolidation_group, data_area_id
-    from {{ ref('consolidation_groups') }}
+    from {{ source('epm_gold', 'consolidation_groups') }}
+    where data_area_id != ''
 ),
 
 rates as (

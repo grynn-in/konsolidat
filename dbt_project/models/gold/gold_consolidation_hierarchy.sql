@@ -16,12 +16,13 @@
    silently between them and nothing recording which had won — and the copies
    do disagree: the seed carries AMDE at 75%, the staging table at 100%.
 
-   Which of those is correct is a separate question (see F2 — Consolidation
-   Group and Ownership Period both carry ownership at different grains, and
-   epm_staging.ownership_periods also says 75%). The defect here is narrower
-   and independent of that: whether an ownership percentage came from a live
-   table or from a CSV last edited in June should never depend on whether some
-   table happened to be populated at build time.
+   F2 answered the "which is correct" question by deleting the disagreement:
+   this model carries NO ownership at all now. It used to expose
+   effective_ownership_pct, which held the DIRECT percentage (konsol wrote
+   `ownership_pct or 100`) and had no date grain, so it could never expire.
+   Ownership is temporal and lives only in Ownership Period; gold_entity_ownership
+   resolves it, multiplying the chain through epm_staging.consolidation_ancestry.
+   What is left here is what the name always promised: structure.
 
    The fallback is gone. If the staging table is empty this model now yields
    nothing rather than quietly substituting the seed, and
@@ -33,7 +34,6 @@ select
     data_area_id,
     parent_group,
     hierarchy_level,
-    effective_ownership_pct,
     path
 from {{ source('epm_staging', 'consolidation_hierarchy') }}
 where consolidation_group != ''

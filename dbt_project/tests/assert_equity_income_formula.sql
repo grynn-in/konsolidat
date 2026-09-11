@@ -7,8 +7,8 @@ select
     ea.fiscal_period,
     ea.amount as equity_income,
     ni.net_income,
-    cg.ownership_pct / 100.0 as ownership_pct,
-    ni.net_income * (cg.ownership_pct / 100.0) as expected
+    eo.effective_ownership_pct as ownership_pct,
+    ni.net_income * eo.effective_ownership_pct as expected
 from {{ ref('gold_equity_method_associates') }} as ea
 inner join (
     select
@@ -25,7 +25,14 @@ inner join (
     on ea.data_area_id = ni.data_area_id
     and ea.fiscal_year = ni.fiscal_year
     and ea.fiscal_period = ni.fiscal_period
-inner join {{ ref('consolidation_groups') }} as cg
-    on ea.data_area_id = cg.data_area_id
+{# F2: the share is dated and per-group, so the oracle must be keyed the same
+   way. It read the consolidation_groups seed on data_area_id alone, which held
+   one percentage per entity for all time and ignored which group was
+   consolidating it. #}
+inner join {{ ref('gold_entity_ownership') }} as eo
+    on ea.consolidation_group = eo.consolidation_group
+    and ea.data_area_id = eo.data_area_id
+    and ea.fiscal_year = eo.fiscal_year
+    and ea.fiscal_period = eo.fiscal_period
 where ea.main_account = 'EQ_INCOME'
-  and abs(ea.amount - ni.net_income * (cg.ownership_pct / 100.0)) > 0.01
+  and abs(ea.amount - ni.net_income * eo.effective_ownership_pct) > 0.01

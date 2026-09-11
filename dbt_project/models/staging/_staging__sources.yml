@@ -10,6 +10,15 @@ sources:
           Manually-entered monthly budgets synced from Budget Sheets on cycle
           lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
           gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+      - name: consolidation_groups
+        description: >
+          F2: the consolidation STRUCTURE — who and where, no ownership. This
+          was `ref('consolidation_groups')`, a seed, and seeds materialise into
+          epm_gold: the CSV and konsol's write-through were the SAME relation,
+          so every governed build re-seeded it from a June snapshot and every
+          bench migrate overwrote it back. Publishing a Consolidation Group
+          triggers a consolidation build, which reverted the publish. The seed
+          is deleted; konsol's ensure_reference_tables() owns the DDL.
 
   - name: epm_staging
     schema: epm_staging
@@ -44,8 +53,20 @@ sources:
         description: "Scenario metadata created via the API"
         loaded_at_field: updated_at
       - name: consolidation_hierarchy
-        description: "PRD-8: Multi-level consolidation group hierarchy with effective ownership"
+        description: >
+          PRD-8: the flat consolidation tree — parent, level, path. It used to
+          carry an effective_ownership_pct column that in fact held the DIRECT
+          percentage and never expired; F2 dropped it. Ownership is temporal and
+          lives only in ownership_periods.
         loaded_at_field: updated_at
+      - name: consolidation_ancestry
+        description: >
+          F2: the link closure of the consolidation tree — one row per (ancestor
+          group, entity, link between them), written by konsol's tree walk.
+          gold_entity_ownership multiplies each link's dated percentage to get
+          the effective share, which is what makes consolidation multi-level.
+          Before F2 the tree was stored and never traversed: a sub-group's
+          entities never reached its parent's consolidated result.
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at

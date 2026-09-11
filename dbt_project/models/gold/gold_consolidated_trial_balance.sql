@@ -59,43 +59,34 @@ with entity_tb as (
         {{ scope_filter('tb.data_area_id') }}
 ),
 
-{# PRD-9: Temporal ownership periods from staging — range lookup per entity per period #}
-ownership_staging as (
-    select
-        consolidation_group,
-        data_area_id,
-        effective_date,
-        end_date,
-        ownership_pct,
-        consolidation_method
-    from {{ source('epm_staging', 'ownership_periods') }}
-),
+{# F2: ownership is resolved in ONE place, gold_entity_ownership, and it is
+   resolved per ANCESTOR group — which is what makes this model multi-level.
+   Before F2 this CTE read the consolidation_groups seed and joined an entity to
+   its immediate parent group only, so GROUP_CORP's consolidated result held
+   JPMF and USMF and none of GROUP_EMEA's entities at any percentage. Now one
+   entity yields one row per ancestor group, each at the chain-product share.
 
-{# PRD-8: Hierarchy-based ownership — prefer hierarchy, fall back to seed #}
-hierarchy_ownership as (
-    select
-        h.consolidation_group,
-        h.data_area_id,
-        h.effective_ownership_pct as hierarchy_ownership_pct
-    from {{ ref('gold_consolidation_hierarchy') }} as h
-),
-
-{# Resolve ownership: temporal staging → hierarchy → seed fallback #}
+   The three-way `if(x != 0, ...)` fallback between staging, hierarchy and seed
+   is gone with it: it read a deliberate 0% as "unset" and silently substituted
+   a different source's number. #}
 entity_ownership as (
     select
-        cg.consolidation_group as consolidation_group,
-        cg.data_area_id as data_area_id,
-        cg.reporting_currency as reporting_currency,
-        cg.consolidation_method as seed_method,
-        cg.ownership_pct as seed_ownership_pct,
-        {# ClickHouse fills an unmatched LEFT JOIN with the column default (0),
-           not NULL, so coalesce() would lock in 0 on a hierarchy miss. Fall back
-           to the seed ownership when the hierarchy has no row. #}
-        if(ho.hierarchy_ownership_pct != 0, ho.hierarchy_ownership_pct, cg.ownership_pct) as base_ownership_pct
-    from {{ ref('consolidation_groups') }} as cg
-    left join hierarchy_ownership as ho
-        on cg.consolidation_group = ho.consolidation_group
-        and cg.data_area_id = ho.data_area_id
+        eo.consolidation_group as consolidation_group,
+        eo.data_area_id as data_area_id,
+        eo.fiscal_year as fiscal_year,
+        eo.fiscal_period as fiscal_period,
+        eo.effective_ownership_pct as ownership_pct,
+        eo.consolidation_method as consolidation_method,
+        eo.has_complete_chain as has_complete_chain,
+        {# The GROUP's presentation currency, taken from the group node — not
+           from the entity's own row, whose reporting_currency in the old seed
+           was the group's anyway (it is NOT the entity's functional currency;
+           that is silver_legal_entities.accounting_currency). #}
+        grp.reporting_currency as reporting_currency
+    from {{ ref('gold_entity_ownership') }} as eo
+    left join {{ source('epm_gold', 'consolidation_groups') }} as grp
+        on grp.consolidation_group = eo.consolidation_group
+        and grp.data_area_id = ''
 ),
 
 {# PRD-10: Historical equity rates from staging #}
@@ -118,6 +109,8 @@ rate_keys as (
     from entity_tb as etb
     inner join entity_ownership as eo
         on etb.data_area_id = eo.data_area_id
+        and etb.fiscal_year = eo.fiscal_year
+        and etb.fiscal_period = eo.fiscal_period
 ),
 
 all_rates as (
@@ -248,13 +241,10 @@ rated as (
         etb.local_amount as local_amount,
         etb.accounting_currency as accounting_currency,
         eo.reporting_currency as reporting_currency,
-        {# PRD-9: Temporal ownership — use staging period match, else hierarchy/seed.
-           The asof LEFT JOIN fills a miss with the default (0 / ''), not NULL, so
-           coalesce() would wrongly lock 0% / '' for every entity without a
-           temporal ownership row (e.g. all of GROUP_CORP — staging holds only
-           AMG). Fall back to the base ownership / seed method on a miss. #}
-        if(os.ownership_pct != 0, os.ownership_pct, eo.base_ownership_pct) / 100.0 as ownership_pct,
-        if(os.consolidation_method != '', os.consolidation_method, eo.seed_method) as consolidation_method,
+        {# Already a fraction and already period-resolved — see
+           gold_entity_ownership. No fallback chain, and 0% means 0%. #}
+        eo.ownership_pct as ownership_pct,
+        eo.consolidation_method as consolidation_method,
         rl.closing_rate as closing_rate,
         rl.average_rate as average_rate,
         {# PRD-10: Historical equity rate lookup #}
@@ -267,13 +257,12 @@ rated as (
             else rl.closing_rate
         end as translation_rate
     from entity_tb as etb
+    {# One row per ancestor group: the fan-out here IS the multi-level
+       consolidation. Period-keyed, because ownership is dated. #}
     inner join entity_ownership as eo
         on etb.data_area_id = eo.data_area_id
-    {# PRD-9: Temporal ownership — period_date falls within [effective_date, end_date] #}
-    asof left join ownership_staging as os
-        on eo.consolidation_group = os.consolidation_group
-        and etb.data_area_id = os.data_area_id
-        and etb.period_date >= os.effective_date
+        and etb.fiscal_year = eo.fiscal_year
+        and etb.fiscal_period = eo.fiscal_period
     left join rate_lookup as rl
         on etb.accounting_currency = rl.from_currency
         and eo.reporting_currency = rl.to_currency
@@ -305,9 +294,14 @@ rated as (
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
         and etb.period_date >= hr.rate_date
-    {# PRD-14: Exclude equity-method entities — handled in separate model.
-       Use the same default-aware resolution as the column above. #}
-    where if(os.consolidation_method != '', os.consolidation_method, eo.seed_method) != 'equity'
+    {# PRD-14: equity-method entities are handled in a separate model. The
+       method is the WEAKEST link on the chain, so an entity below an
+       equity-held sub-group is excluded from that group's line consolidation
+       too — while still line-consolidating into the sub-group itself.
+       A chain with an unresolved link consolidates nothing rather than
+       something plausible; assert_ownership_chain_complete names it. #}
+    where eo.consolidation_method != 'equity'
+      and eo.has_complete_chain = 1
 ),
 
 consolidated as (
