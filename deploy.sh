@@ -69,12 +69,18 @@ case "${1:-}" in
     info "Running backup..."
     # backup has no build: of its own; it runs the image frappe_backend builds,
     # and pull_policy: never stops Compose from looking for it on Docker Hub.
-    # On a host that has never deployed (or a cron run after the image was
-    # pruned), build it first. `config --images backup` also lists the images of
-    # backup's dependencies (mariadb, redis, clickhouse), so keep only the
-    # project-scoped Frappe tag; if nothing matches, the inspect fails and we build.
+    # Backup NEVER builds: it runs unattended from cron, and a full image build
+    # (bench init + a ~700 MB vite build) next to a running ClickHouse on a
+    # small host can OOM, and then there is no backup either. If the image is
+    # missing, fail loudly so the missed backup is visible in the cron log.
+    # `config --images backup` also lists backup's dependencies (mariadb, redis,
+    # clickhouse), so keep only the project-scoped Frappe tag. An empty result
+    # (config failed, or no match) is treated as "not found".
     FRAPPE_IMAGE="$(docker compose --profile backup config --images backup | grep -- '-frappe:latest$' | head -n 1 || true)"
-    docker image inspect "$FRAPPE_IMAGE" >/dev/null 2>&1 || docker compose build frappe_backend
+    if [ -z "$FRAPPE_IMAGE" ] || ! docker image inspect "$FRAPPE_IMAGE" >/dev/null 2>&1; then
+      err "Frappe image ${FRAPPE_IMAGE:-<unresolved>} not found. Run ./deploy.sh first; backup does not build." >&2
+      exit 1
+    fi
     docker compose --profile backup run --rm backup
     exit 0
     ;;

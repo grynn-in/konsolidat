@@ -59,21 +59,38 @@ ERP (D365 / SAP / ERPNext)
 ## Quick Start
 
 ```bash
-cp .env.example .env
-docker compose up -d
-cd dbt_project && dbt deps && dbt build
+./deploy.sh
 ```
 
-> **Run `bench migrate` first.** Since konsolidat#146 this project has no seeds:
-> every reference table — currencies, the consolidation structure, dimension
-> mappings, spread profiles, fiscal calendars, budget input — is written by the
-> konsol Frappe app. `./deploy.sh` runs the configurator (site setup plus
-> `bench migrate`) before dbt, so the stack bootstraps itself. A plain
-> `docker compose up -d` does not: the configurator is in the `setup` profile,
-> so run `docker compose --profile setup run --rm configurator` first if you
-> start the stack by hand. Running dbt by hand against a fresh ClickHouse
-> before konsol has migrated gives you empty reference tables and models that
-> build against nothing, with no seed left to fall back on.
+`./deploy.sh` generates `.env` with random secrets and stages the konsol app
+in `docker/frappe/konsol`. It then starts the infrastructure, builds the
+Frappe image, runs the configurator (site setup plus `bench migrate`), starts
+the application and runs the dbt build, in that order.
+
+To do the same by hand, run these steps in this order. They assume `.env`
+has real secrets and the konsol app is staged:
+
+```bash
+docker compose up -d mariadb redis_cache redis_queue clickhouse
+docker compose build frappe_backend                    # the one Frappe image
+docker compose --profile setup run --rm configurator   # site setup + bench migrate
+docker compose up -d
+docker compose --profile setup run --rm dbt_init       # dbt build
+```
+
+> **Build, then migrate, then run dbt.** Only `frappe_backend` builds the
+> shared Frappe image. Build it before running the configurator: the
+> configurator can't build it, and its project doesn't include
+> `frappe_backend`, so on a fresh host it fails with "No such image".
+> A plain `docker compose up -d` does not run the configurator, because it is
+> in the `setup` profile.
+>
+> Since konsolidat#146 this project has no seeds. Every reference table
+> (currencies, the consolidation structure, dimension mappings, spread
+> profiles, fiscal calendars, budget input) is written by the konsol Frappe
+> app. Running dbt against a fresh ClickHouse before konsol has migrated gives
+> you empty reference tables and models that build against nothing, with no
+> seed left to fall back on.
 
 ## Documentation
 

@@ -13,13 +13,18 @@ x-frappe-common: &frappe-common
   # services would then build the same Dockerfile in parallel, six vite builds
   # at once, which OOM-killed the build and ClickHouse on an 8 GiB host (#152).
   #
-  # The tag is scoped to the Compose project (the directory name unless -p or
-  # COMPOSE_PROJECT_NAME says otherwise), so a build from another checkout or
-  # worktree cannot overwrite the tag the live stack runs.
+  # The tag is scoped to the Compose project: the checkout's directory name,
+  # normalised (lower-cased, characters other than a-z 0-9 - _ dropped),
+  # unless -p or COMPOSE_PROJECT_NAME says otherwise. A build from a checkout
+  # with a different directory name cannot overwrite the tag the live stack
+  # runs; two checkouts with the same directory name (e.g. both `repo`) still
+  # share it. Do NOT pin COMPOSE_PROJECT_NAME to change this: the project name
+  # also names the data volumes (repo_mariadb_data, ...), so a new name would
+  # start the stack on empty volumes.
   #
-  # pull_policy: never, because this image only ever exists locally; the
-  # default (`missing`) would try Docker Hub for it. If it is missing, build
-  # it with `docker compose build frappe_backend` (deploy.sh does this).
+  # pull_policy: never for all six services, because this image only ever
+  # exists locally; the default (`missing`) would try Docker Hub for it.
+  # `never` only stops pulls, it does not stop frappe_backend's build.
   image: ${COMPOSE_PROJECT_NAME}-frappe:latest
   pull_policy: never
   environment: &frappe-env
@@ -151,13 +156,13 @@ services:
     # The only build in the stack: produces the shared <project>-frappe image
     # for all Frappe services. It lives here because frappe_backend is in the
     # default profile, so a plain `docker compose up -d` builds the image when
-    # it is missing. pull_policy overrides the anchor's `never` so this one
-    # service can still build (Compose's default for a service with `build:`).
+    # it is missing. It inherits the anchor's pull_policy: never. That only
+    # rules out pulling from a registry; Compose still builds a service with
+    # `build:` under `never`, and skips a pointless Docker Hub lookup first.
     build:
       context: ./docker/frappe
       args:
         FRAPPE_BRANCH: ${FRAPPE_BRANCH:-version-15}
-    pull_policy: missing
     container_name: konsolidat_backend
     command: ["web"]
     ports:
