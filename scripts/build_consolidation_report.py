@@ -64,51 +64,82 @@ class ConsolidationConfig:
 
 
 def discover_config(group, year):
-    """Build ConsolidationConfig from ClickHouse metadata."""
-    # Get entities in this consolidation group
+    """Build ConsolidationConfig from ClickHouse metadata.
+
+    Entities, ownership and method come from epm_gold.gold_entity_ownership,
+    the source every consolidated model reads (konsolidat#153). F2 retired
+    ownership_pct and consolidation_method from consolidation_groups, so the
+    old first query failed on any stack deployed since.
+    """
+    # Ownership is period-keyed, so the year comes first: the latest year the
+    # group has a consolidated trial balance for.
+    if year is None:
+        yr_rows = ch_query(f"""
+            SELECT max(fiscal_year) AS max_year
+            FROM epm_gold.gold_consolidated_trial_balance
+            WHERE consolidation_group = '{group}'
+            FORMAT JSON
+        """)
+        year = int(yr_rows[0]["max_year"] or 0) if yr_rows else 0
+        if not year:
+            print(f"ERROR: group '{group}' has no consolidated trial balance; pass --year")
+            sys.exit(1)
+        print(f"  Auto-detected fiscal year: {year}")
+
+    # One row per entity: its ownership and method at the year's latest period
+    # inside the ownership window. The aliases differ from the column names on
+    # purpose (CYCLIC_ALIASES).
     rows = ch_query(f"""
-        SELECT cg.consolidation_group, cg.data_area_id, cg.entity_name,
-               cg.ownership_pct, cg.reporting_currency, cg.consolidation_method,
-               le.accounting_currency
-        FROM epm_gold.consolidation_groups AS cg
-        LEFT JOIN epm_silver.silver_entity_currencies AS le
-            ON cg.data_area_id = le.data_area_id
-        WHERE cg.consolidation_group = '{group}'
-          AND cg.data_area_id != ''
-          AND cg.consolidation_method = 'full'
-        ORDER BY cg.data_area_id
+        SELECT data_area_id,
+               argMax(effective_ownership_pct, fiscal_period) AS ownership,
+               argMax(consolidation_method, fiscal_period) AS method
+        FROM epm_gold.gold_entity_ownership
+        WHERE consolidation_group = '{group}'
+          AND fiscal_year = {year}
+          AND outside_ownership_window = 0
+          AND has_complete_chain = 1
+        GROUP BY data_area_id
+        HAVING method = 'full'
+        ORDER BY data_area_id
         FORMAT JSON
     """)
     if not rows:
-        print(f"ERROR: No entities found for group '{group}'")
+        print(f"ERROR: No fully consolidated entities found for group '{group}' in {year}")
         sys.exit(1)
 
-    entities = []
-    reporting_currency = "USD"
-    for r in rows:
-        reporting_currency = r.get("reporting_currency", "USD")
-        entities.append({
-            "data_area_id": r["data_area_id"],
-            "entity_name": r["entity_name"],
-            "ownership_pct": float(r["ownership_pct"]) / 100.0,
-            "accounting_currency": r.get("accounting_currency") or reporting_currency,
-            "consolidation_method": r["consolidation_method"],
-        })
-
-    entity_ids = [e["data_area_id"] for e in entities]
+    entity_ids = [r["data_area_id"] for r in rows]
     entity_list_sql = ", ".join(f"'{e}'" for e in entity_ids)
 
-    # Auto-detect year if not provided
-    if year is None:
-        yr_rows = ch_query(f"""
-            SELECT max(fiscal_year) as max_year
-            FROM epm_gold.gold_trial_balance
-            WHERE data_area_id IN ({entity_list_sql})
-              AND period_net_amount != 0
-            FORMAT JSON
-        """)
-        year = int(yr_rows[0]["max_year"]) if yr_rows else 2024
-        print(f"  Auto-detected fiscal year: {year}")
+    # Names and the group's reporting currency from the group tree; each
+    # entity's currency from the resolved registry (konsol first, ERP second).
+    names = {r["data_area_id"]: r for r in ch_query(f"""
+        SELECT data_area_id, entity_name AS label, reporting_currency AS group_ccy
+        FROM epm_gold.consolidation_groups
+        WHERE consolidation_group = '{group}'
+        FORMAT JSON
+    """)}
+    # The group's own row (data_area_id = ''), as the consolidated model reads it.
+    reporting_currency = (names.get("") or {}).get("group_ccy") or next(
+        (r["group_ccy"] for r in names.values() if r["group_ccy"]), "USD")
+    currencies = {r["data_area_id"]: r["ccy"] for r in ch_query(f"""
+        SELECT data_area_id, any(accounting_currency) AS ccy
+        FROM epm_silver.silver_entity_currencies
+        WHERE data_area_id IN ({entity_list_sql})
+        GROUP BY data_area_id
+        FORMAT JSON
+    """)}
+
+    entities = []
+    for r in rows:
+        eid = r["data_area_id"]
+        entities.append({
+            "data_area_id": eid,
+            "entity_name": (names.get(eid) or {}).get("label") or eid,
+            # A fraction (1 = 100%). The retired column held a percentage.
+            "ownership_pct": float(r["ownership"]),
+            "accounting_currency": currencies.get(eid) or reporting_currency,
+            "consolidation_method": r["method"],
+        })
 
     # Discover P&L sections from data
     pnl_sections = _discover_sections(entity_list_sql, year, is_pnl=True)
@@ -1089,7 +1120,7 @@ def build_diagnostics_sheet(ws, cfg, entity_pnl, entity_bs, consol_pnl, consol_b
         status = "PASS" if 0 < pct <= 100 else "FAIL"
         tests.append(("Ownership", f"{ent['data_area_id']} ownership",
                       "0 < pct <= 100", f"{pct:.0f}%", status,
-                      "" if status == "PASS" else "Bad config in consolidation_groups"))
+                      "" if status == "PASS" else "Bad ownership in gold_entity_ownership"))
 
     # ── Category 3: BS Entity Check ──────────────────────────
     for ent in cfg.entities:
