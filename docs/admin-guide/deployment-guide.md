@@ -181,7 +181,7 @@ The demo data includes:
 - **IC elimination rules**: Balance-based (AR/AP, Revenue/Expense) and unrealized profit on IC inventory (15% margin)
 - **Staging data**: Ownership periods, consolidation hierarchy, and IC balances pre-loaded for full consolidation pipeline
 
-The demo data is loaded from `clickhouse/demo-data.sql` on first container start. To reset to demo data, delete the ClickHouse volume and restart:
+A fresh ClickHouse volume gets schema only: `clickhouse/init-db.sql` and `clickhouse/raw-schema.sql` (the empty ERP landing tables dbt reads, so staging does not fail on a missing source). No demo data is shipped. Load real data through the connectors or konsol's Trial Balance Submission. `scripts/generate_demo_data.py` still writes a synthetic ledger to `clickhouse/demo-data.sql` if you want one, but nothing mounts it.
 
 ```bash
 ./deploy.sh down
