@@ -1,6 +1,6 @@
 -- C2 / grynn-in/konsolidat#120: IAS-21 equity-translation coverage guard.
 --
--- #120 had two asks, both already landed in the demo-data generator via #104/#121:
+-- #120 had two asks, both landed as data changes via #104/#121:
 --   (a) add the missing AMG IAS-21 equity-translation coverage, and
 --   (b) drop/quarantine the 12 acquisition-date `exchange_rates` rows that no model
 --       consumes (equity translation reads `historical_equity_rates`, NOT the
@@ -22,8 +22,9 @@
 --       references the dropped/re-homed rows" guard — a mis-keyed equity rate is the
 --       same dead weight the dropped acquisition-date FX rows were).
 --
--- GREEN requires `historical_equity_rates` to cover exactly the seed subsidiaries
--- (origin/main demo-data: GROUP_CORP×{USMF,DEMF,GBMF,JPMF} + AMG×{AMHQ,AMUS,AMDE}).
+-- GREEN requires `historical_equity_rates` to cover exactly the subsidiaries in
+-- `consolidation_groups`. konsol writes those rows when a Historical Equity Rate is
+-- submitted.
 -- The equity rate join is inert on real-D365 gold (no 3010/3100 equity accounts), so
 -- correcting the source never moves gold row counts.
 

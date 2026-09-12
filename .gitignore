@@ -56,7 +56,3 @@ docker/frappe/konsol/
 excel/*.xlsm
 excel/*_Report_*.xlsx
 excel/AMG_*.xlsx
-
-# Output of scripts/generate_demo_data.py. Not shipped or mounted any more;
-# generate it locally if you want a synthetic ledger, never commit it.
-clickhouse/demo-data.sql
