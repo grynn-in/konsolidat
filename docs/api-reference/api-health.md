@@ -43,10 +43,6 @@ healthcheck:
   retries: 3
 ```
 
-### VBA Debug
-
-The `EPM_Debug` macro calls this endpoint as its first connectivity test. If it fails, the Frappe server is unreachable.
-
 ## Notes
 
 - This endpoint does **not** verify ClickHouse connectivity. It only confirms the Frappe web server and Konsol app are loaded.

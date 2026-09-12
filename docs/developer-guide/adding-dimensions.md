@@ -80,11 +80,11 @@ The dimension macros will automatically include `dim_project` in all models that
 
 ### Step 4: Update API (Optional)
 
-If you want the new dimension to be filterable via `=EPM()`:
+If you want the new dimension to be filterable via `=K.EPM()`:
 
 1. Add a parameter to `epm_value()` and `epm_batch()` in `konsol/api.py`
 2. Add it to the SQL WHERE clause generation in `_batch_query_clickhouse()`
-3. Add it to the VBA `ResolveEpmArgs()` function if needed
+3. Pass it from Excel as a dimension in the add-in (`konsol/public/excel-addin/functions.js` in the konsol repo) if it needs its own parameter
 
 ## Dimension Properties
 

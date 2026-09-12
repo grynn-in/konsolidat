@@ -73,7 +73,7 @@ nav:
           - Setup Guide: getting-started/setup-guide.md
           - Configuration: getting-started/configuration-reference.md
       - Excel:
-          - VBA Add-in: user-guide/excel-vba-guide.md
+          - Excel Formulas: user-guide/excel-formulas-guide.md
           - Task Pane: user-guide/excel-taskpane-guide.md
       - Initial Setup: user-guide/initial-setup-guide.md
       - Financial Processes:

@@ -1,6 +1,6 @@
 # API Overview
 
-Konsolidat exposes a REST API through the Frappe/Konsol web framework. The API is consumed primarily by the Excel VBA module but can be called from any HTTP client.
+Konsolidat exposes a REST API through the Frappe/Konsol web framework. The API is consumed primarily by the konsol Excel add-in but can be called from any HTTP client.
 
 ## Base URL
 
@@ -117,7 +117,7 @@ All errors return a JSON object with `exc_type` and `message`:
 
 `MAX_BATCH_SIZE = 2000`
 
-The batch endpoint rejects requests exceeding 2000 items. The VBA module sends all EPM formulas on a sheet in a single batch, so this limit applies per-sheet refresh.
+The batch endpoint rejects requests exceeding 2000 items. The Excel add-in sends the `K.` formulas of one calculation in batches of at most 2000.
 
 ## Scenario → Table Mapping
 

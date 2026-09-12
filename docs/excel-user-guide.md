@@ -59,9 +59,9 @@ Konsolidat exposes data through Cube's SQL API, which speaks PostgreSQL wire pro
 
 ### Using the Budget Template
 
-1. Open `excel/budget_template.xlsm`
-2. Fill in budget lines (entity, period, account, amount)
-3. Click "Submit Budget" button (VBA macro sends POST to API)
+1. Build the template with `=K.EPMSAVE(...)` cells (see the [Excel Formulas Guide](user-guide/excel-formulas-guide.md#write-function))
+2. Fill in the amounts
+3. Each changed cell is saved to the server when Excel recalculates
 
 ### Manual API Submission
 

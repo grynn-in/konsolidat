@@ -1,6 +1,6 @@
 # POST epm_batch
 
-Queries multiple financial values in a single request. This is the primary endpoint used by the Excel VBA `EPM_Refresh` macro.
+Queries multiple financial values in a single request. This is the primary endpoint used by the konsol Excel add-in.
 
 ## Endpoint
 
@@ -57,7 +57,7 @@ Maximum **2000** items per request (`MAX_BATCH_SIZE`). Requests exceeding this l
 - Successful queries return `float` values
 - No matching data returns `0.0`
 - `null` in the values array indicates an error for that item (check `errors`)
-- The VBA module treats `null` as `0`
+- The Excel add-in shows `null` as `0`
 
 ## Example
 
@@ -139,14 +139,5 @@ Per-item validation runs before query grouping. Invalid items get inline errors 
 ClickHouse errors apply to all items in the affected query group.
 
 ## HTTP Timeouts
-
-The VBA module sets these timeouts when calling the batch endpoint:
-
-| Phase | Timeout |
-|-------|---------|
-| Resolve | 5,000 ms |
-| Connect | 10,000 ms |
-| Send | 30,000 ms |
-| Receive | 60,000 ms |
 
 The Frappe-to-ClickHouse query uses a 30-second `requests` timeout.

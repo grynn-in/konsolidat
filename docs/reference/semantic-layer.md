@@ -9,14 +9,14 @@ keeps them consistent.
 | Path | Used by | Role |
 |---|---|---|
 | **Cube.js SQL API** | Excel ODBC, BI tools, high-concurrency dashboards | **Core semantic layer.** Caching, pre-aggregations and a stable metric contract let reads scale to the target **50–500 users** without every client hitting raw ClickHouse. |
-| **Frappe direct query** (`konsol.api.epm_*` → `konsol/clickhouse.py`) | The `=EPM()` worksheet formulas and budget write-back | **Source of truth** for formula semantics, auth, and write-back. Runs inside the Frappe app so it shares the permission model (see entity-level authorization in `konsol`). |
+| **Frappe direct query** (`konsol.api.epm_*` → `konsol/clickhouse.py`) | The `=K.EPM()` worksheet formulas and budget write-back | **Source of truth** for formula semantics, auth, and write-back. Runs inside the Frappe app so it shares the permission model (see entity-level authorization in `konsol`). |
 
 Cube is **not optional** — it is the layer that makes the read side scale. The
 Frappe path is not a replacement for it; the two serve different consumers.
 
 ## Why not collapse to one path
 
-- Routing every `=EPM()` call through Cube would put Cube on the critical path
+- Routing every `=K.EPM()` call through Cube would put Cube on the critical path
   for auth and write-back, which live in Frappe.
 - Routing every dashboard/ODBC read through Frappe would not scale to hundreds
   of concurrent users — that is exactly what Cube's caching/pre-aggregations are

@@ -1,6 +1,6 @@
 # Excel Task Pane Guide
 
-The Konsolidat task pane is an Office.js add-in that provides pipeline orchestration directly from Excel — login, monitor sync status, and trigger data refreshes without leaving your workbook.
+The konsol Excel add-in adds the `K.` worksheet functions (see the [Excel Formulas Guide](excel-formulas-guide.md)) and a Konsolidat task pane for pipeline orchestration directly from Excel — sign in, monitor sync status, and trigger data refreshes without leaving your workbook.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The task pane appears as a sidebar panel in Excel, connected to your Frappe/Kons
 
 ### Sideloading for Development
 
-1. Locate `excel-addin/manifest.xml` in the Konsolidat repository
+1. Locate `konsol/public/excel-addin/manifest.xml` in the konsol repository (Frappe also serves it at `/assets/konsol/excel-addin/manifest.xml`)
 2. In Excel: **Insert → My Add-ins → Upload My Add-in**
 3. Select the manifest file
 4. The "Konsolidat" button appears on the **Home** tab
@@ -116,23 +116,12 @@ sequenceDiagram
 | Status stuck on "Queued" | Background workers not running | Ensure `bench start` includes the worker process |
 | Task pane not appearing in ribbon | Manifest not loaded | Re-sideload the manifest via Insert → My Add-ins |
 
-## Relationship to VBA Module
+## Formulas
 
-The task pane and VBA module serve different purposes:
-
-| Feature | VBA Module | Task Pane |
-|---------|-----------|-----------|
-| Query financial data | Yes (`=EPM()` formulas) | No |
-| Refresh values | Yes (Ctrl+Shift+R) | No |
-| Trigger pipeline | No | Yes |
-| Monitor sync status | No | Yes |
-| Login required | Yes (EPM_Login) | Yes (task pane login) |
-| Session | Separate (XMLHTTP cookies) | Separate (browser cookies) |
-
-Use both together: the task pane to trigger and monitor data refreshes, the VBA module to query the results.
+The same add-in provides the `K.` worksheet functions (`=K.EPM()`, `=K.EPMSAVE()` and the rest). Signing in on the task pane also signs in the formulas. See the [Excel Formulas Guide](excel-formulas-guide.md).
 
 ## Next Steps
 
-- [Excel VBA Guide](excel-vba-guide.md) — Formula functions and macros
+- [Excel Formulas Guide](excel-formulas-guide.md) — Formula functions
 - [Setup Guide](../getting-started/setup-guide.md) — Full installation including add-in
 - [Operations Runbook](../admin-guide/operations-runbook.md) — Pipeline procedures

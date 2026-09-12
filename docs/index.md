@@ -18,7 +18,7 @@ hide:
 
 <div class="ic-stats">
   <div class="ic-stat">
-    <span class="ic-stat-num">=EPM()</span>
+    <span class="ic-stat-num">=K.EPM()</span>
     <span class="ic-stat-label">Excel Native</span>
   </div>
   <div class="ic-stat">
@@ -45,7 +45,7 @@ hide:
 
 For 27 years, EPM/CPM vendors have tried to move financial analysis out of Excel and into web browsers. We think they're wrong. Excellent analysis thrives on Excel — not on the web. Konsolidat keeps it there.
 
-Multi-entity consolidation, budgeting, allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
+Multi-entity consolidation, budgeting, allocations, and variance analysis — powered by `=K.EPM()` in the spreadsheet your finance team already knows.
 
 <div class="ic-pills">
   <span class="ic-pill">Consolidation</span>
@@ -104,9 +104,9 @@ Multi-entity consolidation, budgeting, allocations, and variance analysis — po
 </div>
 
 ```
-=EPM("USMF", 2024, "Q1", "401100")
-=EPM("USMF", 2024, "FY", "601100")
-=EPM("GRP", 2024, "Q1", "401100")
+=K.EPM("USMF", 2024, "Q1", "401100")
+=K.EPM("USMF", 2024, "FY", "601100")
+=K.EPM("GRP", 2024, "Q1", "401100")
 ```
 
 </div>
@@ -168,7 +168,7 @@ base + challenge + management + board
 | FX + CTA + IC elim | Native | Native | Manual | **Native** |
 | Budget write-back | Native | Native | Native | **Native** |
 | Variance analysis | Native | Native | Native | **Native** |
-| Excel-native | Plugin | Plugin | No | **=EPM()** |
+| Excel-native | Plugin | Plugin | No | **=K.EPM()** |
 | ERP integration | Connector | Connector | Via API | **Native OData** |
 | Workflow/approvals | Native | Native | Native | **Native** |
 | SOX / regulatory | Yes | Yes | Yes | No (not targeted) |
@@ -265,7 +265,7 @@ Encryption at rest + in transit
 
 <a class="ic-nav-card" href="getting-started/quickstart/">
   <strong>Quickstart</strong>
-  <span>Zero to first =EPM() value in 15 minutes</span>
+  <span>Zero to first =K.EPM() value in 15 minutes</span>
 </a>
 
 <a class="ic-nav-card" href="getting-started/setup-guide/">
@@ -278,9 +278,9 @@ Encryption at rest + in transit
   <span>All settings, env vars, dbt variables</span>
 </a>
 
-<a class="ic-nav-card" href="user-guide/excel-vba-guide/">
-  <strong>Excel VBA Guide</strong>
-  <span>=EPM() function, macros, report patterns</span>
+<a class="ic-nav-card" href="user-guide/excel-formulas-guide/">
+  <strong>Excel Formulas Guide</strong>
+  <span>=K.EPM() function, macros, report patterns</span>
 </a>
 
 <a class="ic-nav-card" href="user-guide/consolidation-guide/">

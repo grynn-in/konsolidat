@@ -179,17 +179,6 @@ dbt test --output json > /var/log/dbt-test-results.json 2>&1
 | dbt test failures | Any `warn` severity | Any `error` severity |
 | Airbyte sync failure | — | Any failure |
 
-## VBA Debug Logging
-
-The Excel VBA module includes a built-in logging system:
-
-1. Run `EPM_ToggleLog` to enable logging
-2. A hidden `_EPM_Log` sheet captures:
-   - Timestamp
-   - Level (INFO, ERROR, DEBUG)
-   - Message (HTTP requests, responses, parse results)
-3. Run `EPM_Debug` for a full diagnostic test
-
 ## Next Steps
 
 - [Operations Runbook](operations-runbook.md) — Maintenance procedures

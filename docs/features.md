@@ -4,22 +4,22 @@ Konsolidat delivers full-cycle Enterprise Performance Management through a modul
 
 ## Excel-Native Reporting
 
-Five VBA worksheet functions query financial data directly from ClickHouse via the Frappe API. No SQL, no code — just formulas.
+Worksheet functions in the konsol Excel add-in (the `K.` namespace) query financial data directly from ClickHouse via the Frappe API. No SQL, no code — just formulas.
 
 ```
-=EPM("USMF", 2024, "Q1", "401100")                    → Actuals — net amount
-=EPM_BUDGET("USMF", 2025, "FY", "6100")               → Budget — full year
-=EPM_VARIANCE("USMF", 2025, 5, "6100")                → Variance — actual vs budget
-=EPM_DEBIT("USMF", 2024, 5, "1300")                   → Period debits
-=EPM_CREDIT("USMF", 2024, 5, "1300")                  → Period credits
+=K.EPM("USMF", 2024, "Q1", "401100")                    → Actuals — net amount
+=K.EPM_BUDGET("USMF", 2025, "FY", "6100")               → Budget — full year
+=K.EPM_VARIANCE("USMF", 2025, 5, "6100")                → Variance — actual vs budget
+=K.EPM_DEBIT("USMF", 2024, 5, "1300")                   → Period debits
+=K.EPM_CREDIT("USMF", 2024, 5, "1300")                  → Period credits
 ```
 
 - **Period aggregation** — `Q1`–`Q4`, `H1`/`H2`, `FY` roll up across months
-- **Batch refresh** — `Ctrl+Shift+R` sends all formulas in a single HTTP request
+- **Batched** — every `K.` formula in one calculation goes to the server in a single HTTP request
 - **Session auth** — Frappe login, credentials stored per-workbook
 - **Dimension filters** — Optional cost center, department, business unit parameters
 
-See the [Excel VBA Guide](user-guide/excel-vba-guide.md) for full formula reference.
+See the [Excel Formulas Guide](user-guide/excel-formulas-guide.md) for full formula reference.
 
 ## Multi-Entity Consolidation
 
@@ -79,7 +79,7 @@ Three API endpoints exposed through Frappe/Konsol:
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `epm_value` | GET | Single financial value query |
-| `epm_batch` | POST | Batch query (used by Excel `Ctrl+Shift+R`) |
+| `epm_batch` | POST | Batch query (used by the Excel add-in) |
 | `health` | GET | ClickHouse connection + model freshness check |
 
 Session-based authentication via Frappe login. See the [API Reference](api-reference/api-overview.md).
@@ -120,5 +120,5 @@ Add a new dimension by adding an entry — macros handle the rest. See [Adding D
 | **Airbyte** | D365 OData extraction (via abctl) | 8000 |
 | **dbt Core** | SQL transformations (44 models, 26 tests) | CLI |
 | **Frappe (Konsol)** | API layer, auth, pipeline control, settings | 8069 |
-| **Excel VBA** | `=EPM()` formulas for financial reporting | — |
+| **Excel add-in** | `=K.EPM()` formulas for financial reporting | — |
 | **Excel Task Pane** | Pipeline orchestration (Office.js) | — |

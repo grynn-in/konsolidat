@@ -1,15 +1,6 @@
-# `=EPM()` Client Protocol
+# `=K.EPM()` Client Protocol
 
-The `=EPM()` worksheet functions are implemented by **two independent clients**
-that talk to the same Frappe API:
-
-- **Office.js add-in** — `excel-addin/src/taskpane.js` (also vendored into the
-  konsol app at `konsol/public/excel-addin/`)
-- **VBA module** — `excel/OpenEPM.bas`
-
-Because the protocol is implemented twice, this document is the **single source
-of truth** for the wire contract. Both clients must conform to it; the parity
-test (`tests/test_epm_client_parity.py`) enforces the key invariants.
+The `K.` worksheet functions are implemented by the konsol Office add-in (`konsol/public/excel-addin/` in the konsol repository), which talks to the Frappe API described here. This document is the single source of truth for the wire contract; any other client must conform to it.
 
 ## Endpoints
 

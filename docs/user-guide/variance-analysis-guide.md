@@ -55,16 +55,16 @@ If account_type = 'Expense':
 
 ```
 ' Absolute variance (default for EPM_VARIANCE)
-=EPM_VARIANCE("USMF", 2025, 5, "6100")
+=K.EPM_VARIANCE("USMF", 2025, 5, "6100")
 
 ' Equivalent to:
-=EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")
+=K.EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")
 
 ' Other variance measures:
-=EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")
-=EPM("USMF", 2025, 5, "6100", "budget_amount", "variance")
-=EPM("USMF", 2025, 5, "6100", "variance_pct", "variance")
-=EPM("USMF", 2025, 5, "6100", "variance_favorable", "variance")
+=K.EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")
+=K.EPM("USMF", 2025, 5, "6100", "budget_amount", "variance")
+=K.EPM("USMF", 2025, 5, "6100", "variance_pct", "variance")
+=K.EPM("USMF", 2025, 5, "6100", "variance_favorable", "variance")
 ```
 
 ### Period Ranges
@@ -72,15 +72,15 @@ If account_type = 'Expense':
 Variance supports the same period range codes:
 
 ```
-=EPM_VARIANCE("USMF", 2025, "Q1", "6100")    ' Q1 variance
-=EPM_VARIANCE("USMF", 2025, "H1", "6100")    ' H1 variance
-=EPM_VARIANCE("USMF", 2025, "FY", "6100")    ' Full year variance
+=K.EPM_VARIANCE("USMF", 2025, "Q1", "6100")    ' Q1 variance
+=K.EPM_VARIANCE("USMF", 2025, "H1", "6100")    ' H1 variance
+=K.EPM_VARIANCE("USMF", 2025, "FY", "6100")    ' Full year variance
 ```
 
 ### With Dimension Filters
 
 ```
-=EPM_VARIANCE("USMF", 2025, "FY", "6100", "SALES", "SALES")
+=K.EPM_VARIANCE("USMF", 2025, "FY", "6100", "SALES", "SALES")
 ```
 
 ## YTD Variance
@@ -114,7 +114,7 @@ Beyond budget variance, `gold_prior_year_comparison` provides year-over-year ana
 |---|---|---|---|---|---|
 | 1 | **Entity:** | USMF | **Year:** | 2025 | |
 | 2 | **Account** | **Actual** | **Budget** | **Variance** | **Fav?** |
-| 3 | Revenue (4100) | `=EPM("USMF",2025,"FY","4100","actual_amount","variance")` | `=EPM("USMF",2025,"FY","4100","budget_amount","variance")` | `=EPM_VARIANCE("USMF",2025,"FY","4100")` | `=EPM("USMF",2025,"FY","4100","variance_favorable","variance")` |
+| 3 | Revenue (4100) | `=K.EPM("USMF",2025,"FY","4100","actual_amount","variance")` | `=K.EPM("USMF",2025,"FY","4100","budget_amount","variance")` | `=K.EPM_VARIANCE("USMF",2025,"FY","4100")` | `=K.EPM("USMF",2025,"FY","4100","variance_favorable","variance")` |
 | 4 | Expenses (6100) | ... | ... | ... | ... |
 
 Use conditional formatting on column E: `1` = green (favorable), `0` = red (unfavorable).
@@ -123,4 +123,4 @@ Use conditional formatting on column E: `1` = green (favorable), `0` = red (unfa
 
 - [Budgeting Guide](budgeting-guide.md) — How budgets are input and spread
 - [Report Catalog](report-catalog.md) — Pre-built report patterns
-- [Excel VBA Guide](excel-vba-guide.md) — All formula functions
+- [Excel Formulas Guide](excel-formulas-guide.md) — All formula functions

@@ -1,6 +1,6 @@
 # [konsolid.at](https://konsolid.at)
 
-Open-source Enterprise Performance Management. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and variance analysis — powered by `=EPM()` in the spreadsheet your finance team already knows.
+Open-source Enterprise Performance Management. Multi-entity consolidation, Excel-native budgeting, driver-based allocations, and variance analysis — powered by `=K.EPM()` in the spreadsheet your finance team already knows.
 
 **90% cheaper than commercial EPM/CPM tools. MIT Licensed.**
 
@@ -9,7 +9,7 @@ Open-source Enterprise Performance Management. Multi-entity consolidation, Excel
 - **IFRS Consolidation** — Foreign exchange translation, intercompany elimination, non-controlling interest, cumulative translation adjustments
 - **Cost Allocations** — Multi-step cascading engine with headcount, area, and revenue drivers
 - **Budgeting & Variance** — Layered budgets with seasonal spreads, actual vs budget with favorable logic
-- **Excel-Native Reporting** — Five `=EPM()` worksheet functions query the analytical warehouse directly
+- **Excel-Native Reporting** — Five `=K.EPM()` worksheet functions query the analytical warehouse directly
 
 ## Architecture
 

@@ -1,16 +1,14 @@
-# Excel VBA Guide
+# Excel Formulas Guide
 
-The Konsolidat VBA module turns Excel into a live reporting and budgeting client. Six worksheet functions cover reading (`EPM`, `EPM_BUDGET`, `EPM_VARIANCE`, `EPM_DEBIT`, `EPM_CREDIT`) and writing (`EPMSAVE`). A batch refresh mechanism fetches all read values in a single HTTP round-trip. Budget writes happen immediately on recalc.
+The konsol Excel add-in turns Excel into a live reporting and budgeting client. Its worksheet functions live in the `K` namespace: reading (`K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF`) and writing (`K.EPMSAVE`). Excel calculates them like any other function; the add-in collects every `K.` call in one calculation and sends them to the server together.
 
 ## Setup
 
-1. Import `excel/OpenEPM.bas` into your workbook (Alt+F11 → File → Import)
-2. Add VBA references: `Microsoft Scripting Runtime`, `Microsoft XML, v6.0`
-3. Save as `.xlsm`
-4. Run `EPM_SetServer` to configure the Frappe URL
-5. Run `EPM_Login` to authenticate
+1. Install the add-in: see [Excel Task Pane Guide → Installation](excel-taskpane-guide.md#installation).
+2. Open the **Konsolidat** task pane and sign in with your Frappe credentials.
+3. In any cell, type `=K.EPM("USMF", 2024, 5, "401100")`.
 
-See [Setup Guide](../getting-started/setup-guide.md) for full installation steps.
+The functions work in desktop Excel and Excel on the web. Until you sign in, `K.` cells show `#N/A` with the message "Not logged in — open the Konsolidat task pane and sign in."
 
 ## Formula Functions
 
@@ -18,17 +16,17 @@ See [Setup Guide](../getting-started/setup-guide.md) for full installation steps
 
 | Function | Direction | When It Fires |
 |----------|-----------|---------------|
-| `EPM()`, `EPM_BUDGET()`, `EPM_VARIANCE()`, `EPM_DEBIT()`, `EPM_CREDIT()` | **Read** | Returns cached value; refresh with Ctrl+Shift+R |
-| `EPMSAVE()` | **Write** | Saves to server immediately on recalc (skips if unchanged) |
+| `K.EPM()`, `K.EPM_BUDGET()`, `K.EPM_VARIANCE()`, `K.EPM_DEBIT()`, `K.EPM_CREDIT()`, `K.CF()` | **Read** | When Excel calculates the cell: on entry, when an input changes, or on a full recalculation (Ctrl+Alt+F9) |
+| `K.EPMSAVE()` | **Write** | Saves to the server when Excel calculates the cell (skips unchanged values) |
 
 ### Read Functions
 
-All five read functions share the same parameter pattern. They differ only in the default `measure` and `scenario`.
+The five `K.EPM` read functions share the same parameter pattern. They differ only in the default `measure` and `scenario`.
 
-### EPM() — General Purpose
+### K.EPM() — General Purpose
 
 ```
-=EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [cost_center], [department], [scenario_id])
+=K.EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [cost_center], [department], [scenario_id], [hierarchy], [node], [layer])
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -42,54 +40,64 @@ All five read functions share the same parameter pattern. They differ only in th
 | `cost_center` | String | No | `""` | Filter by cost center |
 | `department` | String | No | `""` | Filter by department |
 | `scenario_id` | String | No | `""` | Filter to a specific scenario ID (e.g., `"BUDGET_2025"`). See [Scenario ID Filtering](#scenario-id-filtering). |
+| `hierarchy`, `node` | String | No | `""` | Read a reporting-hierarchy node instead of a single entity |
+| `layer` | String | No | `""` | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
 
 **Examples:**
 
 ```
-=EPM("USMF", 2024, 5, "401100")
-=EPM("USMF", 2024, "Q1", "401100", "ytd_net_amount")
-=EPM("USMF", 2024, "FY", "401100", "period_net_amount", "actuals", "SALES")
-=EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "", "BUDGET_2025")
+=K.EPM("USMF", 2024, 5, "401100")
+=K.EPM("USMF", 2024, "Q1", "401100", "ytd_net_amount")
+=K.EPM("USMF", 2024, "FY", "401100", "period_net_amount", "actuals", "SALES")
+=K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "", "BUDGET_2025")
 ```
 
-### EPM_BUDGET() — Budget Values
+### K.EPM_BUDGET() — Budget Values
 
 ```
-=EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id])
+=K.EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id], [hierarchy], [node], [layer])
 ```
 
-Shorthand for `=EPM(..., "period_amount", "budget", ...)`.
+Shorthand for `=K.EPM(..., "period_amount", "budget", ...)`.
 
-### EPM_VARIANCE() — Actual vs Budget Variance
-
-```
-=EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id])
-```
-
-Shorthand for `=EPM(..., "variance_abs", "variance", ...)`.
-
-### EPM_DEBIT() — Period Debits
+### K.EPM_VARIANCE() — Actual vs Budget Variance
 
 ```
-=EPM_DEBIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department])
+=K.EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id], [hierarchy], [node])
 ```
 
-Shorthand for `=EPM(..., "period_debit", "actuals", ...)`.
+Shorthand for `=K.EPM(..., "variance_abs", "variance", ...)`.
 
-### EPM_CREDIT() — Period Credits
+### K.EPM_DEBIT() — Period Debits
 
 ```
-=EPM_CREDIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department])
+=K.EPM_DEBIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [hierarchy], [node])
 ```
 
-Shorthand for `=EPM(..., "period_credit", "actuals", ...)`.
+Shorthand for `=K.EPM(..., "period_debit", "actuals", ...)`.
+
+### K.EPM_CREDIT() — Period Credits
+
+```
+=K.EPM_CREDIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [hierarchy], [node])
+```
+
+Shorthand for `=K.EPM(..., "period_credit", "actuals", ...)`.
+
+### K.CF() — Consolidated Cash Flow
+
+```
+=K.CF(group, fiscal_year, fiscal_period, line)
+```
+
+Reads one line of the consolidated cash-flow statement for a consolidation group, e.g. `=K.CF("GROUP_CORP", 2024, 6, "Change in Inventory")`.
 
 ### Write Function
 
-### EPMSAVE() — Budget Write-Back
+### K.EPMSAVE() — Budget Write-Back
 
 ```
-=EPMSAVE(amount, entity, fiscal_year, fiscal_period, account, scenario_id, layer, [cost_center], [department])
+=K.EPMSAVE(amount, entity, fiscal_year, fiscal_period, account, scenario_id, layer, [cost_center], [department], [hierarchy], [node])
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -104,20 +112,20 @@ Shorthand for `=EPM(..., "period_credit", "actuals", ...)`.
 | `cost_center` | String | No | `""` | Cost center dimension |
 | `department` | String | No | `""` | Department dimension |
 
-**The cell displays the amount.** The write to the server happens silently in the background.
+**The cell displays the amount.** The write to the server happens in the background.
 
 **Examples:**
 
 ```
-=EPMSAVE(100000, "USMF", 2025, 1, "6100", "BUDGET_2025", "base")
-=EPMSAVE(-5000, "USMF", 2025, 1, "6100", "BUDGET_2025", "challenge")
-=EPMSAVE(B5, $A$1, $A$2, C$3, $A5, $A$4, "base")     ' cell references
+=K.EPMSAVE(100000, "USMF", 2025, 1, "6100", "BUDGET_2025", "base")
+=K.EPMSAVE(-5000, "USMF", 2025, 1, "6100", "BUDGET_2025", "challenge")
+=K.EPMSAVE(B5, $A$1, $A$2, C$3, $A5, $A$4, "base")
 ```
 
-#### How EPMSAVE Works
+#### How K.EPMSAVE Works
 
-1. Formula evaluates → cell displays the amount (pass-through)
-2. VBA checks if the value changed since last save (skip-unchanged cache)
+1. Excel calculates the cell → it displays the amount (pass-through)
+2. The add-in checks whether the value changed since the last save (skip-unchanged cache)
 3. If changed → `POST /api/method/konsol.api.budget_cell_save` with the parameters
 4. Server sets that period on the matching Budget Line in the (cycle × entity × layer) Budget Sheet — creating the sheet, and an Open Budget Cycle, if new
 5. The data stays in Frappe only until the Budget Cycle is **locked** — locking syncs all its sheets to ClickHouse
@@ -125,7 +133,7 @@ Shorthand for `=EPM(..., "period_credit", "actuals", ...)`.
 ```mermaid
 sequenceDiagram
     participant User
-    participant Excel as EPMSAVE()
+    participant Excel as K.EPMSAVE()
     participant Cache as Save Cache
     participant Frappe as Frappe API
 
@@ -164,14 +172,14 @@ See the **[Budget Layers Guide](budget-layers.md)** for a full worked example sh
 | 1 | **Scenario:** | BUDGET_2025 | **Year:** | 2025 | |
 | 2 | **Layer:** | base | | | |
 | 3 | **Account** | **P1** | **P2** | **P3** | **...** |
-| 4 | 6100 | `=EPMSAVE(100000,$B$1,$D$1,B$3,$A4,$B$2,"base")` | `=EPMSAVE(100000,$B$1,$D$1,C$3,$A4,$B$2,"base")` | ... | |
-| 5 | 6200 | `=EPMSAVE(50000,$B$1,$D$1,B$3,$A5,$B$2,"base")` | `=EPMSAVE(50000,$B$1,$D$1,C$3,$A5,$B$2,"base")` | ... | |
+| 4 | 6100 | `=K.EPMSAVE(100000,$B$1,$D$1,B$3,$A4,$B$2,"base")` | `=K.EPMSAVE(100000,$B$1,$D$1,C$3,$A4,$B$2,"base")` | ... | |
+| 5 | 6200 | `=K.EPMSAVE(50000,$B$1,$D$1,B$3,$A5,$B$2,"base")` | `=K.EPMSAVE(50000,$B$1,$D$1,C$3,$A5,$B$2,"base")` | ... | |
 
 Tips:
 
 - Use **absolute references** for scenario (`$B$1`), year (`$D$1`), and layer (`$B$2`)
 - Use **mixed references** for period (`B$3`, `C$3`) and account (`$A4`, `$A5`) so formulas copy correctly when dragged
-- To change the amount, just edit the first argument — EPMSAVE fires on recalc and saves the new value
+- To change the amount, just edit the first argument — K.EPMSAVE saves the new value when Excel recalculates
 - To enter challenge adjustments, change `$B$2` to `"challenge"` and type your deltas
 
 #### Read + Write Side by Side
@@ -182,21 +190,21 @@ A common pattern: read the current approved budget on one row, write your adjust
 |---|---|---|---|---|
 | 1 | **Scenario:** | BUDGET_2025 | **Year:** | 2025 |
 | 2 | **Account** | **P1** | **P2** | **P3** |
-| 3 | 6100 Approved | `=EPM_BUDGET("USMF",2025,1,"6100")` | `=EPM_BUDGET(...)` | `=EPM_BUDGET(...)` |
-| 4 | 6100 Challenge | `=EPMSAVE(-5000,"USMF",2025,1,"6100","BUDGET_2025","challenge")` | `=EPMSAVE(...)` | `=EPMSAVE(...)` |
+| 3 | 6100 Approved | `=K.EPM_BUDGET("USMF",2025,1,"6100")` | `=K.EPM_BUDGET(...)` | `=K.EPM_BUDGET(...)` |
+| 4 | 6100 Challenge | `=K.EPMSAVE(-5000,"USMF",2025,1,"6100","BUDGET_2025","challenge")` | `=K.EPMSAVE(...)` | `=K.EPMSAVE(...)` |
 | 5 | 6100 Effective | `=B3+B4` | `=C3+C4` | `=D3+D4` |
 
-- Row 3: reads current approved budget (Ctrl+Shift+R to refresh)
-- Row 4: writes your challenge layer adjustments (saves immediately)
+- Row 3: reads the current approved budget
+- Row 4: writes your challenge layer adjustments (saves on recalculation)
 - Row 5: formula shows the effective budget (base + challenge)
 
 #### What Happens After Save
 
-EPMSAVE writes into Budget Sheets under an **Open** Budget Cycle. To make them live:
+K.EPMSAVE writes into Budget Sheets under an **Open** Budget Cycle. To make them live:
 
 1. Open Frappe Desk → Budget Sheet list and review the entries (one sheet per entity × layer)
 2. Lock the **Budget Cycle** for the scenario × year (Lists → EPM → Budget Cycle)
-3. On lock: ClickHouse sync fires → dbt rebuild → EPM() formulas return updated values on next Ctrl+Shift+R
+3. On lock: ClickHouse sync fires → dbt rebuild → `K.EPM` formulas return the updated values on the next full recalculation (Ctrl+Alt+F9)
 
 ## Measures
 
@@ -210,8 +218,6 @@ Each scenario exposes a specific set of measures. Using a measure not allowed fo
 | `period_credit` | Sum of credit amounts for the period |
 | `period_net_amount` | Sum of accounting currency amount (debit − credit) |
 | `transaction_count` | Number of GL entries |
-| `ytd_debit` | Year-to-date cumulative debit |
-| `ytd_credit` | Year-to-date cumulative credit |
 | `ytd_net_amount` | Year-to-date cumulative net amount |
 
 ### Budget Measures
@@ -254,7 +260,7 @@ Instead of a single month number, you can pass period range codes. The API sums 
 | `"H2"` | Months 7–12 |
 | `"FY"` | Months 1–12 (full year) |
 
-**Example:** `=EPM("USMF", 2024, "Q1", "401100")` returns the sum of periods 1+2+3.
+**Example:** `=K.EPM("USMF", 2024, "Q1", "401100")` returns the sum of periods 1+2+3.
 
 ## Scenario ID Filtering
 
@@ -264,55 +270,15 @@ The `scenario_id` parameter lets you target a specific scenario instance (e.g., 
 - **What-if analysis**: Query a what-if scenario alongside the approved budget
 - **Forecast vs budget**: Compare FORECAST_Q3_2025 with BUDGET_2025
 
-When `scenario_id` is omitted or empty, the query returns the sum across **all** scenario IDs — which is the default behavior and matches how EPM() has always worked.
+When `scenario_id` is omitted or empty, the query returns the sum across **all** scenario IDs.
 
 **Currently supported tables**: `gold_spread_budget` (scenario = `budget`)
 
 | Formula | What It Returns |
 |:--------|:----------------|
-| `=EPM_BUDGET("USMF", 2025, 5, "6100")` | Sum of ALL budget scenarios for P5 |
-| `=EPM_BUDGET("USMF", 2025, 5, "6100", "", "", "BUDGET_2025")` | Only BUDGET_2025 for P5 |
-| `=EPM_BUDGET("USMF", 2025, "Q1", "6100", "", "", "BUDGET_2025")` | BUDGET_2025 Q1 total |
-
-## Macros
-
-### EPM_Refresh (Ctrl+Shift+R)
-
-Refreshes the **active sheet**:
-1. Scans all cells for EPM-family formulas
-2. Extracts parameters (resolves cell references like `$B$5`)
-3. Sends a single batch POST to `/api/method/konsol.api.epm_batch`
-4. Populates the in-memory cache
-5. Triggers a single `Calculate` on the EPM range
-
-### EPM_RefreshAll
-
-Refreshes **all sheets** in the workbook. Shows progress on the status bar: `"Konsolidat: Sheet 3/12 — Income Statement"`.
-
-### EPM_Login
-
-Prompts for Frappe username and password. Authenticates via `POST /api/method/login` and stores the session cookie for subsequent API calls. Auto-triggered by refresh if not logged in.
-
-### EPM_ClearCache
-
-Clears the in-memory value cache. Use when you want to force a full re-fetch on next refresh.
-
-### EPM_SetServer
-
-Prompts for the Frappe API URL and saves it as a Custom Document Property (`EPM_API_URL`) in the workbook. Persists across sessions.
-
-### EPM_ToggleLog
-
-Enables/disables debug logging to a hidden `_EPM_Log` sheet. Columns: Timestamp, Level, Message.
-
-### EPM_Debug
-
-Runs a diagnostic sequence:
-1. Tests cache initialization
-2. Tests HTTP connectivity
-3. Calls health endpoint (`konsol.api.health`)
-4. Scans active sheet for EPM formulas
-5. Sends a test batch query (USMF / 2024 / period 5 / account 401100)
+| `=K.EPM_BUDGET("USMF", 2025, 5, "6100")` | Sum of ALL budget scenarios for P5 |
+| `=K.EPM_BUDGET("USMF", 2025, 5, "6100", "", "", "BUDGET_2025")` | Only BUDGET_2025 for P5 |
+| `=K.EPM_BUDGET("USMF", 2025, "Q1", "6100", "", "", "BUDGET_2025")` | BUDGET_2025 Q1 total |
 
 ## Building a Report
 
@@ -322,8 +288,8 @@ Runs a diagnostic sequence:
 |---|---|---|---|---|
 | 1 | **Entity:** | USMF | **Year:** | 2024 |
 | 2 | **Account** | **Jan** | **Feb** | **Mar** |
-| 3 | Revenue (401100) | `=EPM($B$1,$D$1,1,$A3)` | `=EPM($B$1,$D$1,2,$A3)` | `=EPM($B$1,$D$1,3,$A3)` |
-| 4 | COGS (501100) | `=EPM($B$1,$D$1,1,$A4)` | `=EPM($B$1,$D$1,2,$A4)` | `=EPM($B$1,$D$1,3,$A4)` |
+| 3 | Revenue (401100) | `=K.EPM($B$1,$D$1,1,$A3)` | `=K.EPM($B$1,$D$1,2,$A3)` | `=K.EPM($B$1,$D$1,3,$A3)` |
+| 4 | COGS (501100) | `=K.EPM($B$1,$D$1,1,$A4)` | `=K.EPM($B$1,$D$1,2,$A4)` | `=K.EPM($B$1,$D$1,3,$A4)` |
 | 5 | **Gross Profit** | `=B3+B4` | `=C3+C4` | `=D3+D4` |
 
 Tips:
@@ -337,63 +303,61 @@ Tips:
 |---|---|---|---|---|
 | 1 | **Entity:** | USMF | **Year:** | 2025 |
 | 2 | **Account** | **Actual** | **Budget** | **Variance** |
-| 3 | Revenue (401100) | `=EPM($B$1,$D$1,"FY",$A3)` | `=EPM_BUDGET($B$1,$D$1,"FY",$A3)` | `=EPM_VARIANCE($B$1,$D$1,"FY",$A3)` |
+| 3 | Revenue (401100) | `=K.EPM($B$1,$D$1,"FY",$A3)` | `=K.EPM_BUDGET($B$1,$D$1,"FY",$A3)` | `=K.EPM_VARIANCE($B$1,$D$1,"FY",$A3)` |
 
 ### Multi-Entity Comparison
 
 Use different entity codes in each column:
 
 ```
-=EPM("USMF", 2024, "FY", "401100")    ' Column B: US entity
-=EPM("DEMF", 2024, "FY", "401100")    ' Column C: Germany entity
-=EPM("GBMF", 2024, "FY", "401100")    ' Column D: UK entity
+=K.EPM("USMF", 2024, "FY", "401100")    Column B: US entity
+=K.EPM("DEMF", 2024, "FY", "401100")    Column C: Germany entity
+=K.EPM("GBMF", 2024, "FY", "401100")    Column D: UK entity
 ```
 
-## How Refresh Works (Technical)
+## How Batching Works (Technical)
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant VBA as VBA Module
-    participant Cache as Scripting.Dictionary
+    participant Excel
+    participant AddIn as Add-in (functions.js)
     participant Frappe as Frappe API
     participant CH as ClickHouse
 
-    User->>VBA: Ctrl+Shift+R
-    VBA->>VBA: Scan UsedRange for EPM formulas
-    VBA->>VBA: ResolveEpmArgs() — parse & evaluate cell refs
-    VBA->>Frappe: POST /api/method/konsol.api.epm_batch<br/>[{entity, year, period, account, ...}, ...]
+    User->>Excel: Enters formulas or recalculates
+    Excel->>AddIn: Calls K.EPM for each cell
+    AddIn->>AddIn: Queues every call made in the same calculation
+    AddIn->>Frappe: POST /api/method/konsol.api.epm_batch<br/>[{entity, year, period, account, ...}, ...] (up to 2,000 per request)
     Frappe->>Frappe: Validate scenarios & measures
     Frappe->>Frappe: Group by (scenario, measure, periods, dims)
     Frappe->>CH: Parameterized SELECT with SUM + GROUP BY
     CH-->>Frappe: TSV results
-    Frappe-->>VBA: {"values": [1234.56, ...]}
-    VBA->>Cache: Store key → value
-    VBA->>VBA: epmRange.Calculate (single recalc)
-    VBA-->>User: Values appear in cells
+    Frappe-->>AddIn: {"values": [1234.56, ...]}
+    AddIn-->>Excel: Each cell gets its value
+    Excel-->>User: Values appear in cells
 ```
 
-The batch mechanism means 500 EPM cells = 1 HTTP request, not 500.
+A sheet with 500 `K.EPM` cells calculated together costs one HTTP request, not 500.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| All cells show `0` | Not refreshed | Press Ctrl+Shift+R |
-| `#VALUE!` error | Wrong parameter types | Check entity is string, year is number |
-| `401` / `403` on refresh | Session expired | Run EPM_Login again |
-| Slow refresh | Too many unique queries | Group similar periods; use period ranges (Q1, FY) |
-| Values don't update | Stale cache | Run EPM_ClearCache, then Ctrl+Shift+R |
-| `ClickHouse connection failed` | ClickHouse is down | Check `docker ps` for healthy container |
-| EPMSAVE not saving | Not logged in | Run EPM_Login first — EPMSAVE skips if no session |
-| EPMSAVE saving duplicates | Value unchanged but re-saving | Check save cache — run EPM_ToggleLog to verify skip behavior |
-| Budget not visible in EPM_BUDGET | Cycle not locked yet | Budget Sheets sync to ClickHouse when their Budget Cycle is locked — lock it in Frappe Desk first |
+| `#N/A` "Not logged in" | No session | Open the Konsolidat task pane and sign in |
+| `#NAME?` error | The add-in is not loaded | Install or reload the add-in (Insert → My Add-ins) |
+| Cell shows `0` | No data for that combination | Check entity, year, period, account and measure; a missing combination returns `0` |
+| `#VALUE!` error | Invalid parameter (e.g. an unknown measure or year) | Check the parameter types and values; the cell's error message names the problem |
+| Values don't update after a data load | Excel has not recalculated | Press **Ctrl+Alt+F9** to recalculate every formula |
+| `ClickHouse connection failed` | ClickHouse is down | Check `docker ps` for a healthy container |
+| K.EPMSAVE not saving | Not signed in | Sign in via the task pane; K.EPMSAVE skips when there is no session |
+| Budget not visible in K.EPM_BUDGET | Cycle not locked yet | Budget Sheets sync to ClickHouse when their Budget Cycle is locked — lock it in Frappe Desk first |
 
 ## Next Steps
 
 - [Budget Layers Guide](budget-layers.md) — Full worked example of 4-layer collaborative budgeting
 - [Budgeting Guide](budgeting-guide.md) — Spread profiles, scenarios, budget data flow
 - [Report Catalog](report-catalog.md) — Pre-built report patterns for all 22 gold models
-- [Excel Task Pane Guide](excel-taskpane-guide.md) — Pipeline control from Excel
+- [Excel Task Pane Guide](excel-taskpane-guide.md) — Installing the add-in and pipeline control from Excel
 - [API Reference](../api-reference/api-overview.md) — Raw API documentation
 - [Troubleshooting](../troubleshooting/troubleshooting.md) — Full diagnostic guide

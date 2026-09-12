@@ -3,19 +3,19 @@
 ## Finance Users
 
 **Q: How do I get started with EPM formulas in Excel?**
-Follow the [Quickstart Guide](../getting-started/quickstart.md) — you'll have your first `=EPM()` value in 15 minutes.
+Follow the [Quickstart Guide](../getting-started/quickstart.md) — you'll have your first `=K.EPM()` value in 15 minutes.
 
-**Q: What's the difference between EPM() and EPM_BUDGET()?**
-`EPM_BUDGET()` is a shortcut for `EPM(..., "period_amount", "budget")`. See [Excel VBA Guide](../user-guide/excel-vba-guide.md) for all 5 functions.
+**Q: What's the difference between K.EPM() and K.EPM_BUDGET()?**
+`K.EPM_BUDGET()` is a shortcut for `K.EPM(..., "period_amount", "budget")`. See the [Excel Formulas Guide](../user-guide/excel-formulas-guide.md) for all the functions.
 
 **Q: Can I query quarterly or annual totals?**
 Yes. Use period range codes: `"Q1"`, `"Q2"`, `"Q3"`, `"Q4"`, `"H1"`, `"H2"`, or `"FY"`. The API sums across the constituent months.
 
 **Q: Why do all my cells show 0?**
-Likely not refreshed. Press **Ctrl+Shift+R** to fetch values. If still 0, run `EPM_Debug` to test connectivity.
+Check that you are signed in (Konsolidat task pane) and that data exists for that entity, period and account; a missing combination shows 0.
 
 **Q: How do I filter by cost center or department?**
-Add the optional parameters: `=EPM("USMF", 2024, 5, "401100", "period_net_amount", "actuals", "SALES", "SALES")`
+Add the optional parameters: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount", "actuals", "SALES", "SALES")`
 
 **Q: How often is the data updated?**
 After each Airbyte sync + dbt build cycle. Typically daily or on-demand. Ask your IT admin about the schedule.
@@ -26,8 +26,8 @@ Currently, budgets are managed via seed CSVs. A budget write-back feature (via s
 **Q: What accounts are available?**
 Your chart of accounts from D365. Use ClickHouse or ask your admin to query `SELECT DISTINCT main_account FROM epm_gold.gold_trial_balance`.
 
-**Q: Can I use EPM() in Excel Online?**
-The VBA module works only in desktop Excel. For Excel Online, the Office.js task pane add-in provides pipeline control, but custom formula functions are on the roadmap.
+**Q: Can I use K.EPM() in Excel Online?**
+Yes. The konsol add-in's `K.` functions work in desktop Excel and Excel on the web.
 
 ## IT Administrators
 

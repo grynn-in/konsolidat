@@ -49,7 +49,7 @@ Critical tests for month-end:
 
 ### 4. Refresh Excel Reports
 
-In Excel: run **EPM_ClearCache** then **EPM_RefreshAll** (or Ctrl+Shift+R per sheet).
+In Excel: recalculate all formulas (**Ctrl+Alt+F9**).
 
 ### 5. Review Consolidation
 

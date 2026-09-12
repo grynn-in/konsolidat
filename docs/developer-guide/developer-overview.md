@@ -17,7 +17,7 @@ konsolidat/
 │   ├── tests/                # Data quality assertions
 │   └── dbt_project.yml       # Project config and vars
 ├── excel/
-│   └── OpenEPM.bas           # VBA module (5 functions, 7 macros)
+│   └── *.xlsx                # sample workbooks (formulas: konsol Excel add-in)
 ├── excel-addin/
 │   ├── manifest.xml           # Office.js add-in manifest
 │   └── src/                   # Task pane HTML/JS
@@ -47,7 +47,7 @@ graph LR
 
     FRAPPE["<b>Frappe / Konsol</b><br/><br/>REST API & Auth<br/>Workflow & Settings"]
 
-    EXCEL["<b>Excel</b><br/><br/>=EPM() Formulas<br/>VBA + Office.js"]
+    EXCEL["<b>Excel</b><br/><br/>=K.EPM() Formulas<br/>Office.js add-in"]
 
     ERP --> AIR --> CH --> DBT --> CUBE --> FRAPPE --> EXCEL
 ```
@@ -60,7 +60,7 @@ graph LR
 | Transformations | dbt Core + dbt-clickhouse | Latest |
 | API / Auth | Frappe Framework | v15 |
 | ELT | Airbyte (abctl) | Latest |
-| Excel Integration | VBA + Office.js | Excel 2016+ |
+| Excel Integration | Office.js add-in | Microsoft 365 / Excel 2021+, desktop and web |
 | Source ERP | D365 Finance & Operations | Any |
 
 ## Conventions

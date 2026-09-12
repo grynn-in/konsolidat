@@ -126,32 +126,9 @@ Custom column types are specified per seed in `dbt_project.yml`:
 - **`consolidation_groups`**: `ownership_pct` → `Decimal(5,2)`
 - **`consolidation_adjustments`**: All columns typed — `consolidation_group` (String), `fiscal_year` (UInt16), `fiscal_period` (UInt8), `debit_amount` / `credit_amount` (Decimal(18,2)), etc.
 
-## Excel VBA Configuration
+## Excel Add-in Configuration
 
-### `EPM_API_URL` (Custom Document Property)
-
-The VBA module reads the API base URL from a workbook-level Custom Document Property named `EPM_API_URL`.
-
-| Property | Type | Default | Set By |
-|----------|------|---------|--------|
-| `EPM_API_URL` | String | `http://localhost:8069` | `EPM_SetServer` macro |
-
-To set programmatically: run `EPM_SetServer` from the Excel macro menu, or set via VBA:
-
-```vba
-ActiveWorkbook.CustomDocumentProperties.Add _
-    Name:="EPM_API_URL", _
-    LinkToContent:=False, _
-    Type:=msoPropertyTypeString, _
-    Value:="https://your-frappe-server.com"
-```
-
-### VBA Module Constants
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `DEFAULT_API_URL` | `http://localhost:8069` | Fallback when no Custom Document Property is set |
-| `LOG_SHEET_NAME` | `_EPM_Log` | Hidden sheet for debug logging |
+The add-in is served by Frappe; its server is the URL in the add-in's `manifest.xml` (`SourceLocation`, default `http://localhost:8069/assets/konsol/excel-addin/index.html`). For production, change that URL and the `AppDomains` entry (see the [Excel Task Pane Guide](../user-guide/excel-taskpane-guide.md#production-deployment)). Signing in on the task pane stores the session the worksheet functions use.
 
 ## ClickHouse Databases
 

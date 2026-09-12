@@ -187,7 +187,7 @@ from {{ ref('gold_ic_eliminations') }}
 
 ## Making a Model API-Queryable
 
-To expose a new model through the `=EPM()` function, register it in the **Dataset** registry (Frappe Desk → Dataset) — no code change needed:
+To expose a new model through the `=K.EPM()` function, register it in the **Dataset** registry (Frappe Desk → Dataset) — no code change needed:
 
 1. Create a Dataset with `clickhouse_table` pointing at the model's table
 2. Add its allowed measures and dimensions (Dataset Measure / Dataset Dimension child rows)

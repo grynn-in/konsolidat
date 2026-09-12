@@ -49,13 +49,6 @@ test: add assert_cash_flow_nets_to_bs
 - Use **parameterized queries** for ClickHouse (never string interpolation)
 - Raise `frappe.ValidationError` for bad input
 
-### VBA
-
-- `PascalCase` for public functions and macros
-- `camelCase` for local variables
-- `pVariableName` for module-level private variables
-- Add error handling to all public functions
-
 ### Seeds (CSV)
 
 - Use **snake_case** for column headers
