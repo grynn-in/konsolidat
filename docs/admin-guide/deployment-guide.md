@@ -268,18 +268,19 @@ KONSOL_BRANCH=main ./deploy.sh
 
 `git pull` only updates this repository. The konsol Frappe app is a separate
 checkout, staged in `docker/frappe/konsol` and baked into the image, and
-`git pull` does not touch it. `./deploy.sh` stages it on every run. The first
-run clones `KONSOL_BRANCH` (default `main`) from `KONSOL_REPO` (default
-`https://github.com/grynn-in/konsol.git`). Later runs fetch that branch and
-hard-reset the staged checkout to it. Then it:
+`git pull` does not touch it; `./deploy.sh` stages it on every run. In order,
+`./deploy.sh`:
 
 1. starts the infrastructure (`docker compose up -d mariadb redis_cache
    redis_queue clickhouse`) and waits for it to be healthy;
-2. builds the Frappe image;
-3. runs the configurator (`docker compose --profile setup run --rm configurator`),
+2. stages the konsol app: the first run clones `KONSOL_BRANCH` (default
+   `main`) from `KONSOL_REPO` (default `https://github.com/grynn-in/konsol.git`),
+   later runs fetch that branch and hard-reset the staged checkout to it;
+3. builds the Frappe image;
+4. runs the configurator (`docker compose --profile setup run --rm configurator`),
    which runs `bench migrate` on an existing site;
-4. recreates the application services with `docker compose up -d`;
-5. runs the dbt build (`docker compose --profile setup run --rm dbt_init`).
+5. recreates the application services with `docker compose up -d`;
+6. runs the dbt build (`docker compose --profile setup run --rm dbt_init`).
 
 !!! warning "Upgrading to the shared Frappe image (#152)"
     The first upgrade to a version with the shared `<project>-frappe:latest`
@@ -295,8 +296,9 @@ an unmigrated database.
 All six Frappe-based services (`frappe_backend`, `frappe_worker`,
 `frappe_scheduler`, `configurator`, `dbt_init`, `backup`) run one image,
 `<project>-frappe:latest`. `<project>` is the Compose project name: the
-checkout's directory name, normalised (lower-cased, and any character other
-than a letter, digit, `-` or `_` dropped), unless you pass `-p` or set
+checkout's directory name, normalised (lower-cased, any character other
+than a letter, digit, `-` or `_` dropped, and leading `-` or `_` trimmed),
+unless you pass `-p` or set
 `COMPOSE_PROJECT_NAME`. A checkout in `./repo` gets `repo-frappe:latest`.
 
 Scoping the tag this way means a build from a checkout with a *different*

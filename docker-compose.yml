@@ -14,7 +14,8 @@ x-frappe-common: &frappe-common
   # at once, which OOM-killed the build and ClickHouse on an 8 GiB host (#152).
   #
   # The tag is scoped to the Compose project: the checkout's directory name,
-  # normalised (lower-cased, characters other than a-z 0-9 - _ dropped),
+  # normalised (lower-cased, characters other than a-z 0-9 - _ dropped,
+  # leading - and _ trimmed),
   # unless -p or COMPOSE_PROJECT_NAME says otherwise. A build from a checkout
   # with a different directory name cannot overwrite the tag the live stack
   # runs; two checkouts with the same directory name (e.g. both `repo`) still

@@ -62,10 +62,10 @@ ERP (D365 / SAP / ERPNext)
 ./deploy.sh
 ```
 
-`./deploy.sh` generates `.env` with random secrets and stages the konsol app
-in `docker/frappe/konsol`. It then starts the infrastructure, builds the
-Frappe image, runs the configurator (site setup plus `bench migrate`), starts
-the application and runs the dbt build, in that order.
+`./deploy.sh` generates `.env` with random secrets if it is missing, starts
+the infrastructure, stages the konsol app in `docker/frappe/konsol`, builds
+the Frappe image, runs the configurator (site setup plus `bench migrate`),
+starts the application and runs the dbt build, in that order.
 
 To do the same by hand, run these steps in this order. They assume `.env`
 has real secrets and the konsol app is staged:
