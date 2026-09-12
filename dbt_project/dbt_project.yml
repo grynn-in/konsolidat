@@ -7,7 +7,6 @@ profile: 'open_epm'
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
-seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
@@ -245,6 +244,3 @@ models:
         +tags: ['gold', 'domain:staging']
       # --- END konsol-managed model domains ---
 
-seeds:
-  open_epm:
-    +schema: gold

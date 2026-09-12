@@ -304,10 +304,10 @@ for i in $(seq 1 60); do
 done
 
 # ---------------------------------------------------------------------------
-# Step 5: Run dbt seed + build
+# Step 5: Run dbt build
 # ---------------------------------------------------------------------------
 echo ""
-info "Step 5/5: Running dbt build (seeding demo data + building gold models)..."
+info "Step 5/5: Running dbt build (gold models)..."
 # A bare `|| warn` here swallowed everything, including a Compilation Error that
 # meant dbt parsed nothing and built no models at all — while the deploy still
 # printed "Konsolidat is ready!". Data-quality test failures on demo data are

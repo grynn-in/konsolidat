@@ -15,8 +15,12 @@ with used as (
 select currency_code
 from used
 where currency_code != ''
-  {# konsolidat#146: published by konsol.currency_sync from Frappe's Currency
-     records, not a seed in this repo. #}
+  {# konsolidat#146: published by konsol's ISO Currency doctype, not a seed in
+     this repo and NOT from Frappe's own Currency doctype — that one is
+     autonamed on the display name, so giving a code its real name renames the
+     record, and it ships fraction_units = 100 for every currency including the
+     zero-decimal ones. See the ISO Currency controller docstring. Wiring Frappe
+     Currency to this table would recreate the second writer #146 removed. #}
   and currency_code not in (
       select currency_code from {{ source('epm_gold', 'currencies') }}
   )
