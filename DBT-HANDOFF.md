@@ -151,6 +151,23 @@ NOTE: A3 only touched the test, NOT the `scope_filter`/`period_filter` macro nor
 models — they were already correct from A1/A2/#121.
 
 ---
+**#154 — the four consolidation models delete their SCOPE, not the batch's keys.**
+A2's delete+insert deleted only the keys the new batch produced, so a key that
+LEFT the SELECT (an ownership window ending, a currency that stopped resolving,
+a method change, an entity leaving the tree) kept its last rows forever, and the
+"no-var ⇒ byte-for-byte equal to a full build" claim below was false for exactly
+those keys. Now `gold_consolidated_trial_balance`, `gold_cash_flow_indirect` and
+`gold_ytd_trial_balance` are `incremental_strategy='append'` with a `pre_hook`
+that runs `DELETE FROM {{ this }}` with the SAME `period_filter`/`scope_filter`
+as the SELECT (YTD: `include_period=false`); no vars ⇒ the whole table is
+replaced. `gold_fully_consolidated_tb` has no filters of its own (its SELECT is
+always full), so it is a `table`, rebuilt and swapped each run. Limit: an entity
+removed from the group tree is outside `scope_filter`, so only the next unscoped
+build clears it. A2's slice preservation still holds: scoped runs delete only
+their own slice (`assert_incremental_slice_preserved` and
+`assert_scoped_cash_flow_ytd_confined` PASS after a DEMF/2024 scoped run).
+
+---
 **A2 (#116) DONE** — commit `e59f83f`. Made the 4 consolidation models
 (`gold_consolidated_trial_balance`, `gold_fully_consolidated_tb`,
 `gold_cash_flow_indirect`, `gold_ytd_trial_balance`) `materialized='incremental'`
