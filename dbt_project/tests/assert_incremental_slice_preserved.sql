@@ -4,8 +4,9 @@
 -- must update ONLY its own slice and leave every OTHER slice intact. Before A2
 -- the four consolidation models were `table`-materialized, so a scoped run
 -- OVERWROTE the whole table — zeroing every entity/year outside the close. A2
--- makes them `incremental` with `a scope-delete + insert (#154; was delete+insert)` keyed on the close slice, so a
--- scoped run deletes+reinserts only the in-scope keys and preserves the rest.
+-- makes them `incremental`, rewriting only the close slice on each run (since
+-- #154 a pre_hook deletes the slice and the SELECT appends it), so a scoped run
+-- replaces only the in-scope slice and preserves the rest.
 -- This guard makes the old data-loss fail loudly.
 --
 -- OPT-IN via a DEDICATED var `assert_preserved_entity` — deliberately distinct

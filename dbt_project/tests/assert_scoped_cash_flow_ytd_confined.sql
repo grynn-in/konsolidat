@@ -2,13 +2,14 @@
 --
 -- A1 (#119) asserted that under an orchestrator scope close every row in the WHOLE
 -- persisted gold_cash_flow_indirect / gold_ytd_trial_balance table was confined to
--- the scoped entities. A2 (#116) then made both models `incremental` (a scope-delete + insert (#154; was delete+insert)
--- keyed on the close slice), so a scoped close rewrites ONLY the in-scope entity's
+-- the scoped entities. A2 (#116) then made both models `incremental` (rewriting
+-- only the close slice; since #154 a pre_hook deletes it and the SELECT appends
+-- it), so a scoped close rewrites ONLY the in-scope entity's
 -- keys and PRESERVES every other entity's prior rows BY DESIGN. The whole-table
 -- invariant therefore became false and the A1 test false-failed (122 retained rows).
 --
 -- REAL invariant checked here: the FRESHLY-WRITTEN slice — the rows the close
--- actually (re)derives and a scope-delete + insert (#154; was delete+insert)s — must be confined to the resolved scope.
+-- actually (re)derives and writes — must be confined to the resolved scope.
 -- That slice IS each model's SOURCE projection: gold_trial_balance filtered by the
 -- SAME period_filter + scope_filter predicates the model applies (cash-flow:
 -- single-period; YTD: include_period=false, year-bounded). We check that pre-persist
