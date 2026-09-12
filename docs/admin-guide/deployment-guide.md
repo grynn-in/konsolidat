@@ -171,7 +171,7 @@ There is no demo data. A fresh ClickHouse volume gets schema only: `clickhouse/i
 Data comes from two places:
 
 - **Connectors**: an ERP connector pulls ledger data into ClickHouse. See [Connecting Real ERP Data](#connecting-real-erp-data).
-- **Trial balance uploads**: an entity without a connector uploads its trial balance as a file. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads (one file for many entities and periods) go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) can use.
+- **Trial balance uploads**: an entity without a connector uploads its trial balance as a file. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads (one file for many entities and periods) go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use.
 
 To start again from an empty ClickHouse volume:
 
@@ -185,7 +185,7 @@ docker volume rm open_epm_clickhouse_data
 
 To connect a D365 Finance & Operations instance:
 
-1. Log into Frappe: `http://your-server:8069`
+1. Log into Frappe as Administrator: `http://your-server:8069`. Creating a Pipeline Run needs Administrator or System Manager.
 2. Go to **EPM Settings**
 3. Enter your D365 credentials (Tenant ID, Client ID, Client Secret, Environment URL)
 4. Open a new **Pipeline Run** (`/app/pipeline-run/new`) and click **Run Pipeline** to sync data

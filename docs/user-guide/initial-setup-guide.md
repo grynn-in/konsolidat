@@ -50,7 +50,7 @@ You should see `epm_staging`, `epm_bronze`, `epm_silver`, `epm_gold` in the outp
 
 ### Airbyte Connection (optional)
 
-Only needed if you're syncing live data from D365, SAP, or ERPNext. Skip this if your entities upload trial balances instead: a single trial balance through the Trial Balance Submission form in Desk, or in bulk through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) can use. There is no demo data.
+Only needed if you're syncing live data from D365, SAP, or ERPNext. Skip this if your entities upload trial balances instead: a single trial balance through the Trial Balance Submission form in Desk, or in bulk through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use. There is no demo data.
 
 | Field | Value | Notes |
 |-------|-------|-------|
