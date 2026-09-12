@@ -67,6 +67,14 @@ domain_scheme() {
 case "${1:-}" in
   backup)
     info "Running backup..."
+    # backup has no build: of its own; it runs the image frappe_backend builds,
+    # and pull_policy: never stops Compose from looking for it on Docker Hub.
+    # On a host that has never deployed (or a cron run after the image was
+    # pruned), build it first. `config --images backup` also lists the images of
+    # backup's dependencies (mariadb, redis, clickhouse), so keep only the
+    # project-scoped Frappe tag; if nothing matches, the inspect fails and we build.
+    FRAPPE_IMAGE="$(docker compose --profile backup config --images backup | grep -- '-frappe:latest$' | head -n 1 || true)"
+    docker image inspect "$FRAPPE_IMAGE" >/dev/null 2>&1 || docker compose build frappe_backend
     docker compose --profile backup run --rm backup
     exit 0
     ;;
@@ -266,8 +274,9 @@ else
 fi
 
 # Build the Frappe + Konsol image ONCE. frappe_backend is the only service with
-# a `build:` section; it tags konsolidat-frappe:latest, and frappe_worker,
-# frappe_scheduler, configurator, dbt_init and backup all run that same tag.
+# a `build:` section; it tags <project>-frappe:latest (e.g. repo-frappe:latest
+# for a checkout in ./repo), and frappe_worker, frappe_scheduler, configurator,
+# dbt_init and backup all run that same tag.
 # One shared tag means a redeploy cannot leave any of them on old app code
 # (the version skew of grynn-in/konsolidat#58). One build means one
 # `bench get-app` / vite build instead of six in parallel, which OOM-killed the
@@ -276,8 +285,10 @@ fi
 # The setup/backup profiles stay active so that a build-carrying service added
 # to either profile later is still rebuilt here. COMPOSE_PARALLEL_LIMIT=1 is a
 # cheap guard, a no-op while exactly one service builds: if a second `build:`
-# ever comes back, the builds run one at a time instead of racing each other
-# for memory. It is scoped to this command only, so the `up` steps stay parallel.
+# ever comes back, it serialises the builds with the classic builder (verified
+# on Compose 5.1.4 without buildx). It may not apply when Compose builds through
+# buildx/Bake, so the real protection is keeping a single `build:`. It is scoped
+# to this command only, so the `up` steps stay parallel.
 COMPOSE_PARALLEL_LIMIT=1 docker compose --profile setup --profile backup build
 
 # ---------------------------------------------------------------------------

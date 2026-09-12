@@ -67,8 +67,11 @@ cd dbt_project && dbt deps && dbt build
 > **Run `bench migrate` first.** Since konsolidat#146 this project has no seeds:
 > every reference table — currencies, the consolidation structure, dimension
 > mappings, spread profiles, fiscal calendars, budget input — is written by the
-> konsol Frappe app. `docker compose up -d` runs the configurator before dbt, so
-> the stack bootstraps itself. Running dbt by hand against a fresh ClickHouse
+> konsol Frappe app. `./deploy.sh` runs the configurator (site setup plus
+> `bench migrate`) before dbt, so the stack bootstraps itself. A plain
+> `docker compose up -d` does not: the configurator is in the `setup` profile,
+> so run `docker compose --profile setup run --rm configurator` first if you
+> start the stack by hand. Running dbt by hand against a fresh ClickHouse
 > before konsol has migrated gives you empty reference tables and models that
 > build against nothing, with no seed left to fall back on.
 
