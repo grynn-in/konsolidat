@@ -35,8 +35,8 @@ The task pane assets are served from Frappe's static assets directory.
 ### Production Deployment
 
 For production, update `manifest.xml`:
-1. Change the source URL to your production Frappe server
-2. Add your production domain to `AppDomains`
+1. Replace every `https://demo.konsolidat.com` URL with your production Frappe server: the `SourceLocation`, the `bt:Url` and `bt:Image` resources, and the icon and support URLs. The add-in's runtime and its worksheet functions load from those URLs, not only from `SourceLocation`
+2. Replace the demo domain in `AppDomains` with your production domain
 3. Deploy via Microsoft 365 Admin Center or SharePoint App Catalog
 
 ## Using the Task Pane
