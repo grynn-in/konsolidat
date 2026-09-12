@@ -34,6 +34,21 @@ models:
           - not_null
           - unique
 
+  - name: silver_entity_currencies
+    description: >
+      konsol#110: the one answer to which currency an entity keeps its books
+      in — konsol's Entity master first, the ERP's company master second.
+      Consolidation joins here, so an entity with no connector consolidates.
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+          - unique
+      - name: accounting_currency
+        description: "Resolved currency; '' when neither source has one"
+      - name: currency_source
+        description: "'konsol', 'erp', or '' when unresolved"
+
   - name: silver_fiscal_periods
     description: "Standardized period lookup"
 
