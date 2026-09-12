@@ -7,10 +7,12 @@
 # =============================================================================
 
 x-frappe-common: &frappe-common
-  build:
-    context: ./docker/frappe
-    args:
-      FRAPPE_BRANCH: ${FRAPPE_BRANCH:-version-15}
+  # ONE image for every Frappe-based service. Only frappe_backend has a
+  # `build:` section (it builds and tags this image); the other five run the
+  # same tag without building. Do not add `build:` back to this anchor: six
+  # services would then build the same Dockerfile in parallel, six vite builds
+  # at once, which OOM-killed the build and ClickHouse on an 8 GiB host (#152).
+  image: konsolidat-frappe:latest
   environment: &frappe-env
     DB_HOST: mariadb
     DB_PORT: "3306"
@@ -137,6 +139,14 @@ services:
   # ---------------------------------------------------------------------------
   frappe_backend:
     <<: *frappe-common
+    # The only build in the stack: produces konsolidat-frappe:latest for all
+    # Frappe services. It lives here because frappe_backend is in the default
+    # profile, so it is always part of the project; Compose then knows that
+    # image is built locally and never tries to pull it for the others.
+    build:
+      context: ./docker/frappe
+      args:
+        FRAPPE_BRANCH: ${FRAPPE_BRANCH:-version-15}
     container_name: konsolidat_backend
     command: ["web"]
     ports:

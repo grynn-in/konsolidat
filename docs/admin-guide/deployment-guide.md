@@ -257,9 +257,26 @@ This restores MariaDB, ClickHouse, and Frappe files, then restarts services.
 ```bash
 cd konsolidat
 git pull
-docker compose --profile setup --profile backup build  # rebuild ALL Frappe services, not just the backend
+COMPOSE_PARALLEL_LIMIT=1 docker compose --profile setup --profile backup build
 docker compose up -d
 ```
+
+All six Frappe-based services (`frappe_backend`, `frappe_worker`,
+`frappe_scheduler`, `configurator`, `dbt_init`, `backup`) run one image,
+`konsolidat-frappe:latest`. Only `frappe_backend` builds it, so a rebuild
+updates all of them together, and `docker compose up -d` recreates the
+containers whose image changed.
+
+Build the image once only. Each build runs a Node/vite asset build that takes
+about 700 MB, so parallel builds of the same image can exhaust memory on an
+8 GiB host, and the kernel then kills the build and the running ClickHouse.
+`COMPOSE_PARALLEL_LIMIT=1` makes sure that can't happen even if another
+service ever gets its own `build:` section again.
+
+Stacks deployed before this change also have per-service images named
+`<project>-frappe_backend`, `<project>-frappe_worker` and so on. Once the
+new deploy is up, nothing uses them and you can remove them with
+`docker image rm`.
 
 The configurator automatically runs `bench migrate` on existing sites.
 

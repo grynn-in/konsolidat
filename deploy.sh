@@ -265,16 +265,20 @@ else
     git -C "$KONSOL_DIR" reset --hard FETCH_HEAD
 fi
 
-# Rebuild every Frappe-based service, not just the backend. frappe_backend,
-# frappe_worker, frappe_scheduler (default profile) plus configurator + dbt_init
-# (profile: setup) and backup (profile: backup) all derive from the same
-# x-frappe-common build but resolve to SEPARATE images — building only the
-# backend leaves the rest on old app code after a redeploy (version skew); a
-# stale configurator would then run migrate with old code. Activating the
-# profiles pulls those one-shot services into the build set. Only services with
-# a build context (the Frappe ones) are built; image-only services (cubejs,
-# clickhouse, caddy, …) are untouched. See grynn-in/konsolidat#58.
-docker compose --profile setup --profile backup build
+# Build the Frappe + Konsol image ONCE. frappe_backend is the only service with
+# a `build:` section; it tags konsolidat-frappe:latest, and frappe_worker,
+# frappe_scheduler, configurator, dbt_init and backup all run that same tag.
+# One shared tag means a redeploy cannot leave any of them on old app code
+# (the version skew of grynn-in/konsolidat#58). One build means one
+# `bench get-app` / vite build instead of six in parallel, which OOM-killed the
+# build and ClickHouse with it on an 8 GiB host (grynn-in/konsolidat#152).
+#
+# The setup/backup profiles stay active so that a build-carrying service added
+# to either profile later is still rebuilt here. COMPOSE_PARALLEL_LIMIT=1 is a
+# cheap guard, a no-op while exactly one service builds: if a second `build:`
+# ever comes back, the builds run one at a time instead of racing each other
+# for memory. It is scoped to this command only, so the `up` steps stay parallel.
+COMPOSE_PARALLEL_LIMIT=1 docker compose --profile setup --profile backup build
 
 # ---------------------------------------------------------------------------
 # Step 3: Run configurator (create site, install app)
