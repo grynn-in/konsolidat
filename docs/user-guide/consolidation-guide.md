@@ -256,9 +256,16 @@ movements — no separate cash-flow ledger is required.
 
 ### Categorizing accounts
 
-Edit `seeds/cash_flow_categories.csv` and re-run `dbt seed` to map a new GL
-account. The relationships test on `gold_bs_movement.main_account` fails the
-build if any balance-sheet account is left uncategorized.
+Create a **Cash Flow Category** in konsol for the GL account and **Publish**
+it. Publishing writes the mapping through to the warehouse and requests a
+governed rebuild; a Draft or Inactive mapping is deliberately not applied. The
+relationships test on `gold_bs_movement.main_account` fails the build if any
+balance-sheet account is left uncategorized.
+
+(This used to say "edit `seeds/cash_flow_categories.csv` and re-run `dbt seed`".
+That seed was deleted in konsolidat#146 — it was the same relation the doctype
+writes — and editing a CSV would in any case route around the Publish gate that
+decides which mappings are live.)
 
 ### Tests
 

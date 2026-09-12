@@ -61,8 +61,16 @@ ERP (D365 / SAP / ERPNext)
 ```bash
 cp .env.example .env
 docker compose up -d
-cd dbt_project && dbt deps && dbt seed && dbt build
+cd dbt_project && dbt deps && dbt build
 ```
+
+> **Run `bench migrate` first.** Since konsolidat#146 this project has no seeds:
+> every reference table — currencies, the consolidation structure, dimension
+> mappings, spread profiles, fiscal calendars, budget input — is written by the
+> konsol Frappe app. `docker compose up -d` runs the configurator before dbt, so
+> the stack bootstraps itself. Running dbt by hand against a fresh ClickHouse
+> before konsol has migrated gives you empty reference tables and models that
+> build against nothing, with no seed left to fall back on.
 
 ## Documentation
 

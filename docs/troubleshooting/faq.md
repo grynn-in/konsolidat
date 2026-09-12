@@ -41,11 +41,19 @@ ClickHouse data volumes + Frappe `bench backup`. See [Operations Runbook](../adm
 1. Ensure the entity exists in D365
 2. Run an Airbyte sync to pull its data
 3. Add it to `consolidation_groups.csv` if it should be consolidated
-4. Add it to `entity_fiscal_calendars.csv`
-5. Run `dbt seed && dbt build`
+4. Add an **Entity Fiscal Calendar** record in konsol for its `data_area_id`
+5. Run `bench migrate` (or save the record), then `dbt build`
 
 **Q: How do I change the consolidation group structure?**
-Edit `seeds/consolidation_groups.csv`, then `dbt seed && dbt build`.
+Edit the **Consolidation Group** tree in konsol, and set ownership on the
+**Ownership Period** for each node. Saving publishes to the warehouse and
+requests a governed build.
+
+Do **not** look for `seeds/consolidation_groups.csv` — it was deleted in
+konsolidat#146 because it was the same ClickHouse relation konsol writes, so
+`dbt seed` and `bench migrate` overwrote each other. One `dbt seed` was measured
+reverting a published ownership change, deleting a consolidation group outright,
+and putting two entities under two groups at once.
 
 **Q: How do I update exchange rates?**
 Exchange rates come from D365 via Airbyte. Run a sync to pull the latest rates. Rates flow through as TRUE rates — the staging adapter resolves D365's `ConversionFactor` (per-100 quotes etc.) and nothing downstream scales (#138). If a rate looks 100× off, check the raw row's `ConversionFactor` against its magnitude; `assert_exchange_rate_sane_magnitude` should already be failing.
