@@ -6,6 +6,10 @@ Creates a fictional 3-entity manufacturing group (Alpine Manufacturing)
 with 12 months of GL data, budget, exchange rates, and trial balance.
 
 Output: clickhouse/demo-data.sql
+
+NOT loaded by default any more: docker-compose mounts clickhouse/raw-schema.sql
+(empty landing tables) instead. Load the generated file by hand if you want
+synthetic data. The file is gitignored: never commit it back.
 """
 
 import uuid
