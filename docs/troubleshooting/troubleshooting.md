@@ -2,32 +2,20 @@
 
 Symptom-based debugging guide for Konsolidat.
 
-## Excel / VBA Issues
+## Excel Add-in Issues
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| All EPM cells show `0` | Cache empty, not refreshed | Press **Ctrl+Shift+R** |
-| EPM cells show `0` after refresh | No data for the queried dimensions | Verify entity, year, period, account exist in ClickHouse |
-| `#VALUE!` error in EPM cell | Wrong parameter types | Entity and account must be strings (in quotes); year must be numeric |
-| `#NAME?` error | VBA module not loaded | Import `OpenEPM.bas` via Alt+F11 → File → Import |
-| "Compile error: User-defined type not defined" | Missing VBA reference | Add `Microsoft Scripting Runtime` and `Microsoft XML, v6.0` in Tools → References |
-| Refresh does nothing | No EPM formulas found | Check cells contain `=EPM(`, `=EPM_BUDGET(`, etc. (exact prefix match) |
-| "Object variable or With block not set" | Cache not initialized | Close and reopen the workbook, or run `EPM_ClearCache` |
-| Login prompt keeps appearing | Session expired or auth failed | Check Frappe credentials; verify Frappe is running on the configured URL |
-| "Run-time error '429'" | XMLHTTP object creation failed | Ensure `Microsoft XML, v6.0` reference is enabled |
-| Ctrl+Shift+R doesn't work | Key binding not active | Close/reopen workbook (binding is set in `Workbook_Open`) |
-| Slow refresh (>30s) | Large number of unique query groups | Reduce variation in measure/scenario/period combos; use period ranges |
+| `#N/A` "Not logged in" | No session | Open the Konsolidat task pane and sign in |
+| `#NAME?` error | The add-in is not loaded | Install or reload the add-in (Insert → My Add-ins); see the [Excel Task Pane Guide](../user-guide/excel-taskpane-guide.md) |
+| `K.` cells show `0` | No data for the queried dimensions | Verify entity, year, period, account exist in ClickHouse |
+| `#VALUE!` error in a `K.` cell | Invalid parameter | The cell's error message names the problem; entity and account are strings, year is a number |
+| Values don't update after a data load | Excel has not recalculated | Press **Ctrl+Alt+F9** |
+| Slow calculation (>30s) | Large number of unique query groups | Reduce variation in measure/scenario/period combos; use period ranges |
 
 ### Diagnostics
 
-Run **EPM_Debug** (Alt+F8 → EPM_Debug) to test:
-1. Cache initialization
-2. HTTP object creation
-3. Health endpoint connectivity
-4. Formula scanning
-5. Test batch query
-
-Enable detailed logging with **EPM_ToggleLog** — check the `_EPM_Log` sheet for HTTP request/response details.
+Check the server's health endpoint (`/api/method/konsol.api.health`), then sign in again from the task pane.
 
 ## API Issues
 
@@ -101,7 +89,7 @@ dbt build --full-refresh    # Drop all tables and rebuild
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Task pane shows blank | Frappe not running at manifest URL | Start Frappe on `http://localhost:8069` |
+| Task pane shows blank | Frappe not reachable at the manifest's URL | Check the URLs in the manifest point at your running Frappe server |
 | Login fails in task pane | CORS or cookie issue | Check browser console; verify same-origin setup |
 | Pipeline status stuck on "Queued" | Background worker not running | Check `bench start` includes workers |
 | "Trigger Pipeline" does nothing | Pipeline Run doctype missing | Run `bench migrate` |

@@ -276,12 +276,12 @@ decides which mappings are live.)
 Both reconciliations hold only when the (consolidated) balance sheet balances
 each period; a failure points at unbalanced source data, not the model.
 
-## Reporting with EPM()
+## Reporting with K.EPM()
 
 Consolidated data is available via the gold models. For entity-level reporting:
 
 ```
-=EPM("USMF", 2024, "FY", "401100")
+=K.EPM("USMF", 2024, "FY", "401100")
 ```
 
 For consolidated reports, query the fully consolidated models directly via SQL or build summary reports that reference the consolidation gold tables.

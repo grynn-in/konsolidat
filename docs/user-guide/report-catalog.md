@@ -1,6 +1,6 @@
 # Report Catalog
 
-Quick reference for all 22 gold models with sample `=EPM()` formulas for common reports.
+Quick reference for all 22 gold models with sample `=K.EPM()` formulas for common reports.
 
 ## Model Quick Reference
 
@@ -58,7 +58,7 @@ Quick reference for all 22 gold models with sample `=EPM()` formulas for common 
 A 12-month income statement for one entity.
 
 ```
-=EPM($B$1, $D$1, B$2, $A3)
+=K.EPM($B$1, $D$1, B$2, $A3)
 ```
 
 Where B1=entity, D1=year, row 2=period numbers (1–12), column A=account codes.
@@ -67,18 +67,18 @@ Where B1=entity, D1=year, row 2=period numbers (1–12), column A=account codes.
 |---|---|---|---|---|---|
 | 1 | Entity: | USMF | Year: | ... | 2024 |
 | 2 | Account | 1 | 2 | ... | 12 |
-| 3 | 4100 - Revenue | `=EPM($B$1,$D$1,B$2,$A3)` | ... | ... | ... |
-| 4 | 5100 - COGS | `=EPM($B$1,$D$1,B$2,$A4)` | ... | ... | ... |
+| 3 | 4100 - Revenue | `=K.EPM($B$1,$D$1,B$2,$A3)` | ... | ... | ... |
+| 4 | 5100 - COGS | `=K.EPM($B$1,$D$1,B$2,$A4)` | ... | ... | ... |
 | 5 | **Gross Profit** | `=B3+B4` | | | |
-| 6 | 6100 - SGA | `=EPM($B$1,$D$1,B$2,$A6)` | ... | ... | ... |
+| 6 | 6100 - SGA | `=K.EPM($B$1,$D$1,B$2,$A6)` | ... | ... | ... |
 
 ### Quarterly P&L
 
 ```
-=EPM("USMF", 2024, "Q1", "4100")
-=EPM("USMF", 2024, "Q2", "4100")
-=EPM("USMF", 2024, "Q3", "4100")
-=EPM("USMF", 2024, "Q4", "4100")
+=K.EPM("USMF", 2024, "Q1", "4100")
+=K.EPM("USMF", 2024, "Q2", "4100")
+=K.EPM("USMF", 2024, "Q3", "4100")
+=K.EPM("USMF", 2024, "Q4", "4100")
 ```
 
 ### Budget vs Actual (Full Year)
@@ -86,36 +86,36 @@ Where B1=entity, D1=year, row 2=period numbers (1–12), column A=account codes.
 | | A | B | C | D | E |
 |---|---|---|---|---|---|
 | 2 | Account | Actual FY | Budget FY | Variance | Fav? |
-| 3 | 4100 | `=EPM("USMF",2025,"FY","4100")` | `=EPM_BUDGET("USMF",2025,"FY","4100")` | `=EPM_VARIANCE("USMF",2025,"FY","4100")` | `=EPM("USMF",2025,"FY","4100","variance_favorable","variance")` |
+| 3 | 4100 | `=K.EPM("USMF",2025,"FY","4100")` | `=K.EPM_BUDGET("USMF",2025,"FY","4100")` | `=K.EPM_VARIANCE("USMF",2025,"FY","4100")` | `=K.EPM("USMF",2025,"FY","4100","variance_favorable","variance")` |
 
 ### Multi-Entity Comparison
 
 | | A | B | C | D | E |
 |---|---|---|---|---|---|
 | 2 | Account | USMF | DEMF | GBMF | JPMF |
-| 3 | 4100 | `=EPM("USMF",2024,"FY",$A3)` | `=EPM("DEMF",2024,"FY",$A3)` | `=EPM("GBMF",2024,"FY",$A3)` | `=EPM("JPMF",2024,"FY",$A3)` |
+| 3 | 4100 | `=K.EPM("USMF",2024,"FY",$A3)` | `=K.EPM("DEMF",2024,"FY",$A3)` | `=K.EPM("GBMF",2024,"FY",$A3)` | `=K.EPM("JPMF",2024,"FY",$A3)` |
 
 ### Debit/Credit Detail
 
 For accounts where you need both sides:
 
 ```
-=EPM_DEBIT("USMF", 2024, 5, "1300")    ' Receivables debit
-=EPM_CREDIT("USMF", 2024, 5, "1300")   ' Receivables credit
+=K.EPM_DEBIT("USMF", 2024, 5, "1300")    ' Receivables debit
+=K.EPM_CREDIT("USMF", 2024, 5, "1300")   ' Receivables credit
 ```
 
 ### Cost Center Drill-Down
 
 ```
-=EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "IT")
-=EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "SALES")
-=EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "FACILITY")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "IT")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "SALES")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "FACILITY")
 ```
 
 ### YTD Tracking
 
 ```
-=EPM("USMF", 2024, 5, "4100", "ytd_net_amount")
+=K.EPM("USMF", 2024, 5, "4100", "ytd_net_amount")
 ```
 
 Returns the cumulative net amount from period 1 through period 5.
@@ -124,12 +124,12 @@ Returns the cumulative net amount from period 1 through period 5.
 
 - Use **absolute references** (`$B$1`) for entity/year parameters and relative references for the varying dimension
 - **Period ranges** (`Q1`, `H1`, `FY`) save cells and improve readability
-- **EPM_BUDGET** and **EPM_VARIANCE** are shortcuts — the full `EPM()` with measure/scenario parameters gives access to all measures
-- **Ctrl+Shift+R** refreshes the active sheet; all EPM cells batch into a single API call
-- For large workbooks (1000+ EPM cells), use **EPM_RefreshAll** to process all sheets sequentially
+- **K.EPM_BUDGET** and **K.EPM_VARIANCE** are shortcuts — the full `K.EPM()` with measure/scenario parameters gives access to all measures
+- The add-in groups `K.` calls into as few API calls as possible (up to 2,000 per request)
+- For very large workbooks, recalculate one sheet at a time (Shift+F9) instead of the whole workbook
 
 ## Next Steps
 
-- [Excel VBA Guide](excel-vba-guide.md) — Full formula and macro reference
+- [Excel Formulas Guide](excel-formulas-guide.md) — Full formula reference
 - [Gold Models](../data-dictionary/gold-models.md) — Complete column documentation
 - [Variance Analysis Guide](variance-analysis-guide.md) — Favorable/unfavorable logic

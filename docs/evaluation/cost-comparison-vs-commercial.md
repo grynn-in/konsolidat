@@ -25,7 +25,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 | Scenario management | Native | Native | Best-in-class | **Yes** (budget/forecast/what-if via API) |
 | Variance analysis | Native | Native | Native | **Yes** (favorable logic, actual vs budget) |
 | Budget spreading | Native | Native | Native | **Yes** (annual → monthly profiles) |
-| Excel-native UI | Plugin | Plugin | No (web only) | **Yes** (VBA `=EPM()` + batch API) |
+| Excel-native UI | Plugin | Plugin | No (web only) | **Yes** (add-in `=K.EPM()` + batch API) |
 | Regulatory reporting | Strong | Growing | Weak | N/A (not targeted) |
 | ESG reporting | Yes | Yes | No | N/A (not targeted) |
 | Workflow/approvals | Native | Native | Native | **Yes** (4-state, role-based) |
@@ -96,7 +96,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 | ClickHouse | Columnar analytical warehouse | 8123 (HTTP), 9000 (native) |
 | Frappe (Konsol) | API layer, auth, EPM Settings, pipeline control | 8069 |
 | Airbyte | D365 OData extraction | 8000 |
-| Excel VBA | `=EPM()` formula + batch API | — |
+| Excel add-in | `=K.EPM()` formula + batch API | — |
 | Excel Task Pane | Office.js pipeline orchestration | — |
 
 ### Test Coverage
@@ -153,7 +153,7 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 | **No cash flow statement** | High — CFOs need consolidated CF | Buildable: BS delta method in dbt (~2–3 days) |
 | **No multi-GAAP** | Medium — one consolidation path only | Buildable: reporting_standard dimension (~1 week) |
 | **No rolling forecasts** | Medium — annual scenarios only | Buildable: rolling window logic (~2–3 days) |
-| **No web UI for end users** | Medium — Excel-only for finance users | Frappe Desk for admin; EPM() for finance users |
+| **No web UI for end users** | Medium — Excel-only for finance users | Frappe Desk for admin; K.EPM() for finance users |
 | **Allocation rules in CSV** | Low — works but not click-to-edit | Editable in any text editor or Excel |
 | **No real-time GL sync** | Low — batch is fine for most EPM | Airbyte schedule (hourly possible) |
 

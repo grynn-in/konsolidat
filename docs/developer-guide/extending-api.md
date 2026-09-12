@@ -7,7 +7,7 @@ How to add new endpoints to the Frappe/Konsol API layer.
 The API lives in `konsol/api.py` within the Frappe app. It uses Frappe's `@frappe.whitelist()` decorator to expose Python functions as HTTP endpoints.
 
 ```
-Excel VBA → HTTP POST → Frappe (Konsol) → ClickHouse SQL → JSON response
+Excel add-in → HTTP POST → Frappe (Konsol) → ClickHouse SQL → JSON response
 ```
 
 ## Frappe @whitelist Pattern
@@ -112,7 +112,7 @@ assert re.match(r'^[a-z_]+$', measure), f"Invalid measure name: {measure}"
 
 ## Adding a New Scenario
 
-To make a new Gold model queryable through `=EPM()`:
+To make a new Gold model queryable through `=K.EPM()`:
 
 ### 1. Add to SCENARIO_TABLES
 
@@ -183,7 +183,7 @@ def validated_endpoint(scenario):
 
 ## Response Format
 
-Frappe wraps return values in `{"message": <your_return_value>}`. The VBA module and other clients expect this wrapper.
+Frappe wraps return values in `{"message": <your_return_value>}`. The Excel add-in and other clients expect this wrapper.
 
 ```python
 # In Python:

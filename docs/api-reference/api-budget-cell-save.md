@@ -1,6 +1,6 @@
 # POST budget_cell_save
 
-Save a single budget cell — sets one period on a Budget Sheet's Budget Line. Designed for `EPMSAVE()` immediate writes from Excel.
+Save a single budget cell — sets one period on a Budget Sheet's Budget Line. Designed for `K.EPMSAVE()` immediate writes from Excel.
 
 ## Endpoint
 

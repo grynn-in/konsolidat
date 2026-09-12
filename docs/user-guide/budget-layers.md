@@ -99,7 +99,7 @@ This gives you full audit trail: who contributed what, when, and at which layer.
 
 The dbt model aggregates layers into a single effective budget per period:
 
-**`gold_spread_budget`** (what EPM() queries)
+**`gold_spread_budget`** (what K.EPM() queries)
 
 | scenario_id | data_area_id | fiscal_year | fiscal_period | main_account | period_amount |
 |:---|:---|---:|---:|:---|---:|
@@ -118,24 +118,24 @@ The dbt model aggregates layers into a single effective budget per period:
 
 ---
 
-## What Excel Sees via EPM()
+## What Excel Sees via K.EPM()
 
 ### Single Period
 
 | Cell | Formula | Result |
 |:-----|:--------|-------:|
-| B3 | `=EPM("USMF", 2025, 1, "6100", "period_amount", "budget")` | 95,000 |
-| B9 | `=EPM("USMF", 2025, 7, "6100", "period_amount", "budget")` | 110,000 |
-| B12 | `=EPM("USMF", 2025, 10, "6100", "period_amount", "budget")` | 100,000 |
+| B3 | `=K.EPM("USMF", 2025, 1, "6100", "period_amount", "budget")` | 95,000 |
+| B9 | `=K.EPM("USMF", 2025, 7, "6100", "period_amount", "budget")` | 110,000 |
+| B12 | `=K.EPM("USMF", 2025, 10, "6100", "period_amount", "budget")` | 100,000 |
 
 ### Quarterly & Annual Totals
 
 | Cell | Formula | Result | Calculation |
 |:-----|:--------|-------:|:------------|
-| C3 | `=EPM("USMF", 2025, "Q1", "6100", "period_amount", "budget")` | 285,000 | 95k + 95k + 95k |
-| C5 | `=EPM("USMF", 2025, "Q3", "6100", "period_amount", "budget")` | 325,000 | 110k + 110k + 105k |
-| C7 | `=EPM("USMF", 2025, "H2", "6100", "period_amount", "budget")` | 625,000 | Q3 + Q4 |
-| D2 | `=EPM("USMF", 2025, "FY", "6100", "period_amount", "budget")` | 1,195,000 | all 12 periods |
+| C3 | `=K.EPM("USMF", 2025, "Q1", "6100", "period_amount", "budget")` | 285,000 | 95k + 95k + 95k |
+| C5 | `=K.EPM("USMF", 2025, "Q3", "6100", "period_amount", "budget")` | 325,000 | 110k + 110k + 105k |
+| C7 | `=K.EPM("USMF", 2025, "H2", "6100", "period_amount", "budget")` | 625,000 | Q3 + Q4 |
+| D2 | `=K.EPM("USMF", 2025, "FY", "6100", "period_amount", "budget")` | 1,195,000 | all 12 periods |
 
 ### Variance Analysis
 
@@ -143,11 +143,11 @@ Assume actuals for P5 came in at $92,000 against the $95,000 budget:
 
 | Cell | Formula | Result | Meaning |
 |:-----|:--------|-------:|:--------|
-| E5 | `=EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")` | 92,000 | What was actually spent |
-| F5 | `=EPM("USMF", 2025, 5, "6100", "budget_amount", "variance")` | 95,000 | The approved budget |
-| G5 | `=EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")` | -3,000 | Under budget by $3k |
-| H5 | `=EPM("USMF", 2025, 5, "6100", "variance_pct", "variance")` | -3.16 | 3.16% under budget |
-| I5 | `=EPM("USMF", 2025, 5, "6100", "variance_favorable", "variance")` | 1 | Favorable (expense below budget) |
+| E5 | `=K.EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")` | 92,000 | What was actually spent |
+| F5 | `=K.EPM("USMF", 2025, 5, "6100", "budget_amount", "variance")` | 95,000 | The approved budget |
+| G5 | `=K.EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")` | -3,000 | Under budget by $3k |
+| H5 | `=K.EPM("USMF", 2025, 5, "6100", "variance_pct", "variance")` | -3.16 | 3.16% under budget |
+| I5 | `=K.EPM("USMF", 2025, 5, "6100", "variance_favorable", "variance")` | 1 | Favorable (expense below budget) |
 
 ---
 
@@ -183,7 +183,7 @@ Budget Sheets (one per layer)
      [Lock cycle]                  dbt build
                                         │
                                         ▼
-                                 gold_spread_budget             =EPM("USMF",2025,5,
+                                 gold_spread_budget             =K.EPM("USMF",2025,5,
                                  (12 rows: SUM per period)        "6100","period_amount",
                                         │                         "budget")
                                         ▼                              │
@@ -199,10 +199,10 @@ The budget chain (Budget Cycle → Budget Sheet → Budget Line) handles both bu
 
 | Formula | What It Returns |
 |:--------|:----------------|
-| `=EPM("USMF", 2025, 5, "6100", "period_amount", "budget")` | Approved budget (all layers summed) |
-| `=EPM("USMF", 2025, 5, "6100", "period_amount", "forecast")` | Latest forecast (all layers summed) |
-| `=EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")` | Actual from GL |
-| `=EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")` | Actual minus budget |
+| `=K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget")` | Approved budget (all layers summed) |
+| `=K.EPM("USMF", 2025, 5, "6100", "period_amount", "forecast")` | Latest forecast (all layers summed) |
+| `=K.EPM("USMF", 2025, 5, "6100", "actual_amount", "variance")` | Actual from GL |
+| `=K.EPM("USMF", 2025, 5, "6100", "variance_abs", "variance")` | Actual minus budget |
 
 ---
 
@@ -213,7 +213,7 @@ The budget chain (Budget Cycle → Budget Sheet → Budget Line) handles both bu
 | **Layers are additive** | No separate "final" row — the sum across layers IS the final budget |
 | **Only locked cycles sync** | Open-cycle edits stay in Frappe only — no stale data in ClickHouse |
 | **dbt always aggregates** | `gold_spread_budget` returns one `period_amount` per period (sum of all layers) |
-| **EPM() returns the aggregate** | Excel users see the effective budget, not individual layers |
+| **K.EPM() returns the aggregate** | Excel users see the effective budget, not individual layers |
 | **Full audit trail** | Raw layer data persists in `epm_gold.budget_monthly_input` — query by layer for reporting |
 | **Role-based editing** | Each layer locked to its role; System Manager can edit all |
 | **Budget = Forecast** | Same doctypes, same layers, same cycle locking — distinguished by the cycle's scenario_id |

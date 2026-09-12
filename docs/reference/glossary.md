@@ -42,14 +42,13 @@
 | **MergeTree** | ClickHouse's primary table engine; supports sorting keys for fast range queries |
 | **Frappe** | A Python web framework with built-in auth, roles, DocTypes, and REST API; hosts the Konsol app |
 | **DocType** | A Frappe data model definition (schema + UI + permissions + workflow) |
-| **Konsol** | The Frappe app that provides EPM Settings, pipeline control, and the `=EPM()` API |
+| **Konsol** | The Frappe app that provides EPM Settings, pipeline control, and the `=K.EPM()` API |
 | **EPM Settings** | A Frappe Single DocType storing ClickHouse connection details, Airbyte config, and dbt project path |
 | **Airbyte** | An open-source ELT platform; extracts D365 OData entities into ClickHouse |
 | **abctl** | Airbyte's CLI tool for self-hosted deployment |
 | **OData** | A REST protocol used by D365 F&O to expose data entities |
-| **VBA (Visual Basic for Applications)** | The macro language in Excel used to implement the `=EPM()` custom functions |
+| **Excel add-in** | The konsol Office add-in: the `=K.EPM()` worksheet functions and the Konsolidat task pane |
 | **Office.js** | Microsoft's JavaScript API for building Office Add-ins (task panes, custom functions) |
-| **Custom Document Property** | An Excel workbook-level metadata field; used to store `EPM_API_URL` |
 
 ## Abbreviations
 

@@ -151,7 +151,7 @@ txt(Inches(0.6), Inches(6.75), Inches(6), Inches(0.2),
     sz=9, color=GRAY40)
 
 txt(Inches(0.6), Inches(7.0), Inches(6), Inches(0.2),
-    "Airbyte  \u00b7  ClickHouse  \u00b7  dbt Core  \u00b7  Frappe  \u00b7  Excel VBA",
+    "Airbyte  \u00b7  ClickHouse  \u00b7  dbt Core  \u00b7  Frappe  \u00b7  Excel add-in",
     sz=7, color=GRAY60, font='Consolas')
 
 

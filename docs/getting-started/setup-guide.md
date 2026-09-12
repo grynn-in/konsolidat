@@ -1,6 +1,6 @@
 # Setup Guide
 
-Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and Excel VBA.
+Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and the Excel add-in.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and 
 | Docker Desktop | 24+ | ClickHouse container |
 | Python | 3.10+ | dbt Core, Frappe Bench |
 | Node.js | 18+ | Frappe assets |
-| Excel | 2016+ | VBA reporting |
+| Excel | Microsoft 365 desktop or Excel on the web | Add-in reporting |
 | D365 F&O | Any | Source ERP (optional for demo) |
 
 ## 1. Clone the Repository
@@ -185,47 +185,22 @@ Frappe is now running at `http://localhost:8069`.
 
 4. Save
 
-## 6. Set Up Excel VBA
+## 6. Install the Excel Add-in
 
-### 6.1 Import the VBA Module
+The konsol Office add-in provides the `K.` worksheet functions and the Konsolidat task pane (pipeline control).
 
-1. Open Excel → **Alt+F11** (VBA Editor)
-2. **File → Import File** → `excel/OpenEPM.bas`
-3. Close VBA Editor
-4. Save workbook as `.xlsm`
+### 6.1 Sideload for Development
 
-### 6.2 Add References (Required)
+1. Take `konsol/public/excel-addin/manifest.xml` from the konsol repository. It points at the demo server, `https://demo.konsolidat.com`: replace every occurrence with your Frappe URL (e.g. `http://localhost:8069`), because the worksheet functions call the server the add-in was loaded from
+2. In Excel, use **Upload My Add-in** (under **My Add-ins**) and select the manifest
+3. The **Konsolidat** button appears on the Home tab
 
-In the VBA Editor: **Tools → References** → check:
-- `Microsoft Scripting Runtime` (for `Scripting.Dictionary`)
-- `Microsoft XML, v6.0` (for `MSXML2.XMLHTTP60`)
+### 6.2 Sign In and Test
 
-### 6.3 Configure Server URL
+1. Open the Konsolidat task pane and sign in with your Frappe credentials
+2. In any cell: `=K.EPM("USMF", 2024, 5, "401100")`
 
-Run `EPM_SetServer` macro (Alt+F8) and enter your Frappe URL (e.g., `http://localhost:8069`).
-
-This saves the URL as a Custom Document Property in the workbook, so it persists across sessions.
-
-### 6.4 Log In and Test
-
-1. Run `EPM_Login` → enter Frappe credentials
-2. In any cell: `=EPM("USMF", 2024, 5, "401100")`
-3. Press **Ctrl+Shift+R** to refresh
-
-## 7. Optional: Excel Task Pane Add-in
-
-The Office.js task pane provides pipeline orchestration (trigger sync + dbt from Excel).
-
-### Sideload for Development
-
-1. Copy `excel-addin/manifest.xml`
-2. In Excel: **Insert → My Add-ins → Upload My Add-in** → select the manifest
-3. The task pane appears on the Home tab as "Konsolidat"
-
-The task pane connects to Frappe at `http://localhost:8069` and allows:
-- Login with Frappe credentials
-- Viewing latest pipeline run status
-- Triggering new pipeline runs (Airbyte sync + dbt build)
+The task pane connects to the server named in the manifest and also lets you view the latest pipeline run and trigger a new one (Airbyte sync + dbt build).
 
 ## Verification Checklist
 
@@ -234,11 +209,11 @@ The task pane connects to Frappe at `http://localhost:8069` and allows:
 - [ ] `dbt build` completes with 0 errors
 - [ ] Frappe Desk accessible at `http://localhost:8069`
 - [ ] EPM Settings saved with ClickHouse connection
-- [ ] `=EPM("USMF", 2024, 5, "401100")` returns a numeric value after Ctrl+Shift+R
+- [ ] `=K.EPM("USMF", 2024, 5, "401100")` returns a numeric value
 
 ## Next Steps
 
 - [Configuration Reference](configuration-reference.md) — All settings in detail
-- [Excel VBA Guide](../user-guide/excel-vba-guide.md) — Building reports with EPM formulas
+- [Excel Formulas Guide](../user-guide/excel-formulas-guide.md) — Building reports with `K.EPM` formulas
 - [D365 Integration](../admin-guide/d365-integration.md) — Azure AD, OData entity details
 - [Deployment Guide](../admin-guide/deployment-guide.md) — Production deployment

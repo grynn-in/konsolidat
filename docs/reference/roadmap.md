@@ -12,11 +12,11 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
 | Hierarchy, equity method, acquisition/disposal | **Done** |
 | Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
-| Budget write-back (Excel → CH) | **Done** — EPMSAVE() from Excel + Frappe API |
+| Budget write-back (Excel → CH) | **Done** — K.EPMSAVE() from Excel + Frappe API |
 | Budget write-back (CH → ERP) | **Not started** — push approved budget to D365 BudgetRegisterEntries |
 | Scenario management | **Done** — budget/forecast/whatif via API |
 | Variance analysis | **Done** — actual vs budget with favorable logic |
-| Excel VBA integration | **Done** — =EPM() + 5 functions, ODBC + REST |
+| Excel integration | **Done** — Office add-in `=K.EPM()` and six more functions, ODBC + REST |
 | Frappe app (konsol) | **Done** — DocTypes, ClickHouse sync, background jobs |
 | Docs site (MkDocs Material) | **Done** — konsolid.at, 40+ pages |
 | Custom domain | **Done** — konsolid.at on GitHub Pages |
@@ -106,7 +106,7 @@ PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
 PRD: [API Generalisation](../prd/PRD-API-GENERALISATION.md)
 
 - [ ] Replace hardcoded `cost_center`, `department` params with generic `dimensions` dict
-- [ ] `=EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})`
+- [ ] `=K.EPM("USMF", 2024, "Q1", "401100", dimensions={"cost_center": "CC001", "project": "P01"})`
 - [ ] `measure` parameter validates against active Measure registry
 - [ ] New `fact` parameter: defaults to GL, but can query budget or statistical facts
 - [ ] Backward-compatible: old named params still work, mapped internally
@@ -255,9 +255,10 @@ Task pane add-in built and deployed. Source: `excel-addin/`, served from Frappe 
 - [x] Deployed to Frappe static assets, sideloadable via manifest.xml
 - [x] Documentation: README + user guide + architecture diagram
 
-**Not included** (by design — VBA handles data):
-- No custom functions (=EPM() stays in VBA for desktop, Office.js for pipeline control)
+**Not included**:
 - No MSAL/OAuth (uses Frappe session cookies instead)
+
+Worksheet functions (`=K.EPM()` and the rest) were later added to the same add-in; the VBA module is retired.
 
 ---
 
@@ -297,7 +298,7 @@ PRD: [Budget Cell Locking (Concurrency Control)](../prd/PRD-BUDGET-CELL-LOCKING.
 - [ ] Optimistic locking: check `modified` timestamp on `budget_cell_save()` — reject if stale
 - [ ] Conflict response with latest value so Excel can prompt user
 - [ ] Optional pessimistic locking: `Budget Lock` doctype with auto-expiry (5 min)
-- [ ] VBA retry logic on conflict (refresh cell, re-prompt)
+- [ ] Add-in retry logic on conflict (refresh cell, re-prompt)
 
 ### 6.5 Multi-Step Budget Approval Chain (0.5 day)
 

@@ -24,7 +24,7 @@ Meanwhile, every finance team ends up in the same place: **exporting to Excel**.
 What if the spreadsheet *was* the interface?
 
 ```
-=EPM("USMF", 2024, "Q1", "401100")
+=K.EPM("USMF", 2024, "Q1", "401100")
 ```
 
 One formula. Entity, year, period, account. The value appears. No portal, no training, no "EPM workbench." Just Excel — the tool your finance team already knows, already trusts, already lives in 8 hours a day.
@@ -82,17 +82,17 @@ The favorable logic is account-type aware: revenue up = good, expense down = goo
 
 ### Excel-Native Reporting
 
-Five worksheet functions cover every scenario:
+Five read functions cover every scenario, plus `K.CF` for cash flow and `K.EPMSAVE` for budget write-back:
 
 ```
-=EPM("USMF", 2024, 5, "401100")                     Actuals
-=EPM_BUDGET("USMF", 2025, "FY", "6100")             Budget
-=EPM_VARIANCE("USMF", 2025, "Q1", "6100")           Variance
-=EPM_DEBIT("USMF", 2024, 5, "1300")                 Debits
-=EPM_CREDIT("USMF", 2024, 5, "1300")                Credits
+=K.EPM("USMF", 2024, 5, "401100")                     Actuals
+=K.EPM_BUDGET("USMF", 2025, "FY", "6100")             Budget
+=K.EPM_VARIANCE("USMF", 2025, "Q1", "6100")           Variance
+=K.EPM_DEBIT("USMF", 2024, 5, "1300")                 Debits
+=K.EPM_CREDIT("USMF", 2024, 5, "1300")                Credits
 ```
 
-**Ctrl+Shift+R** refreshes an entire sheet in one HTTP round-trip. 500 formulas = 1 API call. The VBA module batches everything.
+The add-in groups formula calls into as few HTTP requests as possible (at most 2,000 per request), instead of one request per cell.
 
 Period ranges — `Q1`, `H1`, `FY` — aggregate automatically. No helper columns, no SUMIFS, no manual grouping.
 
@@ -165,9 +165,9 @@ No proprietary runtimes. No vendor SDK. No Java applets from 2008. Just tools yo
 | **Frappe** | Python web framework with built-in auth, roles, and REST API. No separate auth service, no API gateway, no token server. |
 | **Airbyte** | Open-source ELT. D365 OData connector with `cross_company=true`. Full extraction in one sync. |
 | **Cube** | Semantic layer for metrics and dimensions. Consistent definitions across Excel, API, and dashboards. |
-| **Excel + VBA** | The interface your finance team chose for themselves 30 years ago. We're not fighting it — we're powering it. |
+| **Excel add-in** | The interface your finance team chose for themselves 30 years ago. We're not fighting it — we're powering it. |
 
-Every component is replaceable. Don't like Frappe? The API is 200 lines of Python. Don't like Airbyte? Any tool that writes to ClickHouse works. Don't like VBA? The REST API is standard HTTP JSON.
+Every component is replaceable. Don't like Frappe? The API is 200 lines of Python. Don't like Airbyte? Any tool that writes to ClickHouse works. Don't like Excel? The REST API is standard HTTP JSON.
 
 ---
 
@@ -213,11 +213,11 @@ These are on the [roadmap](reference/roadmap.md). The core consolidation, alloca
 git clone https://github.com/your-org/konsolidat.git
 cd konsolidat && docker compose up -d
 cd dbt_project && dbt build
-# Import excel/OpenEPM.bas into Excel
-# =EPM("USMF", 2024, 5, "401100") → Ctrl+Shift+R
+# Install the konsol Excel add-in (see the Excel Task Pane Guide)
+# =K.EPM("USMF", 2024, 5, "401100")
 ```
 
-**[Quickstart Guide](getting-started/quickstart.md)** — First `=EPM()` value in 15 minutes.
+**[Quickstart Guide](getting-started/quickstart.md)** — First `=K.EPM()` value in 15 minutes.
 
 **[Full Setup Guide](getting-started/setup-guide.md)** — D365 integration, Frappe, production deployment.
 

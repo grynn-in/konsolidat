@@ -3,7 +3,7 @@
 Konsolidat supports annual budget input with configurable spread profiles that distribute amounts across 12 fiscal periods.
 
 !!! tip "Budget Layers — Collaborative Budgeting"
-    Konsolidat supports **additive budget layers** (base, challenge, management, board) where each stakeholder contributes adjustments tracked separately. The effective budget is always the sum of all layers. See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers are entered in Frappe, synced to ClickHouse, and retrieved via `=EPM()`.
+    Konsolidat supports **additive budget layers** (base, challenge, management, board) where each stakeholder contributes adjustments tracked separately. The effective budget is always the sum of all layers. See the **[Budget Layers Guide](budget-layers.md)** for a full worked example showing how layers are entered in Frappe, synced to ClickHouse, and retrieved via `=K.EPM()`.
 
 ## Budget Data Flow
 
@@ -92,13 +92,13 @@ The `gold_scenario_trial_balance` model unions all active scenarios into a singl
 ### From Excel
 
 ```
-=EPM_BUDGET("USMF", 2025, 5, "6100")
+=K.EPM_BUDGET("USMF", 2025, 5, "6100")
 ```
 
 This returns the period 5 budget amount for account 6100. Equivalent to:
 
 ```
-=EPM("USMF", 2025, 5, "6100", "period_amount", "budget")
+=K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget")
 ```
 
 ### Available Budget Measures
@@ -111,8 +111,8 @@ This returns the period 5 budget amount for account 6100. Equivalent to:
 ### Period Ranges Work Too
 
 ```
-=EPM_BUDGET("USMF", 2025, "Q1", "6100")     ' Sum of periods 1+2+3
-=EPM_BUDGET("USMF", 2025, "FY", "6100")     ' Full year (= annual_amount)
+=K.EPM_BUDGET("USMF", 2025, "Q1", "6100")     ' Sum of periods 1+2+3
+=K.EPM_BUDGET("USMF", 2025, "FY", "6100")     ' Full year (= annual_amount)
 ```
 
 ## Adding a New Budget
@@ -148,5 +148,5 @@ The weights don't need to sum to 12.0 — they're normalized during the spread c
 
 - **[Budget Layers Guide](budget-layers.md)** — Collaborative layered budgeting with workflow and approval
 - [Variance Analysis Guide](variance-analysis-guide.md) — Actual vs budget comparison
-- [Excel VBA Guide](excel-vba-guide.md) — Budget formulas in Excel
+- [Excel Formulas Guide](excel-formulas-guide.md) — Budget formulas in Excel
 - [Seeds Reference](../data-dictionary/seeds-reference.md) — Full seed documentation

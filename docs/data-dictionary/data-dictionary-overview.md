@@ -48,7 +48,7 @@ graph TD
 
     G1 & G2 & G3 & G4 --> API
 
-    API["<b>Frappe API → Cube.js → Excel</b><br/><br/>=EPM() formulas in your spreadsheet"]
+    API["<b>Frappe API → Cube.js → Excel</b><br/><br/>=K.EPM() formulas in your spreadsheet"]
 ```
 
 ### Key Lineage Paths

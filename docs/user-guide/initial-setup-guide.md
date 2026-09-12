@@ -126,7 +126,7 @@ Measures define the aggregations available in Excel and the API:
 | `ytd_net_amount` | `sum(accounting_currency_amount)` | YTD Net | sum |
 | `transaction_count` | `count(*)` | Transactions | count |
 
-These become available as the `measure` parameter in `=EPM()` formulas and the API.
+These become available as the `measure` parameter in `=K.EPM()` formulas and the API.
 
 ---
 
@@ -254,7 +254,7 @@ Define how annual amounts distribute across 12 months:
 Budget data lives in the chain **Budget Cycle → Budget Sheet → Budget Line**: one cycle per scenario × fiscal year, one sheet per entity × layer, one wide line per account + dimensions with 12 monthly period columns.
 
 1. A **Budget Cycle** is auto-created Open on first save (or create one under Lists → EPM → Budget Cycle)
-2. Enter monthly amounts on a sheet's **Budget Lines** — or write cells straight from Excel with `EPMSAVE()`
+2. Enter monthly amounts on a sheet's **Budget Lines** — or write cells straight from Excel with `K.EPMSAVE()`
 3. Each sheet carries one **Layer** (base, challenge, management, board) for collaborative budgeting
 4. **Lock the cycle** when input is final — locking syncs all sheets to ClickHouse
 
@@ -346,7 +346,7 @@ Monitor progress in the Pipeline Run document — status updates automatically:
 
 After the first successful run, your data is available in:
 
-- **Excel**: `=EPM("USMF", 2024, 5, "401100", "period_net_amount")`
+- **Excel**: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount")`
 - **Cube.js**: [https://localhost:4443](https://localhost:4443) (query playground)
 - **API**: `GET /api/method/konsol.api.epm_value?entity=USMF&year=2024&period=5&account=401100&measure=period_net_amount`
 
@@ -372,7 +372,7 @@ After the first successful run, your data is available in:
 
 ## Next Steps
 
-- [Excel VBA Add-in](excel-vba-guide.md) — install the Excel add-in and write your first `=EPM()` formula
+- [Excel Formulas Guide](excel-formulas-guide.md) — install the Excel add-in and write your first `=K.EPM()` formula
 - [Consolidation Guide](consolidation-guide.md) — currency translation, IC elimination, and CTA calculation
 - [Allocation Guide](allocation-guide.md) — multi-step cost allocation with driver cascading
 - [Budgeting Guide](budgeting-guide.md) — spread profiles, budget layers, and variance analysis

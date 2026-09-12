@@ -1,6 +1,6 @@
 # Excel Task Pane Guide
 
-The Konsolidat task pane is an Office.js add-in that provides pipeline orchestration directly from Excel — login, monitor sync status, and trigger data refreshes without leaving your workbook.
+The konsol Excel add-in adds the `K.` worksheet functions (see the [Excel Formulas Guide](excel-formulas-guide.md)) and a Konsolidat task pane for pipeline orchestration directly from Excel — sign in, monitor sync status, and trigger data refreshes without leaving your workbook.
 
 ## Overview
 
@@ -15,19 +15,19 @@ The task pane appears as a sidebar panel in Excel, connected to your Frappe/Kons
 
 ### Sideloading for Development
 
-1. Locate `excel-addin/manifest.xml` in the Konsolidat repository
-2. In Excel: **Insert → My Add-ins → Upload My Add-in**
-3. Select the manifest file
-4. The "Konsolidat" button appears on the **Home** tab
+1. Take `konsol/public/excel-addin/manifest.xml` from the konsol repository. It points at the demo server, `https://demo.konsolidat.com`: replace every occurrence with your Frappe URL (e.g. `http://localhost:8069`), because the worksheet functions call the server the add-in was loaded from (the `SourceLocation`, the `Url` and `Image` resources, and `AppDomains`)
+2. In Excel, use **Upload My Add-in** (under **My Add-ins**) and select the manifest
+3. The "Konsolidat" button appears on the **Home** tab
 
 ### Manifest Details
 
 | Property | Value |
 |----------|-------|
-| Add-in ID | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
-| Version | `1.1.0.0` |
+| Add-in ID | `c3d7e9f1-2a4b-5c6d-8e0f-1a2b3c4d5e6f` |
+| Version | `2.0.0.0` |
 | Type | TaskPaneApp |
-| Source URL | `http://localhost:8069/assets/konsol/excel-addin/index.html` |
+| Source URL | `https://demo.konsolidat.com/assets/konsol/excel-addin/index.html` (replace with your server) |
+| Custom functions | Namespace `K`, shared runtime |
 | Permission | ReadWriteDocument |
 
 The task pane assets are served from Frappe's static assets directory.
@@ -35,8 +35,8 @@ The task pane assets are served from Frappe's static assets directory.
 ### Production Deployment
 
 For production, update `manifest.xml`:
-1. Change the source URL to your production Frappe server
-2. Add your production domain to `AppDomains`
+1. Replace every `https://demo.konsolidat.com` URL with your production Frappe server: the `SourceLocation`, the `bt:Url` and `bt:Image` resources, and the icon and support URLs. The add-in's runtime and its worksheet functions load from those URLs, not only from `SourceLocation`
+2. Replace the demo domain in `AppDomains` with your production domain
 3. Deploy via Microsoft 365 Admin Center or SharePoint App Catalog
 
 ## Using the Task Pane
@@ -110,29 +110,18 @@ sequenceDiagram
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Task pane is blank | Frappe not running at manifest URL | Start Frappe on `http://localhost:8069` |
+| Task pane is blank | Frappe not reachable at the manifest's URL | Check the URLs in the manifest point at your running Frappe server |
 | Login fails | Wrong credentials or CORS issue | Check credentials; verify browser console for errors |
 | "Trigger Pipeline" no response | Pipeline Run doctype missing | Run `bench migrate` |
 | Status stuck on "Queued" | Background workers not running | Ensure `bench start` includes the worker process |
-| Task pane not appearing in ribbon | Manifest not loaded | Re-sideload the manifest via Insert → My Add-ins |
+| Task pane not appearing in ribbon | Manifest not loaded | Upload the manifest again (My Add-ins → Upload My Add-in) |
 
-## Relationship to VBA Module
+## Formulas
 
-The task pane and VBA module serve different purposes:
-
-| Feature | VBA Module | Task Pane |
-|---------|-----------|-----------|
-| Query financial data | Yes (`=EPM()` formulas) | No |
-| Refresh values | Yes (Ctrl+Shift+R) | No |
-| Trigger pipeline | No | Yes |
-| Monitor sync status | No | Yes |
-| Login required | Yes (EPM_Login) | Yes (task pane login) |
-| Session | Separate (XMLHTTP cookies) | Separate (browser cookies) |
-
-Use both together: the task pane to trigger and monitor data refreshes, the VBA module to query the results.
+The same add-in provides the `K.` worksheet functions (`=K.EPM()`, `=K.EPMSAVE()` and the rest). Signing in on the task pane also signs in the formulas. See the [Excel Formulas Guide](excel-formulas-guide.md).
 
 ## Next Steps
 
-- [Excel VBA Guide](excel-vba-guide.md) — Formula functions and macros
+- [Excel Formulas Guide](excel-formulas-guide.md) — Formula functions
 - [Setup Guide](../getting-started/setup-guide.md) — Full installation including add-in
 - [Operations Runbook](../admin-guide/operations-runbook.md) — Pipeline procedures
