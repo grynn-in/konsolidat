@@ -51,10 +51,19 @@ with entity_tb as (
        Entity master first, the ERP's company master second. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a
        connector-less entity's submitted trial balance reached gold_trial_balance
-       and then vanished here with nothing failing. An entity neither side knows
-       is still dropped by this join; assert_every_tb_entity_has_a_currency
-       names it. #}
-    inner join {{ ref('silver_entity_currencies') }} as ec
+       and then vanished here with nothing failing.
+
+       Resolved currencies only. An entity with no currency on either side
+       would otherwise join with '', miss every rate key, and translate at the
+       1.0 parity fallback — a JPY ledger landing as CHF, ~170x. Dropping it is
+       the lesser wrong, and not a silent one: assert_every_tb_entity_has_a_currency
+       names it. Filtered in a subquery because ClickHouse's JOIN ... ON takes
+       equality conjunctions only. #}
+    inner join (
+        select data_area_id, accounting_currency
+        from {{ ref('silver_entity_currencies') }}
+        where accounting_currency != ''
+    ) as ec
         on tb.data_area_id = ec.data_area_id
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.

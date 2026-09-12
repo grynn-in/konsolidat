@@ -1,11 +1,12 @@
 {#
     konsol#110 — every entity with trial-balance rows must resolve a currency.
 
-    gold_consolidated_trial_balance takes each entity's accounting currency
-    from silver_entity_currencies, so an entity that is in neither konsol's
-    Entity master nor the ERP's company master is dropped at that join, and
-    one that is in either with no currency set translates at the parity
-    fallback. Both are named here instead.
+    gold_consolidated_trial_balance joins only entities whose currency
+    silver_entity_currencies resolved, so an entity that is in neither konsol's
+    Entity master nor the ERP's company master — or is in either with no
+    currency set — is left out of consolidation. Leaving it out is deliberate
+    (joining it with '' would translate at the 1.0 parity fallback); this test
+    is what stops that being silent.
 
     Replaces assert_tb_submission_entities_consolidatable, the interim guard
     F8 shipped: it checked submitted entities against silver_legal_entities
