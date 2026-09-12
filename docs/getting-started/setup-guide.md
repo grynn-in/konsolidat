@@ -9,7 +9,7 @@ Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and 
 | Docker Desktop | 24+ | ClickHouse container |
 | Python | 3.10+ | dbt Core, Frappe Bench |
 | Node.js | 18+ | Frappe assets |
-| Excel | Microsoft 365 or 2021+, desktop or web | Add-in reporting |
+| Excel | Microsoft 365 desktop or Excel on the web | Add-in reporting |
 | D365 F&O | Any | Source ERP (optional for demo) |
 
 ## 1. Clone the Repository
@@ -191,8 +191,8 @@ The konsol Office add-in provides the `K.` worksheet functions and the Konsolida
 
 ### 6.1 Sideload for Development
 
-1. Take `konsol/public/excel-addin/manifest.xml` from the konsol repository
-2. In Excel: **Insert → My Add-ins → Upload My Add-in** → select the manifest
+1. Take `konsol/public/excel-addin/manifest.xml` from the konsol repository. It points at the demo server, `https://demo.konsolidat.com`: replace every occurrence with your Frappe URL (e.g. `http://localhost:8069`), because the worksheet functions call the server the add-in was loaded from
+2. In Excel, use **Upload My Add-in** (under **My Add-ins**) and select the manifest
 3. The **Konsolidat** button appears on the Home tab
 
 ### 6.2 Sign In and Test
@@ -200,7 +200,7 @@ The konsol Office add-in provides the `K.` worksheet functions and the Konsolida
 1. Open the Konsolidat task pane and sign in with your Frappe credentials
 2. In any cell: `=K.EPM("USMF", 2024, 5, "401100")`
 
-The task pane connects to Frappe at `http://localhost:8069` and also lets you view the latest pipeline run and trigger a new one (Airbyte sync + dbt build).
+The task pane connects to the server named in the manifest and also lets you view the latest pipeline run and trigger a new one (Airbyte sync + dbt build).
 
 ## Verification Checklist
 

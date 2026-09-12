@@ -117,7 +117,7 @@ All errors return a JSON object with `exc_type` and `message`:
 
 `MAX_BATCH_SIZE = 2000`
 
-The batch endpoint rejects requests exceeding 2000 items. The Excel add-in sends the `K.` formulas of one calculation in batches of at most 2000.
+The batch endpoint rejects requests exceeding 2000 items. The Excel add-in groups `K.` formula calls into batches of at most 2000.
 
 ## Scenario → Table Mapping
 

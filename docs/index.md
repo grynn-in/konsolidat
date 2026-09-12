@@ -280,7 +280,7 @@ Encryption at rest + in transit
 
 <a class="ic-nav-card" href="user-guide/excel-formulas-guide/">
   <strong>Excel Formulas Guide</strong>
-  <span>=K.EPM() function, macros, report patterns</span>
+  <span>=K.EPM() functions, budget write-back, report patterns</span>
 </a>
 
 <a class="ic-nav-card" href="user-guide/consolidation-guide/">

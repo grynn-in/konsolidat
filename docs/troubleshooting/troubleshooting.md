@@ -89,7 +89,7 @@ dbt build --full-refresh    # Drop all tables and rebuild
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Task pane shows blank | Frappe not running at manifest URL | Start Frappe on `http://localhost:8069` |
+| Task pane shows blank | Frappe not reachable at the manifest's URL | Check the URLs in the manifest point at your running Frappe server |
 | Login fails in task pane | CORS or cookie issue | Check browser console; verify same-origin setup |
 | Pipeline status stuck on "Queued" | Background worker not running | Check `bench start` includes workers |
 | "Trigger Pipeline" does nothing | Pipeline Run doctype missing | Run `bench migrate` |

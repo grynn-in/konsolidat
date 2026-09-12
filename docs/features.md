@@ -15,9 +15,9 @@ Worksheet functions in the konsol Excel add-in (the `K.` namespace) query financ
 ```
 
 - **Period aggregation** — `Q1`–`Q4`, `H1`/`H2`, `FY` roll up across months
-- **Batched** — every `K.` formula in one calculation goes to the server in a single HTTP request
-- **Session auth** — Frappe login, credentials stored per-workbook
-- **Dimension filters** — Optional cost center, department, business unit parameters
+- **Batched** — the add-in groups formula calls into as few HTTP requests as possible (at most 2,000 per request)
+- **Session auth** — sign in once on the Konsolidat task pane
+- **Dimension filters** — optional cost center and department parameters
 
 See the [Excel Formulas Guide](user-guide/excel-formulas-guide.md) for full formula reference.
 

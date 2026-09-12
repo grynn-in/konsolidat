@@ -57,7 +57,7 @@ Maximum **2000** items per request (`MAX_BATCH_SIZE`). Requests exceeding this l
 - Successful queries return `float` values
 - No matching data returns `0.0`
 - `null` in the values array indicates an error for that item (check `errors`)
-- The Excel add-in shows `null` as `0`
+- The Excel add-in shows an item that has an `errors` entry as `#VALUE!` with that message, and a `null` without an error as `0`
 
 ## Example
 

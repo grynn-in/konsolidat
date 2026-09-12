@@ -12,7 +12,7 @@ Follow the [Quickstart Guide](../getting-started/quickstart.md) — you'll have 
 Yes. Use period range codes: `"Q1"`, `"Q2"`, `"Q3"`, `"Q4"`, `"H1"`, `"H2"`, or `"FY"`. The API sums across the constituent months.
 
 **Q: Why do all my cells show 0?**
-Check that you are signed in (Konsolidat task pane) and that data exists for that entity, period and account; a missing combination shows 0.
+No data exists for that entity, period, account and measure: a missing combination shows 0. Not being signed in shows `#N/A`, not 0.
 
 **Q: How do I filter by cost center or department?**
 Add the optional parameters: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount", "actuals", "SALES", "SALES")`

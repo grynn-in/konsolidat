@@ -1,6 +1,6 @@
 # Excel Formulas Guide
 
-The konsol Excel add-in turns Excel into a live reporting and budgeting client. Its worksheet functions live in the `K` namespace: reading (`K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF`) and writing (`K.EPMSAVE`). Excel calculates them like any other function; the add-in collects every `K.` call in one calculation and sends them to the server together.
+The konsol Excel add-in turns Excel into a live reporting and budgeting client. Its worksheet functions live in the `K` namespace: reading (`K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF`) and writing (`K.EPMSAVE`). Excel calculates them like any other function; the add-in groups the calls into as few server requests as possible.
 
 ## Setup
 
@@ -111,6 +111,7 @@ Reads one line of the consolidated cash-flow statement for a consolidation group
 | `layer` | String | Yes | — | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
 | `cost_center` | String | No | `""` | Cost center dimension |
 | `department` | String | No | `""` | Department dimension |
+| `hierarchy`, `node` | String | No | `""` | Save against a reporting-hierarchy node (as for `K.EPM`) |
 
 **The cell displays the amount.** The write to the server happens in the background.
 
@@ -327,7 +328,7 @@ sequenceDiagram
 
     User->>Excel: Enters formulas or recalculates
     Excel->>AddIn: Calls K.EPM for each cell
-    AddIn->>AddIn: Queues every call made in the same calculation
+    AddIn->>AddIn: Queues calls that arrive together
     AddIn->>Frappe: POST /api/method/konsol.api.epm_batch<br/>[{entity, year, period, account, ...}, ...] (up to 2,000 per request)
     Frappe->>Frappe: Validate scenarios & measures
     Frappe->>Frappe: Group by (scenario, measure, periods, dims)
@@ -338,7 +339,7 @@ sequenceDiagram
     Excel-->>User: Values appear in cells
 ```
 
-A sheet with 500 `K.EPM` cells calculated together costs one HTTP request, not 500.
+The add-in groups calls into as few requests as possible (at most 2,000 per request), instead of one request per cell.
 
 ## Troubleshooting
 

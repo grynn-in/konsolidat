@@ -19,8 +19,7 @@ konsolidat/
 ├── excel/
 │   └── *.xlsx                # sample workbooks (formulas: konsol Excel add-in)
 ├── excel-addin/
-│   ├── manifest.xml           # Office.js add-in manifest
-│   └── src/                   # Task pane HTML/JS
+│   └── README.md              # the add-in lives in the konsol repo (konsol/public/excel-addin)
 ├── clickhouse/
 │   ├── init-db.sql            # Database creation script
 │   └── postgres_compat.xml    # PostgreSQL wire protocol config
@@ -60,7 +59,7 @@ graph LR
 | Transformations | dbt Core + dbt-clickhouse | Latest |
 | API / Auth | Frappe Framework | v15 |
 | ELT | Airbyte (abctl) | Latest |
-| Excel Integration | Office.js add-in | Microsoft 365 / Excel 2021+, desktop and web |
+| Excel Integration | Office.js add-in | Microsoft 365 desktop or Excel on the web |
 | Source ERP | D365 Finance & Operations | Any |
 
 ## Conventions

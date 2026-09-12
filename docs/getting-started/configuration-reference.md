@@ -128,7 +128,7 @@ Custom column types are specified per seed in `dbt_project.yml`:
 
 ## Excel Add-in Configuration
 
-The add-in is served by Frappe; its server is the URL in the add-in's `manifest.xml` (`SourceLocation`, default `http://localhost:8069/assets/konsol/excel-addin/index.html`). For production, change that URL and the `AppDomains` entry (see the [Excel Task Pane Guide](../user-guide/excel-taskpane-guide.md#production-deployment)). Signing in on the task pane stores the session the worksheet functions use.
+The add-in is served by Frappe; its server is the URL in the add-in's `manifest.xml` (`SourceLocation` and the other URLs; the shipped manifest points at `https://demo.konsolidat.com`, so replace them with your own server). For production, change that URL and the `AppDomains` entry (see the [Excel Task Pane Guide](../user-guide/excel-taskpane-guide.md#production-deployment)). Signing in on the task pane stores the session the worksheet functions use.
 
 ## ClickHouse Databases
 

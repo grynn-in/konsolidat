@@ -5,12 +5,12 @@ Sample workbooks for the konsol Excel add-in. The add-in's worksheet functions
 [Excel Formulas Guide](../docs/user-guide/excel-formulas-guide.md); install the add-in
 as described in the [Excel Task Pane Guide](../docs/user-guide/excel-taskpane-guide.md).
 
-| Workbook | What it is |
-|----------|------------|
-| `Open_EPM_Template.xlsx` | Blank report template |
-| `Open_EPM_PnL.xlsx` | P&L report built with EPM formulas |
-| `Budget_Forecast_2024.xlsx` | Budget and forecast layout |
+| Workbook | What it is | State |
+|----------|------------|-------|
+| `Open_EPM_Template.xlsx` | Report template | Its instruction text still describes the retired VBA module (importing `OpenEPM.bas`, Ctrl+Shift+R); the layout itself works with the add-in |
+| `Open_EPM_PnL.xlsx` | P&L report built with EPM formulas | Its formulas call the retired `=EPM()` and show `#NAME?` until rebuilt |
 
-**`Open_EPM_PnL.xlsx` still uses the retired VBA function `=EPM()`.** The VBA module
-was removed, so those cells show `#NAME?` until the workbook is rebuilt in Excel with
-`=K.EPM()`. The arguments are the same, in the same order: replace `EPM(` with `K.EPM(`.
+Both were made for the retired VBA module and need updating in Excel. For
+`Open_EPM_PnL.xlsx`, replace `EPM(` with `K.EPM(`: the arguments are the same, in the
+same order. The VBA-only budget upload workbook (`Budget_Forecast_2024.xlsx`) and its
+generator were removed with the VBA module; budgets are written with `=K.EPMSAVE()`.

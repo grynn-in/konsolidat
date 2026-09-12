@@ -124,8 +124,8 @@ Returns the cumulative net amount from period 1 through period 5.
 
 - Use **absolute references** (`$B$1`) for entity/year parameters and relative references for the varying dimension
 - **Period ranges** (`Q1`, `H1`, `FY`) save cells and improve readability
-- **EPM_BUDGET** and **EPM_VARIANCE** are shortcuts — the full `K.EPM()` with measure/scenario parameters gives access to all measures
-- Excel calculates `K.` cells together; the add-in batches them into single API calls (up to 2,000 per request)
+- **K.EPM_BUDGET** and **K.EPM_VARIANCE** are shortcuts — the full `K.EPM()` with measure/scenario parameters gives access to all measures
+- The add-in groups `K.` calls into as few API calls as possible (up to 2,000 per request)
 - For very large workbooks, recalculate one sheet at a time (Shift+F9) instead of the whole workbook
 
 ## Next Steps

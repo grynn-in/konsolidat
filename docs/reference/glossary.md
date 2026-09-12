@@ -49,7 +49,6 @@
 | **OData** | A REST protocol used by D365 F&O to expose data entities |
 | **Excel add-in** | The konsol Office add-in: the `=K.EPM()` worksheet functions and the Konsolidat task pane |
 | **Office.js** | Microsoft's JavaScript API for building Office Add-ins (task panes, custom functions) |
-| **Custom Document Property** | An Excel workbook-level metadata field; used to store `EPM_API_URL` |
 
 ## Abbreviations
 

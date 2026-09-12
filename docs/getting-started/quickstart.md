@@ -53,8 +53,8 @@ Configure EPM Settings in Frappe Desk:
 
 ## Step 4: Install the Excel add-in (3 min)
 
-1. In Excel: **Insert → My Add-ins → Upload My Add-in**
-2. Select `konsol/public/excel-addin/manifest.xml` from the konsol repository (Frappe also serves it at `http://localhost:8069/assets/konsol/excel-addin/manifest.xml`)
+1. Take `konsol/public/excel-addin/manifest.xml` from the konsol repository. It points at the demo server, `https://demo.konsolidat.com`: replace every occurrence with your Frappe URL (e.g. `http://localhost:8069`), because the worksheet functions call the server the add-in was loaded from
+2. In Excel, use **Upload My Add-in** (under **My Add-ins**) and select the manifest
 3. The **Konsolidat** button appears on the Home tab
 
 ## Step 5: Connect and Query (2 min)
@@ -75,8 +75,8 @@ Excel cell → K.EPM() → add-in batch POST → Frappe API → ClickHouse query
 ```
 
 The add-in:
-1. Collected every `K.` formula Excel calculated together
-2. Sent them in a single POST to `/api/method/konsol.api.epm_batch`
+1. Grouped the `K.` calls Excel made
+2. Sent them in as few POSTs as possible to `/api/method/konsol.api.epm_batch`
 3. Returned each value to its cell
 
 ## Next Steps

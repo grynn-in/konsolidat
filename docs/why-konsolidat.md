@@ -82,7 +82,7 @@ The favorable logic is account-type aware: revenue up = good, expense down = goo
 
 ### Excel-Native Reporting
 
-Five worksheet functions cover every scenario:
+Five read functions cover every scenario, plus `K.CF` for cash flow and `K.EPMSAVE` for budget write-back:
 
 ```
 =K.EPM("USMF", 2024, 5, "401100")                     Actuals
@@ -92,7 +92,7 @@ Five worksheet functions cover every scenario:
 =K.EPM_CREDIT("USMF", 2024, 5, "1300")                Credits
 ```
 
-Excel calculates every `K.` formula on a sheet together, and the add-in sends them in one HTTP round-trip. 500 formulas = 1 API call.
+The add-in groups formula calls into as few HTTP requests as possible (at most 2,000 per request), instead of one request per cell.
 
 Period ranges — `Q1`, `H1`, `FY` — aggregate automatically. No helper columns, no SUMIFS, no manual grouping.
 
