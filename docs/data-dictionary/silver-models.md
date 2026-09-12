@@ -49,6 +49,26 @@ Company master with currency.
 
 **Source**: `bronze_legal_entities`.
 
+
+## silver_entity_currencies
+
+The currency each entity keeps its books in, resolved once (konsol#110).
+`gold_consolidated_trial_balance` joins here for the currency it translates from.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `data_area_id` | String | Entity code | not_null, unique |
+| `accounting_currency` | String | konsol's functional currency when set, else the ERP's; `''` when neither | — |
+| `currency_source` | String | `konsol`, `erp`, or `''` | — |
+| `governed_currency` | String | From konsol's Entity master (`epm_staging.entities`) | — |
+| `erp_currency` | String | From `silver_legal_entities` | — |
+| `in_konsol` / `in_erp` | UInt8 | Which registry knows the entity | — |
+
+**Sources**: `epm_staging.entities` (leaves only) + `silver_legal_entities`.
+`assert_entity_currency_sources_agree` fails when both are set and differ;
+`assert_every_tb_entity_has_a_currency` fails when an entity with trial-balance
+rows resolves none.
+
 ## silver_fiscal_periods
 
 Standardized fiscal period lookup table.

@@ -71,8 +71,8 @@ def discover_config(group, year):
                cg.ownership_pct, cg.reporting_currency, cg.consolidation_method,
                le.accounting_currency
         FROM epm_gold.consolidation_groups AS cg
-        LEFT JOIN epm_gold.silver_legal_entities AS le
-            ON cg.data_area_id = le.data_area
+        LEFT JOIN epm_silver.silver_entity_currencies AS le
+            ON cg.data_area_id = le.data_area_id
         WHERE cg.consolidation_group = '{group}'
           AND cg.data_area_id != ''
           AND cg.consolidation_method = 'full'

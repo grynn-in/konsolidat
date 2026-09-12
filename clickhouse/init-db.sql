@@ -274,6 +274,17 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_ancestry (
     link_data_area_id String, link_depth UInt8, depth UInt8, path String
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id, link_depth);
 
+-- konsol#110: the governed entity registry, written through from konsol's Entity
+-- doctype. The warehouse used to know entities only from ERP extraction
+-- (silver_legal_entities), so a subsidiary with no connector had no accounting
+-- currency and gold_consolidated_trial_balance dropped it at the join.
+-- konsol's ensure_reference_tables() creates it on volumes that predate this.
+CREATE TABLE IF NOT EXISTS epm_staging.entities (
+    data_area_id String, entity_name String, parent_entity String,
+    is_group UInt8, status String, accounting_currency String,
+    country String, erp_source String
+) ENGINE = MergeTree ORDER BY data_area_id;
+
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so
 -- seeds/spread_profiles.csv WAS epm_gold.spread_profiles — the same table the

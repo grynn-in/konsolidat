@@ -127,6 +127,11 @@ sources:
           the effective share, which is what makes consolidation multi-level.
           Before F2 the tree was stored and never traversed: a sub-group's
           entities never reached its parent's consolidated result.
+      - name: entities
+        description: >
+          konsol#110: the governed entity registry — one row per konsol Entity,
+          groups included, with the functional currency as accounting_currency.
+          silver_entity_currencies prefers it over the ERP's company master.
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at

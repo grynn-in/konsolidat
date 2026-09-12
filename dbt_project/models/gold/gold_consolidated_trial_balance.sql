@@ -44,11 +44,28 @@ with entity_tb as (
            which is a positive magnitude (see #64) and would make the local TB
            fail to sum to zero, so no FX/CTA plug could ever balance it. #}
         tb.period_debit - tb.period_credit as local_amount,
-        le.accounting_currency as accounting_currency,
+        ec.accounting_currency as accounting_currency,
         {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
     from {{ ref('gold_trial_balance') }} as tb
-    inner join {{ ref('silver_legal_entities') }} as le
-        on tb.data_area_id = le.data_area
+    {# konsol#110: the currency comes from silver_entity_currencies — konsol's
+       Entity master first, the ERP's company master second. This used to join
+       silver_legal_entities, which knows only entities an ERP extracted, so a
+       connector-less entity's submitted trial balance reached gold_trial_balance
+       and then vanished here with nothing failing.
+
+       Resolved currencies only. An entity with no currency on either side
+       would otherwise join with '', miss every rate key, and translate at the
+       1.0 parity fallback — a JPY ledger landing as CHF, ~170x. Dropping it is
+       the lesser wrong, and not a silent one: assert_every_tb_entity_has_a_currency
+       names it. Filtered in the subquery so the rule sits with the source of
+       the currencies. (An AND of a non-equality in ON also works on 24.8; only
+       `x IN (col, ...)` is refused there.) #}
+    inner join (
+        select data_area_id, accounting_currency
+        from {{ ref('silver_entity_currencies') }}
+        where accounting_currency != ''
+    ) as ec
+        on tb.data_area_id = ec.data_area_id
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
        Applied here at the consolidation chokepoint so every downstream
@@ -82,7 +99,7 @@ entity_ownership as (
         {# The GROUP's presentation currency, taken from the group node — not
            from the entity's own row, whose reporting_currency in the old seed
            was the group's anyway (it is NOT the entity's functional currency;
-           that is silver_legal_entities.accounting_currency). #}
+           that is silver_entity_currencies.accounting_currency). #}
         grp.reporting_currency as reporting_currency
     from {{ ref('gold_entity_ownership') }} as eo
     left join {{ source('epm_gold', 'consolidation_groups') }} as grp
