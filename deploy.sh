@@ -67,6 +67,20 @@ domain_scheme() {
 case "${1:-}" in
   backup)
     info "Running backup..."
+    # backup has no build: of its own; it runs the image frappe_backend builds,
+    # and pull_policy: never stops Compose from looking for it on Docker Hub.
+    # Backup NEVER builds: it runs unattended from cron, and a full image build
+    # (bench init + a ~700 MB vite build) next to a running ClickHouse on a
+    # small host can OOM, and then there is no backup either. If the image is
+    # missing, fail loudly so the missed backup is visible in the cron log.
+    # `config --images backup` also lists backup's dependencies (mariadb, redis,
+    # clickhouse), so keep only the project-scoped Frappe tag. An empty result
+    # (config failed, or no match) is treated as "not found".
+    FRAPPE_IMAGE="$(docker compose --profile backup config --images backup | grep -- '-frappe:latest$' | head -n 1 || true)"
+    if [ -z "$FRAPPE_IMAGE" ] || ! docker image inspect "$FRAPPE_IMAGE" >/dev/null 2>&1; then
+      err "Frappe image ${FRAPPE_IMAGE:-<unresolved>} not found. Run ./deploy.sh first; backup does not build." >&2
+      exit 1
+    fi
     docker compose --profile backup run --rm backup
     exit 0
     ;;
@@ -265,16 +279,23 @@ else
     git -C "$KONSOL_DIR" reset --hard FETCH_HEAD
 fi
 
-# Rebuild every Frappe-based service, not just the backend. frappe_backend,
-# frappe_worker, frappe_scheduler (default profile) plus configurator + dbt_init
-# (profile: setup) and backup (profile: backup) all derive from the same
-# x-frappe-common build but resolve to SEPARATE images — building only the
-# backend leaves the rest on old app code after a redeploy (version skew); a
-# stale configurator would then run migrate with old code. Activating the
-# profiles pulls those one-shot services into the build set. Only services with
-# a build context (the Frappe ones) are built; image-only services (cubejs,
-# clickhouse, caddy, …) are untouched. See grynn-in/konsolidat#58.
-docker compose --profile setup --profile backup build
+# Build the Frappe + Konsol image ONCE. frappe_backend is the only service with
+# a `build:` section; it tags <project>-frappe:latest (e.g. repo-frappe:latest
+# for a checkout in ./repo), and frappe_worker, frappe_scheduler, configurator,
+# dbt_init and backup all run that same tag.
+# One shared tag means a redeploy cannot leave any of them on old app code
+# (the version skew of grynn-in/konsolidat#58). One build means one
+# `bench get-app` / vite build instead of six in parallel, which OOM-killed the
+# build and ClickHouse with it on an 8 GiB host (grynn-in/konsolidat#152).
+#
+# The setup/backup profiles stay active so that a build-carrying service added
+# to either profile later is still rebuilt here. COMPOSE_PARALLEL_LIMIT=1 is a
+# cheap guard, a no-op while exactly one service builds: if a second `build:`
+# ever comes back, it serialises the builds with the classic builder (verified
+# on Compose 5.1.4 without buildx). It may not apply when Compose builds through
+# buildx/Bake, so the real protection is keeping a single `build:`. It is scoped
+# to this command only, so the `up` steps stay parallel.
+COMPOSE_PARALLEL_LIMIT=1 docker compose --profile setup --profile backup build
 
 # ---------------------------------------------------------------------------
 # Step 3: Run configurator (create site, install app)

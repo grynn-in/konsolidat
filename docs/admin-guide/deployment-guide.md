@@ -220,6 +220,12 @@ crontab -e
 0 2 * * * cd /path/to/konsolidat && ./deploy.sh backup >> /var/log/konsolidat-backup.log 2>&1
 ```
 
+`./deploy.sh backup` runs in the Frappe image that `./deploy.sh` builds, and
+it never builds that image itself: an unattended full build next to a running
+ClickHouse can run the host out of memory. If the image is missing, the backup
+exits 1 with `Frappe image … not found. Run ./deploy.sh first; backup does not
+build.` and takes no backup. Watch the log for that line.
+
 ### Off-Server Backup
 
 For disaster recovery, push backups off the server:
@@ -249,11 +255,70 @@ This restores MariaDB, ClickHouse, and Frappe files, then restarts services.
 ```bash
 cd konsolidat
 git pull
-docker compose --profile setup --profile backup build  # rebuild ALL Frappe services, not just the backend
-docker compose up -d
+KONSOL_BRANCH=main ./deploy.sh
 ```
 
-The configurator automatically runs `bench migrate` on existing sites.
+`git pull` only updates this repository. The konsol Frappe app is a separate
+checkout, staged in `docker/frappe/konsol` and baked into the image, and
+`git pull` does not touch it; `./deploy.sh` stages it on every run. In order,
+`./deploy.sh`:
+
+1. starts the infrastructure (`docker compose up -d mariadb redis_cache
+   redis_queue clickhouse`) and waits for it to be healthy;
+2. stages the konsol app: the first run clones `KONSOL_BRANCH` (default
+   `main`) from `KONSOL_REPO` (default `https://github.com/grynn-in/konsol.git`),
+   later runs fetch that branch and hard-reset the staged checkout to it;
+3. builds the Frappe image;
+4. runs the configurator (`docker compose --profile setup run --rm configurator`),
+   which runs `bench migrate` on an existing site;
+5. recreates the application services with `docker compose up -d`;
+6. runs the dbt build (`docker compose --profile setup run --rm dbt_init`).
+
+!!! warning "Upgrading to the shared Frappe image (#152)"
+    The first upgrade to a version with the shared `<project>-frappe:latest`
+    image must be a full `./deploy.sh` run, **before the next scheduled
+    backup**. Until then that image doesn't exist on the host, and
+    `./deploy.sh backup` exits 1 without taking a backup (it never builds).
+
+A plain `docker compose up -d` does **not** run the configurator, because it
+is in the `setup` profile. So if you rebuild by hand, run the configurator
+yourself before starting the services, or the new app code will run against
+an unmigrated database.
+
+All six Frappe-based services (`frappe_backend`, `frappe_worker`,
+`frappe_scheduler`, `configurator`, `dbt_init`, `backup`) run one image,
+`<project>-frappe:latest`. `<project>` is the Compose project name: the
+checkout's directory name, normalised (lower-cased, any character other
+than a letter, digit, `-` or `_` dropped, and leading `-` or `_` trimmed),
+unless you pass `-p` or set
+`COMPOSE_PROJECT_NAME`. A checkout in `./repo` gets `repo-frappe:latest`.
+
+Scoping the tag this way means a build from a checkout with a *different*
+directory name can't overwrite the image the live stack runs. Two checkouts
+with the same directory name (for example, both called `repo`) still share
+the tag, so give a second checkout a distinct directory name.
+
+Don't set `COMPOSE_PROJECT_NAME` to pin the name on an existing stack. The
+project name also prefixes the data volumes (`repo_mariadb_data`,
+`repo_clickhouse_data`, …), so a new name starts the stack on empty volumes.
+
+Only `frappe_backend` builds the image, so a rebuild updates all six services
+together. All six have `pull_policy: never`, so Compose never looks for this
+local-only image on Docker Hub. `never` rules out pulling only;
+`frappe_backend` still builds.
+
+Build the image once only. Each build runs a Node/vite asset build that takes
+about 700 MB, so parallel builds of the same image can exhaust memory on an
+8 GiB host, and the kernel then kills the build and the running ClickHouse.
+`deploy.sh` builds with `COMPOSE_PARALLEL_LIMIT=1`. That serialises builds
+with the classic builder, but it may not apply when Compose builds through
+buildx/Bake. The real safeguard is that only one service has a `build:`
+section.
+
+Stacks deployed before this change also have per-service images named
+`<project>-frappe_backend`, `<project>-frappe_worker` and so on. Once the
+new deploy is up, nothing uses them and you can remove them with
+`docker image rm`.
 
 ## Production Hardening
 
