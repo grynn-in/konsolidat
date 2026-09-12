@@ -8,6 +8,12 @@
     We pass the signed amount through; silver derives debit/credit from its sign
     (debit - credit = amount). The legacy IsCredit flag is not carried — it never
     drives the split (konsolidat#118).
+
+    The amount must arrive SIGNED. A source that ships magnitudes plus a flag
+    books every credit as a debit, and every trial balance goes one-sided
+    (konsolidat#155: the demo generator did exactly that).
+    assert_d365_gl_vouchers_balance fails the build, naming the voucher, when a
+    voucher does not net to zero here.
 #}
 
 with entries as (
@@ -63,7 +69,7 @@ joined as (
                 '$[0].BUSINESSUNIT'
             ),
             ''
-        ) as dim_business_unit_raw,
+        ) as dim_business_unit,
         entries._airbyte_extracted_at as _loaded_at,
         entries._airbyte_raw_id as _raw_id,
         entries.GeneralJournalEntry as general_journal_entry_recid
@@ -72,17 +78,4 @@ joined as (
         on entries.GeneralJournalEntry = headers.SourceKey
 ),
 
-{# Demo: AMUS posts all rows as SERVICES in raw D365 JSON. Split by account
-   so MGMT_DEMO hierarchy rollups (CORP / OPS / BU_ROOT) are testable locally. #}
-with_demo_bu as (
-    select
-        * except (dim_business_unit_raw),
-        case
-            when entity_id = 'AMUS' and main_account in ('5010', '5030') then 'MANUFACTURING'
-            when entity_id = 'AMUS' and main_account in ('6010', '6020', '6030', '6040', '6050', '6060') then 'CORP'
-            else dim_business_unit_raw
-        end as dim_business_unit
-    from joined
-)
-
-select * from with_demo_bu
+select * from joined
