@@ -166,6 +166,21 @@ removed from the group tree is outside `scope_filter`, so only the next unscoped
 build clears it. A2's slice preservation still holds: scoped runs delete only
 their own slice (`assert_incremental_slice_preserved` and
 `assert_scoped_cash_flow_ytd_confined` PASS after a DEMF/2024 scoped run).
+Known trade-offs (#162 review), accepted:
+- **A failed run leaves its slice empty.** The pre_hook DELETE commits before
+  the SELECT; if the INSERT…SELECT then fails (memory, a missing rate, a bad
+  var) the slice — or, unscoped, the whole table — stays empty until the next
+  successful run. The adapter's delete+insert built `__dbt_new_data_*` first
+  and deleted only after, so a failure kept the old rows. The old failure mode
+  was silent (stale rows forever); this one is loud (the build fails, and the
+  next run restores it).
+- **The empty window is longer:** readers see an empty slice for the DELETE
+  plus the whole SELECT, not just a copy. Fine for batch closes.
+- **No `unique_key`** sends these models down the adapter's plain-append path,
+  which never runs `on_schema_change`: a new column needs `--full-refresh`.
+- **`DELETE FROM {{ this }}` has no `ON CLUSTER`**: on the (not live) cluster
+  target it would clear one node only; the engine is plain `MergeTree()` there
+  anyway. Revisit with the cluster.
 
 ---
 **A2 (#116) DONE** — commit `e59f83f`. Made the 4 consolidation models

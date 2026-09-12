@@ -4,7 +4,7 @@
 -- must update ONLY its own slice and leave every OTHER slice intact. Before A2
 -- the four consolidation models were `table`-materialized, so a scoped run
 -- OVERWROTE the whole table — zeroing every entity/year outside the close. A2
--- makes them `incremental` with `delete+insert` keyed on the close slice, so a
+-- makes them `incremental` with `a scope-delete + insert (#154; was delete+insert)` keyed on the close slice, so a
 -- scoped run deletes+reinserts only the in-scope keys and preserves the rest.
 -- This guard makes the old data-loss fail loudly.
 --
