@@ -9,7 +9,7 @@ Output: clickhouse/demo-data.sql
 
 NOT loaded by default any more: docker-compose mounts clickhouse/raw-schema.sql
 (empty landing tables) instead. Load the generated file by hand if you want
-synthetic data. It is gitignored-by-convention: do not commit it back.
+synthetic data. The file is gitignored: never commit it back.
 """
 
 import uuid
