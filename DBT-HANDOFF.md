@@ -166,6 +166,7 @@ removed from the group tree is outside `scope_filter`, so only the next unscoped
 build clears it. A2's slice preservation still holds: scoped runs delete only
 their own slice (`assert_incremental_slice_preserved` and
 `assert_scoped_cash_flow_ytd_confined` PASS after a DEMF/2024 scoped run).
+
 Known trade-offs (#162 review), accepted:
 - **A failed run leaves its slice empty.** The pre_hook DELETE commits before
   the SELECT; if the INSERT…SELECT then fails (memory, a missing rate, a bad
