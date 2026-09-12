@@ -8,8 +8,9 @@
 #}
 
 with rule as (
+    {# konsolidat#146: the doctype's staging table, not the deleted seed. #}
     select *
-    from {{ ref('allocation_rules') }}
+    from {{ source('epm_staging', 'allocation_rules') }}
     where allocation_rule_id = '{{ rule_id }}'
 ),
 

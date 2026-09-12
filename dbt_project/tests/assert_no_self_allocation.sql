@@ -7,6 +7,7 @@ select
     source_account,
     target_cost_center
 from {{ ref('gold_allocation_results') }} as ar
-inner join {{ ref('allocation_rules') }} as r
+{# konsolidat#146: the staging table, not the deleted seed. #}
+inner join {{ source('epm_staging', 'allocation_rules') }} as r
     on ar.allocation_rule_id = r.allocation_rule_id
 where ar.target_cost_center = r.source_cost_center

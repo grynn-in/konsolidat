@@ -10,6 +10,66 @@ sources:
           Manually-entered monthly budgets synced from Budget Sheets on cycle
           lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
           gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
+      - name: budget_annual_input
+        description: >
+          Top-down annual budget figures from konsol's Budget Annual Input
+          doctype, spread into months by gold_spread_budget. konsolidat#146:
+          this was seeds/budget_annual_input.csv, the last seed this repo owned.
+      - name: entity_fiscal_calendars
+        description: >
+          Maps each ERP legal entity (data_area_id) to the fiscal calendar it
+          posts against; silver_gl_entries joins on it to resolve
+          fiscal_year/period, falling back to 'Fiscal' for an entity with no row.
+          Most rows are entities NOT present in the demo (CN01->Fiscal_CN,
+          MYMF->Fiscal_MY) whose calendars are not loaded; those are inert and
+          deliberately retained as a template for real multi-calendar
+          deployments. An entity that HAS GL data must reference a calendar
+          present in silver_fiscal_periods — the demo's AMHQ/AMUS/AMDE map to
+          'Standard', the one calendar it loads — and
+          assert_fiscal_calendar_is_loaded (#77) fails the build if a newly
+          activated entity points at an unloaded one. To support more calendars,
+          load their period data into the raw/staging fiscal-calendar source.
+          konsolidat#146 moved it out of seeds/entity_fiscal_calendars.csv into
+          konsol's Entity Fiscal Calendar doctype.
+        columns:
+          - name: data_area_id
+            description: "ERP legal-entity code, as the ledger emits it"
+            data_tests:
+              - unique
+              - not_null
+      - name: currencies
+        description: >
+          ISO 4217 reference (code, name, symbol, minor unit) from konsol's ISO
+          Currency doctype. Supplies the currency dimension FX validates against:
+          from_currency / to_currency in silver_exchange_rates and entity
+          accounting/reporting currencies are bare ISO codes with no other source
+          of truth (grynn-in/konsolidat#91). Covers the major reserve / G20 / EU
+          currencies plus every currency in the demo FX data.
+          konsolidat#146 moved it out of seeds/currencies.csv: a list the
+          warehouse validates against belongs in the app. Not Frappe's own
+          Currency doctype, which is autonamed on the display name and ships no
+          ISO exponent — see the konsol controller.
+        columns:
+          - name: currency_code
+            description: "ISO 4217 alphabetic code (3 letters), e.g. CHF"
+            data_tests:
+              - unique
+              - not_null
+          - name: minor_unit
+            description: "ISO 4217 minor unit (decimal places); JPY=0, most=2, KWD/BHD/OMR=3"
+      - name: scenario_definitions
+        description: >
+          Scenario metadata from konsol's Scenario doctype. This was
+          `ref('scenario_definitions')`, a seed, and seeds materialise into
+          epm_gold — the same relation konsol writes, so `dbt seed` and
+          `bench migrate` overwrote each other (konsolidat#146). The doctype is
+          the source: it carried 17 scenarios where the CSV had 4 with stale
+          names.
+      - name: spread_profiles
+        description: >
+          Period weights from konsol's Spread Profile doctype. Same collision:
+          the seed and the write-through were one relation. konsol's
+          ensure_reference_tables() owns the DDL now.
       - name: consolidation_groups
         description: >
           F2: the consolidation STRUCTURE — who and where, no ownership. This

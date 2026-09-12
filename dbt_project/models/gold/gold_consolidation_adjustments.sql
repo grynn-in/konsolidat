@@ -5,34 +5,24 @@
     )
 }}
 
-{# PRD-5: Top-side journal adjustments from seed/staging
+{# PRD-5: Top-side journal adjustments from the Consolidation Adjustment doctype
    PRD-16: Workflow status filter — only Approved/Reversed flow through
            Auto-reversal generation for journals with auto_reverse_period > 0 #}
 
-{# Seed-based adjustments (backward compat — always treated as Approved) #}
-with seed_adjustments as (
-    select
-        consolidation_group,
-        adjustment_type,
-        journal_id,
-        data_area_id,
-        {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
-        {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
-        main_account,
-        debit_amount,
-        credit_amount,
-        debit_amount - credit_amount as net_amount,
-        description,
-        posted_by,
-        'Approved' as status,
-        '' as approved_by,
-        '' as reversal_journal_id,
-        toUInt8(0) as auto_reverse_period
-    from {{ ref('consolidation_adjustments') }}
-),
+{# konsolidat#146: the seed half is gone.
 
-{# Staging adjustments with workflow status #}
-staging_adjustments as (
+   It read `ref('consolidation_adjustments')` — a CSV materialising into
+   epm_gold.consolidation_adjustments, the same relation konsol's legacy
+   write-through targeted — and it labelled every row `'Approved'`
+   unconditionally, while the staging half filters on the real workflow status.
+   It applied only when the staging table happened to be empty, the silent
+   fallback F3 removed from gold_consolidation_hierarchy.
+
+   The eight demo rows it carried are not recreated: six of them posted to a
+   consolidation group `GLOBAL` and an entity `GROUP` that exist nowhere in the
+   Consolidation Group tree, and a top-side journal is transactional data, not
+   configuration to ship. #}
+with staging_adjustments as (
     select
         consolidation_group,
         adjustment_type,
@@ -95,16 +85,6 @@ all_adjustments as (
     union all
 
     select * from auto_reversals
-
-    union all
-
-    select sa.*
-    from seed_adjustments as sa
-    where not exists (
-        select 1 from {{ source('epm_staging', 'consolidation_adjustments') }} as stg
-        where stg.consolidation_group != ''
-        limit 1
-    )
 )
 
 select * from all_adjustments

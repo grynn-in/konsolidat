@@ -7,7 +7,10 @@ from (
 ) as r
 cross join (
     select count(distinct step_order) as rule_steps
-    from {{ ref('allocation_rules') }}
+    {# konsolidat#146: the staging table the other allocation tests already
+       use; the seed behind this ref shared a relation with konsol's
+       write-through. #}
+    from {{ source('epm_staging', 'allocation_rules') }}
 ) as ru
 where r.result_steps != ru.rule_steps
   and ru.rule_steps > 0

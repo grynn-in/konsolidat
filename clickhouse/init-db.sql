@@ -273,3 +273,50 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_ancestry (
     consolidation_group String, data_area_id String, link_group String,
     link_data_area_id String, link_depth UInt8, depth UInt8, path String
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id, link_depth);
+
+-- konsolidat#146: two more relations that a dbt seed and a konsol write-through
+-- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so
+-- seeds/spread_profiles.csv WAS epm_gold.spread_profiles — the same table the
+-- Spread Profile doctype TRUNCATE+INSERTs, and whichever of `dbt seed` and
+-- `bench migrate` ran last won. The seeds are deleted; konsol is the source and
+-- konsol's ensure_reference_tables() creates these on volumes that predate the
+-- change. Keep both in step with _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_gold.spread_profiles (
+    profile_id String, profile_name String, fiscal_period Int32, weight Float32
+) ENGINE = MergeTree ORDER BY (profile_id, fiscal_period);
+
+CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
+    scenario_id String, scenario_name String, scenario_type String, is_active Int32
+) ENGINE = MergeTree ORDER BY scenario_id;
+
+-- konsolidat#146: the ISO 4217 reference list, published from Frappe's Currency
+-- records by konsol.currency_sync. It was seeds/currencies.csv.
+CREATE TABLE IF NOT EXISTS epm_gold.currencies (
+    currency_code String, currency_name String, symbol String, minor_unit UInt8
+) ENGINE = MergeTree ORDER BY currency_code;
+
+-- konsolidat#146: which fiscal calendar each ERP legal entity posts against,
+-- from konsol's Entity Fiscal Calendar doctype. It was
+-- seeds/entity_fiscal_calendars.csv.
+CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
+    data_area_id String, fiscal_calendar_id String
+) ENGINE = MergeTree ORDER BY data_area_id;
+
+-- konsolidat#146: the two halves of budget input, both from konsol.
+-- budget_annual_input was seeds/budget_annual_input.csv — a top-down annual
+-- figure that gold_spread_budget spreads into months by profile.
+-- budget_monthly_input is the bottom-up half, written by Budget Sheet; it has
+-- always been a konsol write-through with nothing that creates it, which is why
+-- gold_spread_budget has been failing every build.
+CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
+    scenario_id String, data_area_id String, fiscal_year UInt16,
+    main_account String, dim_cost_center String, dim_department String,
+    annual_amount Decimal(18,2), spread_profile_id String, submitted_by String
+) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, main_account);
+
+CREATE TABLE IF NOT EXISTS epm_gold.budget_monthly_input (
+    scenario_id String, data_area_id String, fiscal_year UInt16,
+    main_account String, dim_cost_center String, dim_department String,
+    fiscal_period UInt8, amount Decimal(18,2), layer String
+) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, layer);
+

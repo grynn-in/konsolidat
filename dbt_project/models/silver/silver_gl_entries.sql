@@ -63,7 +63,7 @@ left join {{ ref('bronze_general_journal_entries') }} as gje
     and gae.data_area_id = gje.data_area_id
 left join {{ ref('silver_main_accounts') }} as ma
     on gae.main_account = ma.main_account_id
-left join {{ ref('entity_fiscal_calendars') }} as efc
+left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
     on gae.data_area_id = efc.data_area_id
 left join fiscal_dates as fp
     on gae.accounting_date = fp.calendar_date
@@ -146,7 +146,7 @@ from (
             {{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }}
         ) as period_start
     from {{ ref('bronze_trial_balance_submissions') }} as b
-    left join {{ ref('entity_fiscal_calendars') }} as efc
+    left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
         on b.data_area_id = efc.data_area_id
     left join {{ ref('silver_fiscal_periods') }} as sfp
         on sfp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
