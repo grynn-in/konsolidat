@@ -52,6 +52,18 @@ The five `K.EPM` read functions share the same parameter pattern. They differ on
 =K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "", "BUDGET_2025")
 ```
 
+**Reading a reporting-hierarchy node.** Set `node` to a member code from a
+published Reporting Hierarchy, and the value is the sum of every leaf below
+that node. `entity` may then be `"ALL"`, meaning every entity you can see.
+`hierarchy` names the tree. Leave it blank only when the node's code is in
+exactly one published hierarchy. If the code is in several, for example
+`MGMT_2026` and `MGMT_2027` both have a `DACH` node, the cell shows `#VALUE!`
+with a message naming both trees, and you add the hierarchy name to choose.
+
+```
+=K.EPM("ALL", 2026, "FY", "400000", "", "", "", "", "", "MGMT_2026", "DACH")
+```
+
 ### K.EPM_BUDGET() — Budget Values
 
 ```
