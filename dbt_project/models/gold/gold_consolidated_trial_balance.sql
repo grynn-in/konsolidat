@@ -57,8 +57,9 @@ with entity_tb as (
        would otherwise join with '', miss every rate key, and translate at the
        1.0 parity fallback — a JPY ledger landing as CHF, ~170x. Dropping it is
        the lesser wrong, and not a silent one: assert_every_tb_entity_has_a_currency
-       names it. Filtered in a subquery because ClickHouse's JOIN ... ON takes
-       equality conjunctions only. #}
+       names it. Filtered in the subquery so the rule sits with the source of
+       the currencies. (An AND of a non-equality in ON also works on 24.8; only
+       `x IN (col, ...)` is refused there.) #}
     inner join (
         select data_area_id, accounting_currency
         from {{ ref('silver_entity_currencies') }}
