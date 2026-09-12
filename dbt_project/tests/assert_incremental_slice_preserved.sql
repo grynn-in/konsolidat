@@ -4,8 +4,11 @@
 -- must update ONLY its own slice and leave every OTHER slice intact. Before A2
 -- the four consolidation models were `table`-materialized, so a scoped run
 -- OVERWROTE the whole table — zeroing every entity/year outside the close. A2
--- makes them `incremental` with `delete+insert` keyed on the close slice, so a
--- scoped run deletes+reinserts only the in-scope keys and preserves the rest.
+-- made them `incremental`, rewriting only the close slice on each run, so a
+-- scoped run replaces only the in-scope slice and preserves the rest. Since
+-- #154, three of them do it with a pre_hook that deletes the slice before the
+-- SELECT appends it; gold_fully_consolidated_tb, which has no filters of its
+-- own, is a `table` again, rebuilt from the already-scoped upstream.
 -- This guard makes the old data-loss fail loudly.
 --
 -- OPT-IN via a DEDICATED var `assert_preserved_entity` — deliberately distinct

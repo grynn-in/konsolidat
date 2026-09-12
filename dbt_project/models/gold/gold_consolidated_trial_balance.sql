@@ -1,24 +1,28 @@
 {{
     config(
         materialized='incremental',
-        incremental_strategy='delete+insert',
-        unique_key=['consolidation_group', 'data_area_id', 'fiscal_year', 'fiscal_period'],
+        incremental_strategy='append',
+        pre_hook="{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}",
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
+   the keys the new batch produced, so a key that left the SELECT (an ownership
+   window ending, a currency that stopped resolving, a method change) kept its
+   last rows forever. No vars => no predicate => the whole table is replaced.
+   An entity removed from the group tree is outside scope_filter, so only the
+   next unscoped build clears it. #}
 
 {# A2 / grynn-in/konsolidat#116: incremental-by-period materialization.
    This is the consolidation CHOKEPOINT, so a scoped orchestrator close
    (entity_scope / fiscal_year[ / fiscal_period] vars) narrows the SELECT to its
    slice. With delete+insert keyed on the close slice
    (consolidation_group, data_area_id, fiscal_year, fiscal_period) a scoped run
-   deletes+reinserts ONLY the in-scope keys and leaves every other slice intact,
-   instead of OVERWRITING the whole table. The key is intentionally coarse (not
-   the full grain): it identifies the slice, so the whole slice is replaced
-   atomically (rows that disappear from a re-closed slice are removed too).
-   No vars => the SELECT returns every slice => delete+insert touches every key
-   => identical to a full table build (opt-in, byte-for-byte). `dbt --full-refresh`
+   replaces ONLY its slice and leaves every other slice intact, instead of
+   OVERWRITING the whole table. The pre_hook above deletes the slice with the
+   same filters the SELECT uses; the SELECT then appends it. `dbt --full-refresh`
    (or the first build) drops + recreates the table from scratch. #}
 
 {# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL

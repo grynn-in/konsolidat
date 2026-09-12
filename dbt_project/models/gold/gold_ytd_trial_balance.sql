@@ -1,8 +1,8 @@
 {{
     config(
         materialized='incremental',
-        incremental_strategy='delete+insert',
-        unique_key=['data_area_id', 'fiscal_year', 'fiscal_period'],
+        incremental_strategy='append',
+        pre_hook="{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter(include_period=false) }} {{ scope_filter() }}{% endif %}",
         engine='MergeTree()',
         order_by='tuple()'
     )
@@ -11,11 +11,11 @@
 {# A2 / grynn-in/konsolidat#116: incremental-by-period materialization. A scoped
    close narrows the SELECT to its slice; the YTD running sum partitions by
    (data_area_id, fiscal_year), so a per-entity/year slice is self-contained.
-   delete+insert keyed on (data_area_id, fiscal_year, fiscal_period) replaces only
-   the in-scope keys and leaves every other entity/period intact, instead of
-   OVERWRITING the table. period_filter(include_period=false) keeps every period
-   of the closed year so the cumulative window stays correct within the slice.
-   No vars => every key present => identical to a full table build (opt-in). #}
+   The pre_hook deletes the slice with the same predicate the SELECT uses (#154:
+   not just the keys the batch produced), and leaves every other entity/year
+   intact. period_filter(include_period=false) keeps every period of the closed
+   year so the cumulative window stays correct within the slice. No vars => the
+   whole table is replaced. #}
 
 select
     data_area_id,

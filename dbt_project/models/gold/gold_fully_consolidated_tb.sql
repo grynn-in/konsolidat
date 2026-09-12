@@ -1,24 +1,16 @@
 {{
     config(
-        materialized='incremental',
-        incremental_strategy='delete+insert',
-        unique_key=['consolidation_group', 'data_area_id', 'fiscal_year', 'fiscal_period'],
+        materialized='table',
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
 
-{# A2 / grynn-in/konsolidat#116: incremental-by-period materialization. Inherits
-   the scoped slice from the gold_consolidated_trial_balance chokepoint (Layer 1
-   entity balances). delete+insert keyed on the close slice
-   (consolidation_group, data_area_id, fiscal_year, fiscal_period).
-
-   NOTE (konsolidat#124): unlike the chokepoint models this one carries NO
-   scope_filter/period_filter of its own — its SELECT is always full and it relies
-   entirely on the already-scoped upstream. So there is no slice-pruning perf
-   benefit here: the delete+insert replaces exactly the keys the (scoped) upstream
-   yields — correct, but a scoped close still re-derives this model in full.
-   No vars => every key present => identical to a full table build (opt-in). #}
+{# #154: a TABLE, rebuilt and swapped in on every run. It carries no
+   scope_filter/period_filter of its own: its SELECT always reads every upstream
+   row (konsolidat#124), so a scoped close re-derived it in full anyway. As
+   delete+insert it only replaced the keys the SELECT produced, and a key that
+   left it (an entity that stopped consolidating) kept its rows forever. #}
 
 {# PRD-5 R4: Unified consolidated trial balance
    Unions: entity balances + IC eliminations + CTA + topside adjustments
