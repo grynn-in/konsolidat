@@ -57,7 +57,7 @@ Validation:
 
 - Header `dimension` must be Published before header Publish
 - Leaf (`is_group=0`): `member_code` required; unique within hierarchy
-- Group (`is_group=1`): aggregates children only
+- Group (`is_group=1`): aggregates children only; `member_code` (auto from the label when blank) is also unique within hierarchy, since formulas and the closure find a node by its code
 - Cannot set `data_area_id` — legal structure uses `Consolidation Group`
 
 ### 3. `reporting_hierarchies` seed (`konsolidat`)
