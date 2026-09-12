@@ -76,6 +76,6 @@ joined as (
     from entries
     left join headers
         on entries.GeneralJournalEntry = headers.SourceKey
-),
+)
 
 select * from joined
