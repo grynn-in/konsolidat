@@ -10,7 +10,7 @@ Complete deployment of Konsolidat: ClickHouse, Airbyte, dbt, Frappe/Konsol, and 
 | Python | 3.10+ | dbt Core, Frappe Bench |
 | Node.js | 18+ | Frappe assets |
 | Excel | Microsoft 365 desktop or Excel on the web | Add-in reporting |
-| D365 F&O | Any | Source ERP (optional for demo) |
+| D365 F&O | Any | Source ERP (optional: entities can upload trial balances instead) |
 
 ## 1. Clone the Repository
 
@@ -46,7 +46,7 @@ curl "http://localhost:8123/?query=SHOW+DATABASES"
 
 ## 3. Set Up Airbyte (D365 Extraction)
 
-> Skip this section if using seed data only (demo mode).
+> There is no demo data. Data comes from connectors or trial balance uploads. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use. Skip this section if you only upload trial balances.
 
 ### 3.1 Install Airbyte
 

@@ -29,10 +29,10 @@ Caddy auto-provisions Let's Encrypt certificates.
 │                       ./deploy.sh                                │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Step 1: Check prerequisites (Docker, Docker Compose)            │
+│  First:  Check prerequisites (Docker, Docker Compose)            │
 │          Generate random passwords → .env                        │
 │                                                                  │
-│  Step 2: Start infrastructure                                    │
+│  Step 1: Start infrastructure                                    │
 │          ┌──────────┐ ┌────────┐ ┌────────┐ ┌────────────┐      │
 │          │ MariaDB  │ │ Redis  │ │ Redis  │ │ ClickHouse │      │
 │          │ (Frappe  │ │ (cache)│ │(queue) │ │  (OLAP)    │      │
@@ -40,15 +40,15 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          └──────────┘ └────────┘ └────────┘ └────────────┘      │
 │          Wait for all healthchecks ✓ ✓ ✓ ✓                      │
 │                                                                  │
-│  Step 3: Build Frappe + Konsol image                             │
+│  Step 2: Build Frappe + Konsol image                             │
 │          (first run only — cached after that)                    │
 │                                                                  │
-│  Step 4: Create Frappe site + install Konsol app                 │
+│  Step 3: Create Frappe site + install Konsol app                 │
 │          • Creates database                                      │
 │          • Sets admin password                                   │
 │          • Configures ClickHouse connection                      │
 │                                                                  │
-│  Step 5: Start application services                              │
+│  Step 4: Start application services                              │
 │          ┌──────────────┐ ┌────────┐ ┌───────────┐              │
 │          │Frappe Backend│ │ Worker │ │ Scheduler │              │
 │          │   :8069      │ │ (jobs) │ │  (cron)   │              │
@@ -59,11 +59,11 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          │  :4000   │ │ proxy)   │                               │
 │          └──────────┘ └──────────┘                               │
 │                                                                  │
-│  Step 6: Seed demo data + run dbt build                          │
+│  Step 5: Run dbt build                                           │
 │          • Creates gold models (trial balance, P&L, etc.)        │
-│          • Excel reports work immediately                        │
+│          • Empty until data is loaded                            │
 │                                                                  │
-│  Step 7: Print URLs + credentials                                │
+│  Last:   Print URLs + credentials                                │
 │          ┌──────────────────────────────────────────────┐        │
 │          │ ✅ Konsolidat is ready!                       │        │
 │          │                                              │        │
@@ -164,24 +164,16 @@ After deployment:
 
 The template includes pre-built reports for Trial Balance, P&L, Balance Sheet, and Budget vs Actual.
 
-## Demo Data
+## Loading Data
 
-A fresh deploy includes synthetic data for a fictional **Alpine Manufacturing Group** — 3 legal entities across CHF, USD, and EUR with 12 months of GL entries, budgets, exchange rates, and trial balance data. This lets you explore consolidation, FX translation, variance analysis, and Excel reports immediately.
+There is no demo data. A fresh ClickHouse volume gets schema only: `clickhouse/init-db.sql` and `clickhouse/raw-schema.sql` (the empty ERP landing tables dbt reads, so staging does not fail on a missing source).
 
-| Entity | Currency | Country | Ownership | Role |
-|--------|----------|---------|-----------|------|
-| AMHQ | CHF | Switzerland | 100% | Parent / HQ |
-| AMUS | USD | United States | 100% | Subsidiary |
-| AMDE | EUR | Germany | 75% | Subsidiary (25% NCI) |
+Data comes from two places:
 
-The demo data includes:
+- **Connectors**: an ERP connector pulls ledger data into ClickHouse. See [Connecting Real ERP Data](#connecting-real-erp-data).
+- **Trial balance uploads**: an entity without a connector uploads its trial balance as a file. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads (one file for many entities and periods) go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use.
 
-- **Intercompany transactions**: Monthly product sales AMUS→AMDE (~120K USD/month), quarterly management fees from HQ, with matching AR/AP for IC elimination
-- **Non-controlling interest**: AMDE at 75% ownership triggers NCI calculations in the consolidated trial balance
-- **IC elimination rules**: Balance-based (AR/AP, Revenue/Expense) and unrealized profit on IC inventory (15% margin)
-- **Staging data**: Ownership periods, consolidation hierarchy, and IC balances pre-loaded for full consolidation pipeline
-
-A fresh ClickHouse volume gets schema only: `clickhouse/init-db.sql` and `clickhouse/raw-schema.sql` (the empty ERP landing tables dbt reads, so staging does not fail on a missing source). No demo data is shipped. Load real data through the connectors or konsol's Trial Balance Submission. `scripts/generate_demo_data.py` still writes a synthetic ledger to `clickhouse/demo-data.sql` if you want one, but nothing mounts it.
+To start again from an empty ClickHouse volume:
 
 ```bash
 ./deploy.sh down
@@ -191,12 +183,12 @@ docker volume rm open_epm_clickhouse_data
 
 ## Connecting Real ERP Data
 
-To replace demo data with a real D365 Finance & Operations instance:
+To connect a D365 Finance & Operations instance:
 
-1. Log into Frappe: `http://your-server:8069`
+1. Log into Frappe as Administrator: `http://your-server:8069`. Creating a Pipeline Run needs Administrator or System Manager.
 2. Go to **EPM Settings**
 3. Enter your D365 credentials (Tenant ID, Client ID, Client Secret, Environment URL)
-4. Click **Run Pipeline** to sync data — this replaces the demo data with your real ERP data
+4. Open a new **Pipeline Run** (`/app/pipeline-run/new`) and click **Run Pipeline** to sync data
 
 Konsolidat supports any ERP via [Airbyte connectors](https://docs.airbyte.com/integrations/). See [D365 Integration](d365-integration.md) for detailed setup.
 

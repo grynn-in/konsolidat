@@ -42,8 +42,8 @@ vars:
   # which per-ERP staging models are built (see the {{ config(enabled=...) }}
   # block at the top of each models/staging/<erp>/ model — it CANNOT live here,
   # because var() inside a dbt_project.yml config does not see this vars: block)
-  # AND which sources the canonical models UNION together. The shipped
-  # demo data is D365-only, so the default is d365_fo. ERPNext deployments add
+  # AND which sources the canonical models UNION together. The default is
+  # d365_fo (see the NOTE below). ERPNext deployments add
   # 'erpnext' here, or override at run time:
   #   dbt build --vars '{erp_sources: [d365_fo, erpnext]}'
   # NOTE: d365_fo must stay in this list. The bronze layer refs several

@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-shot configurator: creates Frappe site, installs konsol app, loads demo data
+# One-shot configurator: creates Frappe site, installs konsol app, sets the ClickHouse connection
 set -e
 
 cd /home/frappe/frappe-bench

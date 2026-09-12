@@ -3,7 +3,7 @@
 _State of the local `konsolidat.local` deployment, probed via **konsol-cli** (api backend, pure HTTP) and read-only ClickHouse inspection. 2026-06-23._
 
 !!! note "Point-in-time snapshot (2026-06-23) — partly superseded"
-    This is a dated readiness analysis, kept as a record of the deployment at the time. Since then: the demo dataset was replaced by the **Contoso Group (`GROUP_CORP`)** seed (not "Alpine Manufacturing"), and two D365 connectors (`CONN-00001`, `CONN-00002`) have been registered — so the "empty connector registry" finding no longer holds. The two-plane model and the real-D365 gap analysis below remain accurate.
+    This is a dated readiness analysis, kept as a record of the deployment at the time. Since then: the demo dataset was replaced by the **Contoso Group (`GROUP_CORP`)** seed (not "Alpine Manufacturing"), and two D365 connectors (`CONN-00001`, `CONN-00002`) have been registered — so the "empty connector registry" finding no longer holds. The demo data has since been removed altogether: there is none, and data comes from connectors or trial balance uploads. The two-plane model and the real-D365 gap analysis below remain accurate.
 
 ## TL;DR
 
