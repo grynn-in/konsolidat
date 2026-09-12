@@ -1,6 +1,6 @@
 # POST reverse_adjustment
 
-Reverse an Approved Consolidation Adjustment. Creates a reversal document with negated amounts and links both via `reversal_journal_id`.
+Reverse an Approved Consolidation Adjustment. Reversal **is** the cancel: the adjustment becomes docstatus 2 and leaves the warehouse. It is allowed only while the adjustment's fiscal period is open.
 
 ## Endpoint
 
@@ -18,15 +18,12 @@ POST /api/method/konsol.api.reverse_adjustment
 
 ## What Happens
 
-1. Validates the adjustment is in "Approved" status
-2. Creates a new Consolidation Adjustment with:
-    - Debit/credit amounts swapped (reversal)
-    - `journal_id` prefixed with `REV-`
-    - `status` set to "Approved"
-    - `reversal_journal_id` pointing to the original
-3. Submits the reversal document
-4. Marks the original as "Reversed" with `reversal_journal_id` pointing to the reversal
-5. Both synced to ClickHouse
+1. Applies the workflow action **Reverse** (`frappe.model.workflow.apply_workflow`).
+2. Refuses if the adjustment's fiscal period is closed or locked.
+3. The adjustment is cancelled: `status` becomes "Reversed".
+4. After the commit, ClickHouse is re-synced; the cancelled adjustment is no longer in `epm_staging.consolidation_adjustments`, so the next consolidation build drops it from gold.
+
+No mirror document is created. To correct an adjustment **after its period has closed**, post a new adjustment in an open period. To change an adjustment while its period is open, reverse it and **amend** it: the amendment starts as a fresh Draft and goes through approval again.
 
 ## Response
 
@@ -34,7 +31,6 @@ POST /api/method/konsol.api.reverse_adjustment
 {
   "message": {
     "original": "CADJ-IC001-0001",
-    "reversal": "CADJ-REV-IC001-0002",
     "status": "Reversed"
   }
 }
@@ -51,17 +47,9 @@ curl -X POST http://localhost:8069/api/method/konsol.api.reverse_adjustment \
 
 ## Error Responses
 
-### Wrong status
-
-```json
-{
-  "exc_type": "ValidationError",
-  "_server_messages": "[\"Cannot reverse: current status is 'Pending Approval', expected 'Approved'\"]"
-}
-```
-
-## dbt Impact
-
-The `gold_consolidation_adjustments` model includes both the original (now "Reversed") and the reversal (status "Approved") entries. The reversal's negated amounts cancel out the original, producing a net-zero effect on consolidated results.
+| Cause | Error |
+|-------|-------|
+| The adjustment isn't "Approved" | `WorkflowTransitionError`: "Not a valid Workflow Action" |
+| Its fiscal period is closed | `ValidationError`: "Cannot reverse a consolidation adjustment: fiscal period 12 of FY2024 is closed." |
 
 See also: [approve_adjustment](api-approve-adjustment.md)
