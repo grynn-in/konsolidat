@@ -14,6 +14,15 @@ models:
       - name: main_account
         tests:
           - not_null
+      # konsol#155: the voucher-balance test groups on this and sums amount. A
+      # NULL key would lump unrelated lines into one group; a NULL amount is
+      # skipped by sum() and lets a voucher pass silently.
+      - name: general_journal_entry_recid
+        tests:
+          - not_null
+      - name: amount
+        tests:
+          - not_null
 
   - name: stg_d365_fo__trial_balance
     description: "D365 F&O trial balance adapter — canonical schema output"

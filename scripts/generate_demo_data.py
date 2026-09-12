@@ -7,6 +7,12 @@ with 12 months of GL data, budget, exchange rates, and trial balance.
 
 Output: clickhouse/demo-data.sql
 
+WARNING — its amounts are UNSIGNED (konsolidat#155). GL lines carry
+abs(amount) with the sign only in IsCredit; budget lines carry abs(amount) with
+no sign at all (the 'No' column is IncludeInCashFlowForecast). The pipeline
+expects signed amounts, so loading this output books every credit as a debit
+and fails tests/assert_d365_gl_vouchers_balance. Sign it before any reuse.
+
 NOT loaded by default any more: docker-compose mounts clickhouse/raw-schema.sql
 (empty landing tables) instead. Load the generated file by hand if you want
 synthetic data. The file is gitignored: never commit it back.
