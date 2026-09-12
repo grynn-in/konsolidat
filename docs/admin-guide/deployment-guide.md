@@ -29,10 +29,10 @@ Caddy auto-provisions Let's Encrypt certificates.
 │                       ./deploy.sh                                │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Step 1: Check prerequisites (Docker, Docker Compose)            │
+│  First:  Check prerequisites (Docker, Docker Compose)            │
 │          Generate random passwords → .env                        │
 │                                                                  │
-│  Step 2: Start infrastructure                                    │
+│  Step 1: Start infrastructure                                    │
 │          ┌──────────┐ ┌────────┐ ┌────────┐ ┌────────────┐      │
 │          │ MariaDB  │ │ Redis  │ │ Redis  │ │ ClickHouse │      │
 │          │ (Frappe  │ │ (cache)│ │(queue) │ │  (OLAP)    │      │
@@ -40,15 +40,15 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          └──────────┘ └────────┘ └────────┘ └────────────┘      │
 │          Wait for all healthchecks ✓ ✓ ✓ ✓                      │
 │                                                                  │
-│  Step 3: Build Frappe + Konsol image                             │
+│  Step 2: Build Frappe + Konsol image                             │
 │          (first run only — cached after that)                    │
 │                                                                  │
-│  Step 4: Create Frappe site + install Konsol app                 │
+│  Step 3: Create Frappe site + install Konsol app                 │
 │          • Creates database                                      │
 │          • Sets admin password                                   │
 │          • Configures ClickHouse connection                      │
 │                                                                  │
-│  Step 5: Start application services                              │
+│  Step 4: Start application services                              │
 │          ┌──────────────┐ ┌────────┐ ┌───────────┐              │
 │          │Frappe Backend│ │ Worker │ │ Scheduler │              │
 │          │   :8069      │ │ (jobs) │ │  (cron)   │              │
@@ -59,11 +59,11 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          │  :4000   │ │ proxy)   │                               │
 │          └──────────┘ └──────────┘                               │
 │                                                                  │
-│  Step 6: Run dbt build                                           │
+│  Step 5: Run dbt build                                           │
 │          • Creates gold models (trial balance, P&L, etc.)        │
 │          • Empty until data is loaded                            │
 │                                                                  │
-│  Step 7: Print URLs + credentials                                │
+│  Last:   Print URLs + credentials                                │
 │          ┌──────────────────────────────────────────────┐        │
 │          │ ✅ Konsolidat is ready!                       │        │
 │          │                                              │        │
@@ -171,7 +171,7 @@ There is no demo data. A fresh ClickHouse volume gets schema only: `clickhouse/i
 Data comes from two places:
 
 - **Connectors**: an ERP connector pulls ledger data into ClickHouse. See [Connecting Real ERP Data](#connecting-real-erp-data).
-- **Trial balance uploads**: an entity without a connector uploads its trial balance as a file, one at a time or in bulk, in konsol-exec at `/konsol-exec/uploads`.
+- **Trial balance uploads**: an entity without a connector uploads its trial balance as a file. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads (one file for many entities and periods) go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) can use.
 
 To start again from an empty ClickHouse volume:
 
@@ -188,7 +188,7 @@ To connect a D365 Finance & Operations instance:
 1. Log into Frappe: `http://your-server:8069`
 2. Go to **EPM Settings**
 3. Enter your D365 credentials (Tenant ID, Client ID, Client Secret, Environment URL)
-4. Click **Run Pipeline** to sync data
+4. Open a new **Pipeline Run** (`/app/pipeline-run/new`) and click **Run Pipeline** to sync data
 
 Konsolidat supports any ERP via [Airbyte connectors](https://docs.airbyte.com/integrations/). See [D365 Integration](d365-integration.md) for detailed setup.
 

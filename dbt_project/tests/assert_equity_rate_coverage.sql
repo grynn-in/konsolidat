@@ -1,30 +1,29 @@
 -- C2 / grynn-in/konsolidat#120: IAS-21 equity-translation coverage guard.
 --
--- #120 had two asks, both landed as data changes via #104/#121:
---   (a) add the missing AMG IAS-21 equity-translation coverage, and
---   (b) drop/quarantine the 12 acquisition-date `exchange_rates` rows that no model
+-- History: #120 had two asks, both fixed at the time in the demo data and its
+-- generator via #104/#121. Both have since been removed; this note is a record only.
+--   (a) add missing IAS-21 equity-translation coverage for one group's entities, and
+--   (b) drop/quarantine 12 acquisition-date `exchange_rates` rows that no model
 --       consumes (equity translation reads `historical_equity_rates`, NOT the
 --       `exchange_rates` table — see gold_consolidated_trial_balance `historical_rates`
 --       CTE / the ASOF `hr` join on (consolidation_group, data_area_id, main_account)).
--- The genuinely-missing piece is this TDD gate. It encodes the invariant as a
--- source/seed contract (no model SQL changes, so full builds are byte-for-byte
--- unchanged) and returns one offender row per violation:
+-- What remains is this gate. It encodes the invariant as a source contract (no model
+-- SQL changes, so full builds are byte-for-byte unchanged) and returns one offender
+-- row per violation:
 --
---   missing_equity_rate_coverage — a `consolidation_groups` seed subsidiary has NO
+--   missing_equity_rate_coverage — an entity node in `consolidation_groups` has NO
 --       `historical_equity_rates` row, so its equity accounts silently fall back to
---       the closing rate instead of the acquisition rate. This is the #120 "AMG
---       entities have equity-translation coverage" check (AMHQ/AMUS/AMDE), and it
---       also catches the #104-review bug where Contoso DEMF/GBMF rates were keyed to
---       a `GROUP_EMEA` group the GROUP_CORP-seeded join never matched.
+--       the closing rate instead of the acquisition rate. It also catches rates keyed
+--       to a consolidation group that the join never matches (a #104-review bug).
 --
 --   orphan_equity_rate — a `historical_equity_rates` (group, entity) that matches no
---       seed subsidiary: a dead rate no model can reference (the #120(b) "no model
---       references the dropped/re-homed rows" guard — a mis-keyed equity rate is the
---       same dead weight the dropped acquisition-date FX rows were).
+--       entity node in `consolidation_groups`: a dead rate no model can reference (the
+--       #120(b) guard — a mis-keyed equity rate is the same dead weight the dropped
+--       acquisition-date FX rows were).
 --
--- GREEN requires `historical_equity_rates` to cover exactly the subsidiaries in
--- `consolidation_groups`. konsol writes those rows when a Historical Equity Rate is
--- submitted.
+-- GREEN requires `historical_equity_rates` to cover every entity node in
+-- `consolidation_groups` (every node with data_area_id != '', parent entity
+-- included). konsol writes those rows when a Historical Equity Rate is submitted.
 -- The equity rate join is inert on real-D365 gold (no 3010/3100 equity accounts), so
 -- correcting the source never moves gold row counts.
 

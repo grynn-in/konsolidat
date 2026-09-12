@@ -46,7 +46,7 @@ curl "http://localhost:8123/?query=SHOW+DATABASES"
 
 ## 3. Set Up Airbyte (D365 Extraction)
 
-> There is no demo data. Data comes from connectors or trial balance uploads (single or bulk, in konsol-exec at `/konsol-exec/uploads`). Skip this section if you only upload trial balances.
+> There is no demo data. Data comes from connectors or trial balance uploads. A single trial balance goes through the Trial Balance Submission form in Desk. Bulk uploads go through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) can use. Skip this section if you only upload trial balances.
 
 ### 3.1 Install Airbyte
 
