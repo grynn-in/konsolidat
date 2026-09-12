@@ -80,7 +80,10 @@ def discover_config(group, year):
             WHERE consolidation_group = '{group}'
             FORMAT JSON
         """)
-        year = int(yr_rows[0]["max_year"]) if yr_rows and int(yr_rows[0]["max_year"] or 0) else 2024
+        year = int(yr_rows[0]["max_year"] or 0) if yr_rows else 0
+        if not year:
+            print(f"ERROR: group '{group}' has no consolidated trial balance; pass --year")
+            sys.exit(1)
         print(f"  Auto-detected fiscal year: {year}")
 
     # One row per entity: its ownership and method at the year's latest period
@@ -94,6 +97,7 @@ def discover_config(group, year):
         WHERE consolidation_group = '{group}'
           AND fiscal_year = {year}
           AND outside_ownership_window = 0
+          AND has_complete_chain = 1
         GROUP BY data_area_id
         HAVING method = 'full'
         ORDER BY data_area_id
@@ -114,7 +118,9 @@ def discover_config(group, year):
         WHERE consolidation_group = '{group}'
         FORMAT JSON
     """)}
-    reporting_currency = next((r["group_ccy"] for r in names.values() if r["group_ccy"]), "USD")
+    # The group's own row (data_area_id = ''), as the consolidated model reads it.
+    reporting_currency = (names.get("") or {}).get("group_ccy") or next(
+        (r["group_ccy"] for r in names.values() if r["group_ccy"]), "USD")
     currencies = {r["data_area_id"]: r["ccy"] for r in ch_query(f"""
         SELECT data_area_id, any(accounting_currency) AS ccy
         FROM epm_silver.silver_entity_currencies
@@ -1114,7 +1120,7 @@ def build_diagnostics_sheet(ws, cfg, entity_pnl, entity_bs, consol_pnl, consol_b
         status = "PASS" if 0 < pct <= 100 else "FAIL"
         tests.append(("Ownership", f"{ent['data_area_id']} ownership",
                       "0 < pct <= 100", f"{pct:.0f}%", status,
-                      "" if status == "PASS" else "Bad config in consolidation_groups"))
+                      "" if status == "PASS" else "Bad ownership in gold_entity_ownership"))
 
     # ── Category 3: BS Entity Check ──────────────────────────
     for ent in cfg.entities:
