@@ -115,8 +115,8 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Dataset Measure | epm | child | Allowed measure for a dataset |
 | Dataset Dimension | epm | child | Dimension for a dataset |
 | Fiscal Period | epm | DOC | Fiscal calendar config → dbt_project.yml vars |
-| Cash Flow Category | epm | DOC | Maps balance-sheet accounts to cash-flow statement lines (generates the cash_flow_categories seed) |
-| Scenario Definition | epm | DOC | Budget / forecast / other scenarios |
+| Cash Flow Category | epm | DOC | Maps balance-sheet accounts to cash-flow statement lines (Published mappings write through to `epm_staging.cash_flow_categories`) |
+| Scenario | epm | DOC | Budget / forecast / other scenarios |
 | Reporting Hierarchy | epm | DOC | Management reporting trees on canonical dimensions |
 | Reporting Hierarchy Member | epm | DOC | Nodes in a reporting tree |
 | Budget Cycle | epm | DOC | Single lock gate for a scenario × fiscal year |

@@ -44,7 +44,7 @@ curl "http://localhost:8123/?query=SELECT+count(*)+FROM+epm_gold.gold_trial_bala
 |---------|-------|-----|
 | `dbt debug` fails | Bad profiles.yml | Check `~/.dbt/profiles.yml` — host, port, user, password |
 | `Database epm_gold does not exist` | Init SQL not run | Run `clickhouse/init-db.sql` manually or restart the Docker container |
-| Seed load fails | Column type mismatch | Check `dbt_project.yml` column_types config for the seed |
+| `relation does not exist` for an `epm_staging` or `epm_gold` source (e.g. `ownership_periods`, `group_exchange_rates`) | konsol has not written that reference table yet | The project has no seeds: these tables are written by konsol doctypes. Run `bench migrate` on the konsol site, or save a record of the doctype, then rebuild |
 | Model build fails with ClickHouse error | SQL syntax issue | Check ClickHouse-specific syntax; use adapter macros |
 | Test failures on fresh build | Expected — data-dependent | `warn`-severity tests may fail without D365 data; `error`-severity tests should pass |
 | `Compilation Error: 'ref' not found` | Missing dependency | Run `dbt deps` to install packages |

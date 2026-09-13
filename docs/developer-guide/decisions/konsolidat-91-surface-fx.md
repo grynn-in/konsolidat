@@ -1,6 +1,16 @@
 # Decision: Surface FX rates in the app (konsolidat #91)
 
-**Issue:** grynn-in/konsolidat#91 · **Status:** Part A done; B/C open
+**Issue:** grynn-in/konsolidat#91 · **Status:** decided and implemented, 13 Sep 2026, in a different form (see Outcome)
+
+## Outcome (13 Sep 2026)
+
+Neither B nor C was built as described below. The decision on konsolidat #93 / konsol #103 went further than C: the group's exchange rates are **governed in konsol and are the only rates translation reads**. The ERP feed is no longer a rate source at all, only an input to a pre-fill.
+
+- **C, superseded:** konsol's **Group Exchange Rate** holds one approved Closing and one Average rate per period, from each currency into a group reporting currency. It is the single source, not a `'manual'` override UNION'd with ERP rates. ([konsol#174](https://github.com/grynn-in/konsol/pull/174))
+- **B, done differently:** users see the rates in the Group Exchange Rate list in konsol, and the read-only `konsol.api.fx_rates` returns the published governed rates per currency pair and period. ([konsol#174](https://github.com/grynn-in/konsol/pull/174))
+- **Translation:** reads only `epm_staging.group_exchange_rates`. ([konsolidat#176](https://github.com/grynn-in/konsolidat/pull/176))
+
+See the [Exchange Rates Guide](../../user-guide/exchange-rates-guide.md). The options below are kept as the record of what was weighed.
 
 ## Context
 Part A (ISO-4217 currency seed + rates present in silver) is done (#98/#108).

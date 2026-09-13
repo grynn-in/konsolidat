@@ -111,10 +111,10 @@ models:
         tests:
           - not_null
       - name: cta_amount
-        description: "PnL CTA component: sum(local * (closing - average) * ownership)"
+        description: "CTA plug per entity/period: -sum(group_amount) over all accounts in gold_consolidated_trial_balance, so that sum(translated group amount) + CTA = 0"
 
   - name: gold_scenario_versions
-    description: "Scenario version metadata from seed and API"
+    description: "Scenario version metadata from konsol's Scenario doctype, plus any created through the API"
     columns:
       - name: scenario_id
         tests:

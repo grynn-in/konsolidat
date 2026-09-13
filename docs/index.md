@@ -290,12 +290,12 @@ Encryption at rest + in transit
 
 <a class="ic-nav-card" href="api-reference/api-overview/">
   <strong>API Reference</strong>
-  <span>3 endpoints — epm_value, epm_batch, health</span>
+  <span>Excel, budget, hierarchy, adjustment and allocation endpoints</span>
 </a>
 
 <a class="ic-nav-card" href="data-dictionary/data-dictionary-overview/">
   <strong>Data Dictionary</strong>
-  <span>44 dbt models, 11 seeds, full lineage</span>
+  <span>103 dbt models, full lineage</span>
 </a>
 
 <a class="ic-nav-card" href="developer-guide/developer-overview/">

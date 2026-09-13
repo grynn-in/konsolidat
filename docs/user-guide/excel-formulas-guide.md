@@ -1,6 +1,6 @@
 # Excel Formulas Guide
 
-The konsol Excel add-in turns Excel into a live reporting and budgeting client. Its worksheet functions live in the `K` namespace: reading (`K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF`) and writing (`K.EPMSAVE`). Excel calculates them like any other function; the add-in groups the calls into as few server requests as possible.
+The konsol Excel add-in turns Excel into a live reporting and budgeting client. Its worksheet functions live in the `K` namespace: reading (`K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF`) and writing (`K.EPMSAVE`). Excel calculates them like any other function; the add-in groups the calls into as few server requests as possible. The add-in is the only Excel client: the earlier VBA module has been retired.
 
 ## Setup
 
@@ -54,11 +54,23 @@ The five `K.EPM` read functions share the same parameter pattern. They differ on
 
 **Reading a reporting-hierarchy node.** Set `node` to a member code from a
 published Reporting Hierarchy, and the value is the sum of every leaf below
-that node. `entity` may then be `"ALL"`, meaning every entity you can see.
-`hierarchy` names the tree. Leave it blank only when the node's code is in
-exactly one published hierarchy. If the code is in several, for example
-`MGMT_2026` and `MGMT_2027` both have a `DACH` node, the cell shows `#VALUE!`
-with a message naming both trees, and you add the hierarchy name to choose.
+that node. `entity` may then be `"ALL"`, `"*"` or blank, meaning every entity
+you are allowed to see; a named entity gives that entity's share of the node.
+`hierarchy` names the tree:
+
+| `hierarchy` | Result |
+|-------------|--------|
+| Names a published tree | That tree (case does not matter) |
+| Blank, and the node is in exactly one published tree | That tree |
+| Blank, and the node is in several published trees | `#VALUE!` "Node 'DACH' is in 2 published hierarchies (MGMT_2026, MGMT_2027). Pass the hierarchy name to choose one." |
+| Blank, and the node is in no published tree | `#VALUE!` "Node 'DACH' is not in any published Reporting Hierarchy." |
+
+The default hierarchy and the fiscal year never choose the tree, so name the
+hierarchy in every report you keep. At a node, `actuals` offers
+`period_net_amount`, `period_debit`, `period_credit` and `transaction_count`
+(not `ytd_net_amount`). See the
+[Reporting Hierarchies Guide](reporting-hierarchies-guide.md) for building a
+tree, a worked example and every error message.
 
 ```
 =K.EPM("ALL", 2026, "FY", "400000", "", "", "", "", "", "MGMT_2026", "DACH")
@@ -123,9 +135,9 @@ Reads one line of the consolidated cash-flow statement for a consolidation group
 | `layer` | String | Yes | — | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
 | `cost_center` | String | No | `""` | Cost center dimension |
 | `department` | String | No | `""` | Department dimension |
-| `hierarchy`, `node` | String | No | `""` | Save against a reporting-hierarchy node (as for `K.EPM`) |
+| `hierarchy`, `node` | String | No | `""` | Save at a reporting-hierarchy **leaf**: the leaf's code is saved on the tree's dimension. A group node is refused |
 
-**The cell displays the amount.** The write to the server happens in the background.
+**The cell displays the amount.** The write to the server happens in the background. The cell shows the amount even when the server refuses the save (you are not signed in, the Budget Cycle is locked, or the node is a group), so check the Budget Sheet if a value seems not to arrive. The next recalculation tries the save again.
 
 **Examples:**
 
@@ -358,18 +370,21 @@ The add-in groups calls into as few requests as possible (at most 2,000 per requ
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `#N/A` "Not logged in" | No session | Open the Konsolidat task pane and sign in |
-| `#NAME?` error | The add-in is not loaded | Install or reload the add-in (Insert → My Add-ins) |
+| `#NAME?` error | The add-in is not loaded | Install or reload the add-in (Insert → My Add-ins). `=K.PING()` returns `1` once the functions are registered |
 | Cell shows `0` | No data for that combination | Check entity, year, period, account and measure; a missing combination returns `0` |
 | `#VALUE!` error | Invalid parameter (e.g. an unknown measure or year) | Check the parameter types and values; the cell's error message names the problem |
+| `#VALUE!` "Node '…' is in 2 published hierarchies" | The node's code is in more than one published tree and `hierarchy` is blank | Add the hierarchy name: the 10th argument of `K.EPM`, the 8th of `K.EPM_BUDGET` and `K.EPM_VARIANCE`, the 7th of `K.EPM_DEBIT` and `K.EPM_CREDIT`. See [Reporting Hierarchies](reporting-hierarchies-guide.md#how-the-tree-is-chosen) |
+| `#VALUE!` "Not permitted to access entity '…'" | The entity is outside the entities you may see, or it is blank in a plain read and your access is restricted | Use one of your entities, or `"ALL"` with a hierarchy node |
 | Values don't update after a data load | Excel has not recalculated | Press **Ctrl+Alt+F9** to recalculate every formula |
 | `ClickHouse connection failed` | ClickHouse is down | Check `docker ps` for a healthy container |
-| K.EPMSAVE not saving | Not signed in | Sign in via the task pane; K.EPMSAVE skips when there is no session |
+| K.EPMSAVE not saving | Not signed in, the Budget Cycle is locked, or the node is a group | Sign in via the task pane; check the cycle's status and use a leaf node. The cell shows the amount either way |
 | Budget not visible in K.EPM_BUDGET | Cycle not locked yet | Budget Sheets sync to ClickHouse when their Budget Cycle is locked — lock it in Frappe Desk first |
 
 ## Next Steps
 
 - [Budget Layers Guide](budget-layers.md) — Full worked example of 4-layer collaborative budgeting
 - [Budgeting Guide](budgeting-guide.md) — Spread profiles, scenarios, budget data flow
+- [Reporting Hierarchies Guide](reporting-hierarchies-guide.md) — Management trees and reading a node
 - [Report Catalog](report-catalog.md) — Pre-built report patterns for all 22 gold models
 - [Excel Task Pane Guide](excel-taskpane-guide.md) — Installing the add-in and pipeline control from Excel
 - [API Reference](../api-reference/api-overview.md) — Raw API documentation

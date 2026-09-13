@@ -49,12 +49,9 @@ test: add assert_cash_flow_nets_to_bs
 - Use **parameterized queries** for ClickHouse (never string interpolation)
 - Raise `frappe.ValidationError` for bad input
 
-### Seeds (CSV)
+### Reference Data
 
-- Use **snake_case** for column headers
-- Sort rows by primary key
-- No trailing commas or empty rows
-- Use consistent quoting (only when values contain commas)
+- Do not add dbt seeds. Reference data belongs in a konsol doctype that writes through to ClickHouse; declare the table as a source in `models/staging/_staging__sources.yml`
 
 ## Testing Requirements
 

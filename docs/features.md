@@ -18,6 +18,7 @@ Worksheet functions in the konsol Excel add-in (the `K.` namespace) query financ
 - **Batched** — the add-in groups formula calls into as few HTTP requests as possible (at most 2,000 per request)
 - **Session auth** — sign in once on the Konsolidat task pane
 - **Dimension filters** — optional cost center and department parameters
+- **Reporting-hierarchy nodes** — read any node of a published management tree, summed across the entities you may see
 
 See the [Excel Formulas Guide](user-guide/excel-formulas-guide.md) for full formula reference.
 
@@ -27,14 +28,24 @@ Full IFRS/GAAP consolidation pipeline, entirely in dbt SQL:
 
 | Step | What happens |
 |------|-------------|
-| **Currency translation** | Balance sheet at closing rate, P&L at average rate |
+| **Currency translation** | Balance sheet at closing rate, P&L at average rate, from governed Group Exchange Rates approved in konsol ([Exchange Rates Guide](user-guide/exchange-rates-guide.md)) |
 | **CTA calculation** | Automatic Currency Translation Adjustment posting |
 | **NCI split** | Group vs non-controlling interest based on ownership % |
-| **IC elimination** | Rule-based intercompany receivable/payable and revenue/COGS netting |
-| **Top-side adjustments** | Manual consolidation journal entries via seed CSV |
+| **IC elimination** | Intercompany balances paired by partner entity; differences booked to the group's intercompany-difference account where one is set, unmatched rows listed ([Intercompany Guide](user-guide/intercompany-guide.md)) |
+| **Top-side adjustments** | Consolidation Adjustments in konsol: an analyst drafts, the close lead approves, and approval is the posting |
 | **Consolidated TB** | 4-layer union: entity + IC eliminations + CTA + topside |
 
 See the [Consolidation Guide](user-guide/consolidation-guide.md) for details.
+
+## Month-End Close
+
+- **One close workspace** — konsol-exec shows the fiscal calendar, each month as eight ordered stages, and a work queue shaped by your job title and entities. See the [Month-End Close Guide](user-guide/month-close-guide.md)
+- **Closed-period controls** — once a period is closed, approvals, submissions and cancellations into it are refused, and the workspace says why on the row
+- **Bulk trial balance upload** — one CSV or Excel file for many entities and periods, checked before anything loads, resumable without duplicates. See the [Trial Balance Upload Guide](user-guide/trial-balance-upload-guide.md)
+
+## Management Reporting Hierarchies
+
+Management trees over one dimension (for example business unit → DACH → Europe), built and published in konsol and read at any node from Excel. See the [Reporting Hierarchies Guide](user-guide/reporting-hierarchies-guide.md).
 
 ## Driver-Based Cost Allocations
 
@@ -44,13 +55,13 @@ Multi-step cascading allocation engine with three built-in allocation types:
 2. **Step 2** — Facility costs allocated by square meters (includes Step 1 cascade)
 3. **Step 3** — Management fees allocated by revenue (includes Step 1+2 cascade)
 
-Allocation rules, drivers, and cost center mappings are all defined in CSV seeds — no code changes needed.
+Allocation rules, drivers and tiers are set up in konsol (Allocation Rule, Allocation Driver, Allocation Tier) and run as Allocation Runs, with no code changes.
 
 See the [Allocation Guide](user-guide/allocation-guide.md) for configuration.
 
 ## Budgeting & Variance Analysis
 
-- **Annual input** — Budget line items defined in CSV, one row per entity/account/year
+- **Annual input** — Budget Annual Input in konsol, one row per scenario, entity, fiscal year and account (with optional cost centre and department). Monthly cells can also be saved from Excel with `K.EPMSAVE`, onto that cycle's Budget Sheets
 - **Spread profiles** — `EVEN` (equal monthly), `SEASONAL_RETAIL` (weighted), or custom profiles
 - **12-period spreading** — Automatic monthly breakdown from annual totals
 - **5 variance measures** — actual, budget, variance_abs, variance_pct, variance_favorable
@@ -118,7 +129,7 @@ Add a new dimension by adding an entry — macros handle the rest. See [Adding D
 |-----------|---------|-------------|
 | **ClickHouse** | Columnar analytical warehouse | 8123 (HTTP), 9000 (native) |
 | **Airbyte** | D365 OData extraction (via abctl) | 8000 |
-| **dbt Core** | SQL transformations (44 models, 26 tests) | CLI |
+| **dbt Core** | SQL transformations (103 models, 110 singular tests plus generic tests) | CLI |
 | **Frappe (Konsol)** | API layer, auth, pipeline control, settings | 8069 |
 | **Excel add-in** | `=K.EPM()` formulas for financial reporting | — |
 | **Excel Task Pane** | Pipeline orchestration (Office.js) | — |

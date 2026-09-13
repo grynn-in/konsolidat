@@ -1,16 +1,16 @@
 # Data Dictionary Overview
 
-Konsolidat uses a **medallion architecture** with 44 dbt models organized in four layers, plus 11 seed tables for reference data.
+Konsolidat uses a **medallion architecture** with 103 dbt models organized in five layers. There are no seeds: reference data comes from konsol doctypes (see [Configuration Data](seeds-reference.md)).
 
 ## Model Counts
 
 | Layer | Schema | Models | Materialization |
 |-------|--------|--------|----------------|
-| Staging | `epm_staging` | ~14 | Views |
-| Bronze | `epm_bronze` | 14 | Tables |
-| Silver | `epm_silver` | 8 | Tables |
-| Gold | `epm_gold` | 22 | Tables |
-| Seeds | `epm_gold` | 11 | Tables |
+| Staging | `epm_staging` | 30 (7 canonical, 16 D365 F&O, 7 ERPNext) | Views |
+| Bronze | `epm_bronze` | 16 | Tables |
+| Silver | `epm_silver` | 9 | Tables |
+| Allocated | `epm_allocated` | 2 | Tables |
+| Gold | `epm_gold` | 46 | Tables |
 
 ## Data Lineage
 
@@ -59,7 +59,7 @@ graph TD
 | **Consolidation** | Trial Balance + FX Rates → Consolidated TB → IC Elimination → FX Reval → Fully Consolidated TB |
 | **Budgeting** | Budget Entries → silver_budget_entries → gold_spread_budget |
 | **Variance** | Trial Balance + Spread Budget → gold_variance_analysis |
-| **Allocations** | Trial Balance + Allocation Rules (seed) → gold_allocation_results |
+| **Allocations** | Trial Balance + Allocation Rules and Drivers (konsol) → gold_allocation_results |
 
 ## Layer Descriptions
 
@@ -72,8 +72,8 @@ Cleaned, deduplicated, and joined data. Key transformations: GL entries joined w
 ### Gold
 Business-ready models consumed by the API and Excel reports. Includes trial balance, P&L, balance sheet, consolidation, allocation, budgeting, and variance analysis. See [Gold Models](gold-models.md).
 
-### Seeds
-CSV-managed reference data: allocation rules, consolidation groups, budget inputs, spread profiles, IC elimination rules, and scenario definitions. See [Seeds Reference](seeds-reference.md).
+### Configuration Data
+Reference data (consolidation groups and ownership, exchange rates, intercompany accounts, adjustments, allocation rules and drivers, budget inputs, spread profiles, scenarios) is entered in konsol doctypes and written through to `epm_staging` and `epm_gold` tables that dbt reads as sources. The CSV seeds that used to hold it were deleted. See [Configuration Data](seeds-reference.md).
 
 ## ClickHouse Staging Tables
 

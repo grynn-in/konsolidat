@@ -10,7 +10,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 - Frappe owns **application concerns** (users, config, workflows, write-back, audit)
 - ClickHouse owns **analytical concerns** (GL data, consolidation, reporting)
 - ClickHouse is never exposed to the internet — all access goes through Frappe or Cube
-- Excel users get `=EPM.VALUE(...)` custom functions that work in Online, Desktop, and iPad
+- Excel users get the `K.` worksheet functions (`=K.EPM(...)` and the rest) from the konsol Office add-in, in desktop Excel and Excel on the web
 
 ---
 
@@ -66,7 +66,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 |---|---|
 | **Identity provider** | Microsoft Entra ID (Azure AD) — same tenant as D365 F&O |
 | **SSO** | Users authenticate via Entra; Frappe validates JWT tokens |
-| **Excel Add-in auth** | MSAL.js in the add-in acquires token from Entra, passes as Bearer header |
+| **Excel Add-in auth** | Frappe session: the user signs in on the add-in's task pane, and the worksheet functions use that session. (Entra ID sign-in through MSAL.js was the design; it is not built.) |
 | **Frappe native auth** | Token-based or OAuth2 for API access; session-based for Desk UI |
 | **2FA** | Frappe built-in — configurable per role |
 
@@ -74,8 +74,8 @@ This document describes the security architecture for exposing Konsol to Excel O
 
 | Role | Desk UI | Excel Read | Excel Write | Config Edit |
 |---|---|---|---|---|
-| **Reader** | View reports, dashboards | `=EPM.VALUE(...)` queries | No | No |
-| **Planner** | View + submit budgets | Full read | `=EPM.SUBMIT(...)` budget write-back | No |
+| **Reader** | View reports, dashboards | `=K.EPM(...)` queries | No | No |
+| **Planner** | View + submit budgets | Full read | `=K.EPMSAVE(...)` budget write-back | No |
 | **Controller** | Full access | Full read | Full write | Edit consolidation groups, IC rules, allocations |
 | **Admin** | Full access | Full read | Full write | All config + user management |
 
@@ -154,9 +154,12 @@ AD v2.0 **client-credentials** OAuth:
 
 ## Excel Online Integration: EPM.VALUE() Custom Function
 
+!!! note "As built"
+    This section is the original design. The shipped konsol add-in registers `K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF` and `K.EPMSAVE`, batches calls to `konsol.api.epm_batch`, and signs in with a Frappe session from its task pane. The earlier VBA module is retired. See the [Excel Formulas Guide](user-guide/excel-formulas-guide.md).
+
 ### The HSGETVALUE Equivalent
 
-Konsol provides an Excel Custom Functions Add-in that registers cell formulas working in Excel Online, Desktop, and iPad:
+The design called for an Excel Custom Functions Add-in that registers cell formulas working in Excel Online, Desktop, and iPad:
 
 | Formula | Purpose | API Endpoint |
 |---|---|---|
@@ -205,31 +208,37 @@ Konsol provides an Excel Custom Functions Add-in that registers cell formulas wo
 
 ## Frappe DocTypes (Replace CSV Seeds)
 
-Configuration that was previously managed as CSV seed files in dbt is now managed as Frappe DocTypes — web-editable, versioned, audited, and role-protected.
+Configuration that was previously managed as CSV seed files in dbt is now managed as Frappe DocTypes — web-editable, versioned, audited, and role-protected. The seeds are gone: `dbt_project/seeds/` was deleted (konsolidat #147). See [Configuration Data](data-dictionary/seeds-reference.md) for every former seed and its doctype.
 
 | DocType | Replaces | Key Fields | Workflow |
 |---|---|---|---|
-| **Budget Entry** | `epm_staging.budget_input` | entity, year, period, account, cost_center, amount, scenario, submitted_by | Draft → Submitted → Approved |
-| **Scenario** | `scenario_definitions.csv` | scenario_id, name, type (budget/forecast/whatif), base_scenario, status | No |
-| **Consolidation Group** | `consolidation_groups.csv` | group_name, entity, ownership_pct, reporting_currency | No |
-| **IC Elimination Rule** | `ic_elimination_rules.csv` | debit_account, credit_account, description | No |
+| **Budget Cycle**, **Budget Sheet**, **Budget Line** | The design's Budget Entry | scenario, fiscal year, entity, layer, account, dimensions, monthly amounts | Budget Cycle lock (see the [Budget Layers Guide](user-guide/budget-layers.md)) |
+| **Scenario** | `scenario_definitions.csv` | scenario_id, scenario_name, scenario_type, is_active | No |
+| **Consolidation Group** (tree) | `consolidation_groups.csv` | parent group, entity, reporting_currency, IC difference account | No |
+| **Ownership Period** | `consolidation_groups.csv` (ownership %) | group, entity, effective and end date, ownership_pct, consolidation_method | Submit |
+| **Intercompany Account** | `ic_elimination_rules.csv` | main_account, counterpart_account, status | No |
+| **IC Elimination Rule** | Unrealised profit only | rule_type, margin_pct, asset_account | No |
+| **Consolidation Adjustment** | `consolidation_adjustments.csv` | journal_id, entity, period, account, debit, credit | Draft → Pending Approval → Approved → Reversed |
 | **Allocation Rule** | `allocation_rules.csv` | step_order, source_account, target_account, driver_type, source_cost_center | No |
-| **Allocation Driver** | `allocation_drivers_*.csv` | cost_center, fiscal_period, driver_value, driver_type | No |
+| **Allocation Driver** | `allocation_drivers_*.csv` | driver_type, cost_center, fiscal_period, driver_value | No |
 
 ### Config Sync Flow
 
 ```
-Controller edits Consolidation Group in Frappe Desk
+Controller edits the Consolidation Group tree or an Ownership Period in konsol
   → Frappe saves to MariaDB (audited)
-  → Frappe server script writes to ClickHouse epm_staging.consolidation_groups
-  → Dagster detects change → triggers dbt build
-  → Gold layer regenerated with new ownership %
+  → konsol writes the change through to ClickHouse
+    (epm_gold.consolidation_groups, epm_staging.consolidation_hierarchy,
+     epm_staging.ownership_periods)
+  → a dbt build run from konsol's pipeline rebuilds the gold layer
   → Excel users see updated consolidated numbers on next refresh
 ```
 
 ---
 
 ## Budget Approval Workflow (Frappe Built-in)
+
+This is the original design. As built, budgets are entered through Budget Cycle, Budget Sheet and Budget Line, and from Excel with `K.EPMSAVE()`; see the [Budget Layers Guide](user-guide/budget-layers.md).
 
 ```
 Planner submits budget in Excel
@@ -279,7 +288,7 @@ For mid-market EPM workloads (a few GB of GL data, monthly refresh cycles), the 
 
 | Gap | Effort | Owner |
 |---|---|---|
-| Cash flow statement | ~2–3 days dbt work | Data engineer |
+| Cash flow statement | Shipped (`gold_cash_flow_indirect`, `gold_consolidated_cash_flow`) | — |
 | Multi-GAAP / dual reporting | ~1 week dbt work | Data engineer |
 | Rolling forecasts | ~2–3 days dbt work | Data engineer |
 
@@ -297,5 +306,5 @@ For mid-market EPM workloads (a few GB of GL data, monthly refresh cycles), the 
 | CORS configuration | 2 hours | Frappe `site_config.json` |
 | Excel Custom Functions Add-in | 2–3 days | TypeScript, MSAL.js, Office.js scaffold |
 | Add-in deployment (org-wide) | Half day | Upload to Microsoft 365 admin center |
-| Migrate CSV seeds → DocTypes | 1 day | One-time data migration |
+| Migrate CSV seeds → DocTypes | Done | Seeds deleted (konsolidat #144, #145, #147) |
 | **Total** | **~10–12 days** | |

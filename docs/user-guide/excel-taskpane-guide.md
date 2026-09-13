@@ -1,6 +1,6 @@
 # Excel Task Pane Guide
 
-The konsol Excel add-in adds the `K.` worksheet functions (see the [Excel Formulas Guide](excel-formulas-guide.md)) and a Konsolidat task pane for pipeline orchestration directly from Excel — sign in, monitor sync status, and trigger data refreshes without leaving your workbook.
+The konsol Excel add-in is the only Excel client (the earlier VBA module has been retired). It adds the `K.` worksheet functions (see the [Excel Formulas Guide](excel-formulas-guide.md)) and a Konsolidat task pane for pipeline orchestration directly from Excel — sign in, monitor sync status, and trigger data refreshes without leaving your workbook.
 
 ## Overview
 

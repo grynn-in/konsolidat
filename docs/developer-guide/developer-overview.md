@@ -13,7 +13,6 @@ konsolidat/
 │   │   ├── silver/           # Tables — deduplicated, standardized
 │   │   └── gold/             # Tables — business logic
 │   ├── macros/               # Reusable Jinja-SQL
-│   ├── seeds/                # CSV reference data
 │   ├── tests/                # Data quality assertions
 │   └── dbt_project.yml       # Project config and vars
 ├── excel/
@@ -145,9 +144,9 @@ Always use adapter macros for type casting:
 toString(column)
 ```
 
-### Seed-Driven Configuration
+### Doctype-Driven Configuration
 
-Reference data (allocation rules, consolidation groups, etc.) lives in CSV seeds, not in SQL. This makes it editable by non-developers and version-controlled in Git.
+Reference data (allocation rules, consolidation groups, exchange rates, etc.) lives in konsol doctypes, not in SQL or CSV seeds. konsol writes it through to ClickHouse tables (mostly `epm_staging`), which dbt declares as sources in `models/staging/_staging__sources.yml`. Finance users edit it in konsol with permissions, audit trail and approvals. There are no dbt seeds; see [Configuration Data](../data-dictionary/seeds-reference.md).
 
 ## Next Steps
 

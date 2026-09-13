@@ -1,5 +1,9 @@
 # Decision: Consolidation membership divergence (konsolidat #130)
 
+!!! note "Status: superseded"
+    The `consolidation_groups` seed this page discusses no longer exists. konsol now writes the group tree from the Consolidation Group doctype, with ownership from Ownership Periods (`epm_staging.consolidation_ancestry`, read by `gold_entity_ownership`), so the two sources can no longer diverge. The options below are kept as history.
+
+
 **Issue:** grynn-in/konsolidat#130 · **Status:** needs owner sign-off (changes reported numbers)
 
 ## Context

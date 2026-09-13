@@ -1,6 +1,6 @@
 # Konsolidat — Roadmap
 
-*Last updated: 2026-06-13*
+*Last updated: 2026-09-13*
 
 See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
@@ -8,8 +8,15 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
 | Area | Status |
 |---|---|
-| Data pipeline (Bronze → Silver → Gold) | **Done** — 77 dbt models, 144 tests |
+| Data pipeline (Bronze → Silver → Gold) | **Done** — 103 dbt models, 110 singular tests (plus generic tests) |
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
+| Governed group exchange rates | **Done** — Group Exchange Rate in konsol, the only rates translation reads (konsolidat #93) |
+| Intercompany elimination by partner | **Done** — Intercompany Account pairs + partner entity on trial balance rows; differences booked |
+| Reporting hierarchies | **Done** — strict resolution: a formula names its hierarchy, an ambiguous node is an error |
+| Month-end close home (konsol-exec) | **Done** — role home with fiscal navigator and close stages |
+| Bulk trial balance upload | **Done** — many entities and periods in one file, at `/konsol-exec/uploads` |
+| Reference data in konsol (dbt seeds retired) | **Done** — every seed replaced by a konsol doctype; no demo data |
+| VBA Excel client | **Retired** — the Office add-in is the only Excel client |
 | Hierarchy, equity method, acquisition/disposal | **Done** |
 | Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
 | Budget write-back (Excel → CH) | **Done** — K.EPMSAVE() from Excel + Frappe API |
@@ -27,7 +34,7 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Dynamic schema (dimensions, measures, facts) | **In progress** — Dimension + Measure registries done, API + Fact registry remaining |
 | Security / Entra ID SSO | **Not started** |
 | Excel Online Add-in (Office.js) | **Done** — Task pane add-in, pipeline orchestration, Frappe session auth |
-| Cash flow statement | **Not started** |
+| Cash flow statement | **Done** — indirect method, entity and group (`gold_cash_flow_indirect`, `gold_consolidated_cash_flow`) |
 | Multi-GAAP | **Not started** |
 | Rolling forecasts | **Not started** |
 | Consolidation enhancements (goodwill CTA, NCI in combos, disposal recycling) | **Not started** |
@@ -37,12 +44,26 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
 ---
 
+## Shipped in September 2026
+
+- [x] **Governed group exchange rates** — rates are entered or pre-filled from the ERP, approved by the Close Lead, and are the only rates translation reads. See the [Exchange Rates Guide](../user-guide/exchange-rates-guide.md)
+- [x] **Presentation currency on the Consolidation Group node** — the EPM Settings consolidation currency field is removed
+- [x] **Intercompany elimination by partner** — Intercompany Account pairs, partner entity on trial balance rows, reconciliation, booked differences, unmatched list. See the [Intercompany Guide](../user-guide/intercompany-guide.md)
+- [x] **Reporting hierarchy strict resolution** — a formula must name its hierarchy. See the [Reporting Hierarchies Guide](../user-guide/reporting-hierarchies-guide.md)
+- [x] **Month-end close home** in konsol-exec. See the [Month-End Close Guide](../user-guide/month-close-guide.md)
+- [x] **Bulk trial balance upload**. See the [Trial Balance Upload Guide](../user-guide/trial-balance-upload-guide.md)
+- [x] **Top-side adjustment approval** — Consolidation Adjustment workflow: EPM Analyst drafts, EPM Admin approves
+- [x] **dbt seeds retired** — reference data lives in konsol doctypes; no demo data ships. See [Configuration Data](../data-dictionary/seeds-reference.md)
+- [x] **VBA Excel client retired** — the Office add-in is the only Excel client
+
+---
+
 ## Phase 1: One-Click Deploy ~~(~3 days)~~ DONE
 
 Full docker-compose stack + single deploy script. Completed in PRs #7 and #9.
 
 - [x] 9 Docker services: Frappe backend/worker/scheduler, MariaDB, Redis (cache + queue), ClickHouse, Cube.js, Caddy
-- [x] 2 one-shot init containers: configurator (site setup), dbt_init (seed + build)
+- [x] 2 one-shot init containers: configurator (site setup), dbt_init (build; it no longer seeds)
 - [x] `deploy.sh` — generates secrets, clones konsol, runs compose up, health checks
 - [x] Caddy reverse proxy with auto-SSL
 - [x] Static assets via gunicorn SharedDataMiddleware (PR #9)
@@ -99,7 +120,7 @@ PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
   - **Accounts Receivable** — aging for working capital analysis
 - [ ] Each Fact Table defines: required dimensions, required measures, ClickHouse table name, dbt model name
 - [ ] On save: generates ClickHouse staging table DDL + dbt source definition
-- [ ] Statistical facts replace the current `allocation_drivers` seed with a proper queryable fact table
+- [ ] Statistical facts replace the current Allocation Driver table (`epm_staging.allocation_drivers`) with a proper queryable fact table
 
 ### 2.4 API Generalisation (1 day)
 
@@ -264,15 +285,15 @@ Worksheet functions (`=K.EPM()` and the rest) were later added to the same add-i
 
 ## Phase 6: Analytical Gaps (~2 weeks)
 
-### 6.1 Cash Flow Statement (2–3 days)
+### 6.1 Cash Flow Statement ~~(2–3 days)~~ DONE
 
 PRD: [Cash Flow Statement (Indirect Method)](../prd/PRD-CASH-FLOW-STATEMENT.md)
 
-- [ ] `gold_cash_flow_indirect.sql` — derive from balance sheet delta method
-- [ ] Categories: Operating, Investing, Financing
-- [ ] Account mapping seed: `cash_flow_categories.csv`
-- [ ] Consolidated cash flow (after FX translation)
-- [ ] Tests: operating + investing + financing = net change in cash
+- [x] `gold_cash_flow_indirect.sql` — derive from balance sheet delta method
+- [x] Categories: Operating, Investing, Financing
+- [x] Account mapping: **Cash Flow Category** doctype in konsol (the `cash_flow_categories.csv` seed was retired)
+- [x] Consolidated cash flow (after FX translation)
+- [x] Tests: operating + investing + financing = net change in cash
 
 ### 6.2 Multi-GAAP / Dual Reporting (1 week)
 
@@ -313,7 +334,7 @@ PRD: [Multi-Step Budget Approval Chain](../prd/PRD-BUDGET-APPROVAL-CHAIN.md)
 
 PRD: [Consolidation Enhancements](../prd/PRD-CONSOLIDATION-ENHANCEMENTS.md)
 
-- [ ] Historical (temporal) rate for equity line items — IAS 21 equity translation at acquisition-date rates
+- [x] Historical (temporal) rate for equity line items — IAS 21 equity translation at acquisition-date rates (Historical Equity Rate doctype)
 - [ ] Remeasurement vs translation distinction (separate functional currency handling)
 - [ ] Goodwill CTA — CTA on goodwill arising from acquisition accounting
 - [ ] Recycling CTA to P&L on disposal of a foreign operation
@@ -334,7 +355,7 @@ PRD: [Planning Enhancements (Driver-Based & Recurring)](../prd/PRD-PLANNING-ENHA
 - [ ] Driver-based planning — revenue × price × volume decomposition
 - [ ] Phasing templates at account-group level (apply seasonal patterns by account type)
 - [ ] Recurring journal templates — auto-generate topside journals on schedule
-- [ ] Topside journal approval workflow (separate from budget approval)
+- [x] Topside journal approval workflow (separate from budget approval) — Consolidation Adjustment: EPM Analyst drafts, EPM Admin approves
 
 ### 6.9 Reporting Enhancements (3–5 days)
 

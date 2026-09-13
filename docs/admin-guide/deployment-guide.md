@@ -274,6 +274,35 @@ checkout, staged in `docker/frappe/konsol` and baked into the image, and
 5. recreates the application services with `docker compose up -d`;
 6. runs the dbt build (`docker compose --profile setup run --rm dbt_init`).
 
+### Governed exchange rates on upgrade
+
+Consolidation translates only with the group's approved exchange rates, which konsol publishes to `epm_staging.group_exchange_rates` (see the [Exchange Rates Guide](../user-guide/exchange-rates-guide.md)). Two places in `deploy.sh` depend on them. The step numbers are the ones `deploy.sh` prints.
+
+**Step 3/5, the configurator's `bench migrate`**, runs konsol's one-time rate adoption on a site upgrading from a version without Group Exchange Rate. It records the rate each already-translated period used as an approved Group Exchange Rate, so the first build gives the same figures. It stops the migrate, and so the deploy, when:
+
+- a currency it would adopt has no **USD Reference (log10)**. The log says, for each one, `Create or edit ISO Currency X, set USD Reference (log10).`;
+- ClickHouse cannot be read. The configurator waits up to 120 seconds for ClickHouse before it migrates.
+
+`deploy.sh` runs under `set -e`, so a failed migrate stops it at step 3/5, before step 4/5 recreates the application services. The backend still running is the **old** release, and its Desk may not show the USD Reference (log10) field. If the field is there, set each named currency's value in **ISO Currency**. If it isn't, set the value from the checkout directory against the running backend, one command per currency (`XYZ` and `3.54` are placeholders; the value is roughly the log10 of the currency's units per 1 USD):
+
+```bash
+docker compose exec frappe_backend \
+  bench --site <site> execute frappe.db.set_value --args '["ISO Currency", "XYZ", "usd_log10", 3.54]'
+```
+
+`frappe.db.set_value` writes the `usd_log10` column directly and commits, and it fails loudly if the column doesn't exist. `frappe.client.set_value` would go through the old release's view of the form and could silently skip a field it doesn't know. Then re-run `./deploy.sh`. The [Operations Runbook](operations-runbook.md#exchange-rate-problems) has the other fixes.
+
+**Before Step 5/5**, `deploy.sh` checks the governed rates with the same dbt macros the consolidation build uses (`dbt show --inline "{{ fx_precheck() }}"` through the `dbt_init` service):
+
+| What the check finds | What deploy.sh does |
+|----------------------|---------------------|
+| `epm_staging.group_exchange_rates` does not exist (the konsol migration that creates it has not run) | **Aborts** (exit 1). A fresh stack gets the table from `init-db.sql`, so this only happens on an old volume |
+| No trial balance or ownership built yet | Continues; nothing to check |
+| Translated keys without a usable rate (missing, duplicate, invalid, or more than 10× from the USD references) | **Warns**, lists the keys (up to 200), and continues |
+| The check itself fails | Warns with dbt's error and continues |
+
+It only warns about missing keys because the check reads the last build, and a fix made in konsol (a currency or ownership change) arrives only with this build. When keys are missing, Step 5/5 then fails: every model not downstream of `gold_consolidated_trial_balance` refreshes, the consolidated trial balance and the models that read it keep their last figures (the build refuses before it deletes anything), and the deploy exits 1 with "dbt build FAILED". Approve the listed rates in konsol (**Group Exchange Rate**) and run the build again.
+
 !!! warning "Upgrading to the shared Frappe image (#152)"
     The first upgrade to a version with the shared `<project>-frappe:latest`
     image must be a full `./deploy.sh` run, **before the next scheduled

@@ -36,7 +36,7 @@ This starts a single ClickHouse container with:
 - HTTP API on port **8123**
 - Native protocol on port **9000**
 - PostgreSQL wire protocol on port **15432**
-- Init SQL creates databases: `epm_bronze`, `epm_staging`, `epm_silver`, `epm_gold`
+- Init SQL creates databases: `epm`, `epm_raw`, `epm_bronze`, `epm_staging`, `epm_silver`, `epm_allocated`, `epm_gold`
 
 Verify:
 
@@ -126,25 +126,12 @@ Build:
 
 ```bash
 dbt deps       # Install dbt packages
-dbt seed       # Load 11 CSV seeds into epm_gold schema
-dbt build      # Build all models + run 26 tests
+dbt build      # Build all models + run tests
 ```
 
-### Seed Files (11)
+### Reference Data
 
-| Seed | Purpose |
-|------|---------|
-| `allocation_rules.csv` | 3 multi-step allocation rules |
-| `allocation_drivers_headcount.csv` | Headcount driver values |
-| `allocation_drivers_sqm.csv` | Square meter driver values |
-| `allocation_drivers_revenue.csv` | Revenue driver values |
-| `budget_annual_input.csv` | Annual budget line items |
-| `spread_profiles.csv` | Monthly spread weights (EVEN, SEASONAL_RETAIL) |
-| `consolidation_groups.csv` | Entity → group mapping with ownership % |
-| `consolidation_adjustments.csv` | Top-side journal entries |
-| `ic_elimination_rules.csv` | Intercompany elimination rules |
-| `scenario_definitions.csv` | Scenario metadata (actuals, budget, forecast) |
-| `entity_fiscal_calendars.csv` | Entity → fiscal calendar mapping |
+There is no `dbt seed` step: the project has no seeds. Reference and configuration data (consolidation groups, ownership, exchange rates, intercompany accounts, adjustments, allocation rules, budgets, scenarios, fiscal calendars) is entered in konsol doctypes, which write it through to ClickHouse tables that dbt reads. See [Configuration Data](../data-dictionary/seeds-reference.md) for the full list.
 
 ## 5. Set Up Frappe / Konsol
 
@@ -205,7 +192,7 @@ The task pane connects to the server named in the manifest and also lets you vie
 ## Verification Checklist
 
 - [ ] `docker ps` shows `konsolidat_clickhouse` healthy
-- [ ] `curl http://localhost:8123/?query=SHOW+DATABASES` returns 4 databases
+- [ ] `curl http://localhost:8123/?query=SHOW+DATABASES` lists the `epm_*` databases
 - [ ] `dbt build` completes with 0 errors
 - [ ] Frappe Desk accessible at `http://localhost:8069`
 - [ ] EPM Settings saved with ClickHouse connection

@@ -17,10 +17,10 @@ This document compares Konsolidat against the three leading commercial Corporate
 | Multi-entity consolidation | Native | Native | Add-on | **Yes** (dbt gold layer) |
 | FX translation (closing/avg rate) | Native | Native | Manual | **Yes** (IFRS/GAAP compliant) |
 | CTA (equity plug) | Native | Native | Manual | **Yes** (tested) |
-| IC elimination | Native | Native | Manual | **Yes** (3 rules, nets to zero) |
+| IC elimination | Native | Native | Manual | **Yes** (by partner entity, differences booked, nets to zero) |
 | Minority interest / NCI | Native | Native | Manual | **Yes** (ownership %, NCI columns) |
-| Top-side adjustments | Native | Native | Yes | **Yes** (CSV-driven) |
-| Multi-step allocations | Native | Native | Best-in-class | **Yes** (3-step cascade, driver-based) |
+| Top-side adjustments | Native | Native | Yes | **Yes** (Consolidation Adjustment, with approval) |
+| Multi-step allocations | Native | Native | Best-in-class | **Yes** (N-step cascade, driver-based) |
 | Budget write-back | Native | Native | Native | **Yes** (EPMSAVE from Excel) |
 | Scenario management | Native | Native | Best-in-class | **Yes** (budget/forecast/what-if via API) |
 | Variance analysis | Native | Native | Native | **Yes** (favorable logic, actual vs budget) |
@@ -32,7 +32,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 | Audit trail | Certified (SOX) | Certified (SOX) | Certified (SOX) | **Column-level** (sufficient for private companies) |
 | User-facing web UI | Full | Full | Full | **Admin only** (Frappe Desk) |
 | D365 F&O integration | Connector | Connector | Via API | **Native** (Airbyte OData) |
-| Data quality tests | Internal | Internal | Internal | **26 dbt tests** |
+| Data quality tests | Internal | Internal | Internal | **110 singular dbt tests** (plus generic tests) |
 
 ---
 
@@ -62,17 +62,19 @@ This document compares Konsolidat against the three leading commercial Corporate
 
 | Layer | Models | Description |
 |---|---|---|
-| Bronze | 14 | Raw D365 OData extracts (GL, TB, budget, FX rates, dimensions, legal entities) |
-| Silver | 8 | Standardized GL entries, trial balance, exchange rates, fiscal periods, accounts |
-| Gold | 22 | Consolidated TB, IC elimination, CTA, allocations, variance, scenarios, P&L, BS, YTD, quarterly, prior year |
+| Staging | 30 | Per-ERP adapters (D365 F&O, ERPNext) into a canonical schema |
+| Bronze | 16 | Raw ERP extracts and trial balance submissions (GL, TB, budget, FX rates, dimensions, legal entities) |
+| Silver | 9 | Standardized GL entries, trial balance, exchange rates, fiscal periods, accounts |
+| Allocated | 2 | Allocation results |
+| Gold | 46 | Consolidated TB, IC elimination, CTA, cash flow, allocations, variance, scenarios, P&L, BS, YTD, quarterly, prior year |
 
 ### Consolidation Engine (Gold Layer)
 
-- **`gold_consolidated_trial_balance`** — Multi-entity with closing rate (BS) and average rate (P&L)
-- **`gold_ic_eliminations`** — Debit/credit matching across entities, conservative min-balance netting
-- **`gold_fx_revaluation`** — CTA equity plug: `PnL × (closing - average) × ownership%`
+- **`gold_consolidated_trial_balance`** — Multi-entity with the group's governed closing rate (BS) and average rate (P&L)
+- **`gold_ic_eliminations`** — Pairs each entity's intercompany balance with its partner's, eliminates the match, books differences
+- **`gold_fx_revaluation`** — CTA equity plug: `−Σ group_amount` per entity and period, so the translated TB balances
 - **`gold_fully_consolidated_tb`** — 4-layer union: entity balances + IC eliminations + CTA + topside
-- **`gold_allocation_results`** — 3-step cascading allocations (IT/headcount → Facility/sqm → Mgmt/revenue)
+- **`gold_allocation_results`** — N-step cascading allocations (e.g. IT/headcount → Facility/sqm → Mgmt/revenue)
 - **`gold_variance_analysis`** — Actual vs budget with favorable/unfavorable logic
 - **`gold_spread_budget`** — Annual budgets spread across 12 periods
 - **`gold_ytd_trial_balance`** — Year-to-date running totals
@@ -101,7 +103,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 
 ### Test Coverage
 
-26 dbt validation tests covering:
+110 singular dbt validation tests, including:
 - FX translation correctness (BS uses closing, P&L uses average)
 - IC elimination nets to zero
 - NCI + group = translated amount
@@ -122,16 +124,17 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 | Requirement | Why It's Not a Gap |
 |---|---|
 | **Store-level P&L** | D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Konsolidat extracts these in bronze and flows them through to gold. Just configure the Cube schema to expose them. |
-| **Management reporting hierarchies** (by region, brand, product category) | Same — financial dimensions support arbitrary rollups. Add hierarchy mapping as a dbt seed and join in gold models. |
-| **Multi-currency consolidation** (CHF, EUR, GBP, DKK, USD) | Fully implemented — closing rate for BS, average rate for P&L, CTA equity plug, all tested. |
-| **IC elimination** (intercompany sales between country entities) | Implemented with configurable rules (CSV seed). |
+| **Management reporting hierarchies** (by region, brand, product category) | Same — financial dimensions support arbitrary rollups. Build the tree as a **Reporting Hierarchy** in konsol and read any node from Excel with `K.EPM`. |
+| **Multi-currency consolidation** (CHF, EUR, GBP, DKK, USD) | Fully implemented — governed closing rate for BS, average rate for P&L, CTA equity plug, all tested. |
+| **IC elimination** (intercompany sales between country entities) | Implemented by partner entity: Intercompany Account pairs in konsol, differences booked to the group's difference account. |
 | **Budget vs actual by store/country** | gold_variance_analysis supports all dimensions from the GL. |
 
-### Genuine Gaps (3 items)
+### Genuine Gaps (2 items)
+
+The consolidated indirect cash flow statement, once a gap here, has shipped (`gold_cash_flow_indirect`, `gold_consolidated_cash_flow`).
 
 | Gap | Impact | Why It Matters | Buildable? |
 |---|---|---|---|
-| **Cash flow statement** | High | CFOs need consolidated indirect cash flow. No CF model exists in dbt today. | Yes — derive from GL movements (BS delta method). ~2–3 days of dbt work. |
 | **Multi-GAAP / dual reporting** | Medium | Swiss GAAP FER for local statutory + IFRS for group reporting. Konsolidat runs one consolidation path. | Yes — add a `reporting_standard` dimension to gold models and maintain two sets of adjustment rules. ~1 week. |
 | **Rolling forecasts** | Medium | Retail needs 12-month rolling forecasts updated monthly, not just annual budget vs actual. | Yes — extend scenario management with a rolling window function and period-shift logic. ~2–3 days. |
 
@@ -150,11 +153,9 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 
 | Gap | Impact | Workaround |
 |---|---|---|
-| **No cash flow statement** | High — CFOs need consolidated CF | Buildable: BS delta method in dbt (~2–3 days) |
 | **No multi-GAAP** | Medium — one consolidation path only | Buildable: reporting_standard dimension (~1 week) |
 | **No rolling forecasts** | Medium — annual scenarios only | Buildable: rolling window logic (~2–3 days) |
 | **No web UI for end users** | Medium — Excel-only for finance users | Frappe Desk for admin; K.EPM() for finance users |
-| **Allocation rules in CSV** | Low — works but not click-to-edit | Editable in any text editor or Excel |
 | **No real-time GL sync** | Low — batch is fine for most EPM | Airbyte schedule (hourly possible) |
 
 ---
@@ -167,7 +168,7 @@ In a mid-market company ($100M–$1B revenue, 2–50 entities), Konsolidat is ma
 
 | Role | FTE | Team | Responsibilities |
 |---|---|---|---|
-| **Group Controller** | 1 | Finance | Owns consolidation rules, IC elimination logic, group reporting. Edits CSV seeds (consolidation groups, IC rules, ownership %). Runs Excel reports. |
+| **Group Controller** | 1 | Finance | Owns consolidation rules, IC elimination logic, group reporting. Maintains consolidation groups, ownership, exchange rates and intercompany accounts in konsol. Runs Excel reports. |
 | **FP&A Analyst** | 1–2 | Finance | Budget input via Excel write-back, variance analysis, scenario management. Power user of PivotTables via Cube SQL. |
 | **Data/Analytics Engineer** | 1 | IT or Finance | Maintains dbt models, Airbyte connections, Frappe config, ClickHouse. Owns the `docker compose` stack. The "platform owner." |
 | **IT Ops** | 0.2 | IT | VM/server, backups, monitoring. Minimal — it's Docker containers. |
@@ -188,8 +189,8 @@ Most common in Swiss/DACH mid-market: the Group Controller hires a "Finance Data
 |---|---|---|---|
 | Monthly close (run pipeline, verify consolidation) | Monthly | 2–4 hours | Controller + data engineer |
 | Budget cycle (collect inputs, load scenarios) | Quarterly | 1–2 days | FP&A + data engineer |
-| Add new entity or change ownership % | Rare | 30 min (edit CSV seed) | Controller |
-| Add/change IC elimination rules | Rare | 30 min (edit CSV seed) | Controller |
+| Add new entity or change ownership % | Rare | 30 min (Consolidation Group and Ownership Period in konsol) | Controller |
+| Add/change intercompany account pairs | Rare | 30 min (Intercompany Account in konsol) | Controller |
 | dbt model changes (new report, new dimension) | Quarterly | 1–2 days | Data engineer |
 | Infrastructure (updates, backups, monitoring) | Monthly | 2–3 hours | IT ops / data engineer |
 | Airbyte connector maintenance (D365 API changes) | Rare | Half day | Data engineer |
