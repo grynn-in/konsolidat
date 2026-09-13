@@ -254,8 +254,38 @@ def _discover_sections(entity_list_sql, year, is_pnl=True):
 
 # ── Data fetching ────────────────────────────────────────────
 
+def ownership_window_filter(cfg):
+    """SQL predicate: keep only the entity-periods the group consolidates.
+
+    konsolidat#161: the entity columns read each entity's whole year, while
+    gold_consolidated_trial_balance joins gold_entity_ownership per period and
+    keeps only complete chains that are not equity- or none-accounted. An
+    entity acquired mid-year therefore showed its pre-acquisition periods
+    (and a disposed one its post-disposal periods) in the entity columns,
+    with nothing in the consolidated column to match them.
+
+    This is the same period set, read from the same model, with the same
+    predicates as the consolidated model (has_complete_chain = 1 already
+    implies outside_ownership_window = 0; both are stated for the reader).
+    """
+    return f"""(data_area_id, fiscal_year, fiscal_period) IN (
+            SELECT data_area_id, fiscal_year, fiscal_period
+            FROM epm_gold.gold_entity_ownership
+            WHERE consolidation_group = '{cfg.group}'
+              AND fiscal_year = {cfg.year}
+              AND outside_ownership_window = 0
+              AND has_complete_chain = 1
+              AND consolidation_method NOT IN ('equity', 'none')
+        )"""
+
+
 def fetch_entity_pnl(cfg):
-    """Fetch P&L data: entity × account × quarter from gold_trial_balance."""
+    """Fetch P&L data: entity × account × quarter from gold_trial_balance.
+
+    Only the periods inside each entity's ownership window (see
+    ownership_window_filter), so a quarter the group did not own the entity
+    for is empty, as it is in the consolidated column.
+    """
     entity_ids = ", ".join(f"'{e['data_area_id']}'" for e in cfg.entities)
     rows = ch_query(f"""
         SELECT
@@ -272,6 +302,7 @@ def fetch_entity_pnl(cfg):
         WHERE fiscal_year = {cfg.year}
           AND data_area_id IN ({entity_ids})
           AND is_pnl = 1
+          AND {ownership_window_filter(cfg)}
         GROUP BY data_area_id, main_account, quarter
         FORMAT JSON
     """)
@@ -282,7 +313,13 @@ def fetch_entity_pnl(cfg):
 
 
 def fetch_entity_bs(cfg):
-    """Fetch BS data: entity × account × quarter-end from gold_balance_sheet."""
+    """Fetch BS data: entity × account × quarter-end from gold_balance_sheet.
+
+    A quarter-end balance is shown only when that quarter-end period is inside
+    the entity's ownership window (see ownership_window_filter). The balance
+    itself is still the entity's full cumulative balance at that date: the
+    filter picks which snapshots appear, not which movements make them up.
+    """
     entity_ids = ", ".join(f"'{e['data_area_id']}'" for e in cfg.entities)
     rows = ch_query(f"""
         SELECT
@@ -294,6 +331,7 @@ def fetch_entity_bs(cfg):
         WHERE fiscal_year = {cfg.year}
           AND fiscal_period IN (3, 6, 9, 12)
           AND data_area_id IN ({entity_ids})
+          AND {ownership_window_filter(cfg)}
         GROUP BY data_area_id, main_account, fiscal_period
         FORMAT JSON
     """)
