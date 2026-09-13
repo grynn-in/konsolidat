@@ -1,15 +1,15 @@
 {#
     konsol#182: the group chart of accounts governed in konsol (Main Account,
-    written through to epm_staging.main_accounts on publish).
-    silver_main_accounts reads it first and the ERP's chart second.
+    written through to epm_staging.main_accounts on publish). It is
+    silver_main_accounts' only source.
 #}
 
 {# The governed chart's relation, or none when the table does not exist yet (a
    volume konsol has not upgraded). This is what lets this project deploy
    before konsol creates the table: no table reads as no declarations, and
-   silver is the ERP chart exactly as before. Callers that read the table also
-   carry a `-- depends_on:` on the source, because nothing is resolved at parse
-   time. #}
+   silver is empty with its full set of columns. Callers that read the table
+   also carry a `-- depends_on:` on the source, because nothing is resolved at
+   parse time. #}
 {% macro governed_chart_relation() %}
     {%- if not execute -%}
         {{ return(none) }}
@@ -17,15 +17,6 @@
     {%- set s = source('epm_staging', 'main_accounts') -%}
     {{ return(adapter.get_relation(database=none, schema=s.schema, identifier=s.identifier)) }}
 {% endmacro %}
-
-{# How an ERP account (one the group has not declared) is translated: the
-   historical rate for equity, the closing rate for the balance sheet, the
-   average rate for the P&L. The final 'closing' is today's fallback for an
-   account that is neither (gold_consolidated_trial_balance: `else
-   gr.gov_closing`). #}
-{% macro erp_fx_method(is_equity, is_bs, is_pnl) -%}
-    multiIf({{ is_equity }} = 1, 'historical', {{ is_bs }} = 1, 'closing', {{ is_pnl }} = 1, 'average', 'closing')
-{%- endmacro %}
 
 {# One row per (main_account, problem) that silver cannot use. Published rows
    only; konsol validates on save, so a row here means the table was written
