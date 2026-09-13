@@ -11,9 +11,9 @@
    gold_fully_consolidated_tb is a SIGNED, balanced trial balance: amounts carry
    natural debit/credit signs (revenue negative, expense positive) and the full
    set sums to ~0 per consolidation_group/period across all layers (entity + IC
-   elimination + CTA + topside + equity-method + acquisition/disposal). This is
-   different from gold_bs_movement, which the entity model uses and which stores
-   positive magnitudes — so the entity seed `sign` is NOT reused here.
+   elimination + CTA + topside + equity-method + acquisition/disposal). The
+   natural signs do the work, so the seed `sign` is NOT reused here
+   (models/staging/README.md states the sign convention).
 
    Because the TB is signed and sums to zero, the change in cash equals the
    negative of every non-cash movement:

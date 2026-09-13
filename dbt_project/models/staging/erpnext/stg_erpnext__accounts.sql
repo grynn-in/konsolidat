@@ -15,6 +15,8 @@
     Receivable, …) maps to account_category. account_id is the Account `name`,
     which is exactly what GL Entry.account links to — so gl.main_account joins
     to accounts.account_id within the erpnext source.
+
+    Adapter contract: models/staging/README.md.
 #}
 
 select

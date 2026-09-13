@@ -1,6 +1,7 @@
 {#
     D365 F&O chart of accounts adapter.
     Maps MainAccounts → canonical stg_accounts schema.
+    Adapter contract: models/staging/README.md.
 #}
 
 select

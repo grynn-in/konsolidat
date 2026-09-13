@@ -4,6 +4,7 @@
     Parses DimensionDisplayValue for MainAccount (first segment).
     Links to header via EntryNumber → sequential dense_rank RecId.
     Output matches canonical stg_budget_entries schema.
+    Adapter contract: models/staging/README.md.
 #}
 
 with lines as (

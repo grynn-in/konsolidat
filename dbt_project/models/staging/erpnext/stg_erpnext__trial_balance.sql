@@ -22,6 +22,8 @@
     the already-typed column rather than re-deriving it — naming the output
     column `fiscal_year` would otherwise shadow the source column and feed an
     Int32 back into substring().
+
+    Adapter contract: models/staging/README.md.
 #}
 
 with gl as (

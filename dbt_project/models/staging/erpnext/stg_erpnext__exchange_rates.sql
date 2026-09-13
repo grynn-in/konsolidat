@@ -13,6 +13,8 @@
     ERPNext rates are point-in-time (a single `date`, no validity range), so
     valid_to is set to an open-ended sentinel matching the D365 adapter's
     default. ERPNext has no rate-type concept, so rate_type is empty.
+
+    Adapter contract: models/staging/README.md.
 #}
 
 select

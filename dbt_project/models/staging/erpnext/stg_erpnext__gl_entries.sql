@@ -26,6 +26,12 @@
     Dimension values are emitted raw here; harmonization to canonical values
     happens centrally in the canonical stg_gl_entries model (keyed on the
     per-row erp_source), so every adapter benefits without restating columns.
+
+    Adapter contract (signed amounts, canonical columns, balance tests):
+    models/staging/README.md. test_canonical_gl_journals_balance fails the
+    build, naming the voucher_no, when a voucher does not net to zero.
+    Known gap: amount is not cast, so a Float64 debit/credit feed fails the
+    canonical UNION with D365's Decimal(38, 9) (NO_COMMON_TYPE).
 #}
 
 select

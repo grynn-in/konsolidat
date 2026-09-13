@@ -22,6 +22,11 @@ models:
       - name: posting_date
         tests:
           - not_null
+      # konsolidat#158: test_canonical_gl_journals_balance sums this per
+      # journal. sum() skips a NULL, which would let an unbalanced journal pass.
+      - name: amount
+        tests:
+          - not_null
 
   - name: stg_trial_balance
     description: "Canonical trial balance — UNION ALL from per-ERP adapters"

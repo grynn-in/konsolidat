@@ -17,11 +17,11 @@
 {# Phase 6.1 — Entity-level cash flow statement (indirect method).
 
    Built from the SIGNED trial balance (gold_trial_balance), using the natural
-   double-entry movement `period_debit - period_credit` per account. Unlike
-   gold_bs_movement (which stores positive magnitudes via the period_net_amount
-   measure — see grynn-in/konsolidat#64), the debit/credit split is genuinely
-   signed, so the cash-flow sign falls out of the data instead of a hand-coded
-   seed `sign`.
+   double-entry movement `period_debit - period_credit` per account. That is
+   the same signed number gold_bs_movement carries as period_movement
+   (period_net_amount is debit − credit, no longer the magnitude described in
+   grynn-in/konsolidat#64; see models/staging/README.md), so the cash-flow sign
+   falls out of the data instead of a hand-coded seed `sign`.
 
    Because the full trial balance is balanced double-entry, the signed movement
    over every account nets to zero each period:

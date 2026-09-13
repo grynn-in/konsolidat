@@ -44,9 +44,13 @@ with entity_tb as (
         {# PRD-10: Equity classification for historical rate lookup #}
         case when tb.account_type_name in ('Equity', 'Stockholders equity') then 1 else 0 end as is_equity,
         {{ dim_select(prefix='tb.') }},
-        {# Signed double-entry movement (debit − credit). NOT period_net_amount,
-           which is a positive magnitude (see #64) and would make the local TB
-           fail to sum to zero, so no FX/CTA plug could ever balance it. #}
+        {# Signed double-entry movement (debit − credit), so the local TB sums
+           to zero and the FX/CTA plug can balance it. Amounts arrive signed at
+           the ERP boundary (models/staging/README.md). Silver splits them once
+           into debit_amount / credit_amount by sign, and nothing after that
+           infers a sign again. period_net_amount holds the same number
+           (sum(debit) - sum(credit), per assert_period_net_equals_debit_minus_credit).
+           It is no longer the positive magnitude #64 described. #}
         tb.period_debit - tb.period_credit as local_amount,
         ec.accounting_currency as accounting_currency,
         {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
