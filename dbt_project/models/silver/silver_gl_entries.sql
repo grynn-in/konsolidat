@@ -146,9 +146,18 @@ from (
         b.partner_data_area_id as partner_data_area_id,
         b.submission_name as submission_name,
         b.debit_amount - b.credit_amount as net_amount,
-        coalesce(
-            sfp.period_start_date,
-            {{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }}
+        {# ClickHouse LEFT JOIN fills an unmatched sfp row with the column
+           default under join_use_nulls=0 -- Date's default is toDate(0) =
+           1970-01-01, NOT NULL -- so coalesce() never falls through. A
+           TB-only site has no ERP fiscal calendar loaded at all, so every
+           submission hit this exact miss and landed on 1970-01-01 instead of
+           the first day of its own fiscal year/period. Test the sentinel
+           value itself, the same shape as the fp.fiscal_year != 0 guard
+           above. #}
+        if(
+            sfp.period_start_date = toDate(0),
+            {{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }},
+            sfp.period_start_date
         ) as period_start
     from {{ ref('bronze_trial_balance_submissions') }} as b
     left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
