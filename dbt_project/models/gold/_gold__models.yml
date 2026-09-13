@@ -82,11 +82,15 @@ models:
       - name: elimination_amount
         description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
       - name: elimination_kind
-        description: "matched, difference or unrealized_profit"
+        description: "matched, nci (decision 12: the minority owners' portion, to the NCI line), difference or unrealized_profit"
         tests:
           - accepted_values:
               arguments:
-                values: ['matched', 'difference', 'unrealized_profit']
+                values: ['matched', 'nci', 'difference', 'unrealized_profit']
+      - name: difference_cause
+        description: "On difference rows, the pair's cause (booking or fx, decision 13); '' otherwise"
+      - name: basis
+        description: "balance (balance-sheet pair, eliminations posted as the change to date) or movement (P&L pair), decision 14; '' for unrealized profit"
       - name: debit_entity
         description: "The entity on the debit side of the eliminated pair."
       - name: credit_entity
@@ -374,12 +378,26 @@ models:
         description: "The smaller side when the two sides offset, else 0; eliminated"
       - name: difference
         description: "balance_a + balance_b: booked to ic_difference_account when the group has one"
-      - name: match_status
-        description: "matched, within_tolerance or over_tolerance (against the group's tolerance)"
+      - name: balance_a
+        description: "Side a at 100% (translated_amount), decision 12: pairs match on this, never on group_balance_a"
+      - name: basis
+        description: "balance (balance-sheet pair: to date, from inception) or movement (P&L pair: the period), decision 14"
         tests:
           - accepted_values:
               arguments:
-                values: ['matched', 'within_tolerance', 'over_tolerance']
+                values: ['balance', 'movement']
+      - name: difference_cause
+        description: "none, booking or fx (decision 13; the rule is in the model header)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'booking', 'fx']
+      - name: match_status
+        description: "matched, within_tolerance or over_tolerance (booking differences against the group's tolerance), or fx_difference (never counts)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['matched', 'within_tolerance', 'over_tolerance', 'fx_difference']
 
   - name: gold_trial_balance_by_partner
     description: >

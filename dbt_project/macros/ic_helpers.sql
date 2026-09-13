@@ -30,3 +30,78 @@
     )
     group by account
 {% endmacro %}
+
+{# Decision 12 (13 Sep 2026): the minority owners' portion of an eliminated
+   intragroup balance goes to their line in the consolidated view, this
+   account. A pseudo-account like DISPOSAL; set var ic_nci_account to post it
+   to a chart account instead. #}
+{% macro ic_nci_account() %}{{ var('ic_nci_account', 'NCI') }}{% endmacro %}
+
+{# The partner-keyed slices of gold_consolidated_trial_balance, at 100%
+   (translated_amount, never the ownership-weighted group_amount), for
+   partners that line-consolidate into the group in that period. The same
+   rows gold_ic_reconciliation pairs; the IC tests recompute from it. #}
+{% macro ic_partner_slices() %}
+    select
+        ctb.consolidation_group as consolidation_group,
+        ctb.data_area_id as data_area_id,
+        ctb.partner_data_area_id as partner_data_area_id,
+        ctb.main_account as main_account,
+        ctb.fiscal_year as fiscal_year,
+        ctb.fiscal_period as fiscal_period,
+        ifNull(toFloat64(sum(ctb.translated_amount)), 0) as translated
+    from {{ ref('gold_consolidated_trial_balance') }} as ctb
+    where ctb.partner_data_area_id != ''
+      and ctb.partner_data_area_id != ctb.data_area_id
+      and (ctb.consolidation_group, ctb.partner_data_area_id, ctb.fiscal_year, ctb.fiscal_period) in (
+          select consolidation_group, data_area_id, fiscal_year, fiscal_period
+          from {{ ref('gold_entity_ownership') }}
+          where has_complete_chain = 1 and consolidation_method not in ('equity', 'none')
+      )
+    group by
+        ctb.consolidation_group, ctb.data_area_id, ctb.partner_data_area_id,
+        ctb.main_account, ctb.fiscal_year, ctb.fiscal_period
+{% endmacro %}
+
+{# Each gold_ic_reconciliation row's two sides recomputed from
+   ic_partner_slices() on the row's basis (decision 14): the balance to date
+   for a balance-sheet pair, the period's movement for a P&L pair. #}
+{% macro ic_expected_pair_values() %}
+    select
+        consolidation_group, fiscal_year, fiscal_period, entity_a, account_a, entity_b, account_b,
+        sum(exp_a) as expected_a,
+        sum(exp_b) as expected_b
+    from (
+        select
+            r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
+            r.fiscal_period as fiscal_period, r.entity_a as entity_a, r.account_a as account_a,
+            r.entity_b as entity_b, r.account_b as account_b,
+            s.translated as exp_a, toFloat64(0) as exp_b
+        from {{ ref('gold_ic_reconciliation') }} as r
+        inner join ({{ ic_partner_slices() }}) as s
+            on s.consolidation_group = r.consolidation_group
+            and s.data_area_id = r.entity_a
+            and s.partner_data_area_id = r.entity_b
+            and s.main_account = r.account_a
+        where if(r.basis = 'balance',
+                 tuple(s.fiscal_year, s.fiscal_period) <= tuple(r.fiscal_year, r.fiscal_period),
+                 s.fiscal_year = r.fiscal_year and s.fiscal_period = r.fiscal_period)
+
+        union all
+
+        select
+            r.consolidation_group, r.fiscal_year, r.fiscal_period, r.entity_a, r.account_a,
+            r.entity_b, r.account_b,
+            toFloat64(0), s.translated
+        from {{ ref('gold_ic_reconciliation') }} as r
+        inner join ({{ ic_partner_slices() }}) as s
+            on s.consolidation_group = r.consolidation_group
+            and s.data_area_id = r.entity_b
+            and s.partner_data_area_id = r.entity_a
+            and s.main_account = r.account_b
+        where if(r.basis = 'balance',
+                 tuple(s.fiscal_year, s.fiscal_period) <= tuple(r.fiscal_year, r.fiscal_period),
+                 s.fiscal_year = r.fiscal_year and s.fiscal_period = r.fiscal_period)
+    )
+    group by consolidation_group, fiscal_year, fiscal_period, entity_a, account_a, entity_b, account_b
+{% endmacro %}
