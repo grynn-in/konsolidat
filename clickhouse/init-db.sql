@@ -285,6 +285,17 @@ CREATE TABLE IF NOT EXISTS epm_staging.entities (
     country String, erp_source String
 ) ENGINE = MergeTree ORDER BY data_area_id;
 
+-- konsol#103 / konsolidat#93: the group's governed exchange rates, written
+-- through from konsol's Group Exchange Rate (submitted rows only).
+-- gold_consolidated_trial_balance translates from this table and nothing else;
+-- the ERP rate feed only pre-fills drafts in konsol. konsol's
+-- ensure_reference_tables() creates it on volumes that predate it. Keep
+-- identical to _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_staging.group_exchange_rates (
+    to_currency String, from_currency String, fiscal_year UInt16,
+    fiscal_period UInt8, rate_type String, rate Float64, document String
+) ENGINE = MergeTree ORDER BY (to_currency, from_currency, fiscal_year, fiscal_period, rate_type);
+
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so
 -- seeds/spread_profiles.csv WAS epm_gold.spread_profiles — the same table the
