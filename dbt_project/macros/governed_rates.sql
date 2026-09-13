@@ -31,9 +31,8 @@
     assert_every_translated_currency_has_a_governed_rate (unscoped).
     NOT IN / IN rather than a LEFT JOIN null test (join_use_nulls=0).
 #}
-{% macro governed_rate_gaps(scoped=true) %}
-    {%- set with_refs = fx_reference_column_present() -%}
-    with translated as (
+{# The (from, to, fy, fp) keys the model translates, with its own filters. #}
+{% macro governed_translated_keys(scoped=true) %}
         select distinct
             ec.accounting_currency as from_currency,
             grp.reporting_currency as to_currency,
@@ -60,6 +59,12 @@
           and eo.has_complete_chain = 1
           and ec.accounting_currency != grp.reporting_currency
           {% if scoped %}{{ period_filter('tb.fiscal_year', 'tb.fiscal_period') }} {{ scope_filter('tb.data_area_id') }}{% endif %}
+{% endmacro %}
+
+{% macro governed_rate_gaps(scoped=true) %}
+    {%- set with_refs = fx_reference_column_present() -%}
+    with translated as (
+        {{ governed_translated_keys(scoped) }}
     ),
 
     {% if with_refs %}
@@ -78,7 +83,7 @@
             (not r_invalid
              and g.from_currency in (select currency_code from ref_mag)
              and g.to_currency in (select currency_code from ref_mag)
-             and abs(log10(g.rate) - (t.usd_log10 - f.usd_log10)) > 1) as r_implausible
+             and {{ fx_is_implausible('g.rate', 'f.usd_log10', 't.usd_log10') }}) as r_implausible
             {% else %}
             false as r_implausible
             {% endif %}
@@ -120,8 +125,9 @@
     where problem != ''
 {% endmacro %}
 
-{# Stops the run, listing EVERY unusable key with its reason (a run is refused
-   whole: one missing rate stops a full build, by contract). ClickHouse's
+{# Stops the run, listing the unusable keys with their reasons: the first 50,
+   sorted, then "... and N more" (the coverage test lists all). A run is
+   refused whole: one missing rate stops a full build, by contract. ClickHouse's
    throwIf needs a constant message; a CAST of the message to UInt8 raises
    with the message itself in the error. The inner query always returns one
    row; the outer WHERE keeps it only when there is something to refuse, so
@@ -130,15 +136,55 @@
     select cast(concat(
         'konsolidat#93 refused before anything was deleted: ', toString(n),
         ' translated key(s) without a usable governed rate (konsol Group Exchange Rate): ', keys,
+        if(n > 50, concat(' ... and ', toString(n - 50), ' more (assert_every_translated_currency_has_a_governed_rate lists all)'), ''),
         '. Reasons: missing = no approved Closing and Average rate; duplicate = more than one approved rate of a type;',
         ' invalid = zero, negative or not finite; implausible = more than 10x from the reference magnitudes (check the quoted-per factor).'
     ) as UInt8)
     from (
         select
             count() as n,
-            arrayStringConcat(arraySort(groupArray(
-                concat(from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem))), '; ') as keys
+            arrayStringConcat(arraySlice(arraySort(groupArray(
+                concat(from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem))), 1, 50), '; ') as keys
         from ({{ governed_rate_gaps(scoped=true) }})
     )
     where n > 0
+{% endmacro %}
+
+{#
+    deploy.sh's pre-step-5 check, run through the dbt_init service (inside the
+    compose network) with `dbt show --inline "{{ fx_precheck() }}"`. The same
+    macros as the guard, so it includes every reason (missing, duplicate,
+    invalid, implausible) and cannot drift from it. One row per line, each
+    starting with a marker deploy.sh greps:
+      FX_NOTHING_BUILT        no trial balance or ownership built yet
+      FX_TABLE_MISSING <n>    epm_staging.group_exchange_rates does not exist;
+                              n translated foreign-currency keys need it
+      FX_GAPS_TOTAL <n>       n translated keys have no usable rate, then
+      FX_GAP <key> <reason>   one line per key, sorted
+#}
+{% macro fx_precheck() %}
+-- depends_on: {{ ref('gold_trial_balance') }} {{ ref('silver_entity_currencies') }} {{ ref('gold_entity_ownership') }} {{ source('epm_gold', 'consolidation_groups') }} {{ source('epm_staging', 'group_exchange_rates') }} {{ source('epm_gold', 'currencies') }}
+{%- set ger, tb, eo = none, none, none -%}
+{%- if execute -%}
+    {%- set g = source('epm_staging', 'group_exchange_rates') -%}
+    {%- set ger = adapter.get_relation(database=none, schema=g.schema, identifier=g.identifier) -%}
+    {%- set t = ref('gold_trial_balance') -%}
+    {%- set tb = adapter.get_relation(database=none, schema=t.schema, identifier=t.identifier) -%}
+    {%- set o = ref('gold_entity_ownership') -%}
+    {%- set eo = adapter.get_relation(database=none, schema=o.schema, identifier=o.identifier) -%}
+{%- endif %}
+{% if not execute or tb is none or eo is none %}
+select 0 as o, 'FX_NOTHING_BUILT' as fx_check
+{% elif ger is none %}
+select 0 as o, concat('FX_TABLE_MISSING ', toString(count())) as fx_check from ({{ governed_translated_keys(scoped=false) }})
+{% else %}
+select o, fx_check from (
+    select 0 as o, concat('FX_GAPS_TOTAL ', toString(count())) as fx_check
+    from ({{ governed_rate_gaps(scoped=false) }})
+    union all
+    select 1 as o, concat('FX_GAP ', from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem) as fx_check
+    from ({{ governed_rate_gaps(scoped=false) }})
+)
+order by o, fx_check
+{% endif %}
 {% endmacro %}

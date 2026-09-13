@@ -22,10 +22,20 @@
 > **A missing rate stops the whole run.** Every key a run translates must have an
 > approved Closing and Average rate, so a newly submitted trial balance in a
 > foreign currency blocks full builds until its period's Closing and Average
-> rates into the group currency are approved in konsol. The build's error
-> lists every such key, konsol's home shows the missing rates, and
-> `scripts/sql/fx_governed_rate_gaps.sql` lists them from ClickHouse directly
-> (`deploy.sh` runs it before step 5).
+> rates into the group currency are approved in konsol. Nothing is deleted:
+> the consolidated trial balance keeps its last figures and every other model
+> still refreshes. The build's error lists the keys (the first 50), konsol's
+> home shows the missing rates, `assert_every_translated_currency_has_a_governed_rate`
+> lists all of them, and `dbt compile --select fx_governed_rate_gaps` renders
+> the same query as standalone SQL for `clickhouse-client`.
+>
+> `deploy.sh` runs that check before step 5, through the dbt_init service. It
+> **aborts** only when `epm_staging.group_exchange_rates` does not exist while
+> foreign-currency keys are translated (the konsol migration that adopts the
+> rates has not run). When the table exists but keys have no usable rate, it
+> **warns** with the list and continues: the check reads the last build, and
+> aborting would deadlock a fix made in konsol that only the next build brings
+> in.
 
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:

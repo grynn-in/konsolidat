@@ -325,59 +325,63 @@ for i in $(seq 1 60); do
 done
 
 # ---------------------------------------------------------------------------
-# Before step 5: every translated key needs a governed rate (konsolidat#93)
+# Before step 5: governed group exchange rates (konsolidat#93)
 # ---------------------------------------------------------------------------
 # gold_consolidated_trial_balance translates only from the governed rates in
-# epm_staging.group_exchange_rates, which konsol writes after the migration
-# that adopts them (konsol#174), and refuses a run with any key lacking a
-# usable rate. This runs the same missing-key query first
-# (scripts/sql/fx_governed_rate_gaps.sql: the keys the model translates, with
-# its ownership filters) and stops with the list. Read-only. A fresh volume
-# (no trial balance or ownership yet) passes.
+# epm_staging.group_exchange_rates (konsol#174) and refuses a run with any key
+# lacking a usable rate, before it deletes anything. This runs the SAME macros
+# through the dbt_init service, inside the compose network
+# (`dbt show --inline "{{ fx_precheck() }}"`), so it covers every reason the
+# guard refuses on (missing, duplicate, invalid, implausible) and never drifts.
 #
-# If ClickHouse cannot be queried from here (wrong password, HTTP not published
-# on localhost, server down), this WARNS and continues rather than aborting:
-# dbt runs inside the compose network with its own connection, so a host-side
-# curl failure says nothing about the warehouse, and aborting would block every
-# deploy on a host that doesn't publish the port. It is never silent, and the
-# build cannot mistranslate: the model's pre_hook guard stops it, before it
-# replaces anything, when a rate is missing.
-ch_rows() {
-    curl -sS -f "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/" \
-        -u "${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-open_epm_dev}" \
-        --data-binary "$1" 2>/dev/null
-}
-ch_query() {
-    ch_rows "$1" | tr -d '[:space:]'
-    return "${PIPESTATUS[0]}"
-}
-FX_SQL_DIR="${SCRIPT_DIR}/scripts/sql"
-if ! GER_TABLE="$(ch_query "EXISTS TABLE epm_staging.group_exchange_rates")"; then
-    warn "Could not query ClickHouse at localhost:${CLICKHOUSE_HTTP_PORT:-8123}, so the governed group exchange rates (konsol#174) were NOT checked."
-    warn "Continuing: if rates are missing, the consolidation build stops before it replaces anything. Check by hand: ${FX_SQL_DIR}/fx_governed_rate_gaps.sql"
-elif [ "$(ch_query "SELECT (SELECT count() FROM system.tables WHERE database = 'epm_gold' AND name IN ('gold_trial_balance', 'gold_entity_ownership')) = 2" || true)" != "1" ]; then
-    info "No trial balance or ownership built yet; the governed-rate check has nothing to check."
-elif [ "$GER_TABLE" != "1" ]; then
-    TRANSLATED="$(ch_query "SELECT count() FROM ($(cat "${FX_SQL_DIR}/fx_translated_keys.sql"))" || echo 0)"
-    case "${TRANSLATED}" in ''|*[!0-9]*) TRANSLATED=0 ;; esac
-    if [ "$TRANSLATED" -gt 0 ]; then
-        err "${TRANSLATED} foreign-currency key(s) are translated, but epm_staging.group_exchange_rates does not exist."
-        err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
-        exit 1
-    fi
-elif ! FX_GAPS="$(ch_rows "$(cat "${FX_SQL_DIR}/fx_governed_rate_gaps.sql") FORMAT TSV")"; then
-    warn "Could not run ${FX_SQL_DIR}/fx_governed_rate_gaps.sql, so the governed group exchange rates were NOT checked."
-else
-    FX_GAP_COUNT="$(printf '%s' "$FX_GAPS" | grep -c . || true)"
-    if [ "$FX_GAP_COUNT" -gt 0 ]; then
-        err "${FX_GAP_COUNT} translated key(s) have no usable governed rate (from, to, year, period, reason):"
-        printf '%s\n' "$FX_GAPS" | head -200 | sed 's/^/    /'
-        [ "$FX_GAP_COUNT" -gt 200 ] && echo "    ... and $((FX_GAP_COUNT - 200)) more"
-        err "Approve their Closing and Average rates in konsol (Group Exchange Rate), or run the konsol migration that adopts them (konsol #174), then re-run this deploy."
-        exit 1
-    fi
-    info "Governed group exchange rates: every translated foreign-currency key has a usable rate."
-fi
+#   * the table does not exist and foreign-currency keys are translated: the
+#     konsol migration that adopts the rates has not run. ABORT (deploy order).
+#   * the table exists but keys have no usable rate: WARN with the list and
+#     continue. The check reads the last build's gold tables, so aborting here
+#     would deadlock a fix made in konsol (a currency or ownership change)
+#     that only this build can bring in. Step 5 refreshes every other model;
+#     the consolidated TB (and what reads it) stays as it was, and step 5
+#     reports that refusal.
+#   * the check itself fails: WARN with dbt's error and continue; the model's
+#     guard still refuses before it replaces anything.
+FX_DBT_CMD="${FX_DBT_CMD:-docker compose --profile setup run --rm -T dbt_init}"
+FX_DBT_PROJECT="${FX_DBT_PROJECT:-/home/frappe/dbt_project}"
+if FX_OUT="$($FX_DBT_CMD show --profiles-dir "$FX_DBT_PROJECT" --project-dir "$FX_DBT_PROJECT" \
+        --limit 201 --output json --inline '{{ fx_precheck() }}' 2>&1)"; then FX_OK=1; else FX_OK=0; fi
+# JSON, not the text table: dbt show truncates wide text columns. Each value is
+# a marker line without quotes, so a grep over the JSON is enough (no jq).
+FX_LINES="$(printf '%s\n' "$FX_OUT" | grep -oE '"fx_check": *"FX_[^"]*"' | sed -E 's/^"fx_check": *"//; s/"$//' || true)"
+FX_HEAD="$(printf '%s\n' "$FX_LINES" | head -1)"
+case "$FX_OK:$FX_HEAD" in
+    1:FX_NOTHING_BUILT)
+        info "Governed group exchange rates: no trial balance or ownership built yet, so nothing to check."
+        ;;
+    1:FX_TABLE_MISSING*)
+        FX_N="${FX_HEAD#FX_TABLE_MISSING }"
+        if [ "$FX_N" -gt 0 ] 2>/dev/null; then
+            err "${FX_N} foreign-currency key(s) are translated, but epm_staging.group_exchange_rates does not exist."
+            err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
+            exit 1
+        fi
+        info "Governed group exchange rates: the table does not exist yet, and no foreign-currency key is translated."
+        ;;
+    1:FX_GAPS_TOTAL*)
+        FX_N="${FX_HEAD#FX_GAPS_TOTAL }"
+        if [ "$FX_N" -gt 0 ] 2>/dev/null; then
+            warn "${FX_N} translated key(s) have no usable governed rate (from->to, year, period, reason):"
+            printf '%s\n' "$FX_LINES" | grep '^FX_GAP ' | sed 's/^FX_GAP /    /'
+            [ "$FX_N" -gt 200 ] && echo "    ... and $((FX_N - 200)) more (assert_every_translated_currency_has_a_governed_rate lists all)"
+            warn "Continuing: step 5 refreshes every other model, but gold_consolidated_trial_balance refuses to rebuild (nothing is deleted) until these rates are approved in konsol (Group Exchange Rate). Step 5 will report that refusal."
+        else
+            info "Governed group exchange rates: every translated foreign-currency key has a usable rate."
+        fi
+        ;;
+    *)
+        warn "FX pre-check failed, so the governed group exchange rates were NOT checked. dbt said:"
+        printf '%s\n' "$FX_OUT" | grep -iE 'error|exception|not found|refused' | head -5 | sed 's/^/    /'
+        warn "Continuing: if a rate is missing, gold_consolidated_trial_balance refuses before it replaces anything."
+        ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Step 5: Run dbt build

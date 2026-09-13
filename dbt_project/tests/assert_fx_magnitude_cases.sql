@@ -6,7 +6,9 @@
 
     Rule (macros/fx_magnitude.sql): a currency has no reference when
     isNaN(usd_log10) OR (usd_log10 = 0 AND currency_code != 'USD'); a rate is
-    plausible when abs(log10(rate) - (usd_log10(to) - usd_log10(from))) <= 1.
+    plausible when abs(log10(rate) - (usd_log10(to) - usd_log10(from))) <= 1
+    (fx_is_implausible). The model's guard uses the same fx_is_implausible, so
+    this test covers the rule that refuses builds too.
 
     expected: ok | implausible | no_reference | invalid.
     Reads no model or source, so it cannot skip anything; it runs wherever
@@ -25,6 +27,7 @@ with cases as (
         ('XNR', 'USD', 0.5,       nan,  0.0,  'no_reference'),  -- a NaN reference
         ('XZR', 'USD', 0.5,       0.0,  0.0,  'no_reference'),  -- 0 for a non-USD currency = unset
         ('XPG', 'USD', 0.001,     3.0,  0.0,  'ok'),            -- a currency pegged at 0.001
+        ('XPG', 'USD', 0.01,      3.0,  0.0,  'ok'),            -- exactly one decade (10x) off: plausible (> 1, not >= 1)
         ('JPY', 'USD', 0.0,       2.17, 0.0,  'invalid'),       -- zero
         ('JPY', 'USD', nan,       2.17, 0.0,  'invalid')        -- not a finite number
     )

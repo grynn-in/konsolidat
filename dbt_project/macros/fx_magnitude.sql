@@ -28,7 +28,15 @@
  where {{ fx_has_reference('currency_code', 'usd_log10') }})
 {%- endmacro %}
 
-{# The rule itself, on any (code, usd_log10) pair. #}
+{# THE magnitude rule: more than one decade (10x) from what the references
+   imply. Exactly 10x is plausible. Used by fx_magnitude_problem (the warn
+   tests) AND by the model's guard (governed_rate_gaps), so the shared case
+   test (assert_fx_magnitude_cases) covers the rule that refuses builds. #}
+{% macro fx_is_implausible(rate, from_log10, to_log10) -%}
+(abs(log10({{ rate }}) - ({{ to_log10 }} - {{ from_log10 }})) > 1)
+{%- endmacro %}
+
+{# The "has a reference" rule itself, on any (code, usd_log10) pair. #}
 {% macro fx_has_reference(code, usd_log10) -%}
 not (isNaN({{ usd_log10 }}) or ({{ usd_log10 }} = 0 and {{ code }} != 'USD'))
 {%- endmacro %}
@@ -43,7 +51,7 @@ multiIf(
         concat('no reference magnitude for ', {{ from_ccy }}, ' (ISO Currency.usd_log10)'),
     {{ to_ccy }} not in (select currency_code from {{ refs }}),
         concat('no reference magnitude for ', {{ to_ccy }}, ' (ISO Currency.usd_log10)'),
-    abs(log10({{ rate }}) - ({{ to_log10 }} - {{ from_log10 }})) > 1,
+    {{ fx_is_implausible(rate, from_log10, to_log10) }},
         'more than 10x from the reference magnitudes',
     ''
 )
