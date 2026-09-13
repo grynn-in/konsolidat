@@ -17,7 +17,11 @@
    PRD-14: + Layer 5: equity method entries
    PRD-11/12: + Layer 6: acquisition/disposal adjustments #}
 
-{# Layer 1: Entity translated balances #}
+{# Layer 1: Entity translated balances.
+   konsol#159: gold_consolidated_trial_balance has one row per intercompany
+   partner. This layer is per account, so it sums over the partners. Passed
+   through row by row, gold_consolidated_ytd ran a separate running total
+   per partner row (#175 review: 250 instead of 150). #}
 with entity_balances as (
     select
         consolidation_group,
@@ -28,10 +32,19 @@ with entity_balances as (
         account_name,
         {{ dim_select() }},
         reporting_currency,
-        group_amount as amount,
+        sum(group_amount) as amount,
         'entity' as adjustment_type,
         '' as journal_id
     from {{ ref('gold_consolidated_trial_balance') }}
+    group by
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_group_by() }},
+        reporting_currency
 ),
 
 {# Layer 2: IC eliminations #}

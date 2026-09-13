@@ -381,6 +381,18 @@ models:
               arguments:
                 values: ['matched', 'within_tolerance', 'over_tolerance']
 
+  - name: gold_trial_balance_by_partner
+    description: >
+      gold_trial_balance with one row per intercompany partner (konsol#159);
+      partner_data_area_id is '' where a row has none. Read by
+      gold_consolidated_trial_balance only. gold_trial_balance keeps the account
+      grain its readers (year-on-year, YTD, P&L) join and window on
+      (assert_partner_grain_not_fanned_out).
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+
   - name: gold_ic_unmatched
     description: >
       Intercompany-account balances with no partner (decision 2, 13 Sep 2026):

@@ -79,7 +79,10 @@ with entity_tb as (
         tb.period_debit - tb.period_credit as local_amount,
         ec.accounting_currency as accounting_currency,
         {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }} as tb
+    {# konsol#159: the partner-grained twin of gold_trial_balance. That model
+       stays at the account grain for its own readers; see
+       gold_trial_balance_by_partner. #}
+    from {{ ref('gold_trial_balance_by_partner') }} as tb
     {# konsol#110: the currency comes from silver_entity_currencies — konsol's
        Entity master first, the ERP's company master second. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a

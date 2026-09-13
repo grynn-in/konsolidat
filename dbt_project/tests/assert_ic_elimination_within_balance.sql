@@ -87,7 +87,7 @@ per_side as (
 
 side_check as (
     select
-        'side' as failed_check,
+        if(r.consolidation_group = '', 'side_without_pair', 'side') as failed_check,
         s.consolidation_group as consolidation_group,
         s.fiscal_year as fiscal_year,
         s.fiscal_period as fiscal_period,
@@ -95,7 +95,10 @@ side_check as (
         s.eliminated_a + s.eliminated_b as total_eliminated,
         abs(r.balance_a) + abs(r.balance_b) as consolidated_balance
     from per_side as s
-    inner join {{ ref('gold_ic_reconciliation') }} as r
+    {# LEFT, so an elimination whose pair key matches no pair is flagged
+       rather than dropped. join_use_nulls=0: a miss comes back as '' and 0,
+       so r.consolidation_group = '' marks it. #}
+    left join {{ ref('gold_ic_reconciliation') }} as r
         on s.consolidation_group = r.consolidation_group
         and s.fiscal_year = r.fiscal_year
         and s.fiscal_period = r.fiscal_period
@@ -103,7 +106,8 @@ side_check as (
         and s.account_a = r.account_a
         and s.entity_b = r.entity_b
         and s.account_b = r.account_b
-    where abs(s.eliminated_a) > abs(r.balance_a) + 0.01
+    where r.consolidation_group = ''
+       or abs(s.eliminated_a) > abs(r.balance_a) + 0.01
        or abs(s.eliminated_b) > abs(r.balance_b) + 0.01
        or s.eliminated_a * r.balance_a > 0.0001
        or s.eliminated_b * r.balance_b > 0.0001
