@@ -51,6 +51,8 @@ select
     end as debit_amount,
     gae.posting_type as posting_type,
     gae.description as description,
+    {# konsol#159: the intercompany partner entity, '' = none #}
+    gae.partner_data_area_id as partner_data_area_id,
     {{ dim_select(prefix='gae.') }},
     gje.journal_number as journal_number,
     gje.journal_category as journal_category,
@@ -100,7 +102,7 @@ select
     -- strictly negative synthetic id: no collision with real (positive) ERP
     -- recids; hash includes description so two legitimate rows for one
     -- account differ even if landed outside the doctype's dedup validation
-    -toInt64(bitShiftRight(cityHash64(tbs.batch_id, tbs.main_account, tbs.description), 1)) as recid,
+    -toInt64(bitShiftRight(cityHash64(tbs.batch_id, tbs.main_account, tbs.partner_data_area_id, tbs.description), 1)) as recid,
     tbs.data_area_id as data_area_id,
     tbs.period_start as accounting_date,
     tbs.fiscal_year as fiscal_year,
@@ -123,6 +125,8 @@ select
     tbs.debit_amount as debit_amount,
     '{{ tbs_marker }}' as posting_type,
     tbs.description as description,
+    {# positional twin of gae.partner_data_area_id above #}
+    tbs.partner_data_area_id as partner_data_area_id,
     {{ dim_empty_strings() }},
     concat('TBS-', tbs.batch_id) as journal_number,
     '{{ tbs_marker }}' as journal_category,
@@ -139,6 +143,7 @@ from (
         b.debit_amount as debit_amount,
         b.credit_amount as credit_amount,
         b.description as description,
+        b.partner_data_area_id as partner_data_area_id,
         b.submission_name as submission_name,
         b.debit_amount - b.credit_amount as net_amount,
         coalesce(

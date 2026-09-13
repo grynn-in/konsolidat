@@ -44,7 +44,9 @@ with fctb as (
         fiscal_year,
         fiscal_period,
         main_account,
-        amount
+        amount,
+        adjustment_type,
+        journal_id
     from {{ ref('gold_fully_consolidated_tb') }}
     where fiscal_period > 0
 ),
@@ -55,10 +57,16 @@ classified as (
         f.fiscal_year as fiscal_year,
         f.fiscal_period as fiscal_period,
         f.amount as amount,
+        f.adjustment_type as adjustment_type,
         cf.is_cash as seed_is_cash,
         cf.cf_category as seed_category,
         cf.cf_line_item as seed_line_item,
-        ma.is_pnl as is_pnl
+        ma.is_pnl as is_pnl,
+        {# an intercompany pair is one journal_id (IC:<account>/<counterpart>);
+           it is a P&L pair when any of its nci legs is on a P&L account #}
+        max(ma.is_pnl) over (
+            partition by f.consolidation_group, f.fiscal_year, f.fiscal_period, f.adjustment_type, f.journal_id
+        ) as journal_has_pnl
     from fctb as f
     -- Published only — see gold_cash_flow_indirect. An Inactive mapping left
     -- in the table would re-classify an account the business deliberately
@@ -87,6 +95,16 @@ lined as (
         -amount as cash_flow_amount
     from classified
     where seed_is_cash = 0
+      {# #175 re-review L3, third review L1: the group view's nci entries
+         (decision 12) move the minority's share of an intragroup balance to
+         the NCI line. For a balance-sheet pair that is a presentation of
+         ownership, not a movement of anything, so the statement leaves the
+         entry out, both legs; it nets to zero, so the statement still ties
+         (assert_consolidated_cf_reconciles). A P&L pair's entry is kept: its
+         P&L leg is part of the group's net income (on that line,
+         assert_cf_net_income_equals_group_pnl) and its NCI leg is a non-cash
+         adjustment. #}
+      and not (adjustment_type = 'ic_elimination_nci' and journal_has_pnl = 0)
 )
 
 select

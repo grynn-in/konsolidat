@@ -17,7 +17,11 @@
    PRD-14: + Layer 5: equity method entries
    PRD-11/12: + Layer 6: acquisition/disposal adjustments #}
 
-{# Layer 1: Entity translated balances #}
+{# Layer 1: Entity translated balances.
+   konsol#159: gold_consolidated_trial_balance has one row per intercompany
+   partner. This layer is per account, so it sums over the partners. Passed
+   through row by row, gold_consolidated_ytd ran a separate running total
+   per partner row (#175 review: 250 instead of 150). #}
 with entity_balances as (
     select
         consolidation_group,
@@ -28,17 +32,32 @@ with entity_balances as (
         account_name,
         {{ dim_select() }},
         reporting_currency,
-        group_amount as amount,
+        sum(group_amount) as amount,
         'entity' as adjustment_type,
         '' as journal_id
     from {{ ref('gold_consolidated_trial_balance') }}
+    group by
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_group_by() }},
+        reporting_currency
 ),
 
-{# Layer 2: IC eliminations #}
+{# Layer 2: IC eliminations, the group view (gold_ic_eliminations also holds
+   the NCI view's entries, which the consolidation report adds for its 100%
+   column). The 'nci' entries (decision 12) are tagged ic_elimination_nci and
+   carry the entity on each leg: the NCI line's leg is the partly owned
+   entity whose minority holds that share (#175 re-review L2). The cash flow
+   statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
+   (third review L1). #}
 ic_elims as (
     select
         consolidation_group,
-        '' as data_area_id,
+        if(elimination_kind = 'nci', debit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
         debit_account as main_account,
@@ -46,15 +65,16 @@ ic_elims as (
         {{ dim_empty_strings() }},
         '' as reporting_currency,
         debit_elimination as amount,
-        'ic_elimination' as adjustment_type,
+        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
+    where elimination_view = 'group'
 
     union all
 
     select
         consolidation_group,
-        '' as data_area_id,
+        if(elimination_kind = 'nci', credit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
         credit_account as main_account,
@@ -62,9 +82,10 @@ ic_elims as (
         {{ dim_empty_strings() }},
         '' as reporting_currency,
         credit_elimination as amount,
-        'ic_elimination' as adjustment_type,
+        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
+    where elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}
@@ -118,7 +139,11 @@ equity_method as (
     from {{ ref('gold_equity_method_associates') }}
 ),
 
-{# Layer 6: Acquisition & disposal adjustments (PRD-11/12) #}
+{# Layer 6: Acquisition & disposal adjustments (PRD-11/12).
+   #175 re-review F3: the pnl_proration rows are one per consolidated row,
+   and gold_consolidated_trial_balance has a row per intercompany partner,
+   so they are summed to the account grain here, like layer 1. Otherwise
+   gold_consolidated_ytd ran a separate running total per row. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -129,10 +154,12 @@ acquisition_disposal as (
         account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        adjustment_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
         concat('ACQ_', data_area_id) as journal_id
     from {{ ref('gold_acquisition_adjustments') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             account_name, adjustment_type
 
     union all
 

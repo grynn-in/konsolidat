@@ -28,6 +28,16 @@ on-run-start:
       row_count UInt64,
       source_max_modified DateTime
     ) ENGINE = ReplacingMergeTree(synced_at) ORDER BY table_name
+  # konsol#159: the intercompany flag, read by ic_account_map() in
+  # gold_ic_reconciliation and gold_ic_unmatched. konsol creates it on migrate
+  # and init-db.sql on a fresh volume. This creates it where this project
+  # deploys before konsol on an existing volume. Keep identical to konsol's
+  # _REFERENCE_TABLE_DDL and init-db.sql.
+  - >
+    CREATE TABLE IF NOT EXISTS epm_staging.intercompany_accounts (
+      main_account String, counterpart_account String, description String,
+      status String
+    ) ENGINE = MergeTree ORDER BY main_account
 
 vars:
   # ── Cluster mode (default OFF — single-node is the default deploy) ─────────
@@ -180,6 +190,8 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_trial_balance:
         +tags: ['gold', 'domain:actuals']
+      gold_trial_balance_by_partner:
+        +tags: ['gold', 'domain:actuals']
       gold_ytd_trial_balance:
         +tags: ['gold', 'domain:actuals']
       # --- Domain: consolidation ---
@@ -206,6 +218,8 @@ models:
       gold_ic_eliminations:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_reconciliation:
+        +tags: ['gold', 'domain:consolidation']
+      gold_ic_unmatched:
         +tags: ['gold', 'domain:consolidation']
       gold_nci_movement_schedule:
         +tags: ['gold', 'domain:consolidation']

@@ -69,17 +69,40 @@ models:
         description: "translated_amount * (1 - ownership_pct)"
 
   - name: gold_ic_eliminations
-    description: "Intercompany elimination entries"
+    description: >
+      Intercompany elimination entries, each with a debit and a credit leg that
+      net to zero. Balance rows come from gold_ic_reconciliation (konsolidat#148):
+      the matched amount of each pair, and the difference moved to the group's
+      intercompany-difference account. Unrealized-profit rows come from IC
+      Elimination Rules.
     columns:
       - name: rule_id
         tests:
           - not_null
       - name: elimination_amount
-        description: "Lesser of debit/credit IC balances to eliminate"
+        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
+      - name: elimination_kind
+        description: "matched, nci (decision 12: the minority owners' portion, to the NCI line), difference or unrealized_profit"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['matched', 'nci', 'difference', 'unrealized_profit']
+      - name: difference_cause
+        description: "On difference rows, the pair's cause (booking or fx, decision 13); '' otherwise"
+      - name: elimination_view
+        description: "group (the group view, booked by gold_fully_consolidated_tb) or nci (the minority's share, added by the consolidation report for its 100% column)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['group', 'nci']
+      - name: basis
+        description: "balance (balance-sheet pair, eliminations posted as the change to date) or movement (P&L pair), decision 14; '' for unrealized profit"
       - name: debit_entity
         description: "The entity on the debit side of the eliminated pair."
       - name: credit_entity
         description: "The entity on the credit side of the eliminated pair."
+      - name: entity_a
+        description: "The pair a balance row belongs to: entity_a/account_a <> entity_b/account_b ('' for unrealized profit)"
 
   - name: gold_fx_revaluation
     description: "Currency translation adjustment (CTA) entries"
@@ -348,13 +371,70 @@ models:
         description: "NCI share of profit for the period"
 
   - name: gold_ic_reconciliation
-    description: "PRD-15: IC reconciliation — matched vs unmatched balances per entity pair"
+    description: >
+      Intercompany pairs (konsolidat#148, konsol#159): (entity, partner, account)
+      against (partner, entity, counterpart) on flagged intercompany accounts,
+      in group currency, with the matched amount, the difference and the
+      group's tolerance.
     columns:
       - name: entity_a
         tests:
           - not_null
+      - name: matched_amount
+        description: "The smaller side when the two sides offset, else 0; eliminated"
+      - name: difference
+        description: "balance_a + balance_b: booked to ic_difference_account when the group has one"
+      - name: balance_a
+        description: "Side a at 100% (translated_amount), decision 12: pairs match on this, never on group_balance_a"
+      - name: basis
+        description: "balance (balance-sheet pair: to date) or movement (P&L pair: the period), decision 14"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['balance', 'movement']
+      - name: pair_event
+        description: "joined (first period both line-consolidate into the group), left (first period after a live pair stops being live in this group for any reason, e.g. a disposal, a sub-group sale or a move to equity: everything reversed), or ''"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['', 'joined', 'left']
+      - name: difference_cause
+        description: "none, booking or fx (decision 13; the rule is in the model header)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['none', 'booking', 'fx']
       - name: match_status
-        description: "matched or unmatched"
+        description: "matched, within_tolerance or over_tolerance (booking differences against the group's tolerance), or fx_difference (never counts)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['matched', 'within_tolerance', 'over_tolerance', 'fx_difference']
+
+  - name: gold_trial_balance_by_partner
+    description: >
+      gold_trial_balance with one row per intercompany partner (konsol#159);
+      partner_data_area_id is '' where a row has none. Read by
+      gold_consolidated_trial_balance only. gold_trial_balance keeps the account
+      grain its readers (year-on-year, YTD, P&L) join and window on
+      (assert_partner_grain_not_fanned_out).
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+
+  - name: gold_ic_unmatched
+    description: >
+      Intercompany-account balances with no partner (decision 2, 13 Sep 2026):
+      never eliminated, never guessed, listed here per group, period, entity
+      and account. Includes every D365 line on an intercompany account until
+      the ERP's partner is mapped.
+    columns:
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: unmatched_amount
+        description: "In group currency (unmatched_local_amount: the entity's own)"
 
   - name: gold_allocation_audit_trail
     description: "Deprecated view over epm_allocated.alloc_audit_trail (scenario_id=ACTUAL)"

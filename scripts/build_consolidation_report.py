@@ -365,7 +365,7 @@ def fetch_consolidated_data(cfg):
     # {adjustment_type: {account: {quarter: amount}}}
     result = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for r in rows:
-        result[r["adjustment_type"]][r["main_account"]][r["quarter"]] += float(r["total_amount"])
+        result[_layer(r["adjustment_type"])][r["main_account"]][r["quarter"]] += float(r["total_amount"])
     return result
 
 
@@ -391,7 +391,7 @@ def fetch_consolidated_bs(cfg):
     # Build period-level data first
     period_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for r in rows:
-        period_data[r["adjustment_type"]][r["main_account"]][int(r["fiscal_period"])] += float(r["total_amount"])
+        period_data[_layer(r["adjustment_type"])][r["main_account"]][int(r["fiscal_period"])] += float(r["total_amount"])
 
     # Cumulate to quarter-end
     result = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
@@ -411,8 +411,44 @@ def fetch_consolidated_bs(cfg):
     return result
 
 
+def _layer(adjustment_type):
+    """The report's block for a gold_fully_consolidated_tb layer.
+
+    ic_elimination_nci (konsolidat#148, decision 12) is the group view's
+    share of an intragroup balance moved to the NCI line; it belongs with the
+    other intercompany eliminations."""
+    return "ic_elimination" if adjustment_type == "ic_elimination_nci" else adjustment_type
+
+
+def _nci_view_legs(cfg):
+    """The NCI view's intercompany eliminations, one row per leg on a chart account.
+
+    The Consolidated column is the group view plus the NCI block, so the NCI
+    block must eliminate the minority's share of each intragroup balance too
+    (#175 re-review H1). Without it, 1000/-1000 between a 100% and an 80% entity
+    left -200 on the payable at 100%. gold_ic_eliminations holds those entries
+    (elimination_view = 'nci'), against the NCI line. The NCI line is not a
+    chart account, so the join drops it, as it drops the group view's.
+    """
+    return f"""
+        SELECT e.leg_account AS main_account, ma.is_pnl AS is_pnl, ma.is_balance_sheet AS is_balance_sheet,
+               e.fiscal_period AS fiscal_period, e.leg_amount AS amount
+        FROM (
+            SELECT debit_account AS leg_account, fiscal_period, debit_elimination AS leg_amount
+            FROM epm_gold.gold_ic_eliminations
+            WHERE consolidation_group = '{cfg.group}' AND fiscal_year = {cfg.year} AND elimination_view = 'nci'
+            UNION ALL
+            SELECT credit_account, fiscal_period, credit_elimination
+            FROM epm_gold.gold_ic_eliminations
+            WHERE consolidation_group = '{cfg.group}' AND fiscal_year = {cfg.year} AND elimination_view = 'nci'
+        ) AS e
+        INNER JOIN epm_silver.silver_main_accounts AS ma ON ma.main_account_id = e.leg_account
+    """
+
+
 def fetch_nci_data(cfg):
-    """Fetch NCI amounts from gold_consolidated_trial_balance."""
+    """Fetch NCI amounts: gold_consolidated_trial_balance's nci_amount plus
+    the NCI view's intercompany eliminations (_nci_view_legs)."""
     rows = ch_query(f"""
         SELECT
             main_account,
@@ -424,10 +460,15 @@ def fetch_nci_data(cfg):
                 fiscal_period IN (7,8,9), 'Q3',
                 'Q4'
             ) as quarter,
-            sum(nci_amount) as nci_total
-        FROM epm_gold.gold_consolidated_trial_balance
-        WHERE consolidation_group = '{cfg.group}'
-          AND fiscal_year = {cfg.year}
+            sum(amount) AS nci_total
+        FROM (
+            SELECT main_account, is_pnl, is_balance_sheet, fiscal_period, nci_amount AS amount
+            FROM epm_gold.gold_consolidated_trial_balance
+            WHERE consolidation_group = '{cfg.group}'
+              AND fiscal_year = {cfg.year}
+            UNION ALL
+            {_nci_view_legs(cfg)}
+        )
         GROUP BY main_account, is_pnl, is_balance_sheet, quarter
         FORMAT JSON
     """)
@@ -450,11 +491,18 @@ def fetch_nci_bs_cumulative(cfg):
         SELECT
             main_account,
             fiscal_period,
-            sum(nci_amount) as nci_total
-        FROM epm_gold.gold_consolidated_trial_balance
-        WHERE consolidation_group = '{cfg.group}'
-          AND fiscal_year = {cfg.year}
-          AND is_balance_sheet = 1
+            sum(amount) AS nci_total
+        FROM (
+            SELECT main_account, fiscal_period, nci_amount AS amount
+            FROM epm_gold.gold_consolidated_trial_balance
+            WHERE consolidation_group = '{cfg.group}'
+              AND fiscal_year = {cfg.year}
+              AND is_balance_sheet = 1
+            UNION ALL
+            SELECT main_account, fiscal_period, amount
+            FROM ({_nci_view_legs(cfg)})
+            WHERE is_balance_sheet = 1
+        )
         GROUP BY main_account, fiscal_period
         ORDER BY main_account, fiscal_period
         FORMAT JSON

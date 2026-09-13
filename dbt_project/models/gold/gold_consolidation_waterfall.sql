@@ -25,7 +25,7 @@ waterfall as (
         fiscal_year,
         fiscal_period,
         sum(case when adjustment_type = 'entity' then layer_amount else 0 end) as entity_amount,
-        sum(case when adjustment_type = 'ic_elimination' then layer_amount else 0 end) as ic_elimination_amount,
+        sum(case when adjustment_type in ('ic_elimination', 'ic_elimination_nci') then layer_amount else 0 end) as ic_elimination_amount,
         sum(case when adjustment_type = 'cta' then layer_amount else 0 end) as cta_amount,
         sum(case when adjustment_type in ('topside', 'reclassification', 'auto_reversal') then layer_amount else 0 end) as topside_amount,
         sum(case when adjustment_type = 'equity_method' then layer_amount else 0 end) as equity_method_amount,

@@ -2,6 +2,7 @@
     D365 F&O trial balance adapter.
     Maps TrialBalanceFiscalYearSnapshots → canonical stg_trial_balance schema.
     Adapter contract: models/staging/README.md.
+    partner_data_area_id (konsol#159) is NULL until an ERP mapping exists.
 #}
 
 select
@@ -19,6 +20,7 @@ select
     coalesce(EndingBalance, 0) as closing_balance,
     '' as currency_code,
     '' as account_type,
+    cast(null as Nullable(String)) as partner_data_area_id,
     _airbyte_extracted_at as _loaded_at,
     _airbyte_raw_id as _raw_id
 from {{ source('d365_raw', 'trial_balance_fiscal_year_snapshots') }}

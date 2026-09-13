@@ -51,6 +51,7 @@ select
     sum(debit - credit) as closing_balance,
     '' as currency_code,
     '' as account_type,
+    cast(null as Nullable(String)) as partner_data_area_id,
     max(_airbyte_extracted_at) as _loaded_at,
     any(_airbyte_raw_id) as _raw_id
 from gl

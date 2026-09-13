@@ -6,9 +6,14 @@
         engine=cluster_engine('ReplacingMergeTree(_airbyte_extracted_at)'),
         order_by='(data_area_id, accounting_date, recid)',
         partition_by='toYear(accounting_date)',
-        cluster=cluster_name()
+        cluster=cluster_name(),
+        on_schema_change='append_new_columns'
     )
 }}
+
+{# konsol#159: on_schema_change adds partner_data_area_id to a table built
+   before it existed; an incremental run would otherwise drop the new column
+   silently (dbt inserts only the columns the target already has). #}
 
 {#
     Consumes canonical stg_gl_entries for ERP-agnostic columns.
@@ -29,6 +34,8 @@ select
     {{ cast_to_int64('coalesce(d365.general_journal_entry_recid, 0)') }} as general_journal_entry_recid,
     {{ cast_to_string('gl.ledger_account') }} as ledger_account,
     {{ cast_to_string('gl.description') }} as description,
+    {# '' = no partner (the canonical column is NULL for every ERP today) #}
+    {{ cast_to_string("coalesce(gl.partner_data_area_id, '')") }} as partner_data_area_id,
     {{ dim_select_from_source(prefix='gl.') }},
     {{ cast_to_datetime('gl._loaded_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('gl._raw_id') }} as _airbyte_raw_id
