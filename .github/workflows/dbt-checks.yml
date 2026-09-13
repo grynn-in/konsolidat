@@ -9,6 +9,8 @@ on:
       - '.github/workflows/dbt-checks.yml'
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
+      - 'clickhouse/raw-schema.sql'
+      - 'scripts/tb_only_first_build.py'
   pull_request:
     paths:
       - 'dbt_project/**'
@@ -16,6 +18,8 @@ on:
       - '.github/workflows/dbt-checks.yml'
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
+      - 'clickhouse/raw-schema.sql'
+      - 'scripts/tb_only_first_build.py'
   workflow_dispatch:
 
 permissions:
@@ -69,3 +73,35 @@ jobs:
       # installs: nothing else in tests/ runs in CI.
       - name: governed chart DDL and column coverage
         run: python -m unittest -v tests.test_governed_chart_ddl
+
+  tb-only-first-build:
+    name: first build on a fresh TB-only site
+    runs-on: ubuntu-latest
+    # konsol#182: the canonical path is trial balances uploaded via CSV, so a
+    # fresh site has no ERP rows, no allocation rules and no ERP FX quotes.
+    # `dbt parse` does not validate SQL; this builds the selection for real on
+    # the empty init-db.sql + raw-schema.sql shape, then with a ZZ fixture.
+    services:
+      clickhouse:
+        # Pinned to the running stack's major version (24.8).
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_PASSWORD: ci
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8123/ping"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: '8123'
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
+      - name: dbt build --select @silver_main_accounts (empty, then ZZ fixture)
+        run: python scripts/tb_only_first_build.py --prefix ci_fb --fixture
