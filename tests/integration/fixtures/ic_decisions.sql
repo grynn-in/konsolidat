@@ -2,7 +2,7 @@
 -- Generated from what konsol writes for this dataset on konsolidat.local
 -- (Entity, Consolidation Group, Ownership Period, Historical Equity Rate,
 -- Intercompany Account, and 19 Trial Balance Submissions), FY2095, ZZ codes
--- only. The governed EUR->USD rates are written by hand (see below).
+-- only, except the governed EUR->USD rates, which are written by hand (see below).
 --   Group ZZGRP (USD), intercompany-difference account 2100, tolerance 5.
 --   Flags 1100 <-> 2010 (balance sheet) and 4030 <-> 5030 (P&L).
 --   ZZA 100% USD, ZZB 80% USD, ZZC 100% USD, ZZD 100% EUR, ZZ7 70% USD from 2095-01-01;
@@ -42,8 +42,10 @@ INSERT INTO epm_staging.ownership_periods (consolidation_group, data_area_id, ef
 -- epm_staging.historical_equity_rates: 9 rows
 INSERT INTO epm_staging.historical_equity_rates (consolidation_group, data_area_id, main_account, rate_date, historical_rate) VALUES ('ZZGRP','ZZ7','3010','2095-01-01',1),('ZZGRP','ZZA','3010','2095-01-01',1),('ZZGRP','ZZB','3010','2095-01-01',1),('ZZGRP','ZZC','3010','2095-01-01',1),('ZZGRP','ZZD','3010','2095-01-01',1.05),('ZZGRP','ZZE','3010','2095-01-01',1),('ZZGRP','ZZH','3010','2095-01-01',1),('ZZGRP','ZZQ','3010','2095-01-01',1),('ZZSUB','ZZS','3010','2095-01-01',1);
 
--- epm_staging.group_exchange_rates: 8 rows (written by hand: the stack's konsol predates
--- Group Exchange Rate, and since #176 ZZD's EUR is translated only at a governed rate)
+-- epm_staging.group_exchange_rates: 8 rows, written by hand rather than approved in konsol's
+-- Group Exchange Rate. Since #176, ZZD's EUR is translated only at a governed rate.
+-- konsol publishes this table by replacing it whole (EXCHANGE TABLES), so a rate approval
+-- during an integration run drops these FY2095 rows and the rate guard refuses the build.
 INSERT INTO epm_staging.group_exchange_rates (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document) VALUES ('USD','EUR',2095,1,'Average',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,1,'Closing',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,2,'Average',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,2,'Closing',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,3,'Average',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,3,'Closing',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,4,'Average',1.0479,'ZZ test: #175 third review'),('USD','EUR',2095,4,'Closing',1.0479,'ZZ test: #175 third review');
 
 -- epm_staging.intercompany_accounts: 2 rows
