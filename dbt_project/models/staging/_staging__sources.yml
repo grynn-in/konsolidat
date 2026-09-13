@@ -135,6 +135,16 @@ sources:
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at
+      - name: group_exchange_rates
+        description: >
+          konsol#103 / konsolidat#93: the group's governed exchange rates. One
+          approved Closing and one Average rate per (group reporting currency,
+          from-currency, fiscal year, fiscal period), written through from
+          konsol's Group Exchange Rate. gold_consolidated_trial_balance
+          translates from this and nothing else; the ERP feed only pre-fills
+          drafts in konsol. `rate` is the TRUE rate (units of to_currency per
+          1 from_currency), published by konsol, the single source of FX
+          rates; the warehouse never scales or inverts it.
       - name: ownership_periods
         description: "PRD-9/11/12: Temporal ownership periods with acquisition and disposal fields"
         loaded_at_field: updated_at

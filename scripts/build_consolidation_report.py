@@ -1215,7 +1215,7 @@ def build_diagnostics_sheet(ws, cfg, entity_pnl, entity_bs, consol_pnl, consol_b
         tests.append(("FX / CTA", "CTA entries exist",
                       "> 0 (non-reporting-currency entities)", str(cta_count),
                       "PASS" if cta_count > 0 else "WARN",
-                      "" if cta_count > 0 else "No CTA entries — check silver_exchange_rates"))
+                      "" if cta_count > 0 else "No CTA entries — check the group's governed rates (konsol Group Exchange Rate)"))
     else:
         tests.append(("FX / CTA", "CTA entries",
                       "0 (all entities in reporting currency)", str(cta_count),
@@ -1246,7 +1246,7 @@ def build_diagnostics_sheet(ws, cfg, entity_pnl, entity_bs, consol_pnl, consol_b
             status = "PASS" if rate != 1.0 and rate != 0 else "WARN"
             tests.append(("FX Rates", f"{eid} {from_ccy}→{to_ccy} rate",
                           "!= 1.0", f"{rate:.6f}", status,
-                          "" if status == "PASS" else "Rate defaulted — check silver_exchange_rates"))
+                          "" if status == "PASS" else "Rate defaulted — check the group's governed rates (konsol Group Exchange Rate)"))
     except Exception:
         tests.append(("FX Rates", "Rate query", "success", "FAILED", "WARN", "Could not query rates"))
 

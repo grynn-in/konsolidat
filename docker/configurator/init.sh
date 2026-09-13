@@ -43,18 +43,24 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-# Wait for ClickHouse
+# Wait for ClickHouse. Stop here if it never answers: `bench migrate` below runs
+# konsol's patches, and the group exchange rate adoption (konsol#174) reads the
+# rates the warehouse translates today from ClickHouse. Migrating without it
+# fails half-way (or, before that patch, left the write-through tables empty
+# until the next migrate). Up to 120 s, because a cold ClickHouse with a large
+# volume can take longer than a minute to answer /ping.
 echo "Waiting for ClickHouse..."
 CH_HOST="${CLICKHOUSE_HOST:-clickhouse}"
 CH_PORT="${CLICKHOUSE_PORT:-8123}"
-for i in $(seq 1 60); do
+for i in $(seq 1 120); do
     if curl -sf "http://${CH_HOST}:${CH_PORT}/ping" >/dev/null 2>&1; then
         echo "ClickHouse is ready."
         break
     fi
-    if [ "$i" -eq 60 ]; then
-        echo "WARNING: ClickHouse not ready. Continuing anyway (sync will retry)."
-        break
+    if [ "$i" -eq 120 ]; then
+        echo "ERROR: ClickHouse (${CH_HOST}:${CH_PORT}) not ready after 120 seconds. Stopping before bench migrate."
+        echo "Start ClickHouse (docker compose up -d clickhouse), check its logs, and re-run."
+        exit 1
     fi
     sleep 1
 done

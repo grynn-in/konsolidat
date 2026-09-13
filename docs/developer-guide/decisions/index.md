@@ -6,7 +6,7 @@ Context → Options (with trade-offs) → **Recommendation** → Consequences.
 
 | Issue | Topic | Recommendation (one line) |
 |---|---|---|
-| konsolidat #93 | [Consolidation currency](konsolidat-93-consolidation-currency.md) | Ship **Phase 1** (direct method) now; defer Phase 2 until #130 |
+| konsolidat #93 | [Consolidation currency](konsolidat-93-consolidation-currency.md) | **Decided 13 Sep 2026:** currency on each Consolidation Group node (validated Link), EPM Settings field removed, governed rates per period; Phase 2 deferred |
 | konsolidat #130 | [Membership divergence](konsolidat-130-membership-divergence.md) | **Align to the seed** (GROUP_CORP) + generate seed from the doctype — needs owner sign-off |
 | konsolidat #92 | [Historical Equity Rate — remaining](konsolidat-92-historical-equity-rate.md) | Add an **is-equity guard via a synced account cache**; pair-check after #130 |
 | konsolidat #91 | [Surface FX rates](konsolidat-91-surface-fx.md) | **Part B first** (read-only CH view); Part C (manual doctype) later |

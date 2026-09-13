@@ -285,6 +285,17 @@ CREATE TABLE IF NOT EXISTS epm_staging.entities (
     country String, erp_source String
 ) ENGINE = MergeTree ORDER BY data_area_id;
 
+-- konsol#103 / konsolidat#93: the group's governed exchange rates, written
+-- through from konsol's Group Exchange Rate (submitted rows only).
+-- gold_consolidated_trial_balance translates from this table and nothing else;
+-- the ERP rate feed only pre-fills drafts in konsol. konsol's
+-- ensure_reference_tables() creates it on volumes that predate it. Keep
+-- identical to _REFERENCE_TABLE_DDL.
+-- rate is the TRUE rate, units of to_currency per 1 from_currency, published by
+-- konsol (the single source of FX rates); the warehouse never scales or inverts
+-- it.
+CREATE TABLE IF NOT EXISTS epm_staging.group_exchange_rates (to_currency String, from_currency String, fiscal_year UInt16, fiscal_period UInt8, rate_type String, rate Float64, document String) ENGINE = MergeTree ORDER BY (to_currency, from_currency, fiscal_year, fiscal_period, rate_type);
+
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so
 -- seeds/spread_profiles.csv WAS epm_gold.spread_profiles — the same table the
@@ -302,9 +313,12 @@ CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
 
 -- konsolidat#146: the ISO 4217 reference list, published from Frappe's Currency
 -- records by konsol.currency_sync. It was seeds/currencies.csv.
-CREATE TABLE IF NOT EXISTS epm_gold.currencies (
-    currency_code String, currency_name String, symbol String, minor_unit UInt8
-) ENGINE = MergeTree ORDER BY currency_code;
+-- konsolidat#93 / konsol#103: usd_log10 is roughly log10 of the currency's units
+-- per 1 USD, the reference magnitude the FX sanity rule checks rates against
+-- (dbt macros/fx_magnitude.sql; konsol.group_rates.magnitude_problem). NaN =
+-- no reference value, and a rate involving it fails the check. Identical to
+-- konsol's _REFERENCE_TABLE_DDL; keep them identical.
+CREATE TABLE IF NOT EXISTS epm_gold.currencies (currency_code String, currency_name String, symbol String, minor_unit UInt8, usd_log10 Float64 DEFAULT nan) ENGINE = MergeTree ORDER BY currency_code;
 
 -- konsolidat#146: which fiscal calendar each ERP legal entity posts against,
 -- from konsol's Entity Fiscal Calendar doctype. It was

@@ -2,11 +2,19 @@
     config(
         materialized='incremental',
         incremental_strategy='append',
-        pre_hook="{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}",
+        pre_hook=[
+            "{{ governed_rate_guard() }}",
+            "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
+        ],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# konsolidat#93: the first pre_hook (macros/governed_rates.sql) raises when a
+   currency this run translates has no approved governed rate, BEFORE the
+   DELETE below, so a missing rate leaves the table as it was. The throwIf in
+   `consolidated` stays as the second line of defence. #}
 
 {# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
    the keys the new batch produced, so a key that left the SELECT (an ownership
@@ -25,7 +33,13 @@
    same filters the SELECT uses; the SELECT then appends it. `dbt --full-refresh`
    (or the first build) drops + recreates the table from scratch. #}
 
-{# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL
+{# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL,
+          from the governed group rates only (konsolidat#93 / konsol#103).
+   FX CONTRACT (13 Sep 2026): epm_staging.group_exchange_rates.rate is the true
+   rate (units of to_currency per 1 from_currency), published by konsol, the
+   single source of FX rates. The warehouse never scales or inverts it.
+   silver_exchange_rates holds the ERP quotes, which feed only konsol's
+   pre-fill.
    PRD-4: Minority interest — nci_amount column for partial ownership
    PRD-8: Multi-level hierarchy — effective_ownership from hierarchy or seed fallback
    PRD-9: Temporal ownership — period-level ownership from ownership_periods staging
@@ -126,122 +140,43 @@ historical_rates as (
     from {{ source('epm_staging', 'historical_equity_rates') }}
 ),
 
-{# Distinct currency-pair × period combos we need rates for #}
-rate_keys as (
-    select distinct
-        etb.accounting_currency as from_currency,
-        eo.reporting_currency as to_currency,
-        etb.period_date
-    from entity_tb as etb
-    inner join entity_ownership as eo
-        on etb.data_area_id = eo.data_area_id
-        and etb.fiscal_year = eo.fiscal_year
-        and etb.fiscal_period = eo.fiscal_period
-),
+{# konsolidat#93 / konsol#103: translation reads ONLY the group's governed
+   rates. Group finance approves one Closing and one Average rate per fiscal
+   period, from each currency into a group reporting currency, in konsol's
+   Group Exchange Rate; the submitted rows arrive here. The ERP feed
+   (silver_exchange_rates) no longer reaches this model. It only pre-fills
+   drafts in konsol, so neither a second ERP instance's drifting rate table nor
+   an ERP's rate-type names ('Closing' / 'Average' / 'Default' as typed into
+   the demo D365) can change a consolidated figure. The two strings below are
+   the governed table's own rate types (konsol's Select), not an ERP's names.
 
-all_rates as (
+   Keyed on the period itself, not an as-of date: a period's rate is the one
+   approved for it. No fallback of any kind. A translated currency with no
+   approved rate stops the build (see `consolidated`), and
+   assert_every_translated_currency_has_a_governed_rate names it. The old
+   chain (Closing, else Default, else 1.0) translated whole ledgers at the 1.0
+   parity rate without a word (#109). #}
+{# The pre_hook guard also reads the currencies' reference magnitudes; declared
+   here so dbt knows the dependency at parse time. #}
+-- depends_on: {{ source('epm_gold', 'currencies') }}
+governed_rates as (
     select
         from_currency,
         to_currency,
-        valid_from,
-        exchange_rate as rate,
-        exchange_rate_type
-    from {{ ref('silver_exchange_rates') }}
-),
-
-{# Best closing rate as-of each period_date (latest valid_from <= period_date) #}
-closing_rate_lookup as (
-    select
-        rk.from_currency,
-        rk.to_currency,
-        rk.period_date,
-        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
-           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
-           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
-           silently collapses a fully-unquoted currency pair to a rate of 0
-           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
-           and ownership blocks guard against. #}
-        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
-    from rate_keys as rk
-    inner join all_rates as ar
-        on rk.from_currency = ar.from_currency
-        and rk.to_currency = ar.to_currency
-    where ar.exchange_rate_type = 'Closing'
-        and ar.valid_from <= rk.period_date
-    group by rk.from_currency, rk.to_currency, rk.period_date
-),
-
-{# Best average rate as-of each period_date #}
-average_rate_lookup as (
-    select
-        rk.from_currency,
-        rk.to_currency,
-        rk.period_date,
-        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
-           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
-           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
-           silently collapses a fully-unquoted currency pair to a rate of 0
-           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
-           and ownership blocks guard against. #}
-        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
-    from rate_keys as rk
-    inner join all_rates as ar
-        on rk.from_currency = ar.from_currency
-        and rk.to_currency = ar.to_currency
-    where ar.exchange_rate_type = 'Average'
-        and ar.valid_from <= rk.period_date
-    group by rk.from_currency, rk.to_currency, rk.period_date
-),
-
-{# Default fallback rate. The rate type is the literal 'Default' (D365's default
-   rate type) — the previous filter `= ''` matched no rows, so this fallback was
-   dead and closing/average misses fell straight through to the 1.0 parity rate.
-   That silently mistranslated pairs whose Closing/Average quotes start later than
-   their history (e.g. JPY->USD Closing begins 2014-02, but Default covers
-   2001-2025), so every JPMF period before 2014 got rate 1.0 (~100x). Matching
-   'Default' lets those periods use the real ~0.008-0.013 rate. #}
-default_rate_lookup as (
-    select
-        rk.from_currency,
-        rk.to_currency,
-        rk.period_date,
-        {# Nullable so a rate_lookup LEFT-join miss below yields NULL, not 0.0.
-           A non-nullable column defaults to 0 on a miss (join_use_nulls=0),
-           which defeats the `coalesce(..., 1.0)` fallback in rate_lookup and
-           silently collapses a fully-unquoted currency pair to a rate of 0
-           (grynn-in/konsolidat#109). Same defaulting trap the historical_rate
-           and ownership blocks guard against. #}
-        cast({{ latest_value_by('ar.rate', 'ar.valid_from') }} as Nullable(Float64)) as rate
-    from rate_keys as rk
-    inner join all_rates as ar
-        on rk.from_currency = ar.from_currency
-        and rk.to_currency = ar.to_currency
-    where ar.exchange_rate_type = 'Default'
-        and ar.valid_from <= rk.period_date
-    group by rk.from_currency, rk.to_currency, rk.period_date
-),
-
-{# Merge into single lookup: closing with fallback, average with fallback #}
-rate_lookup as (
-    select
-        rk.from_currency as from_currency,
-        rk.to_currency as to_currency,
-        rk.period_date as period_date,
-        coalesce(toFloat64(cr.rate), toFloat64(dr.rate), 1.0) as closing_rate,
-        coalesce(toFloat64(ar.rate), toFloat64(dr.rate), 1.0) as average_rate
-    from rate_keys as rk
-    left join closing_rate_lookup as cr
-        on rk.from_currency = cr.from_currency
-        and rk.to_currency = cr.to_currency
-        and rk.period_date = cr.period_date
-    left join average_rate_lookup as ar
-        on rk.from_currency = ar.from_currency
-        and rk.to_currency = ar.to_currency
-        and rk.period_date = ar.period_date
-    left join default_rate_lookup as dr
-        on rk.from_currency = dr.from_currency
-        and rk.to_currency = dr.to_currency
-        and rk.period_date = dr.period_date
+        fiscal_year,
+        fiscal_period,
+        {# One approved row per key: konsol refuses a second approval, and a
+           collision stops the run in the pre_hook guard (and is NULLed below);
+           assert_governed_rate_grain_unique names it (warn). anyIf over no rows
+           is 0, so presence is counted, never inferred from the value.
+           `rate` is used exactly as published: the true rate. #}
+        anyIf(toFloat64(rate), rate_type = 'Closing') as gov_closing,
+        anyIf(toFloat64(rate), rate_type = 'Average') as gov_average,
+        countIf(rate_type = 'Closing') as n_closing,
+        countIf(rate_type = 'Average') as n_average,
+        countIf(not (isFinite(rate) and rate > 0)) as n_invalid
+    from {{ source('epm_staging', 'group_exchange_rates') }}
+    group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 
 {# Resolve per-row rate, ownership and translation_rate once.
@@ -271,16 +206,24 @@ rated as (
            gold_entity_ownership. No fallback chain, and 0% means 0%. #}
         eo.ownership_pct as ownership_pct,
         eo.consolidation_method as consolidation_method,
-        rl.closing_rate as closing_rate,
-        rl.average_rate as average_rate,
+        {# A same-currency entity's rates are 1 by definition, not a lookup. #}
+        if(etb.accounting_currency = eo.reporting_currency, 1.0, gr.gov_closing) as closing_rate,
+        if(etb.accounting_currency = eo.reporting_currency, 1.0, gr.gov_average) as average_rate,
         {# PRD-10: Historical equity rate lookup #}
         hr.historical_rate as historical_equity_rate,
         case
             when etb.accounting_currency = eo.reporting_currency then 1.0
+            {# Not exactly one approved Closing and one Average rate, or a rate
+               that is zero, negative or not finite: NULL here, and
+               `consolidated` stops the build on it (the pre_hook guard has
+               normally stopped it already). Checked before the historical
+               equity rate, so an equity tranche cannot hide a period the group
+               never approved usable rates for. #}
+            when gr.n_closing != 1 or gr.n_average != 1 or gr.n_invalid > 0 then null
             when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
-            when etb.is_balance_sheet = 1 then rl.closing_rate
-            when etb.is_pnl = 1 then rl.average_rate
-            else rl.closing_rate
+            when etb.is_balance_sheet = 1 then gr.gov_closing
+            when etb.is_pnl = 1 then gr.gov_average
+            else gr.gov_closing
         end as translation_rate
     from entity_tb as etb
     {# One row per ancestor group: the fan-out here IS the multi-level
@@ -289,10 +232,13 @@ rated as (
         on etb.data_area_id = eo.data_area_id
         and etb.fiscal_year = eo.fiscal_year
         and etb.fiscal_period = eo.fiscal_period
-    left join rate_lookup as rl
-        on etb.accounting_currency = rl.from_currency
-        and eo.reporting_currency = rl.to_currency
-        and etb.period_date = rl.period_date
+    {# join_use_nulls=0: a miss fills 0s, so n_closing / n_average = 0 is the
+       "no approved rate" signal (never a NULL test across the join). #}
+    left join governed_rates as gr
+        on etb.accounting_currency = gr.from_currency
+        and eo.reporting_currency = gr.to_currency
+        and etb.fiscal_year = gr.fiscal_year
+        and etb.fiscal_period = gr.fiscal_period
     {# PRD-10: Historical equity rate — as-of the period: pick the latest tranche
        whose rate_date <= period_date. The previous row_number()/rn=1 took the
        single most-recent rate_date EVER, ignoring the period entirely, so an
@@ -353,6 +299,13 @@ consolidated as (
         {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
         local_amount * translation_rate * (1.0 - ownership_pct) as nci_amount
     from rated
+    {# konsolidat#93: a missing governed rate fails the build loudly, never a
+       0 or a 1.0 translation. throwIf takes a per-row condition (a constant
+       would be folded and raise on every build). A failed run leaves its
+       scope's slice empty until the next run (#162, accepted); the dbt test
+       names the missing keys. #}
+    where throwIf(translation_rate is null,
+                  'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
 )
 
 select * from consolidated

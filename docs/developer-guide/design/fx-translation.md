@@ -1,5 +1,43 @@
 # FX Translation (Closing vs Average Rate)
 
+> **Superseded for the rate source (konsolidat#93 / konsol#103, 13 Sep 2026).**
+> Translation no longer reads `silver_exchange_rates` or falls back to
+> `Default` or 1.0. `gold_consolidated_trial_balance` takes one approved
+> Closing and one Average rate per fiscal period, from each currency into the
+> group's reporting currency, from `epm_staging.group_exchange_rates` (konsol's
+> Group Exchange Rate). A missing rate stops the build. The ERP feed only
+> pre-fills drafts in konsol. The account-type rule below (closing for the
+> balance sheet, average for the P&L, historical for equity tranches) is
+> unchanged.
+>
+> **The contract (decided 13 Sep 2026):** `epm_staging.group_exchange_rates.rate`
+> is the true rate (units of `to_currency` per 1 `from_currency`), published by
+> konsol, the single source of FX rates. The warehouse never scales or inverts
+> it: finance enters any "quoted per" factor in konsol, and konsol divides it
+> out before publishing. `silver_exchange_rates` holds the ERP quotes, which
+> feed only konsol's pre-fill. A rate more than 10x from the currencies'
+> reference magnitudes (`usd_log10`) stops the build before anything is
+> replaced.
+>
+> **A missing rate stops the whole run.** Every key a run translates must have an
+> approved Closing and Average rate, so a newly submitted trial balance in a
+> foreign currency blocks full builds until its period's Closing and Average
+> rates into the group currency are approved in konsol. Nothing is deleted:
+> every model not downstream of the consolidated trial balance refreshes; the
+> consolidated TB and the models that read it keep their last figures, and the
+> build (and a deploy's step 5) fails. The build's error lists the keys (the first 50), konsol's
+> home shows the missing rates, `assert_every_translated_currency_has_a_governed_rate`
+> lists all of them, and `dbt compile --select fx_governed_rate_gaps` renders
+> the same query as standalone SQL for `clickhouse-client`.
+>
+> `deploy.sh` runs that check before step 5, through the dbt_init service. It
+> **aborts** whenever `epm_staging.group_exchange_rates` does not exist (the
+> konsol migration from #174 has not run; a fresh stack has the table from
+> `init-db.sql`). When the table exists but keys have no usable rate, it
+> **warns** with the list and continues: the check reads the last build, and
+> aborting would deadlock a fix made in konsol that only the next build brings
+> in.
+
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
 - **Balance sheet accounts** → closing (spot) rate at period end

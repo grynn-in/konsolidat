@@ -325,6 +325,65 @@ for i in $(seq 1 60); do
 done
 
 # ---------------------------------------------------------------------------
+# Before step 5: governed group exchange rates (konsolidat#93)
+# ---------------------------------------------------------------------------
+# gold_consolidated_trial_balance translates only from the governed rates in
+# epm_staging.group_exchange_rates (konsol#174) and refuses a run with any key
+# lacking a usable rate, before it deletes anything. This runs the SAME macros
+# through the dbt_init service, inside the compose network
+# (`dbt show --inline "{{ fx_precheck() }}"`), so it covers every reason the
+# guard refuses on (missing, duplicate, invalid, implausible) and never drifts.
+#
+#   * the table does not exist: the konsol migration that creates and fills it
+#     (konsol #174) has not run. ABORT, whatever is translated: the guard and
+#     the model read the table regardless. A fresh stack has it from
+#     init-db.sql, so this only fires on an old volume without #174.
+#   * the table exists but keys have no usable rate: WARN with the list and
+#     continue. The check reads the last build's gold tables, so aborting here
+#     would deadlock a fix made in konsol (a currency or ownership change)
+#     that only this build can bring in. At step 5 every model not
+#     downstream of gold_consolidated_trial_balance refreshes; the
+#     consolidated TB and the models that read it keep their last figures,
+#     and step 5 fails the deploy.
+#   * the check itself fails: WARN with dbt's error and continue; the model's
+#     guard still refuses before it replaces anything.
+FX_DBT_CMD="${FX_DBT_CMD:-docker compose --profile setup run --rm -T dbt_init}"
+FX_DBT_PROJECT="${FX_DBT_PROJECT:-/home/frappe/dbt_project}"
+if FX_OUT="$($FX_DBT_CMD show --profiles-dir "$FX_DBT_PROJECT" --project-dir "$FX_DBT_PROJECT" \
+        --limit 201 --output json --inline '{{ fx_precheck() }}' 2>&1)"; then FX_OK=1; else FX_OK=0; fi
+# JSON, not the text table: dbt show truncates wide text columns. Each value is
+# a marker line without quotes, so a grep over the JSON is enough (no jq).
+FX_LINES="$(printf '%s\n' "$FX_OUT" | grep -oE '"fx_check": *"FX_[^"]*"' | sed -E 's/^"fx_check": *"//; s/"$//' || true)"
+FX_HEAD="$(printf '%s\n' "$FX_LINES" | head -1)"
+case "$FX_OK:$FX_HEAD" in
+    1:FX_NOTHING_BUILT)
+        info "Governed group exchange rates: no trial balance or ownership built yet, so nothing to check."
+        ;;
+    1:FX_TABLE_MISSING*)
+        FX_N="${FX_HEAD#FX_TABLE_MISSING }"
+        err "epm_staging.group_exchange_rates does not exist (${FX_N} foreign-currency key(s) are translated today); gold_consolidated_trial_balance reads it on every build."
+        err "Run the konsol migration (konsol #174) first, then re-run this deploy."
+        exit 1
+        ;;
+    1:FX_GAPS_TOTAL*)
+        FX_N="${FX_HEAD#FX_GAPS_TOTAL }"
+        if [ "$FX_N" -gt 0 ] 2>/dev/null; then
+            warn "${FX_N} translated key(s) have no usable governed rate (from->to, year, period, reason):"
+            printf '%s\n' "$FX_LINES" | grep '^FX_GAP ' | sed 's/^FX_GAP /    /'
+            [ "$FX_N" -gt 200 ] && echo "    ... and $((FX_N - 200)) more (assert_every_translated_currency_has_a_governed_rate lists all)"
+            warn "Continuing: at step 5 every model not downstream of gold_consolidated_trial_balance refreshes; the consolidated TB and the models that read it keep their last figures (nothing is deleted), and step 5 fails the deploy until these rates are approved in konsol (Group Exchange Rate)."
+        else
+            info "Governed group exchange rates: every translated foreign-currency key has a usable rate."
+        fi
+        ;;
+    *)
+        warn "FX pre-check failed, so the governed group exchange rates were NOT checked. dbt said:"
+        printf '%s\n' "$FX_OUT" | grep -iE 'error|exception|not found|refused' | head -5 | sed 's/^/    /'
+        warn "Continuing: if a rate is missing, gold_consolidated_trial_balance refuses before it replaces anything."
+        ;;
+esac
+
+# ---------------------------------------------------------------------------
 # Step 5: Run dbt build
 # ---------------------------------------------------------------------------
 echo ""
@@ -339,10 +398,10 @@ DBT_STATUS=${PIPESTATUS[0]}   # exit status of dbt, not of tee
 if [ "$DBT_STATUS" -eq 0 ]; then
     ok "dbt build completed"
 else
-    if grep -qE "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG"; then
-        err "dbt build FAILED — no models were built. Deploy aborted."
+    if grep -qE "Compilation Error|Encountered an error|Database Error|Parsing Error|ERROR creating|SKIP=[1-9]" "$DBT_LOG"; then
+        err "dbt build FAILED — a model errored or was skipped, so the warehouse is stale. Deploy aborted."
         echo ""
-        grep -E -A3 "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG" | head -20
+        grep -E -A3 "Compilation Error|Encountered an error|Database Error|Parsing Error|ERROR creating|SKIP=[1-9]" "$DBT_LOG" | head -20
         echo ""
         err "The stack is up but the warehouse is stale. Fix the error above and re-run."
         rm -f "$DBT_LOG"
