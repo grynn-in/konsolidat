@@ -15,6 +15,10 @@ select
     account_type_name,
     is_balance_sheet,
     is_pnl,
+    {# konsol#159: the intercompany partner entity ('' = none). A row per
+       partner, so consolidation can pair (entity, partner) with
+       (partner, entity); every other consumer sums over it. #}
+    partner_data_area_id,
     {{ dim_select() }},
     {{ measure_select() }}
 from {{ ref('silver_gl_entries') }}
@@ -27,4 +31,5 @@ group by
     account_type_name,
     is_balance_sheet,
     is_pnl,
+    partner_data_area_id,
     {{ dim_group_by() }}

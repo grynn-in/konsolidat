@@ -17,6 +17,7 @@ select
     closing_balance,
     currency_code,
     account_type,
+    partner_data_area_id,
     _loaded_at,
     _raw_id
 from {{ ref('stg_' ~ erp ~ '__trial_balance') }}
