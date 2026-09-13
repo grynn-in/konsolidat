@@ -1,6 +1,27 @@
 # Decision: Consolidation currency (konsolidat #93)
 
-**Issue:** grynn-in/konsolidat#93 · **Status:** next-round feature (biggest gap)
+**Issue:** grynn-in/konsolidat#93 · **Status:** decided 13 Sep 2026 (see Outcome)
+
+## Outcome (decided 13 Sep 2026)
+
+The recommendation below (an EPM Settings field) was **not** taken. The user decided:
+
+- **The presentation currency lives on each Consolidation Group node**, which is
+  what the translation already read. `reporting_currency` is a Link to
+  ISO Currency, validated: a group node (marked a group, or with no entity) must
+  have one. The unused EPM Settings `consolidation_currency` field and its getter
+  are removed. A reporting basis may override the currency later; that is not
+  built. The direct translation method stays; Phase 2 stays deferred.
+  ([konsol#172](https://github.com/grynn-in/konsol/pull/172))
+- **Rates are governed, per fiscal period**: one approved Closing and one Average
+  rate from each currency into a group reporting currency, in konsol's Group
+  Exchange Rate. The ERP feed only pre-fills drafts; rates lock when their period
+  closes. ([konsol#174](https://github.com/grynn-in/konsol/pull/174))
+- **Translation reads only the governed rates**
+  (`epm_staging.group_exchange_rates`); a missing rate fails the build.
+  ([konsolidat#176](https://github.com/grynn-in/konsolidat/pull/176))
+
+The options below are kept as the record of what was weighed.
 
 ## Context
 Today the group reporting currency is effectively hard-wired (USD in the seed).
