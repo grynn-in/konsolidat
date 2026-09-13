@@ -210,11 +210,14 @@ ORDER BY (allocation_run_id);
 -- konsol's INSERT or bronze's SELECT.
 CREATE DATABASE IF NOT EXISTS epm_raw;
 
+-- konsol#159: partner_data_area_id is the intercompany partner entity on a row
+-- ('' = none). konsol's ensure_raw_tables() adds it to a table created before.
 CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submissions (
     batch_id String, data_area_id String, fiscal_year UInt16,
     fiscal_period UInt8, main_account String,
     debit_amount Float64, credit_amount Float64,
-    description String, submission_name String, submitted_at DateTime
+    description String, submission_name String, submitted_at DateTime,
+    partner_data_area_id String DEFAULT ''
 ) ENGINE = MergeTree ORDER BY (batch_id, main_account);
 
 -- ReplacingMergeTree keyed on batch_id: a duplicated claim (an at-least-once
@@ -260,9 +263,13 @@ CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
 -- so a governed build and a bench migrate overwrote each other's ownership
 -- figures. The seed is deleted and this is the DDL; konsol's
 -- ensure_reference_tables() creates it on volumes that predate F2.
+-- konsol#159: a group node also carries its intercompany-difference account
+-- and tolerance (gold_ic_reconciliation, gold_ic_eliminations). konsol's
+-- ensure_reference_tables() adds both to a table created before.
 CREATE TABLE IF NOT EXISTS epm_gold.consolidation_groups (
     consolidation_group String, data_area_id String, entity_name String,
-    reporting_currency String
+    reporting_currency String, ic_difference_account String DEFAULT '',
+    ic_difference_tolerance Float64 DEFAULT 0
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id);
 
 -- One row per (ancestor group, entity, link on the chain between them), written
@@ -284,6 +291,15 @@ CREATE TABLE IF NOT EXISTS epm_staging.entities (
     is_group UInt8, status String, accounting_currency String,
     country String, erp_source String
 ) ENGINE = MergeTree ORDER BY data_area_id;
+
+-- konsol#159: the intercompany flag on the group chart, written through from
+-- konsol's Intercompany Account doctype (Published rows). counterpart_account
+-- is the account the partner books the other side on ('' = the same account).
+-- Keep in step with konsol's _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_staging.intercompany_accounts (
+    main_account String, counterpart_account String, description String,
+    status String
+) ENGINE = MergeTree ORDER BY main_account;
 
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so

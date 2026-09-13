@@ -6,20 +6,36 @@
     )
 }}
 
-{# IC elimination: find matching debit/credit account balances between entities
-   and create offsetting entries
-   PRD-15: Enhanced with unrealized profit elimination (rule_type = 'unrealized_profit') #}
+{# Intercompany elimination entries. Each row is one two-legged entry:
+   debit_account takes debit_elimination (negative) and credit_account takes
+   credit_elimination (positive), so every row nets to zero.
+   gold_fully_consolidated_tb books both legs as the ic_elimination layer.
 
-{# PRD-15: IC elimination rules, from the IC Elimination Rule doctype.
+   konsolidat#148: this used to sum each entity's WHOLE balance per account,
+   then join every ordered debit-entity x credit-entity pair and eliminate the
+   lesser balance for each, so N entities made N x (N-1) rows each consuming
+   full balances: 2.61M eliminated against a 2.56M intercompany revenue
+   balance, and 31.5M against 14.5M on a wrongly flagged AP account. It had no
+   counterparty to pair on.
 
-   konsolidat#146: this used to union a seed half that applied only when the
-   staging table happened to be empty. The seed read
-   `ref('ic_elimination_rules')`, a CSV materialising into
-   epm_gold.ic_elimination_rules — the same relation konsol's legacy
-   write-through targeted, so the two overwrote each other. It is also the
-   silent fallback F3 removed from gold_consolidation_hierarchy: which rules a
-   build trusts must not depend on whether some table was populated at the time.
-   The doctype's staging table is the only source. #}
+   Now (decided 13 Sep 2026, with konsol#159):
+   - balance eliminations come from gold_ic_reconciliation, one row per pair
+     of (entity, partner, account) and (partner, entity, counterpart), on
+     accounts flagged in the group chart (Intercompany Account);
+   - elimination_kind 'matched': the matched amount, the smaller side, when
+     the two sides offset;
+   - elimination_kind 'difference': what is left on each side after that is
+     moved to the group's intercompany-difference account, so the pair's
+     intercompany balances clear. A group without one books no difference:
+     only the matched amount is eliminated and the rest stays visible on the
+     intercompany accounts;
+   - rows without a partner are never eliminated (gold_ic_unmatched);
+   - IC Elimination Rules of type 'balance' no longer eliminate anything.
+     The doctype stays for special cases: 'unrealized_profit' below.
+
+   entity_a/account_a/entity_b/account_b name the pair a balance row belongs
+   to ('' on unrealized-profit rows). #}
+
 with ic_rules as (
     select
         rule_id,
@@ -34,78 +50,83 @@ with ic_rules as (
     from {{ source('epm_staging', 'ic_elimination_rules') }}
 ),
 
-{# Balance-based elimination: existing logic using ic_rules CTE #}
-ic_balances as (
+pairs as (
     select
-        ctb.consolidation_group as consolidation_group,
-        ctb.fiscal_year as fiscal_year,
-        ctb.fiscal_period as fiscal_period,
-        ctb.main_account as main_account,
-        ctb.data_area_id as data_area_id,
-        sum(ctb.group_amount) as account_balance
-    from {{ ref('gold_consolidated_trial_balance') }} as ctb
-    inner join (
-        select debit_account as ic_account from ic_rules where rule_type = 'balance'
-        union distinct
-        select credit_account as ic_account from ic_rules where rule_type = 'balance'
-    ) as ica
-        on ctb.main_account = ica.ic_account
-    group by
-        ctb.consolidation_group,
-        ctb.fiscal_year,
-        ctb.fiscal_period,
-        ctb.main_account,
-        ctb.data_area_id
+        *,
+        {# what is left on each side once the matched amount is eliminated #}
+        balance_a - sign(balance_a) * matched_amount as residual_a,
+        balance_b - sign(balance_b) * matched_amount as residual_b
+    from {{ ref('gold_ic_reconciliation') }}
 ),
 
-balance_eliminations as (
+matched_eliminations as (
     select
-        icr.rule_id as rule_id,
-        icr.rule_name as rule_name,
-        icr.rule_type as rule_type,
-        db.consolidation_group as consolidation_group,
-        db.fiscal_year as fiscal_year,
-        db.fiscal_period as fiscal_period,
-        icr.debit_account as debit_account,
-        icr.credit_account as credit_account,
-        {# F2: the two entities whose balances this cancels. They were computed
-           here and thrown away, which left assert_equity_method_no_ic_elim
-           unable to key on anything finer than the group — so one equity-method
-           node in a group failed every elimination in it. Also the audit trail
-           F10 wants: which pair a rule actually fired on. #}
-        db.data_area_id as debit_entity,
-        cr.data_area_id as credit_entity,
-        least(abs(db.account_balance), abs(cr.account_balance)) as elimination_amount,
-        -least(abs(db.account_balance), abs(cr.account_balance)) as debit_elimination,
-        least(abs(db.account_balance), abs(cr.account_balance)) as credit_elimination
-    from ic_rules as icr
-    inner join ic_balances as db
-        on db.main_account = icr.debit_account
-    inner join ic_balances as cr
-        on cr.main_account = icr.credit_account
-        and cr.consolidation_group = db.consolidation_group
-        and cr.fiscal_year = db.fiscal_year
-        and cr.fiscal_period = db.fiscal_period
-    where icr.rule_type = 'balance'
-      and cr.data_area_id != db.data_area_id
-      and (icr.debit_entity_pattern = '*' or db.data_area_id = icr.debit_entity_pattern)
-      and (icr.credit_entity_pattern = '*' or cr.data_area_id = icr.credit_entity_pattern)
-      {# PRD-14: Exclude equity-method entities from IC eliminations.
-         F2: the method is dated and per-group, so the exclusion is too — it read
-         the consolidation_groups seed, which had one method per entity for all
-         time and none of the chain. An entity below an equity-held sub-group is
-         equity-method at the top group while still line-consolidating into the
-         sub-group, and only the (group, entity, period) key can say that. #}
-      and (db.consolidation_group, db.data_area_id, db.fiscal_year, db.fiscal_period) not in (
-          select consolidation_group, data_area_id, fiscal_year, fiscal_period
-          from {{ ref('gold_entity_ownership') }}
-          where consolidation_method = 'equity' or has_complete_chain = 0
-      )
-      and (cr.consolidation_group, cr.data_area_id, cr.fiscal_year, cr.fiscal_period) not in (
-          select consolidation_group, data_area_id, fiscal_year, fiscal_period
-          from {{ ref('gold_entity_ownership') }}
-          where consolidation_method = 'equity' or has_complete_chain = 0
-      )
+        concat('IC:', account_a, '/', account_b) as rule_id,
+        'Intercompany: matched amount' as rule_name,
+        'balance' as rule_type,
+        consolidation_group,
+        fiscal_year,
+        fiscal_period,
+        {# the side with the debit balance is credited, and vice versa #}
+        if(balance_a > 0, account_a, account_b) as debit_account,
+        if(balance_a > 0, account_b, account_a) as credit_account,
+        if(balance_a > 0, entity_a, entity_b) as debit_entity,
+        if(balance_a > 0, entity_b, entity_a) as credit_entity,
+        matched_amount as elimination_amount,
+        -matched_amount as debit_elimination,
+        matched_amount as credit_elimination,
+        'matched' as elimination_kind,
+        entity_a,
+        account_a,
+        entity_b,
+        account_b
+    from pairs
+    where matched_amount > 0
+),
+
+residuals as (
+    select
+        consolidation_group, fiscal_year, fiscal_period,
+        entity_a, account_a, entity_b, account_b, ic_difference_account,
+        entity_a as ic_entity, account_a as ic_account, entity_b as other_entity,
+        residual_a as residual
+    from pairs
+    where ic_difference_account != '' and abs(residual_a) >= 0.005
+
+    union all
+
+    select
+        consolidation_group, fiscal_year, fiscal_period,
+        entity_a, account_a, entity_b, account_b, ic_difference_account,
+        entity_b as ic_entity, account_b as ic_account, entity_a as other_entity,
+        residual_b as residual
+    from pairs
+    where ic_difference_account != '' and abs(residual_b) >= 0.005
+),
+
+difference_eliminations as (
+    select
+        concat('IC:', account_a, '/', account_b) as rule_id,
+        'Intercompany: difference' as rule_name,
+        'balance' as rule_type,
+        consolidation_group,
+        fiscal_year,
+        fiscal_period,
+        {# clear the residual off the intercompany account; the difference
+           account takes the same signed amount #}
+        if(residual > 0, ic_account, ic_difference_account) as debit_account,
+        if(residual > 0, ic_difference_account, ic_account) as credit_account,
+        if(residual > 0, ic_entity, other_entity) as debit_entity,
+        if(residual > 0, other_entity, ic_entity) as credit_entity,
+        abs(residual) as elimination_amount,
+        -abs(residual) as debit_elimination,
+        abs(residual) as credit_elimination,
+        'difference' as elimination_kind,
+        entity_a,
+        account_a,
+        entity_b,
+        account_b
+    from residuals
 ),
 
 {# PRD-15: Unrealized profit elimination
@@ -125,7 +146,12 @@ unrealized_profit_eliminations as (
         icb.buying_entity as credit_entity,
         icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as elimination_amount,
         -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
-        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination
+        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination,
+        'unrealized_profit' as elimination_kind,
+        '' as entity_a,
+        '' as account_a,
+        '' as entity_b,
+        '' as account_b
     from ic_rules as icr
     cross join {{ source('epm_staging', 'ic_balances') }} as icb
     {# F2: which group an entity rolls into is now one row per ANCESTOR group, so
@@ -146,6 +172,8 @@ unrealized_profit_eliminations as (
       and (icr.credit_entity_pattern = '*' or icb.buying_entity = icr.credit_entity_pattern)
 )
 
-select * from balance_eliminations
+select * from matched_eliminations
+union all
+select * from difference_eliminations
 union all
 select * from unrealized_profit_eliminations

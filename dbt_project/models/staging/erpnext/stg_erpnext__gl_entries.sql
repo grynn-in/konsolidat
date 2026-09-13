@@ -50,6 +50,9 @@ select
     coalesce(voucher_no, '') as journal_number,
     coalesce(voucher_type, '') as posting_type,
     coalesce(account, '') as ledger_account,
+    {# konsol#159: NULL until an ERP mapping exists (ERPNext's `party` is a
+       customer or supplier, not a group entity). #}
+    cast(null as Nullable(String)) as partner_data_area_id,
     coalesce(cost_center, '') as dim_cost_center,
     '' as dim_department,
     coalesce(project, '') as dim_business_unit,

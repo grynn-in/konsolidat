@@ -132,6 +132,12 @@ sources:
           konsol#110: the governed entity registry — one row per konsol Entity,
           groups included, with the functional currency as accounting_currency.
           silver_entity_currencies prefers it over the ERP's company master.
+      - name: intercompany_accounts
+        description: >
+          konsol#159: the intercompany flag on the group chart — one row per
+          Published Intercompany Account, with the counterpart account the
+          partner books the other side on ('' = the same account). Drives
+          gold_ic_reconciliation, gold_ic_eliminations and gold_ic_unmatched.
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at
