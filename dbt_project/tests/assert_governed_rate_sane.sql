@@ -2,6 +2,8 @@
 {#
     konsol#103 / #138: a governed rate is a positive, finite, true rate of
     plausible magnitude, of a governed type, between two different currencies.
+    `rate` is the true rate as konsol publishes it (units of to per 1 from);
+    nothing here scales or inverts it.
     konsol refuses each of these at entry (konsol.group_rates.magnitude_problem
     for the magnitude); this names a row that reached the warehouse another way
     (a script, a restore). The magnitude rule is macros/fx_magnitude.sql. A

@@ -34,7 +34,12 @@
    (or the first build) drops + recreates the table from scratch. #}
 
 {# PRD-1: Proper FX translation — closing rate for BS, average rate for PnL,
-          from the governed group rates only (konsolidat#93 / konsol#103)
+          from the governed group rates only (konsolidat#93 / konsol#103).
+   FX CONTRACT (13 Sep 2026): epm_staging.group_exchange_rates.rate is the true
+   rate (units of to_currency per 1 from_currency), published by konsol, the
+   single source of FX rates. The warehouse never scales or inverts it.
+   silver_exchange_rates holds the ERP quotes, which feed only konsol's
+   pre-fill.
    PRD-4: Minority interest — nci_amount column for partial ownership
    PRD-8: Multi-level hierarchy — effective_ownership from hierarchy or seed fallback
    PRD-9: Temporal ownership — period-level ownership from ownership_periods staging
@@ -147,16 +152,20 @@ historical_rates as (
    assert_every_translated_currency_has_a_governed_rate names it. The old
    chain (Closing, else Default, else 1.0) translated whole ledgers at the 1.0
    parity rate without a word (#109). #}
+{# The pre_hook guard also reads the currencies' reference magnitudes; declared
+   here so dbt knows the dependency at parse time. #}
+-- depends_on: {{ source('epm_gold', 'currencies') }}
 governed_rates as (
     select
         from_currency,
         to_currency,
         fiscal_year,
         fiscal_period,
-        {# One approved row per key: konsol refuses a second approval, and
-           assert_governed_rate_grain_unique fails the build on a collision.
-           anyIf over no rows is 0, so presence is counted, never inferred
-           from the value. #}
+        {# One approved row per key: konsol refuses a second approval, and a
+           collision stops the run in the pre_hook guard (and is NULLed below);
+           assert_governed_rate_grain_unique names it (warn). anyIf over no rows
+           is 0, so presence is counted, never inferred from the value.
+           `rate` is used exactly as published: the true rate. #}
         anyIf(toFloat64(rate), rate_type = 'Closing') as gov_closing,
         anyIf(toFloat64(rate), rate_type = 'Average') as gov_average,
         countIf(rate_type = 'Closing') as n_closing,
@@ -292,7 +301,7 @@ consolidated as (
        scope's slice empty until the next run (#162, accepted); the dbt test
        names the missing keys. #}
     where throwIf(translation_rate is null,
-                  'konsolidat#93: a translated currency has no approved governed Closing and Average rate for its period (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
+                  'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
 )
 
 select * from consolidated

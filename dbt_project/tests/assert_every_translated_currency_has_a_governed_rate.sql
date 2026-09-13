@@ -13,6 +13,7 @@
     model decides: its first pre_hook (governed_rate_guard, the same query,
     scoped to the run) stops the build before anything is deleted.
 #}
+{%- set _currencies = source('epm_gold', 'currencies') -%}
 select
     from_currency,
     to_currency,
@@ -22,6 +23,7 @@ select
     multiIf(
         problem = 'missing', 'no approved governed Closing and Average rate (konsol Group Exchange Rate)',
         problem = 'duplicate', 'more than one approved governed rate of one type',
-        'a governed rate that is zero, negative or not a finite number'
+        problem = 'invalid', 'a governed rate that is zero, negative or not a finite number',
+        'a governed rate more than 10x from the reference magnitudes (check its scale: the quoted-per factor)'
     ) as detail
 from ({{ governed_rate_gaps(scoped=false) }})

@@ -1,25 +1,38 @@
 {#
-    konsolidat#93 / konsol#103: the (from-currency, group reporting currency,
-    fiscal year, fiscal period) keys gold_consolidated_trial_balance translates
-    whose governed rates are not usable, with the reason:
+    konsolidat#93 / konsol#103. THE CONTRACT (decided 13 Sep 2026: one source
+    of truth for FX rates, and it comes via konsol):
+    epm_staging.group_exchange_rates.rate is the TRUE rate, units of
+    to_currency per 1 from_currency, published by konsol. The warehouse never
+    scales or inverts it (konsol divides out any "quoted per" factor before it
+    publishes). silver_exchange_rates holds the ERP quotes, which feed only
+    konsol's pre-fill. The magnitude check below is the net that stops an
+    unscaled or double-scaled rate from ever being used.
+#}
 
-      missing    no approved Closing AND Average rate;
-      duplicate  more than one approved rate of one type (the model's anyIf
-                 would pick one arbitrarily);
-      invalid    a rate that is zero, negative or not a finite number (it
-                 would translate the ledger to 0, flip its sign, or NaN it).
+{#
+    The (from-currency, group reporting currency, fiscal year, fiscal period)
+    keys gold_consolidated_trial_balance translates whose governed rates are
+    not usable, with the reason:
 
-    Built from the model's own inputs and filters: resolved entity currencies,
-    a complete ownership chain, line consolidation, the group's currency from
-    its node. One definition, two users:
-    * governed_rate_guard(): the model's FIRST pre_hook, scoped by the run's
-      period and scope filters, so an unusable rate stops the run BEFORE the
-      scope's DELETE, while the table is still intact;
-    * assert_every_translated_currency_has_a_governed_rate (unscoped), which
-      names each key and its reason.
+      missing      no approved Closing AND Average rate;
+      duplicate    more than one approved rate of one type (the model's anyIf
+                   would pick one arbitrarily);
+      invalid      a rate that is zero, negative or not a finite number;
+      implausible  a rate more than 10x from what the two currencies'
+                   reference magnitudes imply (ISO Currency usd_log10, when
+                   both are known): a #138-style scaling error, e.g. a rate
+                   published without its "quoted per" factor divided out. A
+                   currency with no reference value is not refused here (the
+                   magnitude tests warn about it).
+
+    Built from the model's own inputs and filters. One definition, two users:
+    governed_rate_guard() (the model's FIRST pre_hook, scoped by the run's
+    period and scope filters, so the run stops BEFORE the scope's DELETE) and
+    assert_every_translated_currency_has_a_governed_rate (unscoped).
     NOT IN / IN rather than a LEFT JOIN null test (join_use_nulls=0).
 #}
 {% macro governed_rate_gaps(scoped=true) %}
+    {%- set with_refs = fx_reference_column_present() -%}
     with translated as (
         select distinct
             ec.accounting_currency as from_currency,
@@ -49,17 +62,42 @@
           {% if scoped %}{{ period_filter('tb.fiscal_year', 'tb.fiscal_period') }} {{ scope_filter('tb.data_area_id') }}{% endif %}
     ),
 
+    {% if with_refs %}
+    ref_mag as {{ fx_reference_magnitudes() }},
+    {% endif %}
+
+    gov_rows as (
+        select
+            g.from_currency as r_from,
+            g.to_currency as r_to,
+            toUInt16(g.fiscal_year) as r_fy,
+            toUInt16(g.fiscal_period) as r_fp,
+            g.rate_type as r_type,
+            not (isFinite(g.rate) and g.rate > 0) as r_invalid,
+            {% if with_refs %}
+            (not r_invalid
+             and g.from_currency in (select currency_code from ref_mag)
+             and g.to_currency in (select currency_code from ref_mag)
+             and abs(log10(g.rate) - (t.usd_log10 - f.usd_log10)) > 1) as r_implausible
+            {% else %}
+            false as r_implausible
+            {% endif %}
+        from {{ source('epm_staging', 'group_exchange_rates') }} as g
+        {% if with_refs %}
+        left join ref_mag as f on f.currency_code = g.from_currency
+        left join ref_mag as t on t.currency_code = g.to_currency
+        {% endif %}
+    ),
+
     governed as (
         select
-            from_currency as g_from,
-            to_currency as g_to,
-            toUInt16(fiscal_year) as g_fy,
-            toUInt16(fiscal_period) as g_fp,
-            countIf(rate_type = 'Closing') as n_closing,
-            countIf(rate_type = 'Average') as n_average,
-            countIf(not (isFinite(rate) and rate > 0)) as n_invalid
-        from {{ source('epm_staging', 'group_exchange_rates') }}
-        group by from_currency, to_currency, fiscal_year, fiscal_period
+            r_from as g_from, r_to as g_to, r_fy as g_fy, r_fp as g_fp,
+            countIf(r_type = 'Closing') as n_closing,
+            countIf(r_type = 'Average') as n_average,
+            countIf(r_invalid) as n_invalid,
+            countIf(r_implausible) as n_implausible
+        from gov_rows
+        group by r_from, r_to, r_fy, r_fp
     )
 
     select
@@ -74,21 +112,30 @@
                 select g_from, g_to, g_fy, g_fp from governed where n_closing > 1 or n_average > 1), 'duplicate',
             (from_currency, to_currency, fy, fp) in (
                 select g_from, g_to, g_fy, g_fp from governed where n_invalid > 0), 'invalid',
+            (from_currency, to_currency, fy, fp) in (
+                select g_from, g_to, g_fy, g_fp from governed where n_implausible > 0), 'implausible',
             ''
         ) as problem
     from translated
     where problem != ''
 {% endmacro %}
 
-{# One throwIf per reason: ClickHouse needs a constant message, so each names
-   its own problem; the test names the keys. #}
+{# Stops the run, naming the first unusable key and its reason. ClickHouse's
+   throwIf needs a constant message; a CAST of the message to UInt8 raises
+   with the message itself in the error, and only when a row exists. #}
 {% macro governed_rate_guard() %}
-    select
-        throwIf(countIf(problem = 'missing') > 0,
-            'konsolidat#93: a translated currency has no approved governed Closing and Average rate for its period (konsol Group Exchange Rate). Nothing was deleted. See assert_every_translated_currency_has_a_governed_rate.'),
-        throwIf(countIf(problem = 'duplicate') > 0,
-            'konsolidat#93: a translated currency has more than one approved governed rate of one type for its period. Nothing was deleted. See assert_every_translated_currency_has_a_governed_rate.'),
-        throwIf(countIf(problem = 'invalid') > 0,
-            'konsolidat#93: a governed rate a translated currency needs is zero, negative or not a finite number. Nothing was deleted. See assert_every_translated_currency_has_a_governed_rate.')
+    select cast(concat(
+        'konsolidat#93 refused before anything was deleted: ',
+        multiIf(
+            problem = 'missing', 'no approved governed Closing and Average rate',
+            problem = 'duplicate', 'more than one approved governed rate of one type',
+            problem = 'invalid', 'a governed rate that is zero, negative or not a finite number',
+            'a governed rate more than 10x from the reference magnitudes (check its scale: the quoted-per factor)'
+        ),
+        ' for ', from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp),
+        ' (', toString(count() over ()), ' key(s) in all; see assert_every_translated_currency_has_a_governed_rate; konsol Group Exchange Rate)'
+    ) as UInt8)
     from ({{ governed_rate_gaps(scoped=true) }})
+    order by from_currency, to_currency, fy, fp
+    limit 1
 {% endmacro %}

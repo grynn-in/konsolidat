@@ -9,6 +9,15 @@
 > pre-fills drafts in konsol. The account-type rule below (closing for the
 > balance sheet, average for the P&L, historical for equity tranches) is
 > unchanged.
+>
+> **The contract (decided 13 Sep 2026):** `epm_staging.group_exchange_rates.rate`
+> is the true rate (units of `to_currency` per 1 `from_currency`), published by
+> konsol, the single source of FX rates. The warehouse never scales or inverts
+> it: finance enters any "quoted per" factor in konsol, and konsol divides it
+> out before publishing. `silver_exchange_rates` holds the ERP quotes, which
+> feed only konsol's pre-fill. A rate more than 10x from the currencies'
+> reference magnitudes (`usd_log10`) stops the build before anything is
+> replaced.
 
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
