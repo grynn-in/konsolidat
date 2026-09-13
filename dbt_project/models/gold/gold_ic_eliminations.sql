@@ -23,7 +23,10 @@
      report adds to the group view for its 100% column (#175 re-review H1).
    Group plus NCI is the full (100%) consolidation. In it both sides of a
    pair are eliminated in full, a difference is booked at 100%, and the NCI
-   line nets to zero.
+   line nets to zero per group and period (assert_ic_nci_line_nets_zero).
+   Not per entity: its legs are attributed to the entity whose minority owns
+   them (assert_ic_nci_leg_entity), and with sides held at 70% and 80% those
+   differ.
 
    Balance eliminations come from gold_ic_reconciliation, one row per pair and
    period (decided 13 Sep 2026):
@@ -132,7 +135,10 @@ posted as (
     from previous
 ),
 
-{# (account, entity, amount) for each of an entry's two legs #}
+{# (account, entity, amount) for each of an entry's two legs. The NCI-line
+   legs below (group 'nci', NCI view 'matched') net to zero per group and
+   period, not per entity: the group view's is attributed to the other,
+   partly owned side, the NCI view's to its own side. #}
 {% set legs = [
     ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= 0.005'),
     ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_n_a) >= 0.005'),

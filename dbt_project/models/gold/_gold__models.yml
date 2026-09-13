@@ -393,7 +393,7 @@ models:
               arguments:
                 values: ['balance', 'movement']
       - name: pair_event
-        description: "joined (first period both are in the group), left (first period after a partner's ownership ended: everything reversed), or ''"
+        description: "joined (first period both line-consolidate into the group), left (first period after a live pair stops being live in this group for any reason, e.g. a disposal, a sub-group sale or a move to equity: everything reversed), or ''"
         tests:
           - accepted_values:
               arguments:

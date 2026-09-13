@@ -42,21 +42,32 @@
    - Decision 14: a balance-sheet pair (receivable, payable, loan) compares
      the balance to date; a P&L pair compares the period's movement.
 
-   Membership (#175 re-review M1). A pair exists in a group only while BOTH
-   entities line-consolidate into it (gold_entity_ownership):
+   Membership (#175 third review M1, M2). A pair is live in a group in a
+   period when BOTH entities line-consolidate into that group at the
+   period's date: a complete ownership chain up to the group, every link
+   open, method full or proportional. It is resolved from the ownership
+   windows (ownership_resolution_ctes, the chain gold_entity_ownership
+   resolves) on a period spine: every period the warehouse holds, from the
+   pair's first booking to the group's latest period. Whether either entity
+   submitted anything in a period plays no part.
    - A balance-sheet side's balance to date is everything that side has
      booked in the group view, including its rows with this partner from
      before the partner joined (a receivable from a company later acquired).
      So the first period of joint membership compares the balances AT
      joining, not the movements since. That row always exists
      (pair_event 'joined'), whether or not anything moved.
-   - The first period after a partner's ownership has ended (every ownership
-     period of it ended before that period's date), while the other side is
-     still in the group, is a 'left' row. Its values are 0, so every
-     elimination posted to date is reversed there: the balance is no longer
-     intragroup.
-   - A period in which one side merely has no data (it is still owned) gets
-     no row. The pair carries its last position; nothing is reversed.
+   - The first period in which a live pair is no longer live is a 'left'
+     row, whatever the reason: the partner was disposed of, the sub-group
+     holding it was sold (while its own ownership period stays open), its
+     stake moved to equity, or the other side left. Its values are 0, so
+     every elimination posted to date is reversed there: the balance is no
+     longer intragroup in this group. It is decided per group: the same pair
+     can stay live in a sub-group.
+   - A period in which one side submitted nothing while both are members is
+     an ordinary period in which that side moved 0. A balance-sheet pair
+     compares against the quiet side's unchanged balance and a P&L pair
+     against 0, so what the other side booked shows as a booking difference
+     until the quiet side's trial balance arrives.
    - What the warehouse does not hold: an acquired entity's own balances from
      before it joined. Its pre-acquisition rows fall outside its ownership
      window, so gold_consolidated_trial_balance never carries them. Until
@@ -85,23 +96,6 @@
 
 with ic_accounts as (
     {{ ic_account_map() }}
-),
-
-members as (
-    select distinct consolidation_group, data_area_id, fiscal_year, fiscal_period
-    from {{ ref('gold_entity_ownership') }}
-    where has_complete_chain = 1
-      and consolidation_method not in ('equity', 'none')
-),
-
-{# when an entity's ownership has ended: the latest end of its ownership
-   periods, when none is open. An open period ends '9999-12-31', stored as
-   ClickHouse's largest Date. #}
-ownership_ends as (
-    select data_area_id as ended_entity, max(end_date) as last_end
-    from {{ source('epm_staging', 'ownership_periods') }}
-    group by data_area_id
-    having max(end_date) < toDate('2149-01-01')
 ),
 
 {# each side's MOVEMENT in the period: local, translated (100%), group share.
@@ -178,34 +172,60 @@ pair_keys as (
     from pair_moves
 ),
 
-{# every period at least one side is in the group #}
-side_periods as (
-    select
-        pk.consolidation_group as consolidation_group, pk.entity_a as entity_a, pk.account_a as account_a,
-        pk.entity_b as entity_b, pk.account_b as account_b,
-        m.fiscal_year as fiscal_year, m.fiscal_period as fiscal_period,
-        toUInt8(1) as a_in, toUInt8(0) as b_in
-    from pair_keys as pk
-    inner join members as m
-        on m.consolidation_group = pk.consolidation_group and m.data_area_id = pk.entity_a
-    union all
-    select
-        pk.consolidation_group, pk.entity_a, pk.account_a, pk.entity_b, pk.account_b,
-        m.fiscal_year, m.fiscal_period,
-        toUInt8(0), toUInt8(1)
-    from pair_keys as pk
-    inner join members as m
-        on m.consolidation_group = pk.consolidation_group and m.data_area_id = pk.entity_b
+pair_span as (
+    select consolidation_group, entity_a, account_a, entity_b, account_b,
+           min(tuple(fiscal_year, fiscal_period)) as first_period
+    from pair_moves
+    group by consolidation_group, entity_a, account_a, entity_b, account_b
+),
+
+group_last as (
+    select consolidation_group as last_group, max(tuple(fiscal_year, fiscal_period)) as last_period
+    from {{ ref('gold_consolidated_trial_balance') }}
+    group by consolidation_group
+),
+
+{# the periods the warehouse holds (gold_entity_ownership resolves the same
+   dates), not the periods either side has data in #}
+spine_periods as (
+    select distinct
+        fiscal_year,
+        fiscal_period,
+        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
+    from {{ ref('gold_trial_balance') }}
+),
+
+pair_entity_periods as (
+    select e.data_area_id as data_area_id, sp.fiscal_year as fiscal_year,
+           sp.fiscal_period as fiscal_period, sp.period_date as period_date
+    from (
+        select entity_a as data_area_id from pair_keys
+        union distinct
+        select entity_b from pair_keys
+    ) as e
+    cross join spine_periods as sp
+),
+
+{{ ownership_resolution_ctes('pair_entity_periods', 'own_') }},
+
+{# line-consolidated into the group at the period's date #}
+members as (
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period
+    from own_resolution
+    where has_complete_chain = 1
+      and consolidation_method not in ('equity', 'none')
 ),
 
 spine as (
     select
-        consolidation_group, entity_a, account_a, entity_b, account_b, fiscal_year, fiscal_period,
-        max(a_in) as a_member,
-        max(b_in) as b_member,
-        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from side_periods
-    group by consolidation_group, entity_a, account_a, entity_b, account_b, fiscal_year, fiscal_period
+        ps.consolidation_group as consolidation_group, ps.entity_a as entity_a, ps.account_a as account_a,
+        ps.entity_b as entity_b, ps.account_b as account_b,
+        sp.fiscal_year as fiscal_year, sp.fiscal_period as fiscal_period
+    from pair_span as ps
+    inner join group_last as gl on gl.last_group = ps.consolidation_group
+    cross join spine_periods as sp
+    where tuple(sp.fiscal_year, sp.fiscal_period) >= ps.first_period
+      and tuple(sp.fiscal_year, sp.fiscal_period) <= gl.last_period
 ),
 
 spine_state as (
@@ -213,24 +233,23 @@ spine_state as (
         s.consolidation_group as consolidation_group, s.entity_a as entity_a, s.account_a as account_a,
         s.entity_b as entity_b, s.account_b as account_b,
         s.fiscal_year as fiscal_year, s.fiscal_period as fiscal_period,
-        toUInt8(s.a_member = 1 and s.b_member = 1) as is_live,
-        {# join_use_nulls=0: an entity with an open ownership period has no
-           ownership_ends row, and comes back as 1970-01-01 #}
-        toUInt8(
-            (s.a_member = 1 and s.b_member = 0 and eb.last_end > toDate('1970-01-01') and s.period_date > eb.last_end)
-            or (s.a_member = 0 and s.b_member = 1 and ea.last_end > toDate('1970-01-01') and s.period_date > ea.last_end)
-        ) as is_out
+        {# join_use_nulls=0: a side that is not a member comes back as '' #}
+        toUInt8(ma.data_area_id != '' and mb.data_area_id != '') as is_live
     from spine as s
-    left join ownership_ends as ea on ea.ended_entity = s.entity_a
-    left join ownership_ends as eb on eb.ended_entity = s.entity_b
+    left join members as ma
+        on ma.consolidation_group = s.consolidation_group and ma.data_area_id = s.entity_a
+        and ma.fiscal_year = s.fiscal_year and ma.fiscal_period = s.fiscal_period
+    left join members as mb
+        on mb.consolidation_group = s.consolidation_group and mb.data_area_id = s.entity_b
+        and mb.fiscal_year = s.fiscal_year and mb.fiscal_period = s.fiscal_period
 ),
 
+{# the spine has every period, so the previous row is the previous period #}
 spine_marked as (
     select
         *,
         lagInFrame(is_live, 1, toUInt8(0)) over ({{ to_date }}) as prev_live
     from spine_state
-    where is_live = 1 or is_out = 1
 ),
 
 combined as (
@@ -246,7 +265,7 @@ combined as (
         consolidation_group, entity_a, account_a, entity_b, account_b, fiscal_year, fiscal_period,
         toUInt8(0),
         toFloat64(0), toFloat64(0), toFloat64(0), toFloat64(0), toFloat64(0), toFloat64(0),
-        toUInt8(0), toUInt8(1), is_live, is_out, prev_live
+        toUInt8(0), toUInt8(1), is_live, toUInt8(is_live = 0 and prev_live = 1), prev_live
     from spine_marked
 ),
 
@@ -304,7 +323,7 @@ valued as (
     from to_date
     where has_spine = 1
       and (
-          {# balance sheet: a period something moved, the first period together, and the first after a partner left #}
+          {# balance sheet: a period something moved, the first period together, and the first after the pair left #}
           (pair_is_bs = 1 and ((live_flag = 1 and (has_move = 1 or was_live = 0)) or (out_flag = 1 and was_live = 1)))
           {# P&L: a period something moved while both are in the group #}
           or (pair_is_bs = 0 and live_flag = 1 and has_move = 1)

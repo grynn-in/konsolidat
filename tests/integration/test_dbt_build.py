@@ -203,8 +203,9 @@ def ic_decisions_data(ch):
 
 
 def test_ic_decisions_12_to_14_on_data(dbt_run, ch, ic_decisions_data):
-    """An 80%-owned side, a balance-sheet pair booked in P1 and P2, a second
-    functional currency, a mid-year acquisition and a disposal: the exact
+    """An 80%-owned side, 70% against 80%, a balance-sheet pair booked in P1
+    and P2, a second functional currency, a mid-year acquisition, a disposal,
+    a sub-group sale, a stake moved to equity and a quiet partner: the exact
     reconciliation rows and entries, and the 100% view clear."""
     result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched")
     assert result.returncode == 0, result.stdout[-3000:]

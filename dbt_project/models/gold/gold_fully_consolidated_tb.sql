@@ -52,7 +52,8 @@ with entity_balances as (
    column). The 'nci' entries (decision 12) are tagged ic_elimination_nci and
    carry the entity on each leg: the NCI line's leg is the partly owned
    entity whose minority holds that share (#175 re-review L2). The cash flow
-   statement leaves them out (L3). #}
+   statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
+   (third review L1). #}
 ic_elims as (
     select
         consolidation_group,
