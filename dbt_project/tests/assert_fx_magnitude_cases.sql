@@ -25,6 +25,7 @@ with cases as (
         ('IDR', 'USD', 0.00617,   4.21, 0.0,  'implausible'),   -- IDR x100
         ('USD', 'USD', 1.0,       0.0,  0.0,  'ok'),            -- USD into itself
         ('XNR', 'USD', 0.5,       nan,  0.0,  'no_reference'),  -- a NaN reference
+        ('XNR', 'USD', 0.0,       nan,  0.0,  'invalid'),       -- zero rate AND no reference: invalid wins (pins the order of checks)
         ('XZR', 'USD', 0.5,       0.0,  0.0,  'no_reference'),  -- 0 for a non-USD currency = unset
         ('XPG', 'USD', 0.001,     3.0,  0.0,  'ok'),            -- a currency pegged at 0.001
         ('XPG', 'USD', 0.01,      3.0,  0.0,  'ok'),            -- exactly one decade (10x) off: plausible (> 1, not >= 1)
