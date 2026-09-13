@@ -20,8 +20,8 @@
    gold_ic_reconciliation can pair (entity, partner) with (partner, entity) on
    translated group amounts.
 
-   It is the LAST column, and the first pre_hook adds it to a table built
-   before it existed. dbt-clickhouse's append inserts POSITIONALLY into the
+   It is the LAST column, and the second pre_hook (after the rate guard,
+   before the DELETE) adds it to a table built before it existed. dbt-clickhouse's append inserts POSITIONALLY into the
    target's columns and applies no on_schema_change on this path, so the new
    column must sit where ALTER ... ADD COLUMN puts it: at the end. Anywhere
    else every later column would land one place off, silently. #}

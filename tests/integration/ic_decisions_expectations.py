@@ -18,6 +18,7 @@ FIXTURE_ROWS = [
     ("epm_staging.consolidation_ancestry", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
     ("epm_staging.ownership_periods", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
     ("epm_staging.historical_equity_rates", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
+    ("epm_staging.group_exchange_rates", "fiscal_year = 2095"),
     ("epm_staging.intercompany_accounts", "description LIKE 'ZZ test%'"),
     ("epm_raw.trial_balance_submissions", "fiscal_year = 2095"),
     ("epm_raw.trial_balance_submission_control", "fiscal_year = 2095"),
