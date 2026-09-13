@@ -14,6 +14,8 @@
     stg_erpnext__gl_entries / budget_entries (ERPNext Company has no short
     code, so the display name is the canonical key, uppercased for join
     stability across the erpnext models).
+
+    Adapter contract: models/staging/README.md.
 #}
 
 select

@@ -2,6 +2,7 @@
     D365 F&O legal entities adapter.
     Joins LegalEntities with Ledgers for currency info.
     Output matches canonical stg_legal_entities schema.
+    Adapter contract: models/staging/README.md.
 #}
 
 with entities as (

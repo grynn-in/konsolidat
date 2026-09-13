@@ -1,6 +1,7 @@
 {#
     D365 F&O fiscal periods adapter.
     Combines fiscal calendar years into canonical stg_fiscal_periods schema.
+    Adapter contract: models/staging/README.md.
 #}
 
 select

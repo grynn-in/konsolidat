@@ -14,6 +14,9 @@
     (konsolidat#155: the demo generator did exactly that).
     assert_d365_gl_vouchers_balance fails the build, naming the voucher, when a
     voucher does not net to zero here.
+
+    Adapter contract (signed amounts, canonical columns, balance tests):
+    models/staging/README.md.
 #}
 
 with entries as (

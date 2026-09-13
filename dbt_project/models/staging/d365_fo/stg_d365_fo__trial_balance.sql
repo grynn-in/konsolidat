@@ -1,6 +1,7 @@
 {#
     D365 F&O trial balance adapter.
     Maps TrialBalanceFiscalYearSnapshots → canonical stg_trial_balance schema.
+    Adapter contract: models/staging/README.md.
 #}
 
 select

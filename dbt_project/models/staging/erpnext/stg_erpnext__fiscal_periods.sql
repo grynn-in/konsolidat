@@ -14,6 +14,8 @@
     dates. The name doubles as both calendar_id and the canonical fiscal_year
     label (canonical fiscal_periods.fiscal_year is a string, unlike the numeric
     fiscal_year on gl_entries).
+
+    Adapter contract: models/staging/README.md.
 #}
 
 select

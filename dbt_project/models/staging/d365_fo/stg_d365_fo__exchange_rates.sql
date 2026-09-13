@@ -5,6 +5,7 @@
     units of from-currency: 100 EUR = 93.50 CHF -> Rate 93.50), so it is
     resolved here and nowhere else. No layer after staging may scale a rate;
     silver holds true rates whatever the ERP. History and why: #138.
+    Adapter contract: models/staging/README.md.
 #}
 
 select

@@ -17,6 +17,10 @@
     (account, budget_amount). ERPNext budgets have no posting date — we derive
     one from the fiscal-year start. record_id is a deterministic Int64 surrogate
     from the parent name + account, matching the numeric canonical contract.
+
+    Adapter contract: models/staging/README.md. Known gap: budget_amount is
+    passed through unsigned, which is right for an expense budget and wrong
+    for an income-account budget (the contract wants debit positive).
 #}
 
 select
