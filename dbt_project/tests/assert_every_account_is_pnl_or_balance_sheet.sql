@@ -3,7 +3,8 @@
     Every chart account (silver_main_accounts already drops Total accounts) is
     exactly one of is_pnl / is_balance_sheet. An account that is neither drops
     out of the P&L, the balance sheet and cash-flow net income, and is
-    translated at the closing rate; one that is both is counted twice. This
+    translated at the closing rate; one that is both appears in both the P&L
+    and the balance sheet (and takes the closing rate). This
     names each such account and its raw account_type, so the fix is to add
     that type to the classification lists in silver_main_accounts (it is how
     ERPNext's 'Income' root_type went unclassified).
