@@ -9,7 +9,9 @@
     declare and publish the account (or correct the code in the upload).
 
     NOT IN, not a LEFT JOIN: under join_use_nulls=0 an unmatched join fills ''
-    rather than NULL, so an `is null` test would never fire.
+    rather than NULL, so an `is null` test would never fire. That is how
+    assert_gl_accounts_in_chart (the same question, as LEFT JOIN ... IS NULL)
+    never fired; this test replaces it.
 
     severity warn, on purpose: this test depends on the model's upstream, so
     at error severity a failure made `dbt build` SKIP the model's downstream,

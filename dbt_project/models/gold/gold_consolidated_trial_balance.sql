@@ -65,8 +65,11 @@ with entity_tb as (
         tb.account_type_name as account_type_name,
         tb.is_balance_sheet as is_balance_sheet,
         tb.is_pnl as is_pnl,
-        {# PRD-10: Equity classification for historical rate lookup #}
-        case when tb.account_type_name in ('Equity', 'Stockholders equity') then 1 else 0 end as is_equity,
+        {# konsol#182: the declared translation. is_equity keeps its meaning for
+           every reader (the historical rate applies) but comes from the
+           declaration, not from matching account-type words. #}
+        toUInt8(ma.fx_method = 'historical') as is_equity,
+        ma.fx_method as fx_method,
         tb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='tb.') }},
         {# Signed double-entry movement (debit − credit), so the local TB sums
@@ -102,6 +105,18 @@ with entity_tb as (
         where accounting_currency != ''
     ) as ec
         on tb.data_area_id = ec.data_area_id
+    {# konsol#182: each account's declared fx_method, from the konsol group chart.
+       LEFT on purpose: an undeclared account stays in the consolidation, and
+       under join_use_nulls=0 its fx_method is '' — translated at the closing
+       rate, as an unclassified account always was
+       (assert_undeclared_accounts_in_trial_balance names it). silver holds one
+       row per account (limit 1 by), so this cannot fan out. fx_method is read
+       by `rated` and never selected into it: this model appends by position,
+       so no column may be added before partner_data_area_id. #}
+    left join (
+        select main_account_id, fx_method from {{ ref('silver_main_accounts') }}
+    ) as ma
+        on tb.main_account = ma.main_account_id
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
        Applied here at the consolidation chokepoint so every downstream
@@ -235,9 +250,14 @@ rated as (
                equity rate, so an equity tranche cannot hide a period the group
                never approved usable rates for. #}
             when gr.n_closing != 1 or gr.n_average != 1 or gr.n_invalid > 0 then null
-            when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
-            when etb.is_balance_sheet = 1 then gr.gov_closing
-            when etb.is_pnl = 1 then gr.gov_average
+            {# konsol#182: the account's declared fx_method decides, not its
+               statement. historical takes the as-of tranche and, before the
+               first tranche, the closing rate (as before); average is the
+               period average; closing, and an undeclared account, the
+               closing rate. A P&L account may be declared at closing (IAS 29
+               hyperinflation). #}
+            when etb.fx_method = 'historical' and hr.historical_rate is not null then hr.historical_rate
+            when etb.fx_method = 'average' then gr.gov_average
             else gr.gov_closing
         end as translation_rate
     from entity_tb as etb

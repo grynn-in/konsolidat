@@ -10,7 +10,7 @@ select
     variance_favorable
 from {{ ref('gold_variance_analysis') }}
 where is_pnl = 1
-  and account_type_name in ('Revenue', 'Income')  -- 'Income' now maps to 'Revenue'; kept for safety
+  and account_type_name = 'Revenue'  -- the konsol chart's vocabulary (konsol#182)
   and actual_amount > budget_amount
   and budget_amount is not null
   and variance_favorable = false

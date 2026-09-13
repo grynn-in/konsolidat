@@ -119,8 +119,7 @@ On submit, the rate syncs to `epm_staging.historical_equity_rates` and is picked
 | `assert_group_amount_formula` | `\|group − (translated × ownership)\| ≤ 0.01` |
 | `assert_nci_plus_group_equals_translated` | `\|translated − (group + nci)\| ≤ 0.01` |
 | `assert_nci_zero_for_full_ownership` | NCI = 0 when ownership = 100% |
-| `assert_bs_uses_closing_rate` | BS accounts use closing rate |
-| `assert_pnl_uses_average_rate` | P&L accounts use average rate |
+| `assert_translation_follows_fx_method` | Each translated account uses the rate its group-chart declaration names (`fx_method`: closing, average or historical) |
 
 ## Intercompany Elimination
 
