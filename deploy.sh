@@ -334,14 +334,17 @@ done
 # (`dbt show --inline "{{ fx_precheck() }}"`), so it covers every reason the
 # guard refuses on (missing, duplicate, invalid, implausible) and never drifts.
 #
-#   * the table does not exist and foreign-currency keys are translated: the
-#     konsol migration that adopts the rates has not run. ABORT (deploy order).
+#   * the table does not exist: the konsol migration that creates and fills it
+#     (konsol #174) has not run. ABORT, whatever is translated: the guard and
+#     the model read the table regardless. A fresh stack has it from
+#     init-db.sql, so this only fires on an old volume without #174.
 #   * the table exists but keys have no usable rate: WARN with the list and
 #     continue. The check reads the last build's gold tables, so aborting here
 #     would deadlock a fix made in konsol (a currency or ownership change)
-#     that only this build can bring in. Step 5 refreshes every other model;
-#     the consolidated TB (and what reads it) stays as it was, and step 5
-#     reports that refusal.
+#     that only this build can bring in. At step 5 every model not
+#     downstream of gold_consolidated_trial_balance refreshes; the
+#     consolidated TB and the models that read it keep their last figures,
+#     and step 5 fails the deploy.
 #   * the check itself fails: WARN with dbt's error and continue; the model's
 #     guard still refuses before it replaces anything.
 FX_DBT_CMD="${FX_DBT_CMD:-docker compose --profile setup run --rm -T dbt_init}"
@@ -358,12 +361,9 @@ case "$FX_OK:$FX_HEAD" in
         ;;
     1:FX_TABLE_MISSING*)
         FX_N="${FX_HEAD#FX_TABLE_MISSING }"
-        if [ "$FX_N" -gt 0 ] 2>/dev/null; then
-            err "${FX_N} foreign-currency key(s) are translated, but epm_staging.group_exchange_rates does not exist."
-            err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
-            exit 1
-        fi
-        info "Governed group exchange rates: the table does not exist yet, and no foreign-currency key is translated."
+        err "epm_staging.group_exchange_rates does not exist (${FX_N} foreign-currency key(s) are translated today); gold_consolidated_trial_balance reads it on every build."
+        err "Run the konsol migration (konsol #174) first, then re-run this deploy."
+        exit 1
         ;;
     1:FX_GAPS_TOTAL*)
         FX_N="${FX_HEAD#FX_GAPS_TOTAL }"
@@ -371,7 +371,7 @@ case "$FX_OK:$FX_HEAD" in
             warn "${FX_N} translated key(s) have no usable governed rate (from->to, year, period, reason):"
             printf '%s\n' "$FX_LINES" | grep '^FX_GAP ' | sed 's/^FX_GAP /    /'
             [ "$FX_N" -gt 200 ] && echo "    ... and $((FX_N - 200)) more (assert_every_translated_currency_has_a_governed_rate lists all)"
-            warn "Continuing: step 5 refreshes every other model, but gold_consolidated_trial_balance refuses to rebuild (nothing is deleted) until these rates are approved in konsol (Group Exchange Rate). Step 5 will report that refusal."
+            warn "Continuing: at step 5 every model not downstream of gold_consolidated_trial_balance refreshes; the consolidated TB and the models that read it keep their last figures (nothing is deleted), and step 5 fails the deploy until these rates are approved in konsol (Group Exchange Rate)."
         else
             info "Governed group exchange rates: every translated foreign-currency key has a usable rate."
         fi

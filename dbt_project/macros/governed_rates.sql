@@ -156,9 +156,12 @@
     macros as the guard, so it includes every reason (missing, duplicate,
     invalid, implausible) and cannot drift from it. One row per line, each
     starting with a marker deploy.sh greps:
-      FX_NOTHING_BUILT        no trial balance or ownership built yet
-      FX_TABLE_MISSING <n>    epm_staging.group_exchange_rates does not exist;
-                              n translated foreign-currency keys need it
+      FX_TABLE_MISSING <n>    epm_staging.group_exchange_rates does not exist
+                              (checked first: the guard and the model read it
+                              whatever is translated); n translated
+                              foreign-currency keys, 0 when nothing is built
+      FX_NOTHING_BUILT        the table exists, but no trial balance or
+                              ownership is built yet (a fresh stack)
       FX_GAPS_TOTAL <n>       n translated keys have no usable rate, then
       FX_GAP <key> <reason>   one line per key, sorted
 #}
@@ -173,10 +176,14 @@
     {%- set o = ref('gold_entity_ownership') -%}
     {%- set eo = adapter.get_relation(database=none, schema=o.schema, identifier=o.identifier) -%}
 {%- endif %}
-{% if not execute or tb is none or eo is none %}
+{% if not execute %}
 select 0 as o, 'FX_NOTHING_BUILT' as fx_check
+{% elif ger is none and (tb is none or eo is none) %}
+select 0 as o, 'FX_TABLE_MISSING 0' as fx_check
 {% elif ger is none %}
 select 0 as o, concat('FX_TABLE_MISSING ', toString(count())) as fx_check from ({{ governed_translated_keys(scoped=false) }})
+{% elif tb is none or eo is none %}
+select 0 as o, 'FX_NOTHING_BUILT' as fx_check
 {% else %}
 select o, fx_check from (
     select 0 as o, concat('FX_GAPS_TOTAL ', toString(count())) as fx_check
