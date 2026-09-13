@@ -190,6 +190,8 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_trial_balance:
         +tags: ['gold', 'domain:actuals']
+      gold_trial_balance_by_partner:
+        +tags: ['gold', 'domain:actuals']
       gold_ytd_trial_balance:
         +tags: ['gold', 'domain:actuals']
       # --- Domain: consolidation ---
@@ -216,6 +218,8 @@ models:
       gold_ic_eliminations:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_reconciliation:
+        +tags: ['gold', 'domain:consolidation']
+      gold_ic_unmatched:
         +tags: ['gold', 'domain:consolidation']
       gold_nci_movement_schedule:
         +tags: ['gold', 'domain:consolidation']

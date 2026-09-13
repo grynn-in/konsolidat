@@ -1,8 +1,7 @@
 {{
     config(
         engine='MergeTree()',
-        order_by='tuple()',
-        tags=['gold', 'domain:consolidation']
+        order_by='tuple()'
     )
 }}
 

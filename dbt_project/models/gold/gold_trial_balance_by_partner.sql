@@ -2,8 +2,7 @@
     config(
         engine=cluster_engine('MergeTree()'),
         order_by='tuple()',
-        cluster=cluster_name(),
-        tags=['gold', 'domain:actuals']
+        cluster=cluster_name()
     )
 }}
 

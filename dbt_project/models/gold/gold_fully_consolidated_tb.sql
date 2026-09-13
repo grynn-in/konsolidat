@@ -131,7 +131,11 @@ equity_method as (
     from {{ ref('gold_equity_method_associates') }}
 ),
 
-{# Layer 6: Acquisition & disposal adjustments (PRD-11/12) #}
+{# Layer 6: Acquisition & disposal adjustments (PRD-11/12).
+   #175 re-review F3: the pnl_proration rows are one per consolidated row,
+   and gold_consolidated_trial_balance has a row per intercompany partner,
+   so they are summed to the account grain here, like layer 1. Otherwise
+   gold_consolidated_ytd ran a separate running total per row. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -142,10 +146,12 @@ acquisition_disposal as (
         account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        adjustment_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
         concat('ACQ_', data_area_id) as journal_id
     from {{ ref('gold_acquisition_adjustments') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             account_name, adjustment_type
 
     union all
 
