@@ -120,22 +120,25 @@
     where problem != ''
 {% endmacro %}
 
-{# Stops the run, naming the first unusable key and its reason. ClickHouse's
+{# Stops the run, listing EVERY unusable key with its reason (a run is refused
+   whole: one missing rate stops a full build, by contract). ClickHouse's
    throwIf needs a constant message; a CAST of the message to UInt8 raises
-   with the message itself in the error, and only when a row exists. #}
+   with the message itself in the error. The inner query always returns one
+   row; the outer WHERE keeps it only when there is something to refuse, so
+   the CAST is never evaluated on a clean run. #}
 {% macro governed_rate_guard() %}
     select cast(concat(
-        'konsolidat#93 refused before anything was deleted: ',
-        multiIf(
-            problem = 'missing', 'no approved governed Closing and Average rate',
-            problem = 'duplicate', 'more than one approved governed rate of one type',
-            problem = 'invalid', 'a governed rate that is zero, negative or not a finite number',
-            'a governed rate more than 10x from the reference magnitudes (check its scale: the quoted-per factor)'
-        ),
-        ' for ', from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp),
-        ' (', toString(count() over ()), ' key(s) in all; see assert_every_translated_currency_has_a_governed_rate; konsol Group Exchange Rate)'
+        'konsolidat#93 refused before anything was deleted: ', toString(n),
+        ' translated key(s) without a usable governed rate (konsol Group Exchange Rate): ', keys,
+        '. Reasons: missing = no approved Closing and Average rate; duplicate = more than one approved rate of a type;',
+        ' invalid = zero, negative or not finite; implausible = more than 10x from the reference magnitudes (check the quoted-per factor).'
     ) as UInt8)
-    from ({{ governed_rate_gaps(scoped=true) }})
-    order by from_currency, to_currency, fy, fp
-    limit 1
+    from (
+        select
+            count() as n,
+            arrayStringConcat(arraySort(groupArray(
+                concat(from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem))), '; ') as keys
+        from ({{ governed_rate_gaps(scoped=true) }})
+    )
+    where n > 0
 {% endmacro %}

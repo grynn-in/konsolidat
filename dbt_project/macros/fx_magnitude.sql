@@ -25,7 +25,12 @@
 {% macro fx_reference_magnitudes() -%}
 (select currency_code, toFloat64(usd_log10) as usd_log10
  from {{ source('epm_gold', 'currencies') }}
- where not (isNaN(usd_log10) or (usd_log10 = 0 and currency_code != 'USD')))
+ where {{ fx_has_reference('currency_code', 'usd_log10') }})
+{%- endmacro %}
+
+{# The rule itself, on any (code, usd_log10) pair. #}
+{% macro fx_has_reference(code, usd_log10) -%}
+not (isNaN({{ usd_log10 }}) or ({{ usd_log10 }} = 0 and {{ code }} != 'USD'))
 {%- endmacro %}
 
 {# '' when the rate is plausible, else why not. The log10 columns come from

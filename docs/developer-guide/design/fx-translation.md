@@ -18,6 +18,14 @@
 > feed only konsol's pre-fill. A rate more than 10x from the currencies'
 > reference magnitudes (`usd_log10`) stops the build before anything is
 > replaced.
+>
+> **A missing rate stops the whole run.** Every key a run translates must have an
+> approved Closing and Average rate, so a newly submitted trial balance in a
+> foreign currency blocks full builds until its period's Closing and Average
+> rates into the group currency are approved in konsol. The build's error
+> lists every such key, konsol's home shows the missing rates, and
+> `scripts/sql/fx_governed_rate_gaps.sql` lists them from ClickHouse directly
+> (`deploy.sh` runs it before step 5).
 
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
