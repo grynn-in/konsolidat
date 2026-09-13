@@ -15,7 +15,12 @@ models:
           - not_null
 
   - name: silver_main_accounts
-    description: "Clean chart of accounts with readable account type names and classification flags"
+    description: >
+      konsol#182: what each account is. The group chart governed in konsol
+      (epm_staging.main_accounts, Published leaves) first; the ERP's chart for
+      an account the group has not declared, classified exactly as before. The
+      first eleven columns are the long-standing contract; the rest are new and
+      stay at the end. Group (heading) nodes and ERP Total accounts are left out.
     columns:
       - name: main_account_id
         tests:
@@ -23,8 +28,60 @@ models:
           - unique:
               config:
                 severity: warn  # D365 can have same account across multiple charts
+      - name: account_type
+        description: "The ERP's raw account type for an ERP account; the declared account_type (Asset, Liability, Equity, Revenue, Expense, Balance sheet, Profit and loss) for a konsol one"
+      - name: account_type_name
+        description: "Readable account type; the declared account_type for a konsol account"
+      - name: is_pnl
+        description: "1 when the account is in the P&L (statement_section = 'Profit and Loss')"
+      - name: is_balance_sheet
+        description: "1 when the account is in the balance sheet (statement_section = 'Balance Sheet')"
       - name: is_equity
-        description: "PRD-10: True for equity accounts (historical FX rate translation)"
+        description: "PRD-10: declared historical-rate translation (IAS 21), i.e. fx_method = 'historical'"
+      - name: debit_credit_default
+        description: "The ERP's DebitCreditDefault; normal_balance for a konsol account. No consumer"
+      - name: statement_section
+        description: "Profit and Loss, Balance Sheet, or '' for an ERP account of an unrecognised type"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Profit and Loss', 'Balance Sheet', '']
+              config:
+                severity: warn
+      - name: sub_section
+        description: "Presentation grouping, e.g. Current assets; '' for an ERP account"
+      - name: normal_balance
+        description: "Debit or Credit as declared; '' for an ERP account"
+      - name: time_balance
+        description: "flow (P&L) or balance (balance sheet)"
+      - name: fx_method
+        description: "The rate the account translates at: closing, average or historical. Declared for a konsol account; for an ERP account historical if equity, else closing for the balance sheet, average for the P&L, closing otherwise"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['closing', 'average', 'historical']
+              config:
+                severity: warn
+      - name: is_posting
+        description: "1 when entries may be posted to the account; always 1 for an ERP account"
+      - name: parent_account
+        description: "The heading node above it in the governed chart; '' for an ERP account"
+      - name: allow_ic
+        description: "1 when the account may carry intercompany partner rows (konsol Main Account); 0 for an ERP account"
+      - name: cf_category
+        description: "Operating, Investing or Financing, as declared; inert until konsol#182 PR5b"
+      - name: cf_line_item
+        description: "Cash-flow line, as declared; inert until konsol#182 PR5b"
+      - name: is_cash
+        description: "1 for a cash account, as declared; inert until konsol#182 PR5b"
+      - name: chart_origin
+        description: "konsol (declared in the governed chart) or erp (the ERP's chart, not declared)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['konsol', 'erp']
+              config:
+                severity: warn
 
   - name: silver_legal_entities
     description: "Clean company master with currency"

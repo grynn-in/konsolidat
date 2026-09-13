@@ -9,6 +9,12 @@
     that type to the classification lists in silver_main_accounts (it is how
     ERPNext's 'Income' root_type went unclassified).
 
+    konsol#182: this covers the governed chart too. A declared account
+    (chart_origin = 'konsol') takes both flags from its statement_section,
+    and governed_chart_guard refuses the build for a value outside the two,
+    so in practice a row here is an ERP account (chart_origin = 'erp'): the
+    other fix is to declare it in konsol's Main Account.
+
     severity warn, on purpose: this test depends on the model's upstream, so
     at error severity a failure made `dbt build` SKIP the model's downstream,
     leaving the old figures in place and the run half-green.
