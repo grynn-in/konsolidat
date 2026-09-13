@@ -329,29 +329,56 @@ done
 # ---------------------------------------------------------------------------
 # gold_consolidated_trial_balance translates only from the governed rates in
 # epm_staging.group_exchange_rates, which konsol writes after the migration
-# that adopts them (konsol#174). Deployed the other way round, every build
-# of a stack with foreign-currency ledgers fails on missing rates. Read-only
-# and cheap: two counts. A query that fails (a fresh volume without these
-# tables) counts as 0, so a fresh install is not blocked here.
-ch_count() {
-    curl -sf "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/" \
+# that adopts them (konsol#174). Deployed the other way round, every build of a
+# stack with foreign-currency ledgers stops on missing rates. Read-only and
+# cheap: EXISTS plus two counts. A fresh volume (no trial balance yet) passes.
+#
+# If ClickHouse cannot be queried from here (wrong password, HTTP not published
+# on localhost, server down), this WARNS and continues rather than aborting:
+# dbt runs inside the compose network with its own connection, so a host-side
+# curl failure says nothing about the warehouse, and aborting would block every
+# deploy on a host that doesn't publish the port. It is never silent, and the
+# build cannot mistranslate: the model's pre_hook guard stops it, before it
+# replaces anything, when a rate is missing.
+ch_query() {
+    curl -sS -f "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/" \
         -u "${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-open_epm_dev}" \
         --data-binary "$1" 2>/dev/null | tr -d '[:space:]'
+    return "${PIPESTATUS[0]}"
 }
-FOREIGN_TB_ROWS="$(ch_count "SELECT count() FROM epm_gold.gold_trial_balance AS tb
-    INNER JOIN (SELECT data_area_id, accounting_currency FROM epm_silver.silver_entity_currencies
-                WHERE accounting_currency != '') AS ec ON ec.data_area_id = tb.data_area_id
-    INNER JOIN epm_staging.consolidation_ancestry AS a ON a.data_area_id = tb.data_area_id
-    INNER JOIN (SELECT consolidation_group, reporting_currency FROM epm_gold.consolidation_groups
-                WHERE data_area_id = '') AS g ON g.consolidation_group = a.consolidation_group
-    WHERE ec.accounting_currency != g.reporting_currency")"
-GOVERNED_RATES="$(ch_count "SELECT count() FROM epm_staging.group_exchange_rates")"
-case "${FOREIGN_TB_ROWS}" in ''|*[!0-9]*) FOREIGN_TB_ROWS=0 ;; esac
-case "${GOVERNED_RATES}" in ''|*[!0-9]*) GOVERNED_RATES=0 ;; esac
-if [ "$FOREIGN_TB_ROWS" -gt 0 ] && [ "$GOVERNED_RATES" -eq 0 ]; then
-    err "The trial balance holds ${FOREIGN_TB_ROWS} foreign-currency rows, but epm_staging.group_exchange_rates is missing or empty."
-    err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
-    exit 1
+if ! GER_TABLE="$(ch_query "EXISTS TABLE epm_staging.group_exchange_rates")"; then
+    warn "Could not query ClickHouse at localhost:${CLICKHOUSE_HTTP_PORT:-8123}, so the governed group exchange rates (konsol#174) were NOT checked."
+    warn "Continuing: if rates are missing, the consolidation build stops before it replaces anything. Check by hand: SELECT count() FROM epm_staging.group_exchange_rates"
+else
+    FOREIGN_TB_ROWS=0
+    if [ "$(ch_query "EXISTS TABLE epm_gold.gold_trial_balance" || true)" = "1" ]; then
+        if ! FOREIGN_TB_ROWS="$(ch_query "SELECT count() FROM epm_gold.gold_trial_balance AS tb
+            INNER JOIN (SELECT data_area_id, accounting_currency FROM epm_silver.silver_entity_currencies
+                        WHERE accounting_currency != '') AS ec ON ec.data_area_id = tb.data_area_id
+            INNER JOIN epm_staging.consolidation_ancestry AS a ON a.data_area_id = tb.data_area_id
+            INNER JOIN (SELECT consolidation_group, reporting_currency FROM epm_gold.consolidation_groups
+                        WHERE data_area_id = '') AS g ON g.consolidation_group = a.consolidation_group
+            WHERE ec.accounting_currency != g.reporting_currency")"; then
+            warn "Could not count the foreign-currency trial balance rows, so the governed-rate check was skipped."
+            FOREIGN_TB_ROWS=0
+        fi
+    fi
+    GOVERNED_RATES=0
+    if [ "$GER_TABLE" = "1" ]; then
+        GOVERNED_RATES="$(ch_query "SELECT count() FROM epm_staging.group_exchange_rates" || echo 0)"
+    fi
+    case "${FOREIGN_TB_ROWS}" in ''|*[!0-9]*) FOREIGN_TB_ROWS=0 ;; esac
+    case "${GOVERNED_RATES}" in ''|*[!0-9]*) GOVERNED_RATES=0 ;; esac
+    if [ "$FOREIGN_TB_ROWS" -gt 0 ] && [ "$GOVERNED_RATES" -eq 0 ]; then
+        if [ "$GER_TABLE" = "1" ]; then
+            err "The trial balance holds ${FOREIGN_TB_ROWS} foreign-currency rows, but epm_staging.group_exchange_rates is empty."
+        else
+            err "The trial balance holds ${FOREIGN_TB_ROWS} foreign-currency rows, but epm_staging.group_exchange_rates does not exist."
+        fi
+        err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
+        exit 1
+    fi
+    info "Governed group exchange rates: ${GOVERNED_RATES} rows (foreign-currency trial balance rows: ${FOREIGN_TB_ROWS})."
 fi
 
 # ---------------------------------------------------------------------------

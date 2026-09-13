@@ -27,6 +27,7 @@
    LEFT JOINs to `refs`; a miss there is caught by the NOT IN checks first. #}
 {% macro fx_magnitude_problem(rate, from_ccy, to_ccy, from_log10, to_log10, refs='ref_mag') -%}
 multiIf(
+    not isFinite({{ rate }}), 'not a finite number',
     {{ rate }} <= 0, 'not positive',
     {{ from_ccy }} not in (select currency_code from {{ refs }}),
         concat('no reference magnitude for ', {{ from_ccy }}, ' (ISO Currency.usd_log10)'),
@@ -36,4 +37,17 @@ multiIf(
         'more than 10x from the reference magnitudes',
     ''
 )
+{%- endmacro %}
+
+{# True when epm_gold.currencies carries usd_log10. CREATE TABLE IF NOT EXISTS
+   never adds a column, so an existing volume has only the four old ones until
+   konsol's migration (#174) adds it. A test that selected the missing column
+   would ERROR, and an erroring test (unlike a failing warn one) makes
+   `dbt build` skip every model downstream of its parents. The magnitude tests
+   return one warn row instead. Callers must also call source('epm_gold',
+   'currencies') at top level so the dependency is known at parse time. #}
+{% macro fx_reference_column_present() -%}
+    {%- if not execute -%}{{ return(false) }}{%- endif -%}
+    {%- set cols = adapter.get_columns_in_relation(source('epm_gold', 'currencies')) -%}
+    {{ return('usd_log10' in (cols | map(attribute='name') | list)) }}
 {%- endmacro %}

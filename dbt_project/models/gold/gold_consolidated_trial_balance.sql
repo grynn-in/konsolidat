@@ -160,7 +160,8 @@ governed_rates as (
         anyIf(toFloat64(rate), rate_type = 'Closing') as gov_closing,
         anyIf(toFloat64(rate), rate_type = 'Average') as gov_average,
         countIf(rate_type = 'Closing') as n_closing,
-        countIf(rate_type = 'Average') as n_average
+        countIf(rate_type = 'Average') as n_average,
+        countIf(not (isFinite(rate) and rate > 0)) as n_invalid
     from {{ source('epm_staging', 'group_exchange_rates') }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
@@ -199,11 +200,13 @@ rated as (
         hr.historical_rate as historical_equity_rate,
         case
             when etb.accounting_currency = eo.reporting_currency then 1.0
-            {# No approved Closing AND Average rate for this period: NULL here,
-               and `consolidated` stops the build on it. Checked before the
-               historical equity rate, so an equity tranche cannot hide a
-               period the group never approved rates for. #}
-            when gr.n_closing = 0 or gr.n_average = 0 then null
+            {# Not exactly one approved Closing and one Average rate, or a rate
+               that is zero, negative or not finite: NULL here, and
+               `consolidated` stops the build on it (the pre_hook guard has
+               normally stopped it already). Checked before the historical
+               equity rate, so an equity tranche cannot hide a period the group
+               never approved usable rates for. #}
+            when gr.n_closing != 1 or gr.n_average != 1 or gr.n_invalid > 0 then null
             when etb.is_equity = 1 and hr.historical_rate is not null then hr.historical_rate
             when etb.is_balance_sheet = 1 then gr.gov_closing
             when etb.is_pnl = 1 then gr.gov_average

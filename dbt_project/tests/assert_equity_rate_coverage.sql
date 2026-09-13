@@ -1,3 +1,12 @@
+{{ config(severity='warn') }}
+{#- konsolidat#176 review: warn, not error. Every row here is konsol master data
+    (an entity node with no Historical Equity Rate), not ledger data, and the
+    model has a defined fallback for it: equity translates at the closing rate.
+    At error it made `dbt build` skip all 14 consolidation models, which the
+    deploy now (rightly) treats as a failed build. It still names each gap. The
+    checks that stop a one-sided ledger from being consolidated,
+    assert_d365_gl_vouchers_balance and assert_silver_gl_debit_credit_balance,
+    stay at error. -#}
 -- C2 / grynn-in/konsolidat#120: IAS-21 equity-translation coverage guard.
 --
 -- History: #120 had two asks, both fixed at the time in the demo data and its
