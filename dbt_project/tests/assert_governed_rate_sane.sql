@@ -1,29 +1,34 @@
+{{ config(severity='warn') }}
 {#
     konsol#103 / #138: a governed rate is a positive, true rate of plausible
     magnitude, of a governed type, between two different currencies. konsol
-    refuses each of these at entry; this catches a row that reached the
-    warehouse another way (a script, a restore). Bands: macros/fx_magnitude.sql.
+    refuses each of these at entry (konsol.group_rates.magnitude_problem for
+    the magnitude); this names a row that reached the warehouse another way
+    (a script, a restore). The magnitude rule is macros/fx_magnitude.sql.
+
+    severity warn: an error-severity source test would make `dbt build` skip
+    the model; the model's own guard decides whether the build fails.
 #}
 
-{% set wide_band = fx_wide_band() | trim %}
+with ref_mag as {{ fx_reference_magnitudes() }},
 
-select
-    to_currency,
-    from_currency,
-    fiscal_year,
-    fiscal_period,
-    rate_type,
-    rate,
-    document,
-    multiIf(
-        rate <= 0, 'not positive',
-        from_currency = to_currency, 'a rate from a currency into itself',
-        rate_type not in ('Closing', 'Average'), 'not a governed rate type',
-        'outside the #138 magnitude band for the pair'
-    ) as problem
-from {{ source('epm_staging', 'group_exchange_rates') }}
-where rate <= 0
-   or from_currency = to_currency
-   or rate_type not in ('Closing', 'Average')
-   or rate < if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 0.0001, 0.05)
-   or rate > if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 10000.0, 20.0)
+checked as (
+    select
+        g.to_currency as to_currency,
+        g.from_currency as from_currency,
+        g.fiscal_year as fiscal_year,
+        g.fiscal_period as fiscal_period,
+        g.rate_type as rate_type,
+        g.rate as rate,
+        g.document as document,
+        multiIf(
+            g.from_currency = g.to_currency, 'a rate from a currency into itself',
+            g.rate_type not in ('Closing', 'Average'), 'not a governed rate type',
+            {{ fx_magnitude_problem('g.rate', 'g.from_currency', 'g.to_currency', 'f.usd_log10', 't.usd_log10') }}
+        ) as problem
+    from {{ source('epm_staging', 'group_exchange_rates') }} as g
+    left join ref_mag as f on f.currency_code = g.from_currency
+    left join ref_mag as t on t.currency_code = g.to_currency
+)
+
+select * from checked where problem != ''

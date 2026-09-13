@@ -1,8 +1,10 @@
+{{ config(severity='warn') }}
 {#
     konsol#103: one approved governed rate per (group reporting currency,
     from-currency, fiscal year, fiscal period, rate type). konsol refuses a
     second approval of a key; a collision here would make the translation pick
-    one quietly (anyIf), so it fails the build instead.
+    one quietly (anyIf), so it is named here. severity warn: an error-severity
+    source test would make `dbt build` skip the model (konsolidat#176 review).
 #}
 
 select

@@ -49,8 +49,12 @@
     toMonth({{ expr }})
 {% endmacro %}
 
+{# The 1st of month P. P is clamped to 1..12: OPN (0) is January and CLS (13)
+   December. Unclamped, toDate('2024-13-01') is 1970-01-01 on ClickHouse 24.8
+   rather than an error, so a CLS row dated 1970 and missed its as-of joins
+   (konsolidat#177). #}
 {% macro build_date_from_year_period(year_expr, period_expr) %}
-    toDate(concat(toString(greatest({{ year_expr }}, 1900)), '-', lpad(toString(greatest({{ period_expr }}, 1)), 2, '0'), '-01'))
+    toDate(concat(toString(greatest({{ year_expr }}, 1900)), '-', lpad(toString(least(greatest({{ period_expr }}, 1), 12)), 2, '0'), '-01'))
 {% endmacro %}
 
 {% macro latest_value_by(val_expr, key_expr) %}

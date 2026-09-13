@@ -150,7 +150,7 @@ ClickHouse-specific adapter macros. All wrap `assumeNotNull()` for null safety.
 |-------|-----------|--------|
 | `extract_year(expr)` | `(expr)` | `toYear(expr)` |
 | `extract_month(expr)` | `(expr)` | `toMonth(expr)` |
-| `build_date_from_year_period(year_expr, period_expr)` | `(year, period)` | `toDate(concat(toString(greatest(year,1900)), '-', lpad(toString(greatest(period,1)),2,'0'), '-01'))` |
+| `build_date_from_year_period(year_expr, period_expr)` | `(year, period)` | `toDate(concat(toString(greatest(year,1900)), '-', lpad(toString(least(greatest(period,1),12)),2,'0'), '-01'))`: the period is clamped to 1..12, so OPN is January and CLS December (konsolidat#177) |
 
 ### Utility
 
@@ -170,42 +170,6 @@ ClickHouse-specific adapter macros. All wrap `assumeNotNull()` for null safety.
     )
 }}
 ```
-
-## currency_conversion.sql
-
-### convert_currency(amount_column, from_currency_column, to_currency, rate_date_column, rate_type='Default')
-
-Generates a correlated subquery against `silver_exchange_rates`.
-
-```sql
-select
-    {{ convert_currency('local_amount', 'accounting_currency', 'USD', 'period_date') }} as translated_amount
-```
-
-Expands to:
-
-```sql
-local_amount * coalesce(
-    (select er.exchange_rate
-     from silver_exchange_rates as er
-     where er.from_currency = accounting_currency
-       and er.to_currency = 'USD'
-       and er.valid_from <= period_date
-       and er.valid_to >= period_date
-     order by er.valid_from desc
-     limit 1),
-    1.0  -- Default: same-currency assumption
-)
-```
-
-**Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `amount_column` | SQL expression | The amount to convert |
-| `from_currency_column` | SQL expression | Column containing source currency code |
-| `to_currency` | String literal | Target currency (e.g., `'USD'`) |
-| `rate_date_column` | SQL expression | Date for rate lookup |
-| `rate_type` | String | Exchange rate type (default: `'Default'`) |
 
 ## allocation_engine.sql
 

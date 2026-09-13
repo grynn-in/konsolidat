@@ -47,10 +47,7 @@ GROUP_CORP,JPMF,Contoso JP,51,USD,full
 | P&L (Revenue, Expense) | **Average rate** | P&L at period average |
 | Equity | **Historical rate** (when defined), else closing rate | IAS 21: equity is frozen at the rate on the date it was contributed — see [Historical Equity Rates](#historical-equity-rates-ias-21) |
 
-The rate is looked up from `silver_exchange_rates` using the `convert_currency()` macro with a fallback chain:
-1. Exact match on `from_currency`, `to_currency`, `valid_from ≤ date ≤ valid_to`
-2. Latest available rate before the period
-3. Default to `1.0` (same-currency assumption)
+The closing and average rates are the group's **governed rates**: one approved Closing and one Average rate per fiscal period, from each currency into the group's reporting currency, entered (or pre-filled from the ERP and accepted) in konsol's **Group Exchange Rate** and read from `epm_staging.group_exchange_rates` (konsolidat#93, konsol#103). There is no fallback: a translated currency with no approved rate for its period stops the build before anything is replaced, and `assert_every_translated_currency_has_a_governed_rate` names it. An entity whose currency is the group's translates at 1.
 
 ### Translation Formulas
 

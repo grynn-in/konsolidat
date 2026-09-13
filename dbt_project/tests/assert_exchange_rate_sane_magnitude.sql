@@ -1,43 +1,35 @@
+{{ config(severity='warn') }}
 {#
     A non-identity FX rate of implausible magnitude is a scaling error, not a
-    market move. This is the guard #138 lacked — assert_exchange_rate_positive
+    market move. This is the guard #138 lacked: assert_exchange_rate_positive
     passed throughout that bug, because 0.00935 is positive.
 
-    Bounds are per magnitude class. WIDE_BAND lists currencies that quote far
-    from parity against the majors — small-unit currencies (JPY, KRW, IDR, VND)
-    and mid-magnitude ones (INR ~88/USD, RUB, PHP, TRY, THB, CZK, HUF, CLP,
-    ISK): real rates for these sit outside [0.05, 20], so they get [1e-4, 1e4].
-    The wide band cannot catch a 100x error on those pairs — a conscious trade
-    against failing the build on correct data. Extend WIDE_BAND when a new
-    far-from-parity currency enters the data; everything else gets the tight
-    band, where a 100x error always trips a bound.
+    The ERP feed is no longer what translation reads (konsolidat#93); it
+    pre-fills drafts in konsol. It is still checked, with the same rule as the
+    governed rates and konsol's entry guard (konsol.group_rates.magnitude_problem):
+    macros/fx_magnitude.sql. A rate more than 10x from the currencies'
+    reference magnitudes (ISO Currency.usd_log10) is named; so is a currency
+    with no reference value. The old per-class bands ([0.05, 20] and
+    [1e-4, 1e4]) refused real IDR/VND rates against the dollar and could not
+    catch a 100x error on a wide-band pair.
+
+    severity warn, as agreed in the #176 review.
 #}
 
-{# The bands live in macros/fx_magnitude.sql, shared with the governed-rate
-   test and kept in step with konsol's entry guard (konsolidat#93). #}
-{% set wide_band = fx_wide_band() | trim %}
+with ref_mag as {{ fx_reference_magnitudes() }},
 
-with rates as (
-
+checked as (
     select
-        from_currency,
-        to_currency,
-        exchange_rate,
-        valid_from,
-        (from_currency in {{ wide_band }} or to_currency in {{ wide_band }}) as is_wide,
-        if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 0.0001, 0.05) as lo,
-        if(from_currency in {{ wide_band }} or to_currency in {{ wide_band }}, 10000.0, 20.0) as hi
-    from {{ ref('silver_exchange_rates') }}
-    where from_currency != to_currency
-
+        r.from_currency as from_currency,
+        r.to_currency as to_currency,
+        r.exchange_rate as exchange_rate,
+        r.exchange_rate_type as exchange_rate_type,
+        r.valid_from as valid_from,
+        {{ fx_magnitude_problem('r.exchange_rate', 'r.from_currency', 'r.to_currency', 'f.usd_log10', 't.usd_log10') }} as problem
+    from {{ ref('silver_exchange_rates') }} as r
+    left join ref_mag as f on f.currency_code = r.from_currency
+    left join ref_mag as t on t.currency_code = r.to_currency
+    where r.from_currency != r.to_currency
 )
 
-select
-    from_currency,
-    to_currency,
-    exchange_rate,
-    valid_from,
-    concat('outside [', toString(lo), ', ', toString(hi), '] for a ',
-           if(is_wide, 'wide-band', 'tight-band'), ' pair') as problem
-from rates
-where exchange_rate < lo or exchange_rate > hi
+select * from checked where problem != ''

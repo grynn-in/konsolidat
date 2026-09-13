@@ -313,8 +313,14 @@ CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
 
 -- konsolidat#146: the ISO 4217 reference list, published from Frappe's Currency
 -- records by konsol.currency_sync. It was seeds/currencies.csv.
+-- konsolidat#93 / konsol#103: usd_log10 is roughly log10 of the currency's units
+-- per 1 USD, the reference magnitude the FX sanity rule checks rates against
+-- (dbt macros/fx_magnitude.sql; konsol.group_rates.magnitude_problem). NaN =
+-- no reference value, and a rate involving it fails the check. Keep identical
+-- to konsol's _REFERENCE_TABLE_DDL.
 CREATE TABLE IF NOT EXISTS epm_gold.currencies (
-    currency_code String, currency_name String, symbol String, minor_unit UInt8
+    currency_code String, currency_name String, symbol String, minor_unit UInt8,
+    usd_log10 Float64 DEFAULT nan
 ) ENGINE = MergeTree ORDER BY currency_code;
 
 -- konsolidat#146: which fiscal calendar each ERP legal entity posts against,

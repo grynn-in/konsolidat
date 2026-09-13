@@ -325,6 +325,36 @@ for i in $(seq 1 60); do
 done
 
 # ---------------------------------------------------------------------------
+# Before step 5: governed group exchange rates must exist (konsolidat#93)
+# ---------------------------------------------------------------------------
+# gold_consolidated_trial_balance translates only from the governed rates in
+# epm_staging.group_exchange_rates, which konsol writes after the migration
+# that adopts them (konsol#174). Deployed the other way round, every build
+# of a stack with foreign-currency ledgers fails on missing rates. Read-only
+# and cheap: two counts. A query that fails (a fresh volume without these
+# tables) counts as 0, so a fresh install is not blocked here.
+ch_count() {
+    curl -sf "http://localhost:${CLICKHOUSE_HTTP_PORT:-8123}/" \
+        -u "${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-open_epm_dev}" \
+        --data-binary "$1" 2>/dev/null | tr -d '[:space:]'
+}
+FOREIGN_TB_ROWS="$(ch_count "SELECT count() FROM epm_gold.gold_trial_balance AS tb
+    INNER JOIN (SELECT data_area_id, accounting_currency FROM epm_silver.silver_entity_currencies
+                WHERE accounting_currency != '') AS ec ON ec.data_area_id = tb.data_area_id
+    INNER JOIN epm_staging.consolidation_ancestry AS a ON a.data_area_id = tb.data_area_id
+    INNER JOIN (SELECT consolidation_group, reporting_currency FROM epm_gold.consolidation_groups
+                WHERE data_area_id = '') AS g ON g.consolidation_group = a.consolidation_group
+    WHERE ec.accounting_currency != g.reporting_currency")"
+GOVERNED_RATES="$(ch_count "SELECT count() FROM epm_staging.group_exchange_rates")"
+case "${FOREIGN_TB_ROWS}" in ''|*[!0-9]*) FOREIGN_TB_ROWS=0 ;; esac
+case "${GOVERNED_RATES}" in ''|*[!0-9]*) GOVERNED_RATES=0 ;; esac
+if [ "$FOREIGN_TB_ROWS" -gt 0 ] && [ "$GOVERNED_RATES" -eq 0 ]; then
+    err "The trial balance holds ${FOREIGN_TB_ROWS} foreign-currency rows, but epm_staging.group_exchange_rates is missing or empty."
+    err "Run the konsol migration that adopts group exchange rates (konsol #174) first, then re-run this deploy."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # Step 5: Run dbt build
 # ---------------------------------------------------------------------------
 echo ""
@@ -339,10 +369,10 @@ DBT_STATUS=${PIPESTATUS[0]}   # exit status of dbt, not of tee
 if [ "$DBT_STATUS" -eq 0 ]; then
     ok "dbt build completed"
 else
-    if grep -qE "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG"; then
-        err "dbt build FAILED — no models were built. Deploy aborted."
+    if grep -qE "Compilation Error|Encountered an error|Database Error|Parsing Error|ERROR creating|SKIP=[1-9]" "$DBT_LOG"; then
+        err "dbt build FAILED — a model errored or was skipped, so the warehouse is stale. Deploy aborted."
         echo ""
-        grep -E -A3 "Compilation Error|Encountered an error|Database Error|Parsing Error" "$DBT_LOG" | head -20
+        grep -E -A3 "Compilation Error|Encountered an error|Database Error|Parsing Error|ERROR creating|SKIP=[1-9]" "$DBT_LOG" | head -20
         echo ""
         err "The stack is up but the warehouse is stale. Fix the error above and re-run."
         rm -f "$DBT_LOG"

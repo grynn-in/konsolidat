@@ -2,11 +2,19 @@
     config(
         materialized='incremental',
         incremental_strategy='append',
-        pre_hook="{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}",
+        pre_hook=[
+            "{{ governed_rate_guard() }}",
+            "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
+        ],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# konsolidat#93: the first pre_hook (macros/governed_rates.sql) raises when a
+   currency this run translates has no approved governed rate, BEFORE the
+   DELETE below, so a missing rate leaves the table as it was. The throwIf in
+   `consolidated` stays as the second line of defence. #}
 
 {# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
    the keys the new batch produced, so a key that left the SELECT (an ownership
