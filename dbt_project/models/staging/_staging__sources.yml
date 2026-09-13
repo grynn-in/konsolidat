@@ -138,6 +138,15 @@ sources:
           Published Intercompany Account, with the counterpart account the
           partner books the other side on ('' = the same account). Drives
           gold_ic_reconciliation, gold_ic_eliminations and gold_ic_unmatched.
+      - name: main_accounts
+        description: >
+          konsol#182: the group chart of accounts governed in konsol — one row
+          per Published Main Account, groups (heading nodes) included, written
+          through on publish. It is silver_main_accounts' only source: an
+          account not declared here is in neither statement. Its fx_method
+          decides the rate gold_consolidated_trial_balance translates at.
+          May be absent on a volume konsol has not upgraded yet;
+          governed_chart_relation() then reads as "no chart" (silver empty).
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at

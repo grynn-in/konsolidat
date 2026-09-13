@@ -15,16 +15,68 @@ models:
           - not_null
 
   - name: silver_main_accounts
-    description: "Clean chart of accounts with readable account type names and classification flags"
+    description: >
+      konsol#182: what each account is — the group chart governed in konsol
+      (epm_staging.main_accounts, Published leaves), and nothing else. No ERP
+      chart is read. An account that is not declared is not here, so its
+      trial-balance rows reach neither statement
+      (assert_undeclared_accounts_in_trial_balance names them). Empty, with
+      every column, when konsol has not created the table yet. The first eleven
+      columns are the long-standing contract; the rest are new and stay at the
+      end. Group (heading) nodes are left out.
     columns:
       - name: main_account_id
         tests:
           - not_null
           - unique:
               config:
-                severity: warn  # D365 can have same account across multiple charts
+                severity: warn  # identical duplicate rows collapse in the model; disagreeing ones stop the build
+      - name: account_type
+        description: "The declared account_type: Asset, Liability, Equity, Revenue, Expense, Balance sheet or Profit and loss"
+      - name: account_type_name
+        description: "The declared account_type (the same value; kept for the contract)"
+      - name: is_pnl
+        description: "1 when the account is in the P&L (statement_section = 'Profit and Loss')"
+      - name: is_balance_sheet
+        description: "1 when the account is in the balance sheet (statement_section = 'Balance Sheet')"
       - name: is_equity
-        description: "PRD-10: True for equity accounts (historical FX rate translation)"
+        description: "PRD-10: declared historical-rate translation (IAS 21), i.e. fx_method = 'historical'"
+      - name: debit_credit_default
+        description: "The declared normal_balance (kept for the contract). No consumer"
+      - name: statement_section
+        description: "Profit and Loss or Balance Sheet, as declared"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Profit and Loss', 'Balance Sheet']
+              config:
+                severity: warn
+      - name: sub_section
+        description: "Presentation grouping, e.g. Current assets"
+      - name: normal_balance
+        description: "Debit or Credit, as declared"
+      - name: time_balance
+        description: "flow (P&L) or balance (balance sheet), as declared"
+      - name: fx_method
+        description: "The declared translation rate: closing, average or historical. gold_consolidated_trial_balance translates each account at this rate (historical falls back to closing before the first historical tranche); a P&L account may be declared at closing (IAS 29)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['closing', 'average', 'historical']
+              config:
+                severity: warn
+      - name: is_posting
+        description: "1 when entries may be posted to the account"
+      - name: parent_account
+        description: "The heading node above it in the governed chart"
+      - name: allow_ic
+        description: "1 when the account may carry intercompany partner rows"
+      - name: cf_category
+        description: "Operating, Investing or Financing, as declared; inert until konsol#182 PR5b"
+      - name: cf_line_item
+        description: "Cash-flow line, as declared; inert until konsol#182 PR5b"
+      - name: is_cash
+        description: "1 for a cash account, as declared; inert until konsol#182 PR5b"
 
   - name: silver_legal_entities
     description: "Clean company master with currency"

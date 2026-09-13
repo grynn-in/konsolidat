@@ -7,11 +7,15 @@ on:
       - 'dbt_project/**'
       - 'scripts/check_gold_domains.py'
       - '.github/workflows/dbt-checks.yml'
+      - 'clickhouse/init-db.sql'
+      - 'tests/test_governed_chart_ddl.py'
   pull_request:
     paths:
       - 'dbt_project/**'
       - 'scripts/check_gold_domains.py'
       - '.github/workflows/dbt-checks.yml'
+      - 'clickhouse/init-db.sql'
+      - 'tests/test_governed_chart_ddl.py'
   workflow_dispatch:
 
 permissions:
@@ -51,3 +55,17 @@ jobs:
         run: >
           dbt parse --no-partial-parse
           --profiles-dir dbt_project --project-dir dbt_project
+
+  contract-tests:
+    name: warehouse contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # konsol#182: the governed chart's DDL is byte-identical to konsol's, and
+      # silver and the guard read every one of its columns. Plain unittest, no
+      # installs: nothing else in tests/ runs in CI.
+      - name: governed chart DDL and column coverage
+        run: python -m unittest -v tests.test_governed_chart_ddl

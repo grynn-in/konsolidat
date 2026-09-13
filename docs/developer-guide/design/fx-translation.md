@@ -73,8 +73,7 @@ Enhance `gold_consolidated_trial_balance.sql` and `silver_exchange_rates` to sup
 
 | Test | Assertion |
 |------|-----------|
-| `assert_bs_uses_closing_rate` | All rows where `is_balance_sheet=1` have `translation_rate = closing_rate` |
-| `assert_pnl_uses_average_rate` | All rows where `is_pnl=1` have `translation_rate = average_rate` |
+| `assert_translation_follows_fx_method` | Every translated row's `translation_rate` is the rate its account's declared `fx_method` names (konsol#182): the historical equity rate for `historical` (closing before the first tranche), `average_rate` for `average`, `closing_rate` otherwise. A P&L account may be declared at closing (IAS 29) |
 | `assert_translated_amount_formula` | `translated_amount = local_amount × translation_rate` within 0.01 |
 | `assert_group_amount_formula` | `group_amount = translated_amount × ownership_pct` within 0.01 |
 

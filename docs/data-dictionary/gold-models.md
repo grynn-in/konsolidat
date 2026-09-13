@@ -195,7 +195,7 @@ Multi-company consolidated trial balance with currency translation.
 | `group_amount` | Decimal | `translated_amount × ownership_pct` | — |
 | `nci_amount` | Decimal | `translated_amount × (1 − ownership_pct)` | — |
 
-**Tests**: `assert_translated_amount_formula`, `assert_group_amount_formula`, `assert_nci_plus_group_equals_translated`, `assert_nci_zero_for_full_ownership`, `assert_bs_uses_closing_rate`, `assert_pnl_uses_average_rate`.
+**Tests**: `assert_translated_amount_formula`, `assert_group_amount_formula`, `assert_nci_plus_group_equals_translated`, `assert_nci_zero_for_full_ownership`, `assert_translation_follows_fx_method`.
 
 ### gold_ic_eliminations
 

@@ -10,7 +10,7 @@ select
     variance_favorable
 from {{ ref('gold_variance_analysis') }}
 where is_pnl = 1
-  and account_type_name in ('Expense', 'Cost of goods sold')
+  and account_type_name = 'Expense'  -- the konsol chart's vocabulary (konsol#182)
   and actual_amount < budget_amount
   and budget_amount is not null
   and variance_favorable = false

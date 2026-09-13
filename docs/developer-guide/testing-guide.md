@@ -22,7 +22,7 @@ Tests have two severity levels:
 |------|----------|-----------|
 | `assert_trial_balance_balances` | warn | `\|SUM(period_debit) − SUM(period_credit)\| ≤ 0.01` per entity/year/period |
 | `assert_silver_gl_debit_credit_balance` | warn | `\|SUM(debit) − SUM(credit)\| ≤ 0.01` at GL level per entity/year |
-| `assert_gl_accounts_in_chart` | error | All GL account codes exist in the chart of accounts |
+| `assert_undeclared_accounts_in_trial_balance` | warn | Every trial-balance account is declared in the konsol group chart (an undeclared one reaches neither statement) |
 | `assert_exchange_rate_positive` | error | All exchange rates are > 0 |
 
 ### P&L and Balance Sheet
@@ -40,8 +40,7 @@ Tests have two severity levels:
 | `assert_group_amount_formula` | error | `\|group − (translated × ownership)\| ≤ 0.01` |
 | `assert_nci_plus_group_equals_translated` | error | `\|translated − (group + nci)\| ≤ 0.01` |
 | `assert_nci_zero_for_full_ownership` | error | NCI = 0 when ownership = 100% |
-| `assert_bs_uses_closing_rate` | error | BS accounts use the closing exchange rate |
-| `assert_pnl_uses_average_rate` | error | P&L accounts use the average exchange rate |
+| `assert_translation_follows_fx_method` | warn | Each translated account uses the rate its declared `fx_method` names (closing, average, or historical) |
 | `assert_cta_not_zero_when_rates_differ` | error | CTA is non-zero when closing ≠ average rate |
 | `assert_cta_zero_for_same_currency` | error | CTA = 0 when entity currency = reporting currency |
 | `assert_ic_elimination_nets_zero` | error | IC eliminations net to zero per group/period |
