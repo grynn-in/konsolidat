@@ -27,7 +27,7 @@
 
 with governed as (
 {%- if governed_rel %}
-    select
+    select distinct
         main_account as main_account_id,
         account_name,
         account_type,
@@ -47,10 +47,12 @@ with governed as (
         toUInt8(is_cash) as is_cash
     from {{ source('epm_staging', 'main_accounts') }}
     where status = 'Published' and is_group = 0
-    {# two concurrent TRUNCATE+INSERT syncs can double a row; the guard stops a
-       DISAGREEING duplicate, identical ones collapse here #}
-    order by main_account
-    limit 1 by main_account
+    {# Two concurrent TRUNCATE+INSERT syncs can double a row. The guard refuses
+       Published duplicates that differ in ANY column, so only identical copies
+       reach here, and DISTINCT collapses them deterministically (limit 1 by
+       would keep an arbitrary one). Were the guard ever bypassed, DISTINCT
+       keeps both versions and unique_silver_main_accounts_main_account_id
+       names the code, rather than one silently winning. #}
 {%- else %}
     {# the table does not exist yet (konsol has not created it): no chart, and
        the same columns and types (the assert_ic_difference_account_in_chart

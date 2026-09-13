@@ -58,7 +58,7 @@ models:
       - name: time_balance
         description: "flow (P&L) or balance (balance sheet), as declared"
       - name: fx_method
-        description: "The declared translation rate: closing, average or historical. gold_consolidated_trial_balance still derives the rate from is_equity / is_balance_sheet / is_pnl until konsol#182 PR3"
+        description: "The declared translation rate: closing, average or historical. gold_consolidated_trial_balance translates each account at this rate (historical falls back to closing before the first historical tranche); a P&L account may be declared at closing (IAS 29)"
         tests:
           - accepted_values:
               arguments:

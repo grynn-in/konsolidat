@@ -71,10 +71,12 @@ combined as (
         case
             when b.budget_amount is null then false
             when coalesce(am.is_pnl, 0) = 0 then false
-            -- 'Income' is kept for safety; map_account_type now emits 'Revenue' for it
-            when coalesce(a.account_type_name, am.account_type_name, '') in ('Revenue', 'Income')
+            {# The konsol group chart's account_type vocabulary (konsol#182).
+               The generic 'Profit and loss' type has no favourable direction
+               by design: it falls to the else. #}
+            when coalesce(a.account_type_name, am.account_type_name, '') = 'Revenue'
                 then coalesce(a.actual_amount, 0) > b.budget_amount
-            when coalesce(a.account_type_name, am.account_type_name, '') in ('Expense', 'Cost of goods sold')
+            when coalesce(a.account_type_name, am.account_type_name, '') = 'Expense'
                 then coalesce(a.actual_amount, 0) < b.budget_amount
             else false
         end as variance_favorable

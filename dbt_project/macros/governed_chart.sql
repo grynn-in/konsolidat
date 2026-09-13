@@ -21,9 +21,10 @@
 {# One row per (main_account, problem) that silver cannot use. Published rows
    only; konsol validates on save, so a row here means the table was written
    around konsol, or two syncs raced:
-     (a) duplicate Published rows for one code that disagree on what the
-         account is (two concurrent TRUNCATE+INSERT syncs can double a row;
-         identical duplicates are harmless and collapse in silver);
+     (a) duplicate Published rows for one code that differ in ANY declared
+         column, named (two concurrent TRUNCATE+INSERT syncs can double a row;
+         identical duplicates are harmless and collapse in silver, but a
+         disagreeing pair has no right answer to pick);
      (b) a Published leaf whose statement_section or fx_method is outside the
          vocabulary, so it would land in neither statement or be translated
          at no rate;
@@ -32,17 +33,28 @@
    Empty when the table does not exist. #}
 {% macro governed_chart_problems() %}
 {%- set rel = governed_chart_relation() -%}
+{#- every column of epm_staging.main_accounts but status (constant here: the
+    rows are Published). tests/test_governed_chart_ddl.py holds this list to
+    the DDL, so a column added there cannot escape the comparison. -#}
+{%- set _declared = ['account_name', 'chart_of_accounts', 'parent_account', 'is_group', 'account_type',
+                     'statement_section', 'sub_section', 'normal_balance', 'time_balance', 'fx_method',
+                     'is_posting', 'is_suspended', 'allow_ic', 'cf_category', 'cf_line_item', 'is_cash',
+                     'main_account_category'] -%}
 {%- if rel is none -%}
 select '' as main_account, '' as problem where 0
 {%- else -%}
 select main_account, problem from (
     select
         main_account,
-        'duplicate Published rows disagree on statement_section, fx_method, account_type or is_group' as problem
+        concat('duplicate Published rows disagree on ', arrayStringConcat(arrayFilter(c -> c != '', [
+            {%- for c in _declared %}
+            if(uniqExact({{ c }}) > 1, '{{ c }}', ''){{ ',' if not loop.last }}
+            {%- endfor %}
+        ]), ', ')) as problem
     from {{ rel }}
     where status = 'Published'
     group by main_account
-    having uniqExact(tuple(statement_section, fx_method, account_type, is_group)) > 1
+    having uniqExact(tuple({{ _declared | join(', ') }})) > 1
 
     union all
 
