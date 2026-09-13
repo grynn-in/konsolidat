@@ -36,7 +36,9 @@ checked as (
         g.rate as rate,
         g.document as document,
         multiIf(
-            g.from_currency = g.to_currency, 'a rate from a currency into itself',
+            {# A currency into itself is 1 by definition: a 1.0 row is harmless
+               (and never read: same-currency entities translate at 1). #}
+            g.from_currency = g.to_currency, if(g.rate = 1, '', 'a rate from a currency into itself that is not 1'),
             g.rate_type not in ('Closing', 'Average'), 'not a governed rate type',
             {{ fx_magnitude_problem('g.rate', 'g.from_currency', 'g.to_currency', 'f.usd_log10', 't.usd_log10') }}
         ) as problem

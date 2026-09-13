@@ -11,16 +11,21 @@
 
         abs(log10(rate) - (usd_log10(T) - usd_log10(F))) > 1
 
-    A currency with no reference value fails: an unknown magnitude cannot be
-    checked. (A >50% move between periods only asks for a reason in konsol; it
+    A currency has NO reference when
+        isNaN(usd_log10) OR (usd_log10 = 0 AND currency_code != 'USD')
+    (USD is 0 by definition; a 0 anywhere else is an unset value). The same
+    rule as konsol #174. A rate involving a currency with no reference is
+    named by the tests; the model's guard does not refuse it. (A >50% move between periods only asks for a reason in konsol; it
     is a soft check and has no place here.)
 #}
 
-{# The currencies that have a reference magnitude. Use as a CTE: `ref_mag as {{ fx_reference_magnitudes() }}` #}
+{# The currencies that HAVE a reference magnitude (the rule above). Use as a
+   CTE: `ref_mag as {{ fx_reference_magnitudes() }}`. The guard in
+   macros/governed_rates.sql and both magnitude tests read only this. #}
 {% macro fx_reference_magnitudes() -%}
 (select currency_code, toFloat64(usd_log10) as usd_log10
  from {{ source('epm_gold', 'currencies') }}
- where isFinite(usd_log10))
+ where not (isNaN(usd_log10) or (usd_log10 = 0 and currency_code != 'USD')))
 {%- endmacro %}
 
 {# '' when the rate is plausible, else why not. The log10 columns come from
