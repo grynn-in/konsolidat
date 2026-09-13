@@ -1,5 +1,7 @@
 {{ config(severity='warn') }}
 
+-- depends_on: {{ ref('silver_main_accounts') }}
+
 {#
     #175 re-review: a group's intercompany-difference account is in the group
     chart. konsol checks it when the account is set, but the chart
