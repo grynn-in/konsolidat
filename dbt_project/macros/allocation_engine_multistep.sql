@@ -15,7 +15,11 @@
 {% set max_steps = 1 %}
 {% if execute %}
     {% set _r = run_query('select max(step_order) as m from ' ~ source('epm_staging', 'allocation_rules')) %}
-    {% if _r and _r.rows and (_r.rows | length) > 0 and _r.rows[0][0] is not none %}
+    {# No rules (a trial-balance-only site): max() over an empty table is 0,
+       not NULL (step_order is a plain UInt8), and range(1, 1) unrolls no step,
+       leaving `all_allocations as ()`, a syntax error. One step over the empty
+       rule set builds an empty result instead. #}
+    {% if _r and _r.rows and (_r.rows | length) > 0 and _r.rows[0][0] is not none and (_r.rows[0][0] | int) > 0 %}
         {% set max_steps = _r.rows[0][0] | int %}
     {% endif %}
 {% endif %}
