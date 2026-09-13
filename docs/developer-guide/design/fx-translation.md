@@ -1,5 +1,15 @@
 # FX Translation (Closing vs Average Rate)
 
+> **Superseded for the rate source (konsolidat#93 / konsol#103, 13 Sep 2026).**
+> Translation no longer reads `silver_exchange_rates` or falls back to
+> `Default` or 1.0. `gold_consolidated_trial_balance` takes one approved
+> Closing and one Average rate per fiscal period, from each currency into the
+> group's reporting currency, from `epm_staging.group_exchange_rates` (konsol's
+> Group Exchange Rate). A missing rate stops the build. The ERP feed only
+> pre-fills drafts in konsol. The account-type rule below (closing for the
+> balance sheet, average for the P&L, historical for equity tranches) is
+> unchanged.
+
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
 - **Balance sheet accounts** → closing (spot) rate at period end

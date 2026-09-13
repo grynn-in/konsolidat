@@ -13,7 +13,9 @@
     band, where a 100x error always trips a bound.
 #}
 
-{% set wide_band = "('JPY','KRW','IDR','VND','HUF','CLP','ISK','INR','RUB','PHP','TRY','THB','CZK')" %}
+{# The bands live in macros/fx_magnitude.sql, shared with the governed-rate
+   test and kept in step with konsol's entry guard (konsolidat#93). #}
+{% set wide_band = fx_wide_band() | trim %}
 
 with rates as (
 
