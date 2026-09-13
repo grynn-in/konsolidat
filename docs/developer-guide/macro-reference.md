@@ -214,7 +214,7 @@ See [Allocation Guide](../user-guide/allocation-guide.md) for a worked example.
 
 ### map_account_type(column)
 
-Maps D365 `MainAccountType` values to readable labels.
+Maps D365 `MainAccountType` values (and ERPNext `root_type`, which passes through except `'Income'`) to readable labels.
 
 ```sql
 select {{ map_account_type('raw.Type') }} as account_type
@@ -230,4 +230,5 @@ select {{ map_account_type('raw.Type') }} as account_type
 | `'5'` / `'Liability'` | `'Liability'` |
 | `'6'` / `'Equity'` | `'Equity'` |
 | `'7'` / `'Total'` | `'Total'` |
+| `'Income'` (ERPNext `root_type`) | `'Revenue'` |
 | Other | Passthrough |

@@ -18,8 +18,11 @@ select
     account_name,
     account_type,
     {{ map_account_type('account_type') }} as account_type_name,
-    -- Classification flags for filtering
-    account_type in ('0', '1', '2', 'ProfitAndLoss', 'Revenue', 'Expense') as is_pnl,
+    -- Classification flags for filtering. 'Income' is ERPNext's root_type for
+    -- revenue accounts (stg_erpnext__accounts passes root_type through); every
+    -- account must be exactly one of is_pnl / is_balance_sheet
+    -- (tests/assert_every_account_is_pnl_or_balance_sheet.sql).
+    account_type in ('0', '1', '2', 'ProfitAndLoss', 'Revenue', 'Income', 'Expense') as is_pnl,
     account_type in ('3', '4', '5', '6', 'BalanceSheet', 'Asset', 'Liability', 'Equity') as is_balance_sheet,
     -- PRD-10: Equity flag for historical rate translation (IAS 21)
     account_type in ('6', 'Equity') as is_equity,
