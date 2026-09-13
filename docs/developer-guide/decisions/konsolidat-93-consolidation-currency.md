@@ -1,6 +1,6 @@
 # Decision: Consolidation currency (konsolidat #93)
 
-**Issue:** grynn-in/konsolidat#93 · **Status:** decided 13 Sep 2026 (see Outcome)
+**Issue:** grynn-in/konsolidat#93 · **Status:** decided and implemented, 13 Sep 2026 (konsol [#172](https://github.com/grynn-in/konsol/pull/172) and [#174](https://github.com/grynn-in/konsol/pull/174), konsolidat [#176](https://github.com/grynn-in/konsolidat/pull/176), all merged). See Outcome, and the [Exchange Rates Guide](../../user-guide/exchange-rates-guide.md) for how it works now.
 
 ## Outcome (decided 13 Sep 2026)
 

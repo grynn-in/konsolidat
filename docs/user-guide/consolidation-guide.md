@@ -9,8 +9,8 @@ graph TD
     TB[gold_trial_balance<br/>Entity-level amounts] --> CTB[gold_consolidated_trial_balance<br/>FX translation + ownership split]
     CTB --> IC[gold_ic_eliminations<br/>Intercompany entries]
     CTB --> FX[gold_fx_revaluation<br/>CTA entries]
-    ADJ[consolidation_adjustments seed<br/>Top-side journals] --> CADJ[gold_consolidation_adjustments]
-    CTB --> FCTB[gold_fully_consolidated_tb<br/>4-layer union]
+    ADJ[Consolidation Adjustment<br/>Approved top-side journals] --> CADJ[gold_consolidation_adjustments]
+    CTB --> FCTB[gold_fully_consolidated_tb<br/>union of all layers]
     IC --> FCTB
     FX --> FCTB
     CADJ --> FCTB
@@ -19,23 +19,16 @@ graph TD
 
 ## Consolidation Groups
 
-Defined in the `consolidation_groups` seed CSV:
+A consolidation group is a node in konsol's **Consolidation Group** tree. Entities sit under group nodes, and a group can hold sub-groups, so consolidation is multi-level: an entity is consolidated into every group above it.
 
-```csv
-consolidation_group,data_area_id,entity_name,ownership_pct,reporting_currency,consolidation_method
-GROUP_CORP,USMF,Contoso US,100,USD,full
-GROUP_CORP,DEMF,Contoso DE,100,USD,full
-GROUP_CORP,GBMF,Contoso UK,80,USD,full
-GROUP_CORP,JPMF,Contoso JP,51,USD,full
-```
+| Where | Field | Description |
+|-------|-------|-------------|
+| Group node | Reporting Currency | The currency the group presents in, a link to ISO Currency. Required on every group node. Every entity below the node is translated directly into it |
+| Group node | Intercompany Difference Account, Intercompany Difference Tolerance | Where the group books intercompany differences; see the [Intercompany Guide](intercompany-guide.md#2-set-the-groups-difference-account-and-tolerance) |
+| Entity row | Entity | The legal entity (`data_area_id`). An entity belongs to exactly one node |
+| Ownership Period | Ownership and method | The parent's share of an entity and how it is consolidated, with the dates they apply. Ownership lives only here |
 
-| Field | Description |
-|-------|-------------|
-| `consolidation_group` | Group identifier (e.g., `GROUP_CORP`) |
-| `data_area_id` | Legal entity code from D365 |
-| `ownership_pct` | Parent's ownership (0–100) |
-| `reporting_currency` | Group reporting currency |
-| `consolidation_method` | Currently: `full` |
+The presentation currency lives on the group node, not in EPM Settings (its consolidation currency field was removed in konsol #172). In the examples below, `GROUP_CORP` reports in USD and owns USMF and DEMF 100%, GBMF 80% and JPMF 51%.
 
 ## Currency Translation
 
@@ -47,7 +40,7 @@ GROUP_CORP,JPMF,Contoso JP,51,USD,full
 | P&L (Revenue, Expense) | **Average rate** | P&L at period average |
 | Equity | **Historical rate** (when defined), else closing rate | IAS 21: equity is frozen at the rate on the date it was contributed — see [Historical Equity Rates](#historical-equity-rates-ias-21) |
 
-The closing and average rates are the group's **governed rates**: one approved Closing and one Average rate per fiscal period, from each currency into the group's reporting currency, entered (or pre-filled from the ERP and accepted) in konsol's **Group Exchange Rate** and read from `epm_staging.group_exchange_rates` (konsolidat#93, konsol#103). There is no fallback: a translated currency with no approved rate for its period stops the build before anything is replaced, and `assert_every_translated_currency_has_a_governed_rate` names it. An entity whose currency is the group's translates at 1.
+The closing and average rates are the group's **governed rates**: one approved Closing and one Average rate per fiscal period, from each currency into the group's reporting currency, in konsol's **Group Exchange Rate** (konsolidat#93, konsol#103). A Group Accountant enters them, or pre-fills drafts from the ERP's quotes, and the Close Lead approves them. A rate is entered as a quote per 1, 10, 100, 1,000 or 10,000 units (`0.6607 USD per 100 JPY`); konsol publishes the true rate, units of the group currency per 1 unit of the entity currency (`0.006607`), to `epm_staging.group_exchange_rates`, and translation uses it exactly as published. The ERP's own rate tables are never read by translation. There is no fallback: a translated currency with no usable rate for its period stops the build before anything is replaced, and `assert_every_translated_currency_has_a_governed_rate` names it. An entity whose currency is the group's translates at 1. See the [Exchange Rates Guide](exchange-rates-guide.md) for entering, approving and correcting rates.
 
 ### Translation Formulas
 
@@ -91,8 +84,8 @@ GBMF (the UK subsidiary, 80% owned) was incorporated on **15 Jan 2020** with **G
 Translating the GBP 1,000,000 of share capital:
 
 ```
-✅ Historical rate:  1,000,000 × 1.40 = 1,400,000 USD   (frozen, correct under IAS 21)
-❌ Closing rate:     1,000,000 × 1.27 = 1,270,000 USD   (wrong — implies capital "shrank" 130,000)
+Historical rate:  1,000,000 × 1.40 = 1,400,000 USD   (correct: frozen under IAS 21)
+Closing rate:     1,000,000 × 1.27 = 1,270,000 USD   (wrong: implies capital "shrank" 130,000)
 ```
 
 The **USD 130,000** difference is not lost — it flows into the **Currency Translation Adjustment** (CTA / FCTR) in equity, isolating pure FX movement instead of distorting share capital. The usual ownership split then applies to the historically-translated amount (`group_amount = 1,400,000 × 0.80 = 1,120,000 USD`; `nci_amount = 280,000 USD`).
@@ -121,28 +114,30 @@ On submit, the rate syncs to `epm_staging.historical_equity_rates` and is picked
 | `assert_nci_zero_for_full_ownership` | NCI = 0 when ownership = 100% |
 | `assert_bs_uses_closing_rate` | BS accounts use closing rate |
 | `assert_pnl_uses_average_rate` | P&L accounts use average rate |
+| `assert_every_translated_currency_has_a_governed_rate` | Every translated key has an approved Closing and Average rate (warns; lists every key) |
+| `assert_governed_rate_sane` | No governed rate is more than 10× from the currencies' USD references (warns) |
 
 ## Intercompany Elimination
 
-### IC Elimination Rules
+Intercompany balances are eliminated **by partner**. The full description, with worked examples, is in the [Intercompany Guide](intercompany-guide.md). In short:
 
-Defined in the `ic_elimination_rules` seed:
+1. **Intercompany Account** in konsol flags the intercompany accounts in the group chart and pairs each with the account the partner books the other side on (`1300` receivable ↔ `2100` payable, `4000` revenue ↔ `5000` cost of sales).
+2. Each trial balance row on those accounts names its partner entity (`partner_data_area_id`). A row without a partner is never eliminated; `gold_ic_unmatched` lists it.
+3. `gold_ic_reconciliation` pairs (entity, partner, account) with (partner, entity, counterpart) per group and period, both sides at 100% in the group's currency. Balance-sheet pairs compare the balance to date, P&L pairs the period's movement.
+4. `gold_ic_eliminations` eliminates the matched amount, moves the minority owners' portion to the NCI line, and moves any difference to the group's **Intercompany Difference Account**, labelled `booking` or `fx`. Only booking differences count against the group's tolerance.
 
-```csv
-rule_id,rule_name,debit_account,credit_account,debit_entity_pattern,credit_entity_pattern,description
-IC_001,IC Receivable/Payable,1300,2100,*,*,Eliminate IC receivables against payables
-IC_002,IC Revenue/COGS,4000,5000,*,*,Eliminate IC revenue against COGS
-IC_003,IC Dividend,8100,3200,*,*,Eliminate IC dividends
-```
+**IC Elimination Rule** now covers only unrealised profit on intercompany inventory (`rule_type = unrealized_profit`, with IC Balance documents). A rule of type `balance` eliminates nothing.
 
-The elimination engine:
-1. For each rule, finds matching debit/credit account balances across entities in the same group
-2. Calculates the elimination amount as the lesser of the two IC balances
-3. Posts offsetting entries to zero out the intercompany position
+### Tests
 
-### Test
+| Test | Assertion |
+|------|-----------|
+| `assert_ic_elimination_nets_zero` | Every elimination entry nets to zero |
+| `assert_ic_nci_line_nets_zero` | The NCI line nets to zero per group and period |
+| `assert_ic_elimination_within_balance` | No side is eliminated beyond its balance |
+| `assert_ic_account_in_one_pair` | Each intercompany account belongs to one pair |
 
-`assert_ic_elimination_nets_zero` — for each group/year/period, `sum(debit_elimination + credit_elimination)` must be ≤ 0.01.
+The [Intercompany Guide](intercompany-guide.md#tests) lists the rest.
 
 ## Currency Translation Adjustment (CTA)
 
@@ -164,11 +159,13 @@ CTA absorbs the *combined* effect of every input that translates an account at s
 
 | Driver | Configured in | Effect on CTA |
 |--------|---------------|---------------|
-| Closing vs average rate | `silver_exchange_rates` (from D365) | BS/P&L timing difference |
+| Closing vs average rate | **Group Exchange Rate** doctype (approved per period) | BS/P&L timing difference |
 | Equity historical rate | **Historical Equity Rate** doctype | freezes equity → differs from closing |
 | Ownership % / method (temporal) | **Ownership Period** doctype | CTA is on the **group share**, so ownership scales it |
-| Reporting currency, base ownership | **Consolidation Group** | a same-currency entity translates at 1.0 → CTA = 0 |
-| Effective ownership (multi-level) | **Reporting Hierarchy** | rolls up indirect ownership feeding the group share |
+| Reporting currency | **Consolidation Group** node | a same-currency entity translates at 1.0 → CTA = 0 |
+| Effective ownership (multi-level) | **Consolidation Group** tree + **Ownership Period** | indirect ownership is the product of each link's dated percentage up the tree (`gold_entity_ownership`), and it sets the group share |
+
+A **Reporting Hierarchy** plays no part in ownership or CTA: it rolls up one dimension for reporting, with no eliminations. See the [Reporting Hierarchies Guide](reporting-hierarchies-guide.md).
 
 The NCI share of the translation difference does **not** go to CTA — it rides with `nci_amount` and is handled by the NCI schedule.
 
@@ -183,20 +180,30 @@ The NCI share of the translation difference does **not** go to CTA — it rides 
 
 Manual journal entries posted at the group level for adjustments that don't originate from entity GL (e.g., goodwill, purchase price allocation, fair value adjustments).
 
-Defined in the `consolidation_adjustments` seed:
+Each line is a **Consolidation Adjustment** document in konsol (Consolidation module). A journal is the set of lines that share a `journal_id`.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `consolidation_group` | String | Group |
-| `adjustment_type` | String | Type of adjustment |
-| `journal_id` | String | Unique journal ID |
-| `data_area_id` | String | Entity (or group-level) |
-| `fiscal_year` | UInt16 | Year |
-| `fiscal_period` | UInt8 | Period |
-| `main_account` | String | Account |
-| `debit_amount` | Decimal(18,2) | Debit |
-| `credit_amount` | Decimal(18,2) | Credit |
-| `description` | String | Narrative |
+| Field | Description |
+|-------|-------------|
+| `consolidation_group` | Group |
+| `adjustment_type` | `topside` or `reclassification` |
+| `journal_id` | The journal the line belongs to |
+| `data_area_id` | Entity (a link to Entity) |
+| `fiscal_year`, `fiscal_period` | Period |
+| `main_account` | Account |
+| `debit_amount`, `credit_amount` | Amounts |
+| `description` | Narrative |
+| `auto_reverse_period` | `0` = no auto-reversal; `N` = reverse in period + N |
+
+Adjustments go through an approval workflow. Approving is the submit:
+
+| State | Who moves it there | Effect in the warehouse |
+|-------|--------------------|-------------------------|
+| Draft | EPM Analyst drafts the line | None |
+| Pending Approval | EPM Analyst sends it for approval (EPM Admin can **Reject** it back to Draft) | None |
+| Approved | EPM Admin approves it, which submits the document | Written to `epm_staging.consolidation_adjustments`; `gold_consolidation_adjustments` picks it up on the next build |
+| Reversed | EPM Admin reverses an approved adjustment, which cancels the document | Removed from the warehouse |
+
+Approving and reversing work only while the fiscal period is open. After the period closes, correct an adjustment with a new one in an open period.
 
 **Test**: `assert_topside_journal_balanced` — each journal must balance (total debits = total credits).
 
@@ -210,14 +217,18 @@ graph LR
     TS[Topside Layer] --> FCTB
 ```
 
-The `gold_fully_consolidated_tb` model unions four layers:
+The `gold_fully_consolidated_tb` model unions these layers:
 
 | `adjustment_type` | Source | Amount |
 |-------------------|--------|--------|
-| `entity` | `gold_consolidated_trial_balance` | `group_amount` |
-| `ic_elimination` | `gold_ic_eliminations` | `elimination_amount` |
+| `entity` | `gold_consolidated_trial_balance` | `group_amount`, summed over partners |
+| `ic_elimination` | `gold_ic_eliminations` (group view: `matched` and `difference` entries) | each entry's debit and credit leg |
+| `ic_elimination_nci` | `gold_ic_eliminations` (group view: `nci` entries) | the legs moving the minority's portion to the NCI line |
 | `cta` | `gold_fx_revaluation` | `cta_amount` |
 | (topside type) | `gold_consolidation_adjustments` | `net_amount` |
+| `equity_method` | `gold_equity_method_associates` | the group's share of an equity-accounted associate |
+| (acquisition type) | `gold_acquisition_adjustments` | acquisition entries |
+| (disposal type) | `gold_disposal_adjustments` | disposal entries |
 
 **Test**: `assert_fctb_entity_layer_ties` — entity layer sums tie to `gold_consolidated_trial_balance.group_amount`.
 
@@ -229,11 +240,11 @@ movements — no separate cash-flow ledger is required.
 **Entity level** — `gold_cash_flow_indirect`:
 
 - Every non-cash BS account's `period_movement` (from `gold_bs_movement`) is
-  classified into Operating / Investing / Financing via the
-  `cash_flow_categories` seed and converted to a cash effect:
-  `cash_flow_amount = period_movement × sign`.
+  classified into Operating / Investing / Financing via the published
+  **Cash Flow Category** mappings (`epm_staging.cash_flow_categories`) and
+  converted to a cash effect: `cash_flow_amount = period_movement × sign`.
 - Because balances are stored as positive magnitudes, the cash direction is set
-  explicitly per account in the seed's `sign` column: credit-natured accounts
+  explicitly per account in the mapping's `sign` field: credit-natured accounts
   (liabilities, equity, contra-assets like accumulated depreciation) are `+1`;
   debit-natured accounts (assets, contra-equity like dividends declared) are
   `-1` — an asset increase is a cash outflow.
@@ -285,6 +296,8 @@ For consolidated reports, query the fully consolidated models directly via SQL o
 
 ## Next Steps
 
+- [Exchange Rates Guide](exchange-rates-guide.md) — Entering and approving the group's exchange rates
+- [Intercompany Guide](intercompany-guide.md) — Intercompany matching and eliminations
 - [Allocation Guide](allocation-guide.md) — Cost allocation after consolidation
 - [Budgeting Guide](budgeting-guide.md) — Budget input and spreading
 - [Data Dictionary: Gold Models](../data-dictionary/gold-models.md) — Full column reference

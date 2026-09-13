@@ -38,6 +38,19 @@
 > aborting would deadlock a fix made in konsol that only the next build brings
 > in.
 
+## Entering rates in konsol
+
+Rates are entered, approved and corrected in konsol's **Group Exchange Rate** (konsol #174); the [Exchange Rates Guide](../../user-guide/exchange-rates-guide.md) is the user-facing reference. What the warehouse relies on:
+
+- **Quote and Quoted Per.** A rate is entered as a quote per 1, 10, 100, 1,000 or 10,000 units of the from-currency (`0.6607 USD per 100 JPY`), like D365's conversion factor. The direction never changes. konsol computes the true rate, Quote ÷ Quoted Per (`0.006607`), in decimal arithmetic when it publishes; nothing downstream divides again.
+- **Approved rows only.** Submit is the approval (EPM Admin). konsol publishes every approved rate after the commit, the full set swapped in at once, so a reader sees the old set or the new one. A cancelled rate leaves the table.
+- **The same magnitude rule at entry.** konsol refuses a rate more than 10× from the `usd_log10` references, and a currency with no reference, before it is saved (`konsol.group_rates.magnitude_problem`; the warehouse's `fx_is_implausible` is the same formula). The two sides are tested against one set of cases, kept as two copies in step by hand: konsol's `konsol/tests/fx_magnitude_cases.json` and konsolidat's `dbt_project/tests/assert_fx_magnitude_cases.sql`. A move of more than 50% needs a reason in konsol; it has no warehouse check.
+- **Adoption on upgrade.** A site upgrading from ERP-rate translation runs a one-time patch in `bench migrate` that records the rate each already-translated period used as an approved row (source `Adoption`), so the first governed build gives the same figures. Keys translated at two rates or at the old 1.0 fallback are not adopted; the guard names them until a person approves a rate.
+- **Pre-fill.** `silver_exchange_rates` / `stg_exchange_rates` (the ERP quotes) feed konsol's **Pre-fill from ERP**, which creates drafts, and warn-only dbt tests such as `assert_exchange_rate_sane_magnitude`. Translation never reads them.
+- **Read-only API.** `konsol.api.fx_rates` and the orchestrator's `get_fx_rates` return the published governed rates.
+
+The sections below are the original design brief for rate selection by account type. Its rate-source requirements (R1, and the `Default` fallbacks in R2) are superseded by the contract above.
+
 ## Problem
 `gold_consolidated_trial_balance` uses a single closing rate for all accounts. IFRS/US GAAP require:
 - **Balance sheet accounts** → closing (spot) rate at period end

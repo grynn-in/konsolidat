@@ -4,13 +4,15 @@
 
 Konsolidat uses a driver-based allocation engine. The process:
 
-1. **Define a rule** in `allocation_rules.csv` — specifies source account/cost center, driver type, and target account
-2. **Provide driver data** in CSV seeds (e.g., `allocation_drivers_headcount.csv`) — values per cost center/period
+1. **Define a rule** as an **Allocation Rule** in konsol — specifies source account/cost center, driver type, and target account
+2. **Provide driver data** as **Allocation Driver** records in konsol — values per cost center/period
 3. **dbt calculates** — reads pool amount from trial balance, computes weights, distributes proportionally
+
+The current, fuller guide is the [Allocation Guide](user-guide/allocation-guide.md).
 
 ## Allocation Rules
 
-Edit `dbt_project/seeds/allocation_rules.csv` or use the Allocation Rule doctype in Frappe Desk.
+Use the **Allocation Rule** doctype in konsol (there are no dbt seeds; it writes through to `epm_staging.allocation_rules`).
 
 | Field | Description | Example |
 |-------|-------------|---------|
@@ -24,23 +26,21 @@ Edit `dbt_project/seeds/allocation_rules.csv` or use the Allocation Rule doctype
 
 ## Driver Data
 
-Create CSV seeds with driver values per cost center and period:
+Enter **Allocation Driver** records with driver values per cost center and period (written through to `epm_staging.allocation_drivers`):
 
-```csv
-data_area_id,cost_center,driver_value,fiscal_year,fiscal_period
-USMF,SALES,45,2024,1
-USMF,MARKETING,20,2024,1
-USMF,OPERATIONS,85,2024,1
-```
+| driver_type | data_area_id | cost_center | driver_value | fiscal_year | fiscal_period |
+|---|---|---|---|---|---|
+| headcount | USMF | SALES | 45 | 2024 | 1 |
+| headcount | USMF | MARKETING | 20 | 2024 | 1 |
+| headcount | USMF | OPERATIONS | 85 | 2024 | 1 |
 
 The engine normalizes driver values to weights (each / sum = weight).
 
 ## Adding a New Allocation
 
-1. Add a row to `allocation_rules.csv`
-2. Create a new driver CSV (e.g., `allocation_drivers_sqm.csv`)
-3. Update `gold_allocation_results.sql` to add a `UNION ALL` with the new rule
-4. Run `dbt seed && dbt build --select gold_allocation_results`
+1. Create an **Allocation Rule** in konsol with the next `step_order`
+2. Enter **Allocation Driver** values for its driver type
+3. Run `dbt build` (the multi-step engine reads the number of steps from the rules; no SQL change is needed)
 
 ## Validation
 

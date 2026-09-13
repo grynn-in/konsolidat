@@ -119,12 +119,9 @@ vars:
 | silver | `silver` | table | silver |
 | gold | `gold` | table | gold |
 
-### Seed Column Types
+### Reference Data Sources
 
-Custom column types are specified per seed in `dbt_project.yml`:
-
-- **`consolidation_groups`**: `ownership_pct` → `Decimal(5,2)`
-- **`consolidation_adjustments`**: All columns typed — `consolidation_group` (String), `fiscal_year` (UInt16), `fiscal_period` (UInt8), `debit_amount` / `credit_amount` (Decimal(18,2)), etc.
+There are no seeds, so `dbt_project.yml` has no seed configuration. Reference data is written by konsol doctypes to ClickHouse tables that dbt declares as sources in `models/staging/_staging__sources.yml`; konsol creates those tables with their column types. See [Configuration Data](../data-dictionary/seeds-reference.md).
 
 ## Excel Add-in Configuration
 

@@ -9,23 +9,22 @@ Konsolidat supports annual budget input with configurable spread profiles that d
 
 ```mermaid
 graph LR
-    INPUT[budget_annual_input seed<br/>Annual budget lines] --> SPREAD[gold_spread_budget<br/>12 monthly periods]
-    PROFILES[spread_profiles seed<br/>Monthly weights] --> SPREAD
+    INPUT[Budget Annual Input<br/>Annual budget lines] --> SPREAD[gold_spread_budget<br/>12 monthly periods]
+    PROFILES[Spread Profile<br/>Monthly weights] --> SPREAD
     SPREAD --> VAR[gold_variance_analysis<br/>Actual vs budget]
     SPREAD --> API[Frappe API<br/>scenario=budget]
 ```
 
-## Budget Seed Input
+## Annual Budget Input
 
-Demo/seed budget data is defined in `seeds/budget_annual_input.csv` (app-entered budgets flow through Budget Cycle → Budget Sheet → Budget Line instead — see the [Budget Layers Guide](budget-layers.md)):
+Annual budget lines are **Budget Annual Input** records in konsol, written through to `epm_gold.budget_annual_input` (app-entered budgets flow through Budget Cycle → Budget Sheet → Budget Line instead — see the [Budget Layers Guide](budget-layers.md)). Example lines:
 
-```csv
-scenario_id,data_area_id,fiscal_year,main_account,dim_cost_center,dim_department,annual_amount,spread_profile_id,submitted_by
-BUDGET_2025,USMF,2025,6100,SALES,SALES,1200000,EVEN,admin
-BUDGET_2025,USMF,2025,6200,MARKETING,MARKETING,600000,SEASONAL_RETAIL,admin
-BUDGET_2025,USMF,2025,7100,IT,IT,360000,EVEN,admin
-BUDGET_2025,USMF,2025,4100,SALES,SALES,2400000,SEASONAL_RETAIL,admin
-```
+| scenario_id | data_area_id | fiscal_year | main_account | dim_cost_center | dim_department | annual_amount | spread_profile_id |
+|---|---|---|---|---|---|---|---|
+| BUDGET_2025 | USMF | 2025 | 6100 | SALES | SALES | 1,200,000 | EVEN |
+| BUDGET_2025 | USMF | 2025 | 6200 | MARKETING | MARKETING | 600,000 | SEASONAL_RETAIL |
+| BUDGET_2025 | USMF | 2025 | 7100 | IT | IT | 360,000 | EVEN |
+| BUDGET_2025 | USMF | 2025 | 4100 | SALES | SALES | 2,400,000 | SEASONAL_RETAIL |
 
 | Column | Description |
 |--------|-------------|
@@ -41,7 +40,7 @@ BUDGET_2025,USMF,2025,4100,SALES,SALES,2400000,SEASONAL_RETAIL,admin
 
 ## Spread Profiles
 
-Spread profiles define how annual amounts are distributed across 12 months. Defined in `seeds/spread_profiles.csv`:
+Spread profiles define how annual amounts are distributed across 12 months. They are **Spread Profile** records in konsol (`epm_gold.spread_profiles`). For example:
 
 ### EVEN (Equal Monthly Spread)
 
@@ -76,7 +75,7 @@ The weights are **normalized** so they always sum to the annual total regardless
 
 ## Scenarios
 
-Budget data is tagged with a scenario from `seeds/scenario_definitions.csv`:
+Budget data is tagged with a scenario, a **Scenario** record in konsol (`epm_gold.scenario_definitions`). For example:
 
 | Scenario ID | Name | Type | Active |
 |------------|------|------|--------|
@@ -117,23 +116,22 @@ This returns the period 5 budget amount for account 6100. Equivalent to:
 
 ## Adding a New Budget
 
-1. Add rows to `seeds/budget_annual_input.csv` with a new `scenario_id`
-2. Optionally add a new spread profile to `seeds/spread_profiles.csv`
-3. Add the scenario to `seeds/scenario_definitions.csv`
-4. Run `dbt seed && dbt build`
+1. Create the **Scenario** in konsol
+2. Optionally create a new **Spread Profile**
+3. Enter **Budget Annual Input** lines with the new `scenario_id` (or use Budget Cycle and Budget Sheet; see the [Budget Layers Guide](budget-layers.md))
+4. Run `dbt build`
 
 ## Adding a Custom Spread Profile
 
-Add 12 rows to `seeds/spread_profiles.csv`:
+Create 12 **Spread Profile** records, one per fiscal period, with the same `profile_id`:
 
-```csv
-profile_id,profile_name,fiscal_period,weight
-FRONT_LOADED,Front-Loaded,1,2.0
-FRONT_LOADED,Front-Loaded,2,1.8
-FRONT_LOADED,Front-Loaded,3,1.5
-...
-FRONT_LOADED,Front-Loaded,12,0.5
-```
+| profile_id | profile_name | fiscal_period | weight |
+|---|---|---|---|
+| FRONT_LOADED | Front-Loaded | 1 | 2.0 |
+| FRONT_LOADED | Front-Loaded | 2 | 1.8 |
+| FRONT_LOADED | Front-Loaded | 3 | 1.5 |
+| … | … | … | … |
+| FRONT_LOADED | Front-Loaded | 12 | 0.5 |
 
 The weights don't need to sum to 12.0 — they're normalized during the spread calculation.
 
@@ -149,4 +147,4 @@ The weights don't need to sum to 12.0 — they're normalized during the spread c
 - **[Budget Layers Guide](budget-layers.md)** — Collaborative layered budgeting with workflow and approval
 - [Variance Analysis Guide](variance-analysis-guide.md) — Actual vs budget comparison
 - [Excel Formulas Guide](excel-formulas-guide.md) — Budget formulas in Excel
-- [Seeds Reference](../data-dictionary/seeds-reference.md) — Full seed documentation
+- [Configuration Data](../data-dictionary/seeds-reference.md) — Where each kind of reference data lives in konsol

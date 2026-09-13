@@ -77,13 +77,18 @@ nav:
           - Task Pane: user-guide/excel-taskpane-guide.md
       - Initial Setup: user-guide/initial-setup-guide.md
       - Financial Processes:
+          - Month-End Close: user-guide/month-close-guide.md
+          - Trial Balance Upload: user-guide/trial-balance-upload-guide.md
           - Consolidation: user-guide/consolidation-guide.md
+          - Exchange Rates: user-guide/exchange-rates-guide.md
+          - Intercompany: user-guide/intercompany-guide.md
           - Allocations: user-guide/allocation-guide.md
           - Budgeting: user-guide/budgeting-guide.md
           - Budget Layers: user-guide/budget-layers.md
           - Variance Analysis: user-guide/variance-analysis-guide.md
       - Reports:
           - Report Catalog: user-guide/report-catalog.md
+          - Reporting Hierarchies: user-guide/reporting-hierarchies-guide.md
       - Administration:
           - Deployment: admin-guide/deployment-guide.md
           - Operations Runbook: admin-guide/operations-runbook.md
@@ -114,7 +119,7 @@ nav:
           - Gold Models: data-dictionary/gold-models.md
           - Silver Models: data-dictionary/silver-models.md
           - Bronze Models: data-dictionary/bronze-models.md
-          - Seeds: data-dictionary/seeds-reference.md
+          - Configuration Data: data-dictionary/seeds-reference.md
           - Staging Tables: data-dictionary/staging-tables.md
       - Extending:
           - dbt Macro Reference: developer-guide/macro-reference.md

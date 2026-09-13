@@ -122,9 +122,10 @@ Configure Airbyte to call the sync-complete webhook so Frappe can track sync sta
 cd dbt_project
 pip install dbt-core dbt-clickhouse
 dbt deps
-dbt seed    # Load allocation rules, consolidation groups, etc.
 dbt build   # Build all models + run tests
 ```
+
+There is no `dbt seed` step. Allocation rules, consolidation groups and the other reference data are konsol doctypes that write through to ClickHouse; see [Configuration Data](data-dictionary/seeds-reference.md).
 
 ## Step 5: Start Remaining Services
 

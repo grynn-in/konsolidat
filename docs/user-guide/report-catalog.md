@@ -40,7 +40,7 @@ Quick reference for all 22 gold models with sample `=K.EPM()` formulas for commo
 | `gold_ic_eliminations` | Intercompany entries | `elimination_amount` |
 | `gold_fx_revaluation` | CTA entries | `cta_amount` |
 | `gold_consolidation_adjustments` | Top-side journals | `net_amount` |
-| `gold_fully_consolidated_tb` | 4-layer consolidated TB | `amount` by `adjustment_type` |
+| `gold_fully_consolidated_tb` | Fully consolidated TB, every layer | `amount` by `adjustment_type` |
 | `gold_consolidated_ytd` | YTD consolidated | `ytd_amount` |
 
 ### Allocation & Scenarios

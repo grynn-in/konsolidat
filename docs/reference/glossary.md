@@ -14,7 +14,7 @@
 | **Intercompany (IC) Elimination** | Removing transactions between entities within the same consolidation group so they don't double-count |
 | **Topside Journal / Consolidation Adjustment** | Manual journal entries posted at the group level (e.g., goodwill, fair-value adjustments) |
 | **Trial Balance** | A listing of all accounts and their balances for a given period, where total debits must equal total credits |
-| **Fully Consolidated Trial Balance (FCTB)** | The final 4-layer union: entity amounts + IC eliminations + CTA + topside adjustments |
+| **Fully Consolidated Trial Balance (FCTB)** | The final union of every layer: entity amounts, IC eliminations, CTA, topside adjustments, equity method, acquisitions and disposals |
 | **Chart of Accounts** | The master list of all general ledger account codes and their types (Revenue, Expense, Asset, Liability, Equity) |
 | **Cost Center** | An organizational unit used to track where costs are incurred (e.g., IT, Sales, Facility) |
 | **Driver-Based Allocation** | Distributing a cost pool across recipients based on a measurable driver (headcount, square meters, revenue) |
@@ -24,6 +24,29 @@
 | **YTD (Year-to-Date)** | Cumulative total from period 1 through the current period |
 | **Fiscal Period** | A numbered month (1–12) within a fiscal year, plus optional special periods (0 = Opening, 13 = Closing) |
 | **Scenario** | A named version of financial data: `actuals`, `budget`, or `forecast` |
+
+## Konsol Close and Reporting Terms
+
+| Term | Definition |
+|------|-----------|
+| **Reporting Hierarchy** | A management tree over one dimension (for example business unit), built in konsol and read from Excel with `K.EPM`. It adds up across entities with no eliminations. See [Reporting Hierarchies](../user-guide/reporting-hierarchies-guide.md) |
+| **Node** | Any member of a Reporting Hierarchy, found by its Member Code. A node's value is the sum of every leaf below it |
+| **Leaf** | A member with **Is Group** unchecked, whose Member Code is a real dimension code on the postings, such as `BU_AT01`. Group nodes are headings that only add up leaves |
+| **Group Exchange Rate** | The approved Closing or Average rate for one currency into a group reporting currency for one fiscal period. konsol publishes the true rate (units of group currency per 1 entity-currency unit), and translation reads only these rates |
+| **Quoted Per** | How many units of the from-currency a Group Exchange Rate quote is for: 1, 10, 100, 1,000 or 10,000. A quote of 0.6607 USD per 100 JPY is published as the true rate 0.006607 |
+| **USD reference** | A rough size for each currency (about log10 of its units per 1 USD), kept on ISO Currency. A rate more than 10 times away from what the references imply is refused as a likely typing error |
+| **Governed rate** | A rate approved by group finance in konsol (a submitted Group Exchange Rate). The ERP feed only proposes draft rates, and a period cannot close while a translated currency lacks one |
+| **Intercompany Account** | A group chart account flagged as intercompany (Published), with the counterpart account the partner books the other side on. Its trial balance rows need a partner entity to be eliminated |
+| **Partner entity** | The other group entity an intercompany row is held with (`partner_data_area_id` on a trial balance row). A row without one loads but is never eliminated, and is listed as unmatched |
+| **Booking difference** | A pair difference where both sides are in one functional currency and their local amounts don't net to zero: a different amount was booked, or one side hasn't booked yet. Only booking differences count against the group's Intercompany Difference Tolerance |
+| **FX difference** | A pair difference that arises because the sides are in different currencies, or from translation alone. It is shown but never counts against the tolerance |
+| **NCI line** | The account (by default the pseudo-account `NCI`) where the minority owners' share of intercompany eliminations is posted. The group view carries a balance on it; added to the NCI view, it nets to zero per group and period |
+| **Elimination view** | Which share an intercompany elimination entry covers: `group` (the group's share, booked in the consolidated trial balance) or `nci` (the minority owners' share). Group plus NCI is the full (100%) consolidation |
+| **Build Approval** | A governed request to rebuild the warehouse for a scope (for example `consolidation`, `reporting` or `full`). Every scope except `staging` waits in Pending Review for the Close Lead; a Running build can only be moved on by the build itself |
+| **Trial Balance Upload** | The audit record of one bulk trial balance file: its checks, and the Trial Balance Submission it created for each entity and period. See [Trial Balance Upload](../user-guide/trial-balance-upload-guide.md) |
+| **Close Lead** | The job title konsol shows for the EPM Admin role: runs the close, approves builds and adjustments, signs off periods |
+| **Entity Accountant** | A role for people who submit trial balances (one entity and period at a time, through Trial Balance Submission) and the base budget, for their assigned entities only. One with no entity assigned sees no entity |
+| **Month stages** | The eight ordered steps of a month's close in konsol-exec: source data, trial balances, ownership & rates, intercompany, adjustments, consolidate, assertions, sign off. See [Month-End Close](../user-guide/month-close-guide.md) |
 
 ## Technical Terms
 

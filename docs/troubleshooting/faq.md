@@ -21,7 +21,7 @@ Add the optional parameters: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amou
 After each Airbyte sync + dbt build cycle. Typically daily or on-demand. Ask your IT admin about the schedule.
 
 **Q: Can I write budget data from Excel?**
-Currently, budgets are managed via seed CSVs. A budget write-back feature (via staging tables) is on the roadmap.
+Yes. `K.EPMSAVE()` writes budget values from Excel to konsol. See the [Excel Formulas Guide](../user-guide/excel-formulas-guide.md) and the [Budget Layers Guide](../user-guide/budget-layers.md).
 
 **Q: What accounts are available?**
 Your chart of accounts from D365. Use ClickHouse or ask your admin to query `SELECT DISTINCT main_account FROM epm_gold.gold_trial_balance`.
@@ -40,7 +40,7 @@ ClickHouse data volumes + Frappe `bench backup`. See [Operations Runbook](../adm
 **Q: How do I add a new legal entity?**
 1. Ensure the entity exists in D365
 2. Run an Airbyte sync to pull its data
-3. Add it to `consolidation_groups.csv` if it should be consolidated
+3. Add it under its group in the **Consolidation Group** tree in konsol, with an **Ownership Period**, if it should be consolidated
 4. Add an **Entity Fiscal Calendar** record in konsol for its `data_area_id`
 5. Run `bench migrate` (or save the record), then `dbt build`
 
@@ -56,7 +56,7 @@ reverting a published ownership change, deleting a consolidation group outright,
 and putting two entities under two groups at once.
 
 **Q: How do I update exchange rates?**
-Exchange rates come from D365 via Airbyte. Run a sync to pull the latest rates. Rates flow through as TRUE rates — the staging adapter resolves D365's `ConversionFactor` (per-100 quotes etc.) and nothing downstream scales (#138). If a rate looks 100× off, check the raw row's `ConversionFactor` against its magnitude; `assert_exchange_rate_sane_magnitude` should already be failing.
+In konsol's **Group Exchange Rate** list. Translation reads only these governed rates: one approved Closing and one Average rate per period for each currency. A Group Accountant enters them or pre-fills drafts from the ERP's rates, and the Close Lead approves them. The ERP's rates are only a source for the pre-fill. See the [Exchange Rates Guide](../user-guide/exchange-rates-guide.md).
 
 **Q: Can I use ClickHouse Cloud instead of self-hosted?**
 Yes. Update the EPM Settings in Frappe with the cloud hostname, port, and credentials. See [Deployment Guide](../admin-guide/deployment-guide.md).
@@ -89,10 +89,10 @@ ClickHouse is a columnar OLAP database optimized for aggregation queries. Financ
 dbt-clickhouse is the only tested adapter. The SQL uses ClickHouse-specific functions (via `db_adapter.sql` macros), so other databases would require adapter changes.
 
 **Q: How do I add a new allocation rule?**
-Add a row to `allocation_rules.csv`, create driver data, and update the multi-step macro. See [Allocation Guide](../user-guide/allocation-guide.md).
+Create an **Allocation Rule** in konsol and enter its **Allocation Driver** values, then run `dbt build`. The multi-step engine reads the number of steps from the rules, so no macro change is needed. See [Allocation Guide](../user-guide/allocation-guide.md).
 
 **Q: How are tests structured?**
-26 assertion tests in `dbt_project/tests/`. Each returns rows that violate a rule — zero rows = pass. See [Testing Guide](../developer-guide/testing-guide.md).
+110 singular assertion tests in `dbt_project/tests/`, plus generic tests declared in the model YAML. Each returns rows that violate a rule — zero rows = pass. See [Testing Guide](../developer-guide/testing-guide.md).
 
 ## Decision Makers
 
@@ -103,10 +103,10 @@ See [Cost Comparison vs Commercial](../evaluation/cost-comparison-vs-commercial.
 Estimated $20K–55K over 3 years vs $200K–$1.4M for commercial solutions. Main costs are infrastructure (~$200–400/mo) and internal FTE time.
 
 **Q: What are the current gaps vs commercial tools?**
-Cash flow statement, multi-GAAP support, and rolling forecasts. These are on the [Roadmap](../reference/roadmap.md).
+Multi-GAAP support and rolling forecasts. These are on the [Roadmap](../reference/roadmap.md). (The indirect-method cash flow statement has shipped.)
 
 **Q: What team do I need?**
 2.5–3.5 FTE: Group Controller (1.0), FP&A Analyst (1–2), Data Engineer (1.0), IT Ops (0.2). See the cost comparison for details.
 
 **Q: Is it production-ready?**
-The core pipeline (D365 → ClickHouse → dbt → Frappe API → Excel) is functional with 60 models, 26 tests, and 3 API endpoints. Production hardening (HA, monitoring, audit trail) is in progress.
+The core pipeline (D365 → ClickHouse → dbt → Frappe API → Excel) is functional with 103 dbt models and 110 singular data tests, and konsol serves the Excel, budget, adjustment and allocation APIs. Production hardening (HA, monitoring, audit trail) is in progress.

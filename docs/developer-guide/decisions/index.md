@@ -6,10 +6,10 @@ Context → Options (with trade-offs) → **Recommendation** → Consequences.
 
 | Issue | Topic | Recommendation (one line) |
 |---|---|---|
-| konsolidat #93 | [Consolidation currency](konsolidat-93-consolidation-currency.md) | **Decided 13 Sep 2026:** currency on each Consolidation Group node (validated Link), EPM Settings field removed, governed rates per period; Phase 2 deferred |
-| konsolidat #130 | [Membership divergence](konsolidat-130-membership-divergence.md) | **Align to the seed** (GROUP_CORP) + generate seed from the doctype — needs owner sign-off |
+| konsolidat #93 | [Consolidation currency](konsolidat-93-consolidation-currency.md) | **Decided and implemented 13 Sep 2026:** currency on each Consolidation Group node (validated Link), EPM Settings field removed, governed rates per period; Phase 2 deferred |
+| konsolidat #130 | [Membership divergence](konsolidat-130-membership-divergence.md) | **Superseded.** The `consolidation_groups` seed is gone; konsol writes the group tree from Consolidation Group and Ownership Periods (see the page) |
 | konsolidat #92 | [Historical Equity Rate — remaining](konsolidat-92-historical-equity-rate.md) | Add an **is-equity guard via a synced account cache**; pair-check after #130 |
-| konsolidat #91 | [Surface FX rates](konsolidat-91-surface-fx.md) | **Part B first** (read-only CH view); Part C (manual doctype) later |
+| konsolidat #91 | [Surface FX rates](konsolidat-91-surface-fx.md) | **Decided and implemented 13 Sep 2026**, in a different form: the group's rates are governed in konsol (**Group Exchange Rate**) and are the only rates translation reads; users see them in that list and through `konsol.api.fx_rates` |
 | konsolidat #131 | [Asset self-heal staleness](konsolidat-131-selfheal-staleness.md) | **Hash-guard + timeout** the heal |
 | konsolidat #90 | [Productionize Airbyte](konsolidat-90-airbyte-prod.md) | Defer (P2); when needed, **Helm Airbyte on real k8s** |
 | konsolidat #57 | [ClickHouse cluster mode](konsolidat-57-clickhouse-cluster.md) | Defer (scale-gated); prefer **managed CH or Keeper+shards** when scale lands |

@@ -182,7 +182,7 @@ Single-step allocation for one rule.
 ```
 
 **CTE chain:**
-1. `rule` — Reads rule definition from `allocation_rules` seed
+1. `rule` — Reads rule definition from `epm_staging.allocation_rules` (written by konsol's Allocation Rule)
 2. `source_pool` — Sums `period_net_amount` from `gold_trial_balance` matching rule's source account/cost center
 3. `drivers` — Computes `driver_weight = driver_value / SUM(driver_value) OVER (PARTITION BY entity, year, period)`
 4. `allocated` — Cross-joins pool × rule, inner joins drivers, excludes self-allocation
@@ -193,7 +193,7 @@ Single-step allocation for one rule.
 
 ### allocation_engine_multistep()
 
-Three-step cascading allocation. No parameters — reads all rules from the `allocation_rules` seed.
+N-step cascading allocation. No parameters — reads all rules from `epm_staging.allocation_rules` and driver values from `epm_staging.allocation_drivers`, and takes the number of steps from the highest `step_order`. The steps below are the three-rule example.
 
 ```sql
 {{ allocation_engine_multistep() }}

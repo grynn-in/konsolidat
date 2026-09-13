@@ -69,7 +69,7 @@ D365 F&O (OData) → Airbyte → ClickHouse → dbt → Cube → Excel
 | Orchestration | Dagster | Airbyte + dbt asset graph, schedules |
 | Write-back | FastAPI (v1) → Frappe (v2) | Budget/forecast input from Excel |
 | Admin UI | Streamlit (v1) → Frappe Desk (v2) | Pipeline monitoring, rule editing, config management |
-| User UI | Excel (Desktop + Online) | PivotTables via ODBC; `=EPM.VALUE()` via Add-in |
+| User UI | Excel (Desktop + Online) | PivotTables via ODBC; `=K.EPM()` and the other `K.` functions via the konsol Office add-in |
 | Auth & RBAC | — (v1) → Frappe (v2) | Users, roles, SSO, 2FA, audit trail |
 | Workflow | — (v1) → Frappe (v2) | Budget approval: Draft → Submitted → Approved |
 
@@ -90,12 +90,14 @@ Budget/forecast input goes to ClickHouse staging tables, not back to D365. dbt u
 ### ADR-005: Seed-driven Allocations (v1) → Frappe DocTypes (v2)
 v1: Allocation rules and drivers are CSV seeds editable in Streamlit.
 v2: Rules move to Frappe DocTypes — web-editable, versioned, audited, role-protected. Frappe syncs config to ClickHouse on save, triggering a dbt rebuild.
+Status: done. All seeds were deleted (konsolidat #144, #145, #147); every piece of reference data is a konsol doctype. See [Configuration Data](data-dictionary/seeds-reference.md).
 
 ### ADR-006: Frappe over FastAPI for Application Layer
 FastAPI is minimal and fast but requires building auth, RBAC, audit, workflows, and web UI from scratch. Frappe provides all of these out of the box. Trade-off: heavier deployment (MariaDB + Redis + workers), but `docker compose` handles it. Frappe's DB (MariaDB) stores only metadata and config — all analytical data stays in ClickHouse.
 
 ### ADR-007: Excel Custom Functions Add-in for Online/Desktop/iPad
 `=EPM.VALUE(entity, year, period, account, scenario)` replaces the Hyperion `HsGetValue()` pattern. Built as an Office Add-in (TypeScript + Office.js), authenticates via MSAL.js + Entra ID, and calls Frappe API endpoints. Works in Excel Online, Desktop, and iPad — unlike SmartView which is desktop-only.
+Status: built in a different form. The konsol add-in's functions are `K.EPM`, `K.EPM_BUDGET`, `K.EPM_VARIANCE`, `K.EPM_DEBIT`, `K.EPM_CREDIT`, `K.CF` and `K.EPMSAVE`; they sign in with a Frappe session from the task pane (Entra ID SSO is not built). The VBA module is retired. See the [Excel Formulas Guide](user-guide/excel-formulas-guide.md).
 
 ## Security
 
@@ -112,7 +114,7 @@ See [`docs/security-architecture.md`](security-architecture.md) for the full sec
 
 ## Excel Online: EPM.VALUE() Custom Function
 
-The Excel Add-in provides HSGETVALUE-equivalent cell formulas:
+The design below was superseded by the konsol add-in's `K.` functions; see ADR-007 and the [Excel Formulas Guide](user-guide/excel-formulas-guide.md). The original design proposed these HSGETVALUE-equivalent cell formulas:
 
 | Formula | Purpose |
 |---|---|

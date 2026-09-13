@@ -7,16 +7,14 @@ Konsolidat supports driver-based cost allocation with multi-step cascading. Cost
 ```mermaid
 graph TD
     TB[gold_trial_balance<br/>Source pool amounts] --> ALLOC[Allocation Engine]
-    RULES[allocation_rules seed<br/>3 rules, ordered by step] --> ALLOC
-    DH[allocation_drivers_headcount] --> ALLOC
-    DS[allocation_drivers_sqm] --> ALLOC
-    DR[allocation_drivers_revenue] --> ALLOC
+    RULES[Allocation Rule<br/>ordered by step] --> ALLOC
+    DRV[Allocation Driver<br/>headcount, sqm, revenue, ...] --> ALLOC
     ALLOC --> RESULTS[gold_allocation_results]
 ```
 
 ## Allocation Rules
 
-Defined in `seeds/allocation_rules.csv`:
+Rules are **Allocation Rule** records in konsol (Allocation module), written through to `epm_staging.allocation_rules`. The examples on this page use three rules:
 
 | Rule ID | Name | Step | Source Account | Source CC | Driver | Target Account |
 |---------|------|------|---------------|-----------|--------|---------------|
@@ -30,7 +28,7 @@ Defined in `seeds/allocation_rules.csv`:
 |-------|-------------|
 | `allocation_rule_id` | Unique rule identifier |
 | `rule_name` | Human-readable name |
-| `step_order` | Execution order (1, 2, 3) — later steps see cascaded amounts |
+| `step_order` | Execution order (1, 2, 3, …) — later steps see cascaded amounts |
 | `source_account` | GL account to allocate from |
 | `source_cost_center` | Cost center holding the pool |
 | `driver_type` | Driver name: `headcount`, `sqm`, or `revenue` |
@@ -38,10 +36,11 @@ Defined in `seeds/allocation_rules.csv`:
 
 ## Driver Data
 
-Three driver seed files, all with the same schema:
+Driver values are **Allocation Driver** records in konsol, one doctype for every driver, written through to `epm_staging.allocation_drivers`:
 
 | Column | Type | Description |
 |--------|------|-------------|
+| `driver_type` | String | Which driver: `headcount`, `sqm`, `revenue`, … |
 | `data_area_id` | String | Legal entity |
 | `cost_center` | String | Receiving cost center |
 | `driver_value` | Decimal | Driver quantity (e.g., headcount = 25) |
@@ -145,10 +144,9 @@ Each row represents one allocation line:
 
 ## Adding a New Allocation Rule
 
-1. Add a row to `seeds/allocation_rules.csv` with the next `step_order`
-2. Create a driver seed CSV (or reuse an existing driver)
-3. Update the `allocation_engine_multistep()` macro in `macros/allocation_engine_multistep.sql` to add the new step
-4. Run `dbt seed && dbt build`
+1. Create an **Allocation Rule** in konsol with the next `step_order`
+2. Enter **Allocation Driver** values for its `driver_type` (or reuse an existing driver)
+3. Run `dbt build`. The `allocation_engine_multistep()` macro reads the number of steps from the highest `step_order`, so no macro change is needed
 
 See [Extending dbt Models](../developer-guide/extending-dbt-models.md) for the full workflow.
 

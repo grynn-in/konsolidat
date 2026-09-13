@@ -30,9 +30,10 @@ docker exec konsolidat_clickhouse clickhouse-client --query "SELECT 1"
 cd dbt_project
 pip install dbt-core dbt-clickhouse    # If not already installed
 dbt deps                                # Install packages
-dbt seed                                # Load reference data (11 CSV seeds)
-dbt build                               # Build all 44 models + run 26 tests
+dbt build                               # Build all models + run tests
 ```
+
+There is no `dbt seed` step and no demo data. Reference data comes from konsol doctypes, and the ledger from a connector or a trial balance upload; until you load some, the build produces empty tables.
 
 On success you'll see `Completed successfully. Done.` with 0 errors.
 

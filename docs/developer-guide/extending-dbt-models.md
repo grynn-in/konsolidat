@@ -77,42 +77,29 @@ dbt build --select gold_your_model  # Both in one command
 
 Register the model as a konsol **Build Model** doc, assigning its **Build Scope** — this generates the model's `domain:<scope>` tag in `dbt_project.yml` so scoped governed builds select it. A gold model with no scope is only built by a full build; `scripts/check_gold_domains.py` fails CI for untagged gold models.
 
-## Adding a Seed-Driven Model
+## Adding a Model That Needs Reference Data
 
-If your model needs reference data:
+The project has no dbt seeds. Reference data is entered in a konsol doctype, which writes it through to a ClickHouse table (usually in `epm_staging`); dbt reads that table as a source.
 
-### 1. Create the Seed CSV
+### 1. Store the Data in konsol
 
-Add `dbt_project/seeds/your_reference_data.csv`:
+Use an existing doctype, or add one in konsol that writes through to a table such as `epm_staging.your_reference_data`.
 
-```csv
-column_a,column_b,column_c
-value1,value2,value3
-```
+### 2. Declare the Source
 
-### 2. Configure Column Types (Optional)
-
-In `dbt_project.yml`, add type overrides:
+In `models/staging/_staging__sources.yml`, add the table under the `epm_staging` source:
 
 ```yaml
-seeds:
-  konsolidat:
-    your_reference_data:
-      +column_types:
-        column_a: String
-        column_b: Decimal(18,2)
+  - name: epm_staging
+    schema: epm_staging
+    tables:
+      - name: your_reference_data
 ```
 
 ### 3. Reference in Your Model
 
 ```sql
-from {{ ref('your_reference_data') }} as ref_data
-```
-
-### 4. Load the Seed
-
-```bash
-dbt seed --select your_reference_data
+from {{ source('epm_staging', 'your_reference_data') }} as ref_data
 ```
 
 ## Patterns to Follow

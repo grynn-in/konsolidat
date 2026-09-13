@@ -1,174 +1,29 @@
-# Seeds Reference
+# Configuration Data (formerly Seeds)
 
-12 CSV seed files loaded into the `epm_gold` schema via `dbt seed`.
+The dbt project no longer has seeds: `dbt_project/seeds/` was deleted in konsolidat #144, #145 and #147, and there is no `dbt seed` step. There is no demo data either.
 
-## cash_flow_categories.csv
+Reference and configuration data lives in **konsol doctypes**. Saving a record (publishing it, for governed mappings such as Cash Flow Category, Dimension Mapping and Intercompany Account; approving it, for documents that need approval) writes it through to a ClickHouse table, and dbt reads that table as a source. Most tables are in `epm_staging`; a few older ones are in `epm_gold`. konsol owns these tables and rewrites them on every write-through, so edit the doctype, never the table.
 
-Maps each balance-sheet GL account to a cash flow category and the sign that
-converts a BS movement into its cash effect. Consumed by
-`gold_cash_flow_indirect` and `gold_consolidated_cash_flow` (Phase 6.1).
+## Where each former seed went
 
-> **Generated, not hand-maintained.** This seed is regenerated from Published
-> **Cash Flow Category** doctype records (konsolidat#63) — on publish and after
-> `bench migrate` — by `konsol.dbt_config`. Edit the doctype, not the CSV.
+| Former seed | konsol doctype | Table dbt reads |
+|-------------|----------------|-----------------|
+| `consolidation_groups.csv` | **Consolidation Group** (a tree: group nodes, entities, reporting currency) and **Ownership Period** (ownership % and method, with dates) | `epm_gold.consolidation_groups`, `epm_staging.consolidation_hierarchy`, `epm_staging.consolidation_ancestry`, `epm_staging.ownership_periods` |
+| `consolidation_adjustments.csv` | **Consolidation Adjustment** (EPM Analyst drafts, EPM Admin approves; only approved lines reach the warehouse) | `epm_staging.consolidation_adjustments` |
+| `ic_elimination_rules.csv` | **Intercompany Account** (account pairs; see the [Intercompany Guide](../user-guide/intercompany-guide.md)). **IC Elimination Rule** remains only for unrealised profit on intercompany inventory, with **IC Balance** documents | `epm_staging.intercompany_accounts`; `epm_staging.ic_elimination_rules`, `epm_staging.ic_balances` |
+| `allocation_rules.csv` | **Allocation Rule** (with its **Allocation Tier** rows) | `epm_staging.allocation_rules`, `epm_staging.allocation_tiers` |
+| `allocation_drivers_headcount.csv`, `allocation_drivers_sqm.csv`, `allocation_drivers_revenue.csv` | **Allocation Driver** (one doctype; `driver_type` says which driver) | `epm_staging.allocation_drivers` |
+| `budget_annual_input.csv` | **Budget Annual Input** (app budgets are entered through Budget Cycle, Budget Sheet and Budget Line; see the [Budget Layers Guide](../user-guide/budget-layers.md)) | `epm_gold.budget_annual_input` (Budget Sheet: `epm_gold.budget_monthly_input`) |
+| `spread_profiles.csv` | **Spread Profile** | `epm_gold.spread_profiles` |
+| `scenario_definitions.csv` | **Scenario** | `epm_gold.scenario_definitions` |
+| `entity_fiscal_calendars.csv` | **Entity Fiscal Calendar** | `epm_gold.entity_fiscal_calendars` |
+| `currencies.csv` | **ISO Currency** | `epm_gold.currencies` |
+| `cash_flow_categories.csv` | **Cash Flow Category** (only Published mappings are applied) | `epm_staging.cash_flow_categories` |
+| `dimension_mappings.csv` | **Dimension Mapping** | `epm_staging.dimension_mappings` |
+| `reporting_hierarchies.csv` | **Reporting Hierarchy** (see the [Reporting Hierarchies Guide](../user-guide/reporting-hierarchies-guide.md)) | `epm_staging.reporting_hierarchies` |
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `main_account` | String | GL account (matches `gold_bs_movement.main_account`) |
-| `cf_category` | String | `Operating`, `Investing`, or `Financing` |
-| `cf_line_item` | String | Sub-line label (e.g. `Change in Trade Receivables`, `Dividends Paid`) |
-| `is_cash` | UInt8 | 1 = account *is* cash/cash-equivalent (excluded from activity, defines reconciliation target) |
-| `sign` | Int8 | `+1` (credit-natured: liabilities, equity, contra-assets) or `-1` (debit-natured: assets, contra-equity) — an asset increase is a cash outflow |
+Exchange rates were never a seed. The group's translation rates are **Group Exchange Rates** in konsol, published to `epm_staging.group_exchange_rates`; see the [Exchange Rates Guide](../user-guide/exchange-rates-guide.md). Historical rates for equity are **Historical Equity Rate** documents (`epm_staging.historical_equity_rates`).
 
-**Default data**: 12 rows for the demo chart — cash (`1010`, `is_cash=1`);
-receivables/inventory/IC receivable, payables/accrued, accumulated depreciation,
-and retained earnings → Operating; fixed assets → Investing; long-term debt,
-share capital, and dividends declared → Financing.
+## Why the seeds were removed
 
-## allocation_rules.csv
-
-Defines multi-step allocation rules.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `allocation_rule_id` | String | Unique rule ID (e.g., `ALLOC_001`) |
-| `rule_name` | String | Human-readable name |
-| `step_order` | Int | Execution order (1, 2, 3) |
-| `source_account` | String | GL account to allocate from |
-| `source_cost_center` | String | Cost center holding the pool |
-| `driver_type` | String | Driver name: `headcount`, `sqm`, `revenue` |
-| `target_account` | String | GL account to allocate to |
-| `description` | String | Rule description |
-
-**Default data**: 3 rules (IT → headcount, Facility → sqm, Management → revenue).
-
-## allocation_drivers_headcount.csv
-
-Headcount driver values per cost center.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `data_area_id` | String | Legal entity |
-| `cost_center` | String | Cost center |
-| `driver_value` | Decimal | Headcount number |
-| `fiscal_year` | UInt16 | Year |
-| `fiscal_period` | UInt8 | Period |
-
-## allocation_drivers_sqm.csv
-
-Square meter driver values per cost center. Same schema as headcount.
-
-## allocation_drivers_revenue.csv
-
-Revenue driver values per cost center. Same schema as headcount. Values ≤ 0 are excluded during allocation.
-
-## budget_annual_input.csv
-
-Annual budget line items to be spread across 12 periods.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `scenario_id` | String | Budget scenario (e.g., `BUDGET_2025`) |
-| `data_area_id` | String | Legal entity |
-| `fiscal_year` | UInt16 | Budget year |
-| `main_account` | String | GL account |
-| `dim_cost_center` | String | Cost center |
-| `dim_department` | String | Department |
-| `annual_amount` | Decimal | Total annual budget |
-| `spread_profile_id` | String | How to spread (e.g., `EVEN`, `SEASONAL_RETAIL`) |
-| `submitted_by` | String | Who submitted |
-
-## spread_profiles.csv
-
-Monthly weight profiles for budget spreading. Each profile has 12 rows (one per period).
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `profile_id` | String | Profile identifier |
-| `profile_name` | String | Display name |
-| `fiscal_period` | UInt8 | Period (1–12) |
-| `weight` | Decimal | Relative weight for this month |
-
-**Default profiles**:
-- `EVEN` — all weights = 1.0 (equal monthly distribution)
-- `SEASONAL_RETAIL` — weights 0.5–2.5 (Q4 peak: period 12 = 2.5)
-
-Weights are normalized during spreading: `period_weight = weight / SUM(all 12 weights)`.
-
-## consolidation_groups.csv
-
-Maps legal entities to consolidation groups with ownership percentages.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `consolidation_group` | String | Group identifier |
-| `data_area_id` | String | Legal entity code |
-| `entity_name` | String | Company name |
-| `ownership_pct` | Decimal(5,2) | Parent ownership (0–100) |
-| `reporting_currency` | String | Group reporting currency |
-| `consolidation_method` | String | Method: `full` |
-
-**Default data**: GROUP_CORP with USMF (100%), DEMF (100%), GBMF (80%), JPMF (51%).
-
-## consolidation_adjustments.csv
-
-Top-side journal entries posted at the group level.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `consolidation_group` | String | Group |
-| `adjustment_type` | String | Type of adjustment |
-| `journal_id` | String | Journal entry ID |
-| `data_area_id` | String | Entity |
-| `fiscal_year` | UInt16 | Year |
-| `fiscal_period` | UInt8 | Period |
-| `main_account` | String | Account |
-| `debit_amount` | Decimal(18,2) | Debit |
-| `credit_amount` | Decimal(18,2) | Credit |
-| `description` | String | Narrative |
-| `posted_by` | String | Who posted |
-
-Each journal must balance (total debits = total credits).
-
-## ic_elimination_rules.csv
-
-Intercompany elimination rule definitions.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `rule_id` | String | Rule identifier |
-| `rule_name` | String | Display name |
-| `debit_account` | String | Debit-side account |
-| `credit_account` | String | Credit-side account |
-| `debit_entity_pattern` | String | Entity filter for debit side (`*` = all) |
-| `credit_entity_pattern` | String | Entity filter for credit side (`*` = all) |
-| `description` | String | Rule description |
-
-**Default rules**:
-- `IC_001`: IC Receivable (1300) / Payable (2100)
-- `IC_002`: IC Revenue (4000) / COGS (5000)
-- `IC_003`: IC Dividend (8100) / Equity (3200)
-
-## scenario_definitions.csv
-
-Scenario metadata.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `scenario_id` | String | Unique identifier |
-| `scenario_name` | String | Display name |
-| `scenario_type` | String | Type: `actual`, `budget`, `forecast`, `whatif` |
-| `is_active` | UInt8 | 1 = active, 0 = inactive |
-
-**Default data**: ACTUAL, BUDGET, FORECAST (active), WHATIF_01 (inactive).
-
-## entity_fiscal_calendars.csv
-
-Maps legal entities to their fiscal calendar.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `data_area_id` | String | Legal entity code |
-| `fiscal_calendar_id` | String | Calendar ID from D365 |
-
-**Default data**: 65+ entities mapped. Most use `Fiscal`; regional variants include `Fiscal_CN`, `Fiscal_IN`, `Fiscal_MY`, `Fiscal_SA`, `Fiscal_TH`, and bespoke calendars.
+A seed materialises into a ClickHouse table, and konsol wrote the same tables from its doctypes. Every `dbt seed` and every `bench migrate` overwrote the other's data: a single `dbt seed` could revert a published ownership change. Keeping one writer, konsol, removed that conflict and put every change behind konsol's permissions, audit trail and approval workflows.

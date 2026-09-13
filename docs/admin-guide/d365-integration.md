@@ -142,7 +142,7 @@ How D365 entities flow through the dbt layers:
 | LegalEntities | `bronze_legal_entities` | `silver_legal_entities` | — |
 | FiscalCalendars | `bronze_fiscal_calendars` | `silver_fiscal_periods` | `gold_period_hierarchy` |
 | FiscalCalendarYears | `bronze_fiscal_calendar_years` | `silver_fiscal_periods` (joined) | — |
-| ExchangeRateCurrencyPairs | `bronze_exchange_rate_currency_pairs` | `silver_exchange_rates` | `gold_consolidated_trial_balance` |
+| ExchangeRateCurrencyPairs | `bronze_exchange_rate_currency_pairs` | `silver_exchange_rates` | konsol's Pre-fill from ERP for Group Exchange Rates (not read by translation) |
 | BudgetRegisterEntries | `bronze_budget_register_entries` | `silver_budget_entries` | `gold_spread_budget` |
 | BudgetTransactionLines | `bronze_budget_transaction_lines` | `silver_budget_entries` (joined) | — |
 

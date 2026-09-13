@@ -14,7 +14,7 @@ graph TD
     CONSOL --> PIPE[7. Pipeline Run<br/>Sync + transform]
     ALLOC --> PIPE
     BUDGET --> PIPE
-    PIPE --> EXCEL[8. Excel<br/>First =EPM formula]
+    PIPE --> EXCEL[8. Excel<br/>First =K.EPM formula]
 
     style EPM fill:#4051b5,color:#fff
     style PIPE fill:#4051b5,color:#fff
@@ -50,7 +50,7 @@ You should see `epm_staging`, `epm_bronze`, `epm_silver`, `epm_gold` in the outp
 
 ### Airbyte Connection (optional)
 
-Only needed if you're syncing live data from D365, SAP, or ERPNext. Skip this if your entities upload trial balances instead: a single trial balance through the Trial Balance Submission form in Desk, or in bulk through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use. There is no demo data.
+Only needed if you're syncing live data from D365, SAP, or ERPNext. Skip this if your entities upload trial balances instead: a single trial balance through the Trial Balance Submission form in Desk, or in bulk through konsol-exec at `/konsol-exec/uploads`, which only the Close Lead (EPM Admin) or a System Manager can use (see the [Trial Balance Upload Guide](trial-balance-upload-guide.md)). There is no demo data.
 
 | Field | Value | Notes |
 |-------|-------|-------|
@@ -374,6 +374,8 @@ After the first successful run, your data is available in:
 
 - [Excel Formulas Guide](excel-formulas-guide.md) — install the Excel add-in and write your first `=K.EPM()` formula
 - [Consolidation Guide](consolidation-guide.md) — currency translation, IC elimination, and CTA calculation
+- [Trial Balance Upload Guide](trial-balance-upload-guide.md) — load trial balances for entities without an ERP connector
+- [Month-End Close Guide](month-close-guide.md) — the konsol-exec workspace for the monthly close
 - [Allocation Guide](allocation-guide.md) — multi-step cost allocation with driver cascading
 - [Budgeting Guide](budgeting-guide.md) — spread profiles, budget layers, and variance analysis
 - [API Reference](../api-reference/api-overview.md) — all available endpoints for programmatic access
