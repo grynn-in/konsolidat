@@ -1,4 +1,10 @@
-{# Maps D365 MainAccountType enum (numeric or string) to readable name #}
+{#
+    Maps D365 MainAccountType enum (numeric or string) to readable name.
+    ERPNext root_type values (Asset/Liability/Income/Expense/Equity) arrive in
+    the same column; 'Income' reads as 'Revenue' so an ERPNext revenue account
+    lands where downstream consumers match 'Revenue' (the P&L report's Revenue
+    section and Gross Profit, variance favourability).
+#}
 {% macro map_account_type(column) %}
     case {{ column }}
         when '0' then 'Profit and loss'
@@ -11,6 +17,7 @@
         when '7' then 'Total'
         when 'ProfitAndLoss' then 'Profit and loss'
         when 'Revenue' then 'Revenue'
+        when 'Income' then 'Revenue'
         when 'Expense' then 'Expense'
         when 'BalanceSheet' then 'Balance sheet'
         when 'Asset' then 'Asset'
