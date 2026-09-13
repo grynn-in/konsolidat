@@ -5,6 +5,16 @@
 --
 -- Uses NOT IN (not a left-join null check): ClickHouse left joins fill a miss
 -- with the column default ('') rather than NULL when join_use_nulls=0.
+--
+-- konsol#182: no ERP quotes built (a trial-balance-only site, or a selection
+-- that does not build silver_exchange_rates) means nothing to check.
+
+{%- set quotes = erp_rate_quotes_relation() %}
+{% if execute and quotes is none %}
+
+select '' as currency_code where 0
+
+{% else %}
 
 with used as (
     select from_currency as currency_code from {{ ref('silver_exchange_rates') }}
@@ -24,3 +34,5 @@ where currency_code != ''
   and currency_code not in (
       select currency_code from {{ source('epm_gold', 'currencies') }}
   )
+
+{% endif %}

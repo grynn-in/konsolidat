@@ -16,11 +16,19 @@
     severity warn, as agreed in the #176 review. Until epm_gold.currencies has
     usd_log10 (konsol #174 adds it), this returns one warn row instead of
     erroring on the missing column.
+
+    konsol#182: no ERP quotes built (a trial-balance-only site, or a selection
+    that does not build silver_exchange_rates) means nothing to check.
 #}
 {%- set rates = ref('silver_exchange_rates') -%}
 {%- set currencies = source('epm_gold', 'currencies') -%}
+{%- set quotes = erp_rate_quotes_relation() -%}
 
-{% if not fx_reference_column_present() %}
+{% if execute and quotes is none %}
+
+select '' as problem where 0
+
+{% elif not fx_reference_column_present() %}
 
 select 'usd_log10 not present yet in epm_gold.currencies: run the konsol migration from #174' as problem
 

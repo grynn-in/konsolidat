@@ -69,3 +69,17 @@ multiIf(
     {%- set cols = adapter.get_columns_in_relation(source('epm_gold', 'currencies')) -%}
     {{ return('usd_log10' in (cols | map(attribute='name') | list)) }}
 {%- endmacro %}
+
+{# The ERP rate quotes (silver_exchange_rates) as a relation, or none when the
+   table has not been built. A trial-balance-only site has no ERP quotes, and a
+   selection such as @silver_main_accounts reaches the tests that read them
+   (through epm_gold.currencies) without building the model, so those tests
+   used to ERROR on a missing table. None reads as "no quotes to check"; when
+   the table exists every row is checked as before. Callers test
+   `execute and rel is none`, so the full branch (with its ref) is what parses
+   and the dependency stays known. #}
+{% macro erp_rate_quotes_relation() -%}
+    {%- if not execute -%}{{ return(none) }}{%- endif -%}
+    {%- set r = ref('silver_exchange_rates') -%}
+    {{ return(adapter.get_relation(database=none, schema=r.schema, identifier=r.identifier)) }}
+{%- endmacro %}
