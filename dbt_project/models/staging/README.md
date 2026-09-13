@@ -58,7 +58,7 @@ Column rules:
   it with `toInt64`, and `bronze_general_journal_account_entries` uses it as
   its delete+insert key. A string key is hashed, as ERPNext's `name` is.
 - `entity_id` is the legal-entity code, the same value in every model of one
-  adapter (upper-cased). `stg_gl_entries` drops GL lines with an empty
+  adapter; use the ERP's canonical (upper-case) code. `stg_gl_entries` drops GL lines with an empty
   `entity_id` (#105).
 - `posting_date` is a `YYYY-MM-DD` string.
 - GL `amount` is not NULL and signed as above. `sum()` skips a NULL, which
@@ -74,7 +74,10 @@ Column rules:
 - Trial balance: `debit_amount` and `credit_amount` are non-negative period
   totals. `opening_balance` and `closing_balance` are signed, debit positive,
   with `closing = opening + debit - credit` (`silver_trial_balance.calculated_closing`).
-- Budget `amount` uses the GL sign convention: debit positive, credit negative.
+- Budget `amount`: **no sign convention is defined or enforced yet.** Budgets
+  arrive as magnitudes (the D365 feed on the test stack is all positive,
+  revenue accounts included) and no layer signs them, while actuals are signed.
+  Defining the rule end to end is #174.
 - Dimension values are emitted raw. `stg_gl_entries` and `stg_budget_entries`
   harmonize them centrally through the `dimension_mappings` crosswalk.
 
@@ -94,7 +97,7 @@ union can't drift apart.
 | `tests/staging/test_canonical_gl_journals_balance.sql` | Every source: each (erp_source, entity_id, journal_number) nets to zero. |
 | `tests/assert_d365_gl_vouchers_balance.sql` | D365, at a finer grain: each voucher nets to zero, entity-less headers included. |
 | `not_null` on `stg_gl_entries.amount` | No NULL amount slips past the balance tests. |
-| `tests/staging/test_canonical_gl_entries_schema.sql` | Every GL column exists, so a missing one fails compilation. |
+| `tests/staging/test_canonical_gl_entries_schema.sql` | Key GL columns exist, so a missing one fails compilation (it doesn't list every column). |
 | `tests/staging/test_canonical_gl_entries_not_null.sql` | Key GL columns are populated. |
 | `tests/staging/test_erp_source_valid.sql` | `erp_source` is a known value. |
 | `tests/assert_silver_gl_debit_credit_balance.sql` | Silver debits equal credits per entity and year. |
@@ -113,9 +116,10 @@ union can't drift apart.
 
 ## Known gaps
 
-- `stg_erpnext__budget_entries` passes ERPNext's `budget_amount` through
-  unsigned. That is right for an expense budget, which is ERPNext's normal
-  case, and wrong for a budget on an income account.
+- Budget sign: not defined for any source (see the Budget rule above, #174).
+- `stg_erpnext__trial_balance` hard-codes `toFloat64(0) as opening_balance`,
+  so enabling `erpnext` fails `stg_trial_balance` with `NO_COMMON_TYPE`
+  against D365's `Decimal(38, 9)`, whatever type the feed lands as (#173).
 - `stg_erpnext__gl_entries` doesn't cast `amount`. If the ERPNext feed lands
   `debit`/`credit` as Float64, enabling `erpnext` fails `stg_gl_entries` with
-  `NO_COMMON_TYPE` (see Column rules).
+  `NO_COMMON_TYPE` (see Column rules, #173).
