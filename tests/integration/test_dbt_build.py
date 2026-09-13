@@ -170,3 +170,43 @@ def test_two_partners_on_one_account_keep_the_account_grain(ch, dbt_run, two_par
     assert ch(f"SELECT count(), sum(ytd_net_amount) FROM epm_gold.gold_ytd_trial_balance WHERE {key} AND fiscal_year = 2097") == "1\t-150"
     assert ch("SELECT count(), sum(current_amount), sum(prior_year_amount) FROM epm_gold.gold_prior_year_comparison "
               f"WHERE {key} AND fiscal_year = 2097") == "1\t-150\t-150"
+
+
+# ---------------------------------------------------------------------------
+# konsol#159 / #175 re-review M2 and M1: decisions 12-14 on data
+# ---------------------------------------------------------------------------
+IC_DECISIONS_FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "ic_decisions.sql")
+
+
+def _ic_decisions_expectations():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "ic_decisions_expectations", os.path.join(os.path.dirname(__file__), "ic_decisions_expectations.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _drop_ic_decisions_fixture(ch, expectations):
+    for table, where in expectations.FIXTURE_ROWS:
+        ch(f"ALTER TABLE {table} DELETE WHERE {where} SETTINGS mutations_sync = 1")
+
+
+@pytest.fixture
+def ic_decisions_data(ch):
+    expectations = _ic_decisions_expectations()
+    _drop_ic_decisions_fixture(ch, expectations)
+    for statement in _sql_statements(IC_DECISIONS_FIXTURE):
+        ch(statement)
+    yield expectations
+    _drop_ic_decisions_fixture(ch, expectations)
+
+
+def test_ic_decisions_12_to_14_on_data(dbt_run, ch, ic_decisions_data):
+    """An 80%-owned side, a balance-sheet pair booked in P1 and P2, a second
+    functional currency, a mid-year acquisition and a disposal: the exact
+    reconciliation rows and entries, and the 100% view clear."""
+    result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched")
+    assert result.returncode == 0, result.stdout[-3000:]
+    problems = ic_decisions_data.check(ch)
+    assert not problems, "\n".join(problems)

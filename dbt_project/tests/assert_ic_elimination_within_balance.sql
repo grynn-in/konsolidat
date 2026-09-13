@@ -28,7 +28,7 @@
 
 with eliminations as (
     select * from {{ ref('gold_ic_eliminations') }}
-    where rule_type = 'balance'
+    where rule_type = 'balance' and elimination_view = 'group'
 ),
 
 legs as (

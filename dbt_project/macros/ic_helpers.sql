@@ -38,9 +38,10 @@
 {% macro ic_nci_account() %}{{ var('ic_nci_account', 'NCI') }}{% endmacro %}
 
 {# The partner-keyed slices of gold_consolidated_trial_balance, at 100%
-   (translated_amount, never the ownership-weighted group_amount), for
-   partners that line-consolidate into the group in that period. The same
-   rows gold_ic_reconciliation pairs; the IC tests recompute from it. #}
+   (translated_amount, never the ownership-weighted group_amount; and the
+   entity's own local_amount), every period the entity is in the group view,
+   whether or not its partner is yet: gold_ic_reconciliation applies the
+   pair's membership (#175 re-review M1). The IC tests recompute from it. #}
 {% macro ic_partner_slices() %}
     select
         ctb.consolidation_group as consolidation_group,
@@ -49,15 +50,11 @@
         ctb.main_account as main_account,
         ctb.fiscal_year as fiscal_year,
         ctb.fiscal_period as fiscal_period,
-        ifNull(toFloat64(sum(ctb.translated_amount)), 0) as translated
+        ifNull(toFloat64(sum(ctb.translated_amount)), 0) as translated,
+        ifNull(toFloat64(sum(ctb.local_amount)), 0) as local
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     where ctb.partner_data_area_id != ''
       and ctb.partner_data_area_id != ctb.data_area_id
-      and (ctb.consolidation_group, ctb.partner_data_area_id, ctb.fiscal_year, ctb.fiscal_period) in (
-          select consolidation_group, data_area_id, fiscal_year, fiscal_period
-          from {{ ref('gold_entity_ownership') }}
-          where has_complete_chain = 1 and consolidation_method not in ('equity', 'none')
-      )
     group by
         ctb.consolidation_group, ctb.data_area_id, ctb.partner_data_area_id,
         ctb.main_account, ctb.fiscal_year, ctb.fiscal_period
@@ -65,18 +62,23 @@
 
 {# Each gold_ic_reconciliation row's two sides recomputed from
    ic_partner_slices() on the row's basis (decision 14): the balance to date
-   for a balance-sheet pair, the period's movement for a P&L pair. #}
+   for a balance-sheet pair (everything the side booked in the group view,
+   from before the partner joined too), the period's movement for a P&L
+   pair; 0 on a 'left' row, where the pair is no longer intragroup. #}
 {% macro ic_expected_pair_values() %}
     select
         consolidation_group, fiscal_year, fiscal_period, entity_a, account_a, entity_b, account_b,
         sum(exp_a) as expected_a,
-        sum(exp_b) as expected_b
+        sum(exp_b) as expected_b,
+        sum(exp_local_a) as expected_local_a,
+        sum(exp_local_b) as expected_local_b
     from (
         select
             r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
             r.fiscal_period as fiscal_period, r.entity_a as entity_a, r.account_a as account_a,
             r.entity_b as entity_b, r.account_b as account_b,
-            s.translated as exp_a, toFloat64(0) as exp_b
+            if(r.pair_event = 'left', 0, s.translated) as exp_a, toFloat64(0) as exp_b,
+            if(r.pair_event = 'left', 0, s.local) as exp_local_a, toFloat64(0) as exp_local_b
         from {{ ref('gold_ic_reconciliation') }} as r
         inner join ({{ ic_partner_slices() }}) as s
             on s.consolidation_group = r.consolidation_group
@@ -92,7 +94,8 @@
         select
             r.consolidation_group, r.fiscal_year, r.fiscal_period, r.entity_a, r.account_a,
             r.entity_b, r.account_b,
-            toFloat64(0), s.translated
+            toFloat64(0), if(r.pair_event = 'left', 0, s.translated),
+            toFloat64(0), if(r.pair_event = 'left', 0, s.local)
         from {{ ref('gold_ic_reconciliation') }} as r
         inner join ({{ ic_partner_slices() }}) as s
             on s.consolidation_group = r.consolidation_group

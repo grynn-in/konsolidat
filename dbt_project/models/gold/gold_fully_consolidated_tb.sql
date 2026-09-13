@@ -47,11 +47,16 @@ with entity_balances as (
         reporting_currency
 ),
 
-{# Layer 2: IC eliminations #}
+{# Layer 2: IC eliminations, the group view (gold_ic_eliminations also holds
+   the NCI view's entries, which the consolidation report adds for its 100%
+   column). The 'nci' entries (decision 12) are tagged ic_elimination_nci and
+   carry the entity on each leg: the NCI line's leg is the partly owned
+   entity whose minority holds that share (#175 re-review L2). The cash flow
+   statement leaves them out (L3). #}
 ic_elims as (
     select
         consolidation_group,
-        '' as data_area_id,
+        if(elimination_kind = 'nci', debit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
         debit_account as main_account,
@@ -59,15 +64,16 @@ ic_elims as (
         {{ dim_empty_strings() }},
         '' as reporting_currency,
         debit_elimination as amount,
-        'ic_elimination' as adjustment_type,
+        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
+    where elimination_view = 'group'
 
     union all
 
     select
         consolidation_group,
-        '' as data_area_id,
+        if(elimination_kind = 'nci', credit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
         credit_account as main_account,
@@ -75,9 +81,10 @@ ic_elims as (
         {{ dim_empty_strings() }},
         '' as reporting_currency,
         credit_elimination as amount,
-        'ic_elimination' as adjustment_type,
+        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
+    where elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}

@@ -10,8 +10,9 @@
        zero per group and period, so both legs of every entry (the NCI line's
        included, decision 12) reached it;
     3. pair: on the pair's basis (decision 14: to date for a balance-sheet
-       pair, the period for a P&L pair), what the group view holds of the two
-       sides plus their eliminations nets to zero when the group has an
+       pair, the period for a P&L pair), what the GROUP VIEW holds of the two
+       sides plus its eliminations nets to zero (the 100% view is
+       assert_ic_full_view_nets_zero) when the group has an
        intercompany-difference account, and to exactly the group share of
        the residuals when it has none (only the matched amount is eliminated
        then).
@@ -42,7 +43,7 @@ layer_check as (
         '' as detail,
         sum(amount) as net
     from {{ ref('gold_fully_consolidated_tb') }}
-    where adjustment_type = 'ic_elimination'
+    where adjustment_type in ('ic_elimination', 'ic_elimination_nci')
     group by consolidation_group, fiscal_year, fiscal_period
     having abs(sum(amount)) > 0.01
 ),
@@ -59,7 +60,7 @@ pair_legs as (
                  or (credit_account = account_b and credit_entity = entity_b), credit_elimination, 0)
         ) as legs_in_period
     from eliminations
-    where rule_type = 'balance'
+    where rule_type = 'balance' and elimination_view = 'group'
     group by consolidation_group, fiscal_year, fiscal_period, entity_a, account_a, entity_b, account_b
 ),
 

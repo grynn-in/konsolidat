@@ -7,7 +7,9 @@
     2. cause: difference_cause follows the rule (see gold_ic_reconciliation):
        none below 0.005; fx across currencies; booking in one currency when
        the local amounts do not net to zero; fx in one currency when they do
-       (translation only).
+       (translation only). The local amounts are recomputed from
+       gold_consolidated_trial_balance (ic_expected_pair_values), not taken
+       from the model's own columns (#175 re-review L4).
     3. status: an fx difference is 'fx_difference' and never counts against
        the tolerance. A booking difference is within_tolerance or
        over_tolerance against the group's tolerance.
@@ -15,16 +17,24 @@
        splitting the difference account in two later needs no data change.
 #}
 
-with rec as (
+with expected as (
+    {{ ic_expected_pair_values() }}
+),
+
+rec as (
     select
-        *,
+        r.*,
         multiIf(
-            abs(difference) < 0.005, 'none',
-            currency_a != currency_b, 'fx',
-            abs(local_a + local_b) >= 0.005, 'booking',
+            abs(r.difference) < 0.005, 'none',
+            r.currency_a != r.currency_b, 'fx',
+            abs(e.expected_local_a + e.expected_local_b) >= 0.005, 'booking',
             'fx'
         ) as expected_cause
-    from {{ ref('gold_ic_reconciliation') }}
+    from {{ ref('gold_ic_reconciliation') }} as r
+    left join expected as e
+        on e.consolidation_group = r.consolidation_group and e.fiscal_year = r.fiscal_year
+        and e.fiscal_period = r.fiscal_period and e.entity_a = r.entity_a and e.account_a = r.account_a
+        and e.entity_b = r.entity_b and e.account_b = r.account_b
 ),
 
 currencies as (

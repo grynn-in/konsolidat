@@ -89,6 +89,12 @@ models:
                 values: ['matched', 'nci', 'difference', 'unrealized_profit']
       - name: difference_cause
         description: "On difference rows, the pair's cause (booking or fx, decision 13); '' otherwise"
+      - name: elimination_view
+        description: "group (the group view, booked by gold_fully_consolidated_tb) or nci (the minority's share, added by the consolidation report for its 100% column)"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['group', 'nci']
       - name: basis
         description: "balance (balance-sheet pair, eliminations posted as the change to date) or movement (P&L pair), decision 14; '' for unrealized profit"
       - name: debit_entity
@@ -381,11 +387,17 @@ models:
       - name: balance_a
         description: "Side a at 100% (translated_amount), decision 12: pairs match on this, never on group_balance_a"
       - name: basis
-        description: "balance (balance-sheet pair: to date, from inception) or movement (P&L pair: the period), decision 14"
+        description: "balance (balance-sheet pair: to date) or movement (P&L pair: the period), decision 14"
         tests:
           - accepted_values:
               arguments:
                 values: ['balance', 'movement']
+      - name: pair_event
+        description: "joined (first period both are in the group), left (first period after a partner's ownership ended: everything reversed), or ''"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['', 'joined', 'left']
       - name: difference_cause
         description: "none, booking or fx (decision 13; the rule is in the model header)"
         tests:

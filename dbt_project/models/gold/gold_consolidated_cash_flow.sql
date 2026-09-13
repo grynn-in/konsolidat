@@ -47,6 +47,13 @@ with fctb as (
         amount
     from {{ ref('gold_fully_consolidated_tb') }}
     where fiscal_period > 0
+      {# #175 re-review L3: the group view's nci entries (decision 12) move
+         the minority's share of an intragroup balance to the NCI line. They
+         are a presentation of ownership, not a movement of anything, so the
+         statement leaves them out, both legs. Each entry nets to zero, so the
+         statement still ties to the change in cash; leaving out the NCI line
+         alone would untie it (assert_consolidated_cf_reconciles). #}
+      and adjustment_type != 'ic_elimination_nci'
 ),
 
 classified as (
