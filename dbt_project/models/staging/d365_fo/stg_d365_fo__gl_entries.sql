@@ -17,6 +17,10 @@
 
     Adapter contract (signed amounts, canonical columns, balance tests):
     models/staging/README.md.
+    partner_data_area_id (konsol#159) is NULL: D365's intercompany partner is
+    not mapped from the ledger yet, so no D365 line is ever eliminated as
+    intercompany (an intercompany account's D365 rows show as unmatched).
+    Replace the NULL when an ERP mapping exists.
 #}
 
 with entries as (
@@ -52,6 +56,7 @@ joined as (
         coalesce(headers.JournalNumber, '') as journal_number,
         coalesce(entries.PostingType, '') as posting_type,
         coalesce(entries.LedgerAccount, '') as ledger_account,
+        cast(null as Nullable(String)) as partner_data_area_id,
         coalesce(
             JSON_VALUE(
                 replaceAll(coalesce(entries.LedgerDimensionValuesJson, '[]'), '''', '"'),

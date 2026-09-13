@@ -4,6 +4,7 @@
         incremental_strategy='append',
         pre_hook=[
             "{{ governed_rate_guard() }}",
+            "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
         ],
         engine='MergeTree()',
@@ -15,6 +16,15 @@
    currency this run translates has no approved governed rate, BEFORE the
    DELETE below, so a missing rate leaves the table as it was. The throwIf in
    `consolidated` stays as the second line of defence. #}
+{# konsol#159: partner_data_area_id rides through from gold_trial_balance, so
+   gold_ic_reconciliation can pair (entity, partner) with (partner, entity) on
+   translated group amounts.
+
+   It is the LAST column, and the first pre_hook adds it to a table built
+   before it existed. dbt-clickhouse's append inserts POSITIONALLY into the
+   target's columns and applies no on_schema_change on this path, so the new
+   column must sit where ALTER ... ADD COLUMN puts it: at the end. Anywhere
+   else every later column would land one place off, silently. #}
 
 {# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
    the keys the new batch produced, so a key that left the SELECT (an ownership
@@ -57,6 +67,7 @@ with entity_tb as (
         tb.is_pnl as is_pnl,
         {# PRD-10: Equity classification for historical rate lookup #}
         case when tb.account_type_name in ('Equity', 'Stockholders equity') then 1 else 0 end as is_equity,
+        tb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='tb.') }},
         {# Signed double-entry movement (debit − credit), so the local TB sums
            to zero and the FX/CTA plug can balance it. Amounts arrive signed at
@@ -198,6 +209,7 @@ rated as (
         etb.is_balance_sheet as is_balance_sheet,
         etb.is_pnl as is_pnl,
         etb.is_equity as is_equity,
+        etb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='etb.') }},
         etb.local_amount as local_amount,
         etb.accounting_currency as accounting_currency,
@@ -308,4 +320,5 @@ consolidated as (
                   'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
 )
 
-select * from consolidated
+{# partner_data_area_id last: see the note at the top #}
+select * except (partner_data_area_id), partner_data_area_id from consolidated

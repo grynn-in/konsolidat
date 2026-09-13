@@ -34,6 +34,7 @@ EXPECTED_GOLD_TABLES = [
     "gold_balance_sheet",
     "gold_pnl_by_period",
     "gold_ic_eliminations",
+    "gold_ic_unmatched",
     "gold_fx_revaluation",
     "gold_consolidation_adjustments",
     "gold_allocation_results",

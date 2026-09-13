@@ -32,6 +32,7 @@ with unioned as (
         journal_number,
         posting_type,
         ledger_account,
+        partner_data_area_id,
         dim_cost_center,
         dim_department,
         dim_business_unit,
@@ -60,6 +61,9 @@ select
     journal_number,
     posting_type,
     ledger_account,
+    {# konsol#159: the intercompany partner entity (NULL when the source has
+       none). Every adapter emits it; see stg_d365_fo__gl_entries. #}
+    partner_data_area_id,
     {{ dim_harmonize_select(raw_alias='unioned') }}
     unioned._loaded_at as _loaded_at,
     unioned._raw_id as _raw_id

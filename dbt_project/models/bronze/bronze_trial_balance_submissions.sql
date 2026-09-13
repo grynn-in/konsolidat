@@ -19,6 +19,19 @@
    every raw row of the batch — debits and credits doubling together, which no
    balance test can see. #}
 
+{# konsol#159: the intercompany partner entity on each row ('' = none). konsol
+   adds the raw column (ensure_raw_tables, on submit and on every migrate) and
+   init-db.sql creates it on a fresh volume. Until konsol has run once on an
+   older stack the column may be missing, so it is read only if it exists:
+   this model then deploys in either order with konsol#159. #}
+{% set partner_expr = "''" %}
+{% if execute %}
+    {% set raw_columns = adapter.get_columns_in_relation(source('submission_raw', 'trial_balance_submissions')) | map(attribute='name') | list %}
+    {% if 'partner_data_area_id' in raw_columns %}
+        {% set partner_expr = 'raw.partner_data_area_id' %}
+    {% endif %}
+{% endif %}
+
 with claims as (
 
     select
@@ -42,6 +55,7 @@ select
     {{ cast_to_decimal128('raw.debit_amount', 2) }}       as debit_amount,
     {{ cast_to_decimal128('raw.credit_amount', 2) }}      as credit_amount,
     {{ cast_to_string('raw.description') }}               as description,
+    {{ cast_to_string(partner_expr) }}                    as partner_data_area_id,
     {{ cast_to_string('raw.submission_name') }}           as submission_name,
     raw.submitted_at                                      as submitted_at,
     claims.last_claimed_at                                as claimed_at,
