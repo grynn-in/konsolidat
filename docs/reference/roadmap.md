@@ -12,7 +12,7 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
 | Governed group exchange rates | **Done** — Group Exchange Rate in konsol, the only rates translation reads (konsolidat #93) |
 | Intercompany elimination by partner | **Done** — Intercompany Account pairs + partner entity on trial balance rows; differences booked |
-| Reporting hierarchies | **Done** — strict resolution: a formula names its hierarchy, an ambiguous node is an error |
+| Reporting hierarchies | **Done** — strict resolution: a node found in several published trees is an error, never a guess |
 | Month-end close home (konsol-exec) | **Done** — role home with fiscal navigator and close stages |
 | Bulk trial balance upload | **Done** — many entities and periods in one file, at `/konsol-exec/uploads` |
 | Reference data in konsol (dbt seeds retired) | **Done** — every seed replaced by a konsol doctype; no demo data |
@@ -49,7 +49,7 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 - [x] **Governed group exchange rates** — rates are entered or pre-filled from the ERP, approved by the Close Lead, and are the only rates translation reads. See the [Exchange Rates Guide](../user-guide/exchange-rates-guide.md)
 - [x] **Presentation currency on the Consolidation Group node** — the EPM Settings consolidation currency field is removed
 - [x] **Intercompany elimination by partner** — Intercompany Account pairs, partner entity on trial balance rows, reconciliation, booked differences, unmatched list. See the [Intercompany Guide](../user-guide/intercompany-guide.md)
-- [x] **Reporting hierarchy strict resolution** — a formula must name its hierarchy. See the [Reporting Hierarchies Guide](../user-guide/reporting-hierarchies-guide.md)
+- [x] **Reporting hierarchy strict resolution** — with no hierarchy named, a node resolves to the only published tree that holds it; a node in several trees is an error that names them, never a guess. See the [Reporting Hierarchies Guide](../user-guide/reporting-hierarchies-guide.md)
 - [x] **Month-end close home** in konsol-exec. See the [Month-End Close Guide](../user-guide/month-close-guide.md)
 - [x] **Bulk trial balance upload**. See the [Trial Balance Upload Guide](../user-guide/trial-balance-upload-guide.md)
 - [x] **Top-side adjustment approval** — Consolidation Adjustment workflow: EPM Analyst drafts, EPM Admin approves

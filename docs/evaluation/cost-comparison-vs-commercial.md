@@ -65,7 +65,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 | Staging | 30 | Per-ERP adapters (D365 F&O, ERPNext) into a canonical schema |
 | Bronze | 16 | Raw ERP extracts and trial balance submissions (GL, TB, budget, FX rates, dimensions, legal entities) |
 | Silver | 9 | Standardized GL entries, trial balance, exchange rates, fiscal periods, accounts |
-| Allocated | 2 | Allocation results |
+| Allocated | 2 | Allocation results and audit trail |
 | Gold | 46 | Consolidated TB, IC elimination, CTA, cash flow, allocations, variance, scenarios, P&L, BS, YTD, quarterly, prior year |
 
 ### Consolidation Engine (Gold Layer)
@@ -73,7 +73,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 - **`gold_consolidated_trial_balance`** — Multi-entity with the group's governed closing rate (BS) and average rate (P&L)
 - **`gold_ic_eliminations`** — Pairs each entity's intercompany balance with its partner's, eliminates the match, books differences
 - **`gold_fx_revaluation`** — CTA equity plug: `−Σ group_amount` per entity and period, so the translated TB balances
-- **`gold_fully_consolidated_tb`** — 4-layer union: entity balances + IC eliminations + CTA + topside
+- **`gold_fully_consolidated_tb`** — union of entity balances, IC eliminations, CTA, topside, equity method, acquisitions and disposals
 - **`gold_allocation_results`** — N-step cascading allocations (e.g. IT/headcount → Facility/sqm → Mgmt/revenue)
 - **`gold_variance_analysis`** — Actual vs budget with favorable/unfavorable logic
 - **`gold_spread_budget`** — Annual budgets spread across 12 periods

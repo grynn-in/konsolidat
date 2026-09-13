@@ -2,7 +2,7 @@
 
 The dbt project no longer has seeds: `dbt_project/seeds/` was deleted in konsolidat #144, #145 and #147, and there is no `dbt seed` step. There is no demo data either.
 
-Reference and configuration data lives in **konsol doctypes**. Saving a record (or approving it, for documents that need approval) writes it through to a ClickHouse table, and dbt reads that table as a source. Most tables are in `epm_staging`; a few older ones are in `epm_gold`. konsol owns these tables and rewrites them on every write-through, so edit the doctype, never the table.
+Reference and configuration data lives in **konsol doctypes**. Saving a record (publishing it, for governed mappings such as Cash Flow Category, Dimension Mapping and Intercompany Account; approving it, for documents that need approval) writes it through to a ClickHouse table, and dbt reads that table as a source. Most tables are in `epm_staging`; a few older ones are in `epm_gold`. konsol owns these tables and rewrites them on every write-through, so edit the doctype, never the table.
 
 ## Where each former seed went
 

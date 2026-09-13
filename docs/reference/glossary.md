@@ -14,7 +14,7 @@
 | **Intercompany (IC) Elimination** | Removing transactions between entities within the same consolidation group so they don't double-count |
 | **Topside Journal / Consolidation Adjustment** | Manual journal entries posted at the group level (e.g., goodwill, fair-value adjustments) |
 | **Trial Balance** | A listing of all accounts and their balances for a given period, where total debits must equal total credits |
-| **Fully Consolidated Trial Balance (FCTB)** | The final 4-layer union: entity amounts + IC eliminations + CTA + topside adjustments |
+| **Fully Consolidated Trial Balance (FCTB)** | The final union of every layer: entity amounts, IC eliminations, CTA, topside adjustments, equity method, acquisitions and disposals |
 | **Chart of Accounts** | The master list of all general ledger account codes and their types (Revenue, Expense, Asset, Liability, Equity) |
 | **Cost Center** | An organizational unit used to track where costs are incurred (e.g., IT, Sales, Facility) |
 | **Driver-Based Allocation** | Distributing a cost pool across recipients based on a measurable driver (headcount, square meters, revenue) |

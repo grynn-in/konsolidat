@@ -30,7 +30,7 @@ dbt build
 ```
 
 This will:
-1. Build all 103 models (staging → bronze → silver → allocated → gold)
+1. Build all 103 models (staging, bronze, silver, gold and allocated)
 2. Run the 110 singular tests in `dbt_project/tests/` plus the generic tests declared in the model YAML
 3. Report any failures
 
@@ -76,7 +76,7 @@ Check consolidated trial balance for:
 
 ## Reference Data
 
-There are no dbt seeds: `dbt_project/seeds/` was deleted (konsolidat #144, #145, #147). Reference and configuration data lives in konsol doctypes. Saving a record (or approving it, for documents that need approval) writes it through to the ClickHouse table dbt reads, and the next `dbt build` picks it up. Do not edit those tables by hand: konsol overwrites them on the next write-through.
+There are no dbt seeds: `dbt_project/seeds/` was deleted (konsolidat #144, #145, #147). Reference and configuration data lives in konsol doctypes. Saving a record (publishing it, for governed mappings such as Cash Flow Category, Dimension Mapping and Intercompany Account; approving it, for documents that need approval) writes it through to the ClickHouse table dbt reads, and the next `dbt build` picks it up. Do not edit those tables by hand: konsol overwrites them on the next write-through.
 
 ### Key Doctypes
 

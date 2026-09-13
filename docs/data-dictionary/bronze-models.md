@@ -2,7 +2,7 @@
 
 16 models in the `epm_bronze` schema. Raw D365 OData data, type-cast to ClickHouse types and renamed to snake_case. No business logic applied.
 
-All Bronze models source from Airbyte-managed tables in the `epm_bronze` database.
+All Bronze models source from Airbyte-managed tables in the `epm_bronze` database, except `bronze_trial_balance_submissions`, which reads konsol's uploaded trial balances in `epm_raw`.
 
 ## General Ledger
 

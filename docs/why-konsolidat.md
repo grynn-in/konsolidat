@@ -42,7 +42,7 @@ Not a toy. Not a demo. A production consolidation engine with:
 - **NCI split** — group vs. non-controlling interest based on ownership percentage
 - **Intercompany elimination** — rule-based netting across 3 IC patterns
 - **Top-side adjustments** — manual consolidation journals (goodwill, fair value, reclassifications)
-- **4-layer fully consolidated trial balance** — entity + IC elimination + CTA + topside, unified
+- **Fully consolidated trial balance** — entity, IC eliminations, CTA, topside, equity method, acquisitions and disposals, in one table
 
 Every calculation is tested. 26 data quality assertions run on every build — not "trust us, it works," but `assert_nci_plus_group_equals_translated` with a 0.01 tolerance. The math is in the SQL. You can read it.
 

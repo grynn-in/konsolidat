@@ -33,7 +33,7 @@ Full IFRS/GAAP consolidation pipeline, entirely in dbt SQL:
 | **NCI split** | Group vs non-controlling interest based on ownership % |
 | **IC elimination** | Intercompany balances paired by partner entity; differences booked to the group's intercompany-difference account where one is set, unmatched rows listed ([Intercompany Guide](user-guide/intercompany-guide.md)) |
 | **Top-side adjustments** | Consolidation Adjustments in konsol: an analyst drafts, the close lead approves, and approval is the posting |
-| **Consolidated TB** | 4-layer union: entity + IC eliminations + CTA + topside |
+| **Consolidated TB** | One union of every layer: entity, IC eliminations, CTA, topside, equity method, acquisitions and disposals |
 
 See the [Consolidation Guide](user-guide/consolidation-guide.md) for details.
 

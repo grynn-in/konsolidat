@@ -10,7 +10,7 @@ graph TD
     CTB --> IC[gold_ic_eliminations<br/>Intercompany entries]
     CTB --> FX[gold_fx_revaluation<br/>CTA entries]
     ADJ[Consolidation Adjustment<br/>Approved top-side journals] --> CADJ[gold_consolidation_adjustments]
-    CTB --> FCTB[gold_fully_consolidated_tb<br/>4-layer union]
+    CTB --> FCTB[gold_fully_consolidated_tb<br/>union of all layers]
     IC --> FCTB
     FX --> FCTB
     CADJ --> FCTB
@@ -217,7 +217,7 @@ graph LR
     TS[Topside Layer] --> FCTB
 ```
 
-The `gold_fully_consolidated_tb` model unions four layers:
+The `gold_fully_consolidated_tb` model unions these layers:
 
 | `adjustment_type` | Source | Amount |
 |-------------------|--------|--------|
@@ -226,6 +226,9 @@ The `gold_fully_consolidated_tb` model unions four layers:
 | `ic_elimination_nci` | `gold_ic_eliminations` (group view: `nci` entries) | the legs moving the minority's portion to the NCI line |
 | `cta` | `gold_fx_revaluation` | `cta_amount` |
 | (topside type) | `gold_consolidation_adjustments` | `net_amount` |
+| `equity_method` | `gold_equity_method_associates` | the group's share of an equity-accounted associate |
+| (acquisition type) | `gold_acquisition_adjustments` | acquisition entries |
+| (disposal type) | `gold_disposal_adjustments` | disposal entries |
 
 **Test**: `assert_fctb_entity_layer_ties` — entity layer sums tie to `gold_consolidated_trial_balance.group_amount`.
 

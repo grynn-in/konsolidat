@@ -268,4 +268,4 @@ For mid-market EPM workloads (a few GB of GL data, monthly refresh cycles), the 
 | Excel Custom Functions Add-in | 2–3 days | TypeScript, MSAL.js, Office.js scaffold |
 | Add-in deployment (org-wide) | Half day | Upload to Microsoft 365 admin center |
 | Migrate CSV seeds → DocTypes | Done | Seeds deleted (konsolidat #144, #145, #147) |
-| **Total** | **~10–12 days** | |
+| **Total** | **~9–11 days remaining** | |

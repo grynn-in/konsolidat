@@ -101,15 +101,21 @@ The rows of submitted trial balances (single Trial Balance Submission and bulk u
 Created by `clickhouse/init-db.sql`:
 
 ```sql
+CREATE DATABASE IF NOT EXISTS epm;
+CREATE DATABASE IF NOT EXISTS epm_raw;
 CREATE DATABASE IF NOT EXISTS epm_bronze;
 CREATE DATABASE IF NOT EXISTS epm_staging;
 CREATE DATABASE IF NOT EXISTS epm_silver;
+CREATE DATABASE IF NOT EXISTS epm_allocated;
 CREATE DATABASE IF NOT EXISTS epm_gold;
 ```
 
 | Database | Managed By | Contents |
 |----------|-----------|----------|
+| `epm` | dbt | The dbt target database |
+| `epm_raw` | konsol, ERP extracts | Uploaded trial balances and raw ERP extracts |
 | `epm_bronze` | Airbyte | Raw D365 OData tables |
 | `epm_staging` | dbt | Staging views + write-back tables |
 | `epm_silver` | dbt | Cleaned, standardized tables |
+| `epm_allocated` | dbt | Allocation results and audit trail |
 | `epm_gold` | dbt, konsol | Business logic; a few konsol-written reference tables (e.g. `consolidation_groups`, `scenario_definitions`) |
