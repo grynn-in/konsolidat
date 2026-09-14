@@ -30,6 +30,19 @@
 > lists all of them, and `dbt compile --select fx_governed_rate_gaps` renders
 > the same query as standalone SQL for `clickhouse-client`.
 >
+> **A Closing period has no rates of its own (konsolidat#199).** The year-end
+> close of a period-end-balance file posts in the fiscal year's Closing period
+> (`epm_staging.fiscal_periods`, `period_type = 'Closing'`, typically P13), and
+> group finance approves rates per Regular period in konsol. So, by declared
+> rule, a Closing-type period translates at the same fiscal year's **last
+> Regular period's** Closing and Average rates, and the guard requires (and
+> names) the rate at that Regular period, once. The mapping is one macro,
+> `rate_period_map()` in `macros/governed_rates.sql`, read by the guard, the
+> coverage test, the deploy precheck and the model's rate join, so they cannot
+> disagree. Nothing is invented: a period the calendar does not know, or a
+> Closing period in a year with no Regular period, maps to itself and is still
+> reported `missing` when it has no rate.
+>
 > `deploy.sh` runs that check before step 5, through the dbt_init service. It
 > **aborts** whenever `epm_staging.group_exchange_rates` does not exist (the
 > konsol migration from #174 has not run; a fresh stack has the table from

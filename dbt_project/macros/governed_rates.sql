@@ -30,15 +30,69 @@
     period and scope filters, so the run stops BEFORE the scope's DELETE) and
     assert_every_translated_currency_has_a_governed_rate (unscoped).
     NOT IN / IN rather than a LEFT JOIN null test (join_use_nulls=0).
+
+    The keys are RATE keys (konsolidat#199, row D9): a trial-balance period is
+    first mapped through rate_period_map(), so a Closing period is required
+    (and reported) as its year's last Regular period, once, whatever it is
+    numbered. The rule, declared, not a default: a Closing-type period has
+    no governed rates of its own; it uses the same fiscal year's last Regular
+    period's rates. The year-end close of a period-end-balance file
+    (silver_tb_movements) posts in the calendar's Closing period, and group
+    finance approves rates per Regular period in konsol, so a P13 rate would
+    only ever be a second entry of P12's.
 #}
-{# The (from, to, fy, fp) keys the model translates, with its own filters. #}
+
+{#
+    (fiscal_year, fiscal_period) -> (rate_year, rate_period): the period whose
+    governed rates a period translates at, from konsol's fiscal calendar
+    (epm_staging.fiscal_periods). A period of type 'Closing' maps to the
+    highest fiscal_period of the same year with period_type = 'Regular';
+    every other period maps to itself. One row per calendar period (grouped,
+    so a duplicated calendar row cannot fan a join out). A period the calendar
+    does not know is NOT in the map, and a Closing period in a year with no
+    Regular period maps to itself: nothing is invented, and its readers fall
+    back to the period itself on a LEFT JOIN miss (rate_period = 0 under
+    join_use_nulls=0, never a real period), so the 'missing' reason still
+    fires for it. Used by governed_translated_keys() (the guard, the coverage
+    test and the deploy precheck) and by gold_consolidated_trial_balance's
+    governed_rates join: one definition, so the guard and the translation
+    cannot disagree on which rate a period needs.
+#}
+{% macro rate_period_map() %}
+    (
+        select
+            toUInt16(p.fiscal_year) as fiscal_year,
+            toUInt16(p.fiscal_period) as fiscal_period,
+            toUInt16(p.fiscal_year) as rate_year,
+            toUInt16(if(p.is_closing = 1 and r.last_regular > 0, r.last_regular, p.fiscal_period)) as rate_period
+        from (
+            select fiscal_year, fiscal_period, max(period_type = 'Closing') as is_closing
+            from {{ source('epm_staging', 'fiscal_periods') }}
+            group by fiscal_year, fiscal_period
+        ) as p
+        left join (
+            select fiscal_year, max(fiscal_period) as last_regular
+            from {{ source('epm_staging', 'fiscal_periods') }}
+            where period_type = 'Regular'
+            group by fiscal_year
+        ) as r
+            on r.fiscal_year = p.fiscal_year
+    )
+{% endmacro %}
+
+{# The (from, to, fy, fp) RATE keys the model translates, with its own filters:
+   the trial balance's period mapped through rate_period_map() (a period the
+   calendar does not know maps to itself). #}
 {% macro governed_translated_keys(scoped=true) %}
         select distinct
             ec.accounting_currency as from_currency,
             grp.reporting_currency as to_currency,
-            toUInt16(tb.fiscal_year) as fy,
-            toUInt16(tb.fiscal_period) as fp
+            if(rpm.rate_period != 0, rpm.rate_year, toUInt16(tb.fiscal_year)) as fy,
+            if(rpm.rate_period != 0, rpm.rate_period, toUInt16(tb.fiscal_period)) as fp
         from {{ ref('gold_trial_balance') }} as tb
+        left join {{ rate_period_map() }} as rpm
+            on rpm.fiscal_year = tb.fiscal_year
+            and rpm.fiscal_period = tb.fiscal_period
         inner join (
             select data_area_id, accounting_currency
             from {{ ref('silver_entity_currencies') }}
@@ -166,7 +220,7 @@
       FX_GAP <key> <reason>   one line per key, sorted
 #}
 {% macro fx_precheck() %}
--- depends_on: {{ ref('gold_trial_balance') }} {{ ref('silver_entity_currencies') }} {{ ref('gold_entity_ownership') }} {{ source('epm_gold', 'consolidation_groups') }} {{ source('epm_staging', 'group_exchange_rates') }} {{ source('epm_gold', 'currencies') }}
+-- depends_on: {{ ref('gold_trial_balance') }} {{ ref('silver_entity_currencies') }} {{ ref('gold_entity_ownership') }} {{ source('epm_gold', 'consolidation_groups') }} {{ source('epm_staging', 'group_exchange_rates') }} {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }}
 {%- set ger, tb, eo = none, none, none -%}
 {%- if execute -%}
     {%- set g = source('epm_staging', 'group_exchange_rates') -%}

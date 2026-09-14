@@ -81,6 +81,17 @@ with entity_tb as (
            It is no longer the positive magnitude #64 described. #}
         tb.period_debit - tb.period_credit as local_amount,
         ec.accounting_currency as accounting_currency,
+        {# konsolidat#199 (row D9): the period whose governed rates this row
+           translates at. Itself, except a Closing-type period, which has no
+           rates of its own and uses the same fiscal year's last Regular
+           period's (macros/governed_rates.sql, rate_period_map(): the guard
+           requires the rate at the same key). A period konsol's calendar does
+           not know maps to itself: a LEFT JOIN miss reads rate_period = 0
+           under join_use_nulls=0, never a real period. Read by `rated`'s
+           governed_rates join and never selected into it: this model appends
+           by position, so no column may be added before partner_data_area_id. #}
+        if(rpm.rate_period != 0, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
+        if(rpm.rate_period != 0, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
         {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
     {# konsol#159: the partner-grained twin of gold_trial_balance. That model
        stays at the account grain for its own readers; see
@@ -117,6 +128,11 @@ with entity_tb as (
         select main_account_id, fx_method from {{ ref('silver_main_accounts') }}
     ) as ma
         on tb.main_account = ma.main_account_id
+    {# konsolidat#199 (row D9): the Closing-period rule, one row per calendar
+       period; see rate_year / rate_period above. #}
+    left join {{ rate_period_map() }} as rpm
+        on rpm.fiscal_year = tb.fiscal_year
+        and rpm.fiscal_period = tb.fiscal_period
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
        Applied here at the consolidation chokepoint so every downstream
@@ -180,14 +196,18 @@ historical_rates as (
    the governed table's own rate types (konsol's Select), not an ERP's names.
 
    Keyed on the period itself, not an as-of date: a period's rate is the one
-   approved for it. No fallback of any kind. A translated currency with no
-   approved rate stops the build (see `consolidated`), and
-   assert_every_translated_currency_has_a_governed_rate names it. The old
-   chain (Closing, else Default, else 1.0) translated whole ledgers at the 1.0
-   parity rate without a word (#109). #}
-{# The pre_hook guard also reads the currencies' reference magnitudes; declared
-   here so dbt knows the dependency at parse time. #}
--- depends_on: {{ source('epm_gold', 'currencies') }}
+   approved for it. No fallback of any kind. The one declared exception is not
+   a fallback: a Closing-type period (the year-end close of a period-end-balance
+   file, konsolidat#199) has no rates of its own and is keyed on its year's
+   last Regular period (rate_year / rate_period in entity_tb, from
+   rate_period_map()); the guard requires the rate at that same key. A
+   translated currency with no approved rate stops the build (see
+   `consolidated`), and assert_every_translated_currency_has_a_governed_rate
+   names it. The old chain (Closing, else Default, else 1.0) translated whole
+   ledgers at the 1.0 parity rate without a word (#109). #}
+{# The pre_hook guard also reads the currencies' reference magnitudes and the
+   fiscal calendar; declared here so dbt knows the dependencies at parse time. #}
+-- depends_on: {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }}
 governed_rates as (
     select
         from_currency,
@@ -268,12 +288,14 @@ rated as (
         and etb.fiscal_year = eo.fiscal_year
         and etb.fiscal_period = eo.fiscal_period
     {# join_use_nulls=0: a miss fills 0s, so n_closing / n_average = 0 is the
-       "no approved rate" signal (never a NULL test across the join). #}
+       "no approved rate" signal (never a NULL test across the join).
+       Keyed on the mapped rate period (konsolidat#199, row D9): the row's own
+       period, or its year's last Regular period for a Closing period. #}
     left join governed_rates as gr
         on etb.accounting_currency = gr.from_currency
         and eo.reporting_currency = gr.to_currency
-        and etb.fiscal_year = gr.fiscal_year
-        and etb.fiscal_period = gr.fiscal_period
+        and etb.rate_year = gr.fiscal_year
+        and etb.rate_period = gr.fiscal_period
     {# PRD-10: Historical equity rate — as-of the period: pick the latest tranche
        whose rate_date <= period_date. The previous row_number()/rn=1 took the
        single most-recent rate_date EVER, ignoring the period entirely, so an
