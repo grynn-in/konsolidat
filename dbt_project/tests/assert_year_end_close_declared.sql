@@ -15,10 +15,12 @@
 
     So: one row per (entity, fiscal year) that NEEDS a close — its batches are
     period-end balances, a later fiscal year has data, and SOMETHING SITS IN
-    A P&L ACCOUNT at the year's last claimed period (the model's pnl_totals:
-    the sum of the P&L balances there is not 0; a balance-sheet-only entity,
-    or a file that already zeroes its P&L, needs no close and is not held up
-    by a missing Closing period or flag) — and LACKS a usable Closing period
+    A P&L ACCOUNT at the year's last claimed period (any P&L balance there is
+    not 0 — not the net: silver_tb_movements closes every P&L key, so a year
+    whose revenue and expenses cancel still needs its close; a
+    balance-sheet-only entity, or a file that already zeroes its P&L, needs no
+    close and is not held up by a missing Closing period or flag) — and LACKS
+    a usable Closing period
     (none in the calendar for the year, or one that does not sort after the
     year's last claimed period: the close must post after the balances it
     closes) or a single retained-earnings account, with the reason. Error
@@ -51,15 +53,16 @@ years_with_successor as (
 
 ),
 
-pnl_totals as (
+pnl_keys as (
 
-    {# the year's result still sitting in the P&L accounts at the last
-       claimed period — the same figure silver_tb_movements moves into
-       retained earnings; 0 means there is nothing to close #}
+    {# the P&L balances at the year's last claimed period, at the model's
+       key grain (account × partner), the way silver_tb_movements sees them #}
     select
         b.data_area_id as data_area_id,
         b.fiscal_year as fiscal_year,
-        sum(b.debit_amount - b.credit_amount) as pnl_total
+        b.main_account as main_account,
+        b.partner_data_area_id as partner_data_area_id,
+        sum(b.debit_amount - b.credit_amount) as key_net
     from {{ ref('bronze_trial_balance_submissions') }} as b
     inner join entity_years as y
         on y.data_area_id = b.data_area_id
@@ -68,7 +71,24 @@ pnl_totals as (
     inner join {{ ref('silver_main_accounts') }} as ma
         on ma.main_account_id = b.main_account
     where ma.is_pnl = 1
-    group by b.data_area_id, b.fiscal_year
+    group by b.data_area_id, b.fiscal_year, b.main_account, b.partner_data_area_id
+
+),
+
+pnl_totals as (
+
+    {# silver_tb_movements zeroes EVERY P&L key at the close and moves their
+       sum into retained earnings, so the year needs a close as soon as ANY
+       P&L key holds a balance — not only when the net result is not 0: a
+       year whose revenue and expenses cancel still leaves balances the next
+       year's file restarts from 0, and without the close their reversal
+       would read as activity. Only all-zero P&L means nothing to close. #}
+    select
+        data_area_id,
+        fiscal_year,
+        sum(abs(key_net)) as pnl_total
+    from pnl_keys
+    group by data_area_id, fiscal_year
     having pnl_total != 0
 
 ),

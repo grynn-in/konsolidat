@@ -180,9 +180,10 @@ then yields the closing entry there (`movement_kind = 'year_end_close'`, `batch_
 `submission_name = 'Year-end close'`) and activity only in the next year's first period. Nothing is
 synthesized when the year has no Closing period sorting after its last claimed period, the chart
 has no or several retained-earnings accounts, or the entity claimed a batch in the Closing period
-itself; `assert_year_end_close_declared` names the first two cases for years whose P&L accounts
-still hold a result at the last claimed period (a balance-sheet-only entity, or a file that already
-zeroes its P&L, needs no close). The flagged retained-earnings account must be the one the ERP's
+itself; `assert_year_end_close_declared` names the first two cases for years in which any P&L
+account still holds a balance at the last claimed period — not only when the net result is non-zero,
+since every P&L key is closed (a balance-sheet-only entity, or a file that already zeroes its P&L,
+needs no close). The flagged retained-earnings account must be the one the ERP's
 files carry the result in: if the next year's first file does not list it, the spine reverses the
 close as activity, and `assert_year_end_close_carried` (warn) names the closed year.
 
@@ -206,7 +207,7 @@ close as activity, and `assert_year_end_close_carried` (warn) names the closed y
 **Tests**: `assert_tb_movements_balance` (each entity-period nets to 0),
 `assert_tb_movements_cumulate_to_source` (movements cumulate back to the declared source amounts
 under the batch's basis), `assert_year_end_close_declared` (a period-end-balance year that a
-later year follows, with a result in its P&L accounts, has a Closing period and a single
+later year follows, with any non-zero P&L balance, has a Closing period and a single
 retained-earnings account to close into) and `assert_year_end_close_carried` (warn: the first file
 after a close lists the retained-earnings account the close posted to).
 
