@@ -138,8 +138,10 @@ models:
       reverses the P&L keys into the chart's retained-earnings account
       (movement_kind 'year_end_close'), so the next year's first period
       carries activity only; assert_year_end_close_declared names a year
-      that needs this and lacks a Closing period or a single
-      retained-earnings account. Guarded by
+      that needs this (a result in its P&L accounts) and lacks a Closing
+      period or a single retained-earnings account, and
+      assert_year_end_close_carried (warn) names a close whose next file
+      does not carry the result in the flagged account. Guarded by
       assert_tb_movements_balance (each entity-period sums to 0) and
       assert_tb_movements_cumulate_to_source (undoing the rewrite gives the
       source figure back). Built for the Trial Balance Submission branch of

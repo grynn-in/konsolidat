@@ -178,9 +178,13 @@ last claimed period's balances with every P&L account (`silver_main_accounts.is_
 the retained-earnings account (`is_retained_earnings = 1`) increased by their sum. The differencing
 then yields the closing entry there (`movement_kind = 'year_end_close'`, `batch_id = ''`,
 `submission_name = 'Year-end close'`) and activity only in the next year's first period. Nothing is
-synthesized when the year has no Closing period, the chart has no or several retained-earnings
-accounts, or the entity claimed a batch in the Closing period itself;
-`assert_year_end_close_declared` names the first two cases.
+synthesized when the year has no Closing period sorting after its last claimed period, the chart
+has no or several retained-earnings accounts, or the entity claimed a batch in the Closing period
+itself; `assert_year_end_close_declared` names the first two cases for years whose P&L accounts
+still hold a result at the last claimed period (a balance-sheet-only entity, or a file that already
+zeroes its P&L, needs no close). The flagged retained-earnings account must be the one the ERP's
+files carry the result in: if the next year's first file does not list it, the spine reverses the
+close as activity, and `assert_year_end_close_carried` (warn) names the closed year.
 
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
@@ -201,7 +205,9 @@ accounts, or the entity claimed a batch in the Closing period itself;
 
 **Tests**: `assert_tb_movements_balance` (each entity-period nets to 0),
 `assert_tb_movements_cumulate_to_source` (movements cumulate back to the declared source amounts
-under the batch's basis) and `assert_year_end_close_declared` (a period-end-balance year that a
-later year follows has a Closing period and a single retained-earnings account to close into).
+under the batch's basis), `assert_year_end_close_declared` (a period-end-balance year that a
+later year follows, with a result in its P&L accounts, has a Closing period and a single
+retained-earnings account to close into) and `assert_year_end_close_carried` (warn: the first file
+after a close lists the retained-earnings account the close posted to).
 
 **Sources**: `bronze_trial_balance_submissions`, `silver_main_accounts`, `epm_staging.fiscal_periods`.

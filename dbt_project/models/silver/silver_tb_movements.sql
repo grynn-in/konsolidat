@@ -48,10 +48,15 @@
    differencing then yields the closing entry there (movement_kind =
    'year_end_close': P&L keys reversed, retained earnings moved) and, in the
    next year's first period, activity only. The rest is movement_kind =
-   'activity'. When the year has no Closing period, the chart has no (or more
-   than one) retained-earnings account, or the entity itself claimed a batch
-   in the Closing period (the file already holds the closed balances), nothing
-   is synthesized; assert_year_end_close_declared names the first two.
+   'activity'. When the year has no Closing period sorting after its last
+   claimed period, the chart has no (or more than one) retained-earnings
+   account, or the entity itself claimed a batch in the Closing period (the
+   file already holds the closed balances), nothing is synthesized;
+   assert_year_end_close_declared names the first two for years that have a
+   result to close. The flagged retained-earnings account must be the one the
+   ERP's next file carries the result in, or the spine reverses the close as
+   activity in the next first period; assert_year_end_close_carried (warn)
+   names that.
 
    Mixed bases: each period is computed with ITS batch's basis and no attempt is
    made to reconcile a history whose batches disagree —
@@ -136,8 +141,13 @@ entity_years as (
 years_to_close as (
 
     {# entity-years of period-end balances that a later year follows and that
-       can be closed: a Closing period the entity did not claim a batch in, and
-       one retained-earnings account #}
+       can be closed: a Closing period the entity did not claim a batch in
+       and that sorts AFTER the year's last claimed period, and one
+       retained-earnings account. The ordering condition (PR 200 re-review
+       finding 3): the differencing walks periods in (fiscal_year,
+       fiscal_period) order, so a close numbered before the balances it
+       closes would be differenced against the wrong side; nothing is
+       synthesized then, and assert_year_end_close_declared names the year #}
     select
         y.data_area_id as data_area_id,
         y.fiscal_year as fiscal_year,
@@ -155,6 +165,7 @@ years_to_close as (
     where y.amount_basis = 'Period-end balance'
       and y.fiscal_year < y.last_year
       and not has(y.claimed_periods, cp.closing_period)
+      and cp.closing_period > y.last_period
       and re.retained_accounts = 1
 
 ),
