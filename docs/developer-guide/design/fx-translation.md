@@ -71,6 +71,8 @@ Enhance `gold_consolidated_trial_balance.sql` and `silver_exchange_rates` to sup
 
 ## Acceptance Tests (dbt singular tests)
 
+Each singular test in `dbt_project/tests/` can be checked against seeded `ZZ`-coded rows in a scratch schema using the fixtures in `dbt_project/test_fixtures/` (see its README; the fixtures never touch live tables).
+
 | Test | Assertion |
 |------|-----------|
 | `assert_translation_follows_fx_method` | Every translated row's `translation_rate` is the rate its account's declared `fx_method` names (konsol#182): the historical equity rate for `historical` (closing before the first tranche), `average_rate` for `average`, `closing_rate` otherwise. A P&L account may be declared at closing (IAS 29) |
