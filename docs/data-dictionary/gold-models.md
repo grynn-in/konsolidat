@@ -41,7 +41,7 @@ Year-to-date running totals over `gold_trial_balance`.
 | `ytd_credit` | Decimal | Cumulative credit through period | — |
 | `ytd_net_amount` | Decimal | Cumulative net amount through period | not_null desc |
 
-**Test**: `assert_ytd_p12_equals_annual` — YTD at period 12 must equal sum of all 12 periods.
+**Test**: `assert_ytd_at_last_regular_period_equals_annual` (warn) — YTD at the year's last Regular period (from `epm_staging.fiscal_periods`, not a hardcoded 12) must equal the sum of the year's Regular periods; the Closing period is left out because the year-end close posted there (`silver_tb_movements`) reclassifies the year's result, it is not activity.
 
 ## P&L Models
 
