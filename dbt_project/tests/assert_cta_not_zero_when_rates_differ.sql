@@ -4,7 +4,7 @@
 -- -sum(group_amount) per entity-period. Balance-sheet rows translate at the closing
 -- rate, P&L rows at the average rate and (with an approved Historical Equity Rate)
 -- equity rows at that historical rate. Because the local trial balance sums to zero,
--- the translated one only fails to when more than one rate was applied; that gap is
+-- the translated one only fails to sum to zero when more than one rate was applied; that gap is
 -- the CTA.
 --
 -- When CTA must be non-zero: an entity-period in which at least one row translated at
