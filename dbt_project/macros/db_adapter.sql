@@ -37,8 +37,21 @@
     toDateTime(assumeNotNull({{ expr }}))
 {% endmacro %}
 
+{# toDecimal128(Float64, scale) truncates the binary double toward zero, so a
+   value like 0.29 (not exactly representable in binary) becomes 0.28
+   (konsolidat#191); a float sum truncates the same way even after going
+   through text, because its shortest text form can itself sit a hair below
+   the cent (toFloat64(0.7) + toFloat64(0.1) = 0.7999999999999999, which
+   parses to 0.79, not 0.80). Rounding to the target scale before the text
+   step fixes both: round() first snaps the value to the scale, then
+   toString() gives its shortest exact decimal text at that scale, which
+   toDecimal128 parses back exactly. Neither a float's binary value nor
+   float-sum error can truncate a cent this way. A Decimal input already
+   within the target scale is unchanged by round(); one with extra digits
+   is rounded to the scale by round(), rather than left for toDecimal128
+   to truncate. #}
 {% macro cast_to_decimal128(expr, scale) %}
-    toDecimal128(assumeNotNull({{ expr }}), {{ scale }})
+    toDecimal128(toString(round(assumeNotNull({{ expr }}), {{ scale }})), {{ scale }})
 {% endmacro %}
 
 {% macro extract_year(expr) %}
