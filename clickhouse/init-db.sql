@@ -223,10 +223,14 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submissions (
 -- ReplacingMergeTree keyed on batch_id: a duplicated claim (an at-least-once
 -- retry of konsol's on_submit) collapses to one row instead of fanning out the
 -- bronze join — the same idempotency choice as epm_staging.sync_watermark.
+-- konsolidat#199: amount_basis is what the batch's amounts are ('Period
+-- movement', 'Year-to-date movement', 'Period-end balance'); '' = undeclared,
+-- refused by assert_tb_submission_has_basis. tests/test_raw_submission_ddl.py
+-- pins this body to konsol's _RAW_TABLE_DDL.
 CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
     batch_id String, submission_name String, data_area_id String,
     fiscal_year UInt16, fiscal_period UInt8, row_count UInt32,
-    claimed_at DateTime
+    claimed_at DateTime, amount_basis String DEFAULT ''
 ) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;
 
 -- F3: governed reference data written through from konsol (Dimension Mapping,

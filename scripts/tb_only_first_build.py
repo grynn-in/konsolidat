@@ -150,7 +150,8 @@ def fixture_sql(p):
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ1000', 150, 0, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ3000', 0, 50, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ4000', 0, 100, '', 'ZZ-TBS-1', now())",
-        f"INSERT INTO {p}_raw.trial_balance_submission_control VALUES ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now())",
+        # konsolidat#199: columns named, basis declared (tests/test_raw_submission_ddl.py)
+        f"INSERT INTO {p}_raw.trial_balance_submission_control (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis) VALUES ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now(), 'Period movement')",
         f"INSERT INTO {p}_staging.allocation_rules (allocation_rule_id, rule_name, step_order, source_account, source_cost_center, driver_type, target_account) VALUES "
         "('ZZAR1', 'ZZ rule', 1, 'ZZ4000', 'ZZCC', 'headcount', 'ZZ4000')",
     ]

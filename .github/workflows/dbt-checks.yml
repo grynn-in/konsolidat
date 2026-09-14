@@ -10,6 +10,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_raw_submission_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   pull_request:
@@ -20,6 +21,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_raw_submission_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   workflow_dispatch:
@@ -78,6 +80,10 @@ jobs:
       # #191: the TB-only first build runs the cast test by name.
       - name: first-build script runs the cast test
         run: python -m unittest -v tests.test_tb_only_first_build
+      # konsolidat#199: the TB submission control table's DDL is konsol's,
+      # including amount_basis, and the CI fixture claims its batch by name.
+      - name: raw submission control DDL and CI claim
+        run: python -m unittest -v tests.test_raw_submission_ddl
 
   tb-only-first-build:
     name: first build on a fresh TB-only site
