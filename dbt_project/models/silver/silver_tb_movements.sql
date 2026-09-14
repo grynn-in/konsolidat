@@ -52,8 +52,8 @@
    claimed period, the chart has no (or more than one) retained-earnings
    account, or the entity itself claimed a batch in the Closing period (the
    file already holds the closed balances), nothing is synthesized;
-   assert_year_end_close_declared names the first two for years that have a
-   result to close. The flagged retained-earnings account must be the one the
+   assert_year_end_close_declared names the first two for years with any
+   non-zero P&L balance at their last claimed period. The flagged retained-earnings account must be the one the
    ERP's next file carries the result in, or the spine reverses the close as
    activity in the next first period; assert_year_end_close_carried (warn)
    names that.

@@ -125,6 +125,9 @@ candidates as (
            silver_tb_movements posts the close; the same condition as its
            years_to_close #}
         cp.closing_period > y.last_period as closing_period_usable,
+        -- the entity itself claimed a batch in the Closing period while P&L is still open:
+        -- the model cannot close into a claimed period (silver_tb_movements years_to_close)
+        cp.closing_period = y.last_period as claimed_closing,
         re.retained_accounts as retained_accounts
     from years_with_successor as y
     inner join pnl_totals as t
@@ -142,6 +145,9 @@ select
     data_area_id,
     fiscal_year,
     multiIf(
+        claimed_closing,
+            concat('a batch was claimed in the Closing period P', toString(closing_period),
+                   ' but still carries P&L balances; nothing can be closed into it — fix the file, not the calendar'),
         not closing_period_usable and retained_accounts != 1,
             if(closing_period = 0,
                'no Closing period in the fiscal calendar and no single retained-earnings account in the chart',
