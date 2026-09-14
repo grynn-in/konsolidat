@@ -86,12 +86,13 @@ with entity_tb as (
            rates of its own and uses the same fiscal year's last Regular
            period's (macros/governed_rates.sql, rate_period_map(): the guard
            requires the rate at the same key). A period konsol's calendar does
-           not know maps to itself: a LEFT JOIN miss reads rate_period = 0
-           under join_use_nulls=0, never a real period. Read by `rated`'s
+           not know maps to itself: a LEFT JOIN miss reads mapped = 0 under
+           join_use_nulls=0 (an Opening period is legitimately numbered 0, so
+           the flag, not the number, decides). Read by `rated`'s
            governed_rates join and never selected into it: this model appends
            by position, so no column may be added before partner_data_area_id. #}
-        if(rpm.rate_period != 0, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
-        if(rpm.rate_period != 0, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
+        if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
+        if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
         {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
     {# konsol#159: the partner-grained twin of gold_trial_balance. That model
        stays at the account grain for its own readers; see

@@ -64,7 +64,10 @@
             toUInt16(p.fiscal_year) as fiscal_year,
             toUInt16(p.fiscal_period) as fiscal_period,
             toUInt16(p.fiscal_year) as rate_year,
-            toUInt16(if(p.is_closing = 1 and r.last_regular > 0, r.last_regular, p.fiscal_period)) as rate_period
+            toUInt16(if(p.is_closing = 1 and r.last_regular > 0, r.last_regular, p.fiscal_period)) as rate_period,
+            -- 1 on every calendar row: a LEFT JOIN miss reads 0 here, so callers branch on
+            -- this flag, never on rate_period = 0 (an Opening period is legitimately numbered 0)
+            toUInt8(1) as mapped
         from (
             select fiscal_year, fiscal_period, max(period_type = 'Closing') as is_closing
             from {{ source('epm_staging', 'fiscal_periods') }}
@@ -87,8 +90,8 @@
         select distinct
             ec.accounting_currency as from_currency,
             grp.reporting_currency as to_currency,
-            if(rpm.rate_period != 0, rpm.rate_year, toUInt16(tb.fiscal_year)) as fy,
-            if(rpm.rate_period != 0, rpm.rate_period, toUInt16(tb.fiscal_period)) as fp
+            if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as fy,
+            if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as fp
         from {{ ref('gold_trial_balance') }} as tb
         left join {{ rate_period_map() }} as rpm
             on rpm.fiscal_year = tb.fiscal_year
