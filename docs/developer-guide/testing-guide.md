@@ -70,7 +70,7 @@ Tests have two severity levels:
 
 | Test | Severity | Assertion |
 |------|----------|-----------|
-| `assert_ytd_p12_equals_annual` | warn | YTD at period 12 = sum of all 12 periods |
+| `assert_ytd_at_last_regular_period_equals_annual` | warn | YTD at the year's last Regular period (declared calendar) = sum of the year's Regular periods; the Closing period's year-end close is excluded |
 
 ## Running Tests
 
