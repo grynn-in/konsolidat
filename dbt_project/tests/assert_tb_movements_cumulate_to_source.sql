@@ -9,10 +9,22 @@
       'Year-to-date movement'  running sum within the fiscal year    = source net
       'Period-end balance'     running sum over every period         = source net
 
-    A key that vanished from a later batch has source net 0 there, and its
-    running sum must come back to 0 too. Rows whose basis is not one of the
-    three strings are not judged here: assert_tb_submission_has_basis names
-    them at the bronze layer and stops the build.
+    A key that vanished from a later batch has a row here only because the
+    model's spine put one there (source net 0, movement minus the previous
+    figure), and that row's running sum comes back to 0 as any other. This
+    test judges the rows that exist; a spine that MISSED the vanished key
+    would leave no row to judge, and it is assert_tb_movements_balance that
+    catches that (the period no longer sums to 0).
+
+    The synthetic year-end close of a period-end-balance file (PR 200
+    finding 1) passes for the same reason: its rows carry the post-close
+    balance as source_net_amount (0 for a P&L key, the year's result added
+    to retained earnings), so the running sum over every period still
+    equals the source figure at each row.
+
+    Rows whose basis is not one of the three strings are not judged here:
+    assert_tb_submission_has_basis names them at the bronze layer and stops
+    the build.
 
     Tolerance 0.01, as for the other balance tests.
 #}

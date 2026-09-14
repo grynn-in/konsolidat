@@ -146,13 +146,19 @@ select
     '{{ tbs_marker }}' as journal_category,
     tbs.submission_name as document_number,
     tbs.period_start as document_date,
-    '' as posting_layer
+    {# the synthetic year-end close of a period-end-balance file (PR 200
+       finding 1) is the one TBS entry that is not the file's own activity:
+       it posts in the year's Closing period with batch_id '' (journal
+       'TBS-') and submission 'Year-end close', and is marked here the way
+       D365 marks its closing entries — on posting_layer #}
+    if(tbs.movement_kind = 'year_end_close', 'Year-end close', '') as posting_layer
 from (
     {# one normalised period movement per key (konsolidat#199); the batch and
        submission the period was claimed under ride along for the journal
        columns #}
     select
         m.batch_id as batch_id,
+        m.movement_kind as movement_kind,
         m.data_area_id as data_area_id,
         m.fiscal_year as fiscal_year,
         m.fiscal_period as fiscal_period,

@@ -169,6 +169,19 @@ rows with movement 0 and no source row are dropped. Each period is computed with
 mixed history is not reconciled — `assert_entity_has_one_amount_basis` refuses it, and
 `assert_tb_submission_has_basis` refuses an undeclared (empty or unknown) basis.
 
+**Year-end close.** A period-end-balance file carries the year's P&L in its accounts until the year
+end; the next year's file starts them from zero with the result in retained earnings, a close no
+file shows. Differencing across the year end would read that as activity, so for every
+entity-year of period-end balances that a later year follows, the model synthesizes a post-close
+period in the year's Closing period (`epm_staging.fiscal_periods`, `period_type = 'Closing'`): the
+last claimed period's balances with every P&L account (`silver_main_accounts.is_pnl = 1`) at 0 and
+the retained-earnings account (`is_retained_earnings = 1`) increased by their sum. The differencing
+then yields the closing entry there (`movement_kind = 'year_end_close'`, `batch_id = ''`,
+`submission_name = 'Year-end close'`) and activity only in the next year's first period. Nothing is
+synthesized when the year has no Closing period, the chart has no or several retained-earnings
+accounts, or the entity claimed a batch in the Closing period itself;
+`assert_year_end_close_declared` names the first two cases.
+
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
 | `data_area_id` | String | Legal entity | not_null |
@@ -184,9 +197,11 @@ mixed history is not reconciled — `assert_entity_has_one_amount_basis` refuses
 | `movement_amount` | Decimal(38,2) | Period movement per the table above |  |
 | `debit_amount` | Decimal(38,2) | `greatest(movement_amount, 0)` |  |
 | `credit_amount` | Decimal(38,2) | `greatest(-movement_amount, 0)` |  |
+| `movement_kind` | String | `activity`, or `year_end_close` for the synthetic close of a period-end-balance year | accepted_values |
 
-**Tests**: `assert_tb_movements_balance` (each entity-period nets to 0) and
+**Tests**: `assert_tb_movements_balance` (each entity-period nets to 0),
 `assert_tb_movements_cumulate_to_source` (movements cumulate back to the declared source amounts
-under the batch's basis).
+under the batch's basis) and `assert_year_end_close_declared` (a period-end-balance year that a
+later year follows has a Closing period and a single retained-earnings account to close into).
 
-**Source**: `bronze_trial_balance_submissions`.
+**Sources**: `bronze_trial_balance_submissions`, `silver_main_accounts`, `epm_staging.fiscal_periods`.
