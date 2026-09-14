@@ -39,22 +39,27 @@
 {%- set _declared = ['account_name', 'chart_of_accounts', 'parent_account', 'is_group', 'account_type',
                      'statement_section', 'sub_section', 'normal_balance', 'time_balance', 'fx_method',
                      'is_posting', 'is_suspended', 'allow_ic', 'cf_category', 'cf_line_item', 'is_cash',
-                     'main_account_category'] -%}
+                     'main_account_category', 'is_retained_earnings'] -%}
 {%- if rel is none -%}
 select '' as main_account, '' as problem where 0
 {%- else -%}
+{#- konsolidat#199: the two repos deploy in either order, so a declared column
+    the table does not have yet (is_retained_earnings until konsol row K7 has
+    migrated) is left out of the comparison instead of breaking the query. -#}
+{%- set _present = adapter.get_columns_in_relation(rel) | map(attribute='name') | list -%}
+{%- set _compared = _declared | select('in', _present) | list -%}
 select main_account, problem from (
     select
         main_account,
         concat('duplicate Published rows disagree on ', arrayStringConcat(arrayFilter(c -> c != '', [
-            {%- for c in _declared %}
+            {%- for c in _compared %}
             if(uniqExact({{ c }}) > 1, '{{ c }}', ''){{ ',' if not loop.last }}
             {%- endfor %}
         ]), ', ')) as problem
     from {{ rel }}
     where status = 'Published'
     group by main_account
-    having uniqExact(tuple({{ _declared | join(', ') }})) > 1
+    having uniqExact(tuple({{ _compared | join(', ') }})) > 1
 
     union all
 

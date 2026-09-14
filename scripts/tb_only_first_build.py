@@ -124,20 +124,27 @@ def fixture_sql(p):
     chart_cols = (
         "main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, "
         "statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, "
-        "is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status"
+        "is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, "
+        # konsolidat#199 (konsol row K7): the year-end close's account, one per chart
+        "is_retained_earnings"
     )
     return [
         f"INSERT INTO {p}_staging.main_accounts ({chart_cols}) VALUES "
-        "('ZZ', 'ZZ group chart', 'ZZCOA', '', 1, '', '', '', '', '', '', 0, 0, 0, '', '', 0, '', 'Published'), "
-        "('ZZ1000', 'ZZ cash', 'ZZCOA', 'ZZ', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'CASH', 'Published'), "
-        "('ZZ3000', 'ZZ share capital', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published'), "
-        "('ZZ4000', 'ZZ revenue', 'ZZCOA', 'ZZ', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published')",
+        "('ZZ', 'ZZ group chart', 'ZZCOA', '', 1, '', '', '', '', '', '', 0, 0, 0, '', '', 0, '', 'Published', 0), "
+        "('ZZ1000', 'ZZ cash', 'ZZCOA', 'ZZ', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'CASH', 'Published', 0), "
+        "('ZZ3000', 'ZZ share capital', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0), "
+        "('ZZ3100', 'ZZ retained earnings', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 1), "
+        "('ZZ4000', 'ZZ revenue', 'ZZCOA', 'ZZ', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published', 0)",
         # every balance-sheet account is categorised for the cash flow
         # (the relationships test on gold_bs_movement.main_account)
         f"INSERT INTO {p}_staging.cash_flow_categories VALUES "
         "('ZZ1000', 'Operating', 'Cash', 1, 1, 'Published'), "
-        "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published')",
+        "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published'), "
+        "('ZZ3100', 'Financing', 'Retained earnings', 0, 1, 'Published')",
         f"INSERT INTO {p}_staging.entities VALUES ('ZZOP', 'ZZ Operating', 'ZZGRP', 0, 'Active', 'USD', 'US', '')",
+        # konsolidat#199: the fiscal calendar for the ZZ batch's year (2026 P1) with its
+        # Closing period, columns named (tests/test_fiscal_periods_ddl.py)
+        f"INSERT INTO {p}_staging.fiscal_periods (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status) VALUES (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'), (2026, 13, 'FY2026-P13', 'FY2026 closing', 'Closing', '2026-12-31', '2026-12-31', 'Q4', 'Open')",
         f"INSERT INTO {p}_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency) VALUES "
         "('ZZGRP', '', 'ZZ Group', 'USD'), ('ZZGRP', 'ZZOP', 'ZZ Operating', 'USD')",
         f"INSERT INTO {p}_staging.consolidation_hierarchy (consolidation_group, data_area_id, parent_group, hierarchy_level, path) VALUES "
@@ -150,7 +157,8 @@ def fixture_sql(p):
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ1000', 150, 0, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ3000', 0, 50, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ4000', 0, 100, '', 'ZZ-TBS-1', now())",
-        f"INSERT INTO {p}_raw.trial_balance_submission_control VALUES ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now())",
+        # konsolidat#199: columns named, basis declared (tests/test_raw_submission_ddl.py)
+        f"INSERT INTO {p}_raw.trial_balance_submission_control (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis) VALUES ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now(), 'Period movement')",
         f"INSERT INTO {p}_staging.allocation_rules (allocation_rule_id, rule_name, step_order, source_account, source_cost_center, driver_type, target_account) VALUES "
         "('ZZAR1', 'ZZ rule', 1, 'ZZ4000', 'ZZCC', 'headcount', 'ZZ4000')",
     ]

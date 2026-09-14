@@ -18,3 +18,10 @@ sources:
         loaded_at_field: submitted_at
       - name: trial_balance_submission_control
         loaded_at_field: claimed_at
+        columns:
+          - name: amount_basis
+            description: >
+              What the batch's amounts are — 'Period movement',
+              'Year-to-date movement' or 'Period-end balance'; empty means
+              undeclared, which assert_tb_submission_has_basis refuses
+              (konsolidat#199).

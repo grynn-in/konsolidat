@@ -77,6 +77,8 @@ models:
         description: "Cash-flow line, as declared; inert until konsol#182 PR5b"
       - name: is_cash
         description: "1 for a cash account, as declared; inert until konsol#182 PR5b"
+      - name: is_retained_earnings
+        description: "konsolidat#199: 1 for the one account the year-end close of a period-end-balance file posts the year's P&L to, as declared in konsol (row K7). 0 for every account while epm_staging.main_accounts predates the column; assert_year_end_close_declared then names the years that cannot close"
 
   - name: silver_legal_entities
     description: "Clean company master with currency"
@@ -119,3 +121,62 @@ models:
 
   - name: silver_trial_balance
     description: "Trial balance from D365 snapshot entity (validation baseline)"
+
+  - name: silver_tb_movements
+    description: >
+      konsolidat#199: every claimed trial-balance batch normalised to PERIOD
+      MOVEMENTS from the basis konsol declared on the claim (amount_basis).
+      'Period movement' rows are taken as they are; 'Year-to-date movement'
+      rows are differenced against the previous period of the same fiscal
+      year; 'Period-end balance' rows are differenced against the previous
+      claimed period of any year (the first one is the balance from
+      inception). Computed on a spine of the entity's claimed periods x the
+      entity's keys, so a key that vanishes from a later file yields minus
+      its previous figure. One row per key and period. For an entity-year
+      of period-end balances that a later year follows, a synthetic
+      post-close period in the year's Closing period (epm_staging.fiscal_periods)
+      reverses the P&L keys into the chart's retained-earnings account
+      (movement_kind 'year_end_close'), so the next year's first period
+      carries activity only; assert_year_end_close_declared names a year
+      that needs this (any non-zero P&L balance at its last period, not only a non-zero net result) and lacks a Closing
+      period or a single retained-earnings account, and
+      assert_year_end_close_carried (warn) names a close whose next file
+      does not carry the result in the flagged account. Guarded by
+      assert_tb_movements_balance (each entity-period sums to 0) and
+      assert_tb_movements_cumulate_to_source (undoing the rewrite gives the
+      source figure back). Built for the Trial Balance Submission branch of
+      silver_gl_entries to read in place of bronze.
+    columns:
+      - name: data_area_id
+        description: "The entity"
+        tests:
+          - not_null
+      - name: fiscal_year
+        description: "Fiscal year of the batch"
+      - name: fiscal_period
+        description: "Fiscal period of the batch"
+      - name: main_account
+        description: "The account code as submitted"
+      - name: partner_data_area_id
+        description: "The intercompany partner entity, '' = none (konsol#159)"
+      - name: amount_basis
+        description: "The batch's declared basis: 'Period movement', 'Year-to-date movement' or 'Period-end balance'; the period was normalised with this rule"
+      - name: batch_id
+        description: "The claimed batch that holds this entity-period; '' on a synthetic year-end close row"
+      - name: submission_name
+        description: "The submission (konsol document) that claimed the batch; 'Year-end close' on a synthetic year-end close row"
+      - name: description
+        description: "The single distinct description of the source rows at this key, '' when they differ or there is no source row"
+      - name: source_net_amount
+        description: "sum(debit - credit) of the source rows at this key and period; 0 on a spine row the file did not carry"
+      - name: movement_amount
+        description: "The period movement per the basis rule; the figure every downstream model reads"
+      - name: debit_amount
+        description: "greatest(movement_amount, 0)"
+      - name: credit_amount
+        description: "greatest(-movement_amount, 0)"
+      - name: movement_kind
+        description: "'activity' for a movement of the file's own; 'year_end_close' for the synthetic close of a period-end-balance year, posted in the Closing period"
+        tests:
+          - accepted_values:
+              values: ['activity', 'year_end_close']

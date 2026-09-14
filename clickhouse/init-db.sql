@@ -223,10 +223,14 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submissions (
 -- ReplacingMergeTree keyed on batch_id: a duplicated claim (an at-least-once
 -- retry of konsol's on_submit) collapses to one row instead of fanning out the
 -- bronze join — the same idempotency choice as epm_staging.sync_watermark.
+-- konsolidat#199: amount_basis is what the batch's amounts are ('Period
+-- movement', 'Year-to-date movement', 'Period-end balance'); '' = undeclared,
+-- refused by assert_tb_submission_has_basis. tests/test_raw_submission_ddl.py
+-- pins this body to konsol's _RAW_TABLE_DDL.
 CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
     batch_id String, submission_name String, data_area_id String,
     fiscal_year UInt16, fiscal_period UInt8, row_count UInt32,
-    claimed_at DateTime
+    claimed_at DateTime, amount_basis String DEFAULT ''
 ) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;
 
 -- F3: governed reference data written through from konsol (Dimension Mapping,
@@ -315,7 +319,10 @@ CREATE TABLE IF NOT EXISTS epm_staging.intercompany_accounts (
 -- source, and its fx_method drives translation. konsol's
 -- ensure_reference_tables() creates it on volumes that predate it. Identical to
 -- konsol's _REFERENCE_TABLE_DDL.
-CREATE TABLE IF NOT EXISTS epm_staging.main_accounts (main_account String, account_name String, chart_of_accounts String, parent_account String, is_group UInt8, account_type String, statement_section String, sub_section String, normal_balance String, time_balance String, fx_method String, is_posting UInt8, is_suspended UInt8, allow_ic UInt8, cf_category String, cf_line_item String, is_cash UInt8, main_account_category String, status String) ENGINE = MergeTree ORDER BY main_account;
+CREATE TABLE IF NOT EXISTS epm_staging.main_accounts (main_account String, account_name String, chart_of_accounts String, parent_account String, is_group UInt8, account_type String, statement_section String, sub_section String, normal_balance String, time_balance String, fx_method String, is_posting UInt8, is_suspended UInt8, allow_ic UInt8, cf_category String, cf_line_item String, is_cash UInt8, main_account_category String, status String, is_retained_earnings UInt8 DEFAULT 0) ENGINE = MergeTree ORDER BY main_account;
+-- konsolidat#199: the fiscal calendar, owned and written through by konsol (one row per fiscal year
+-- and period, period_type 'Regular' or 'Closing'); silver_tb_movements reads the Closing period from it. Identical to konsol's _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_staging.fiscal_periods (fiscal_year UInt16, fiscal_period UInt8, period_code String, period_label String, period_type String, start_date Date, end_date Date, quarter String, status String) ENGINE = MergeTree ORDER BY (fiscal_year, fiscal_period);
 
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so

@@ -7,7 +7,9 @@ f"CREATE TABLE IF NOT EXISTS {table} {body}"), and this repo's
 clickhouse/init-db.sql creates it on a fresh volume. Whichever runs first
 wins, so a difference between the two texts is a table whose shape depends on
 the order the stack came up in. KONSOL_BODY is konsol's string, verbatim; the
-same pin lives in konsol's tests/test_main_account.py.
+same pin lives in konsol's tests/test_main_account.py. konsolidat#199 (konsol
+row K7) appends `is_retained_earnings UInt8 DEFAULT 0`, the account the
+year-end close of period-end-balance files posts to.
 
 Plain unittest, no third-party imports, so CI runs it with
 `python -m unittest -v tests.test_governed_chart_ddl` (.github/workflows/dbt-checks.yml).
@@ -29,7 +31,7 @@ KONSOL_BODY = (
     "time_balance String, fx_method String, is_posting UInt8, "
     "is_suspended UInt8, allow_ic UInt8, cf_category String, "
     "cf_line_item String, is_cash UInt8, main_account_category String, "
-    "status String) "
+    "status String, is_retained_earnings UInt8 DEFAULT 0) "
     "ENGINE = MergeTree ORDER BY main_account"
 )
 EXPECTED_LINE = f"CREATE TABLE IF NOT EXISTS {TABLE} {KONSOL_BODY};"

@@ -32,6 +32,20 @@
     {% endif %}
 {% endif %}
 
+{# konsolidat#199: what the batch's amounts ARE — 'Period movement',
+   'Year-to-date movement' or 'Period-end balance' — declared by konsol on the
+   claim row at submit. silver_tb_movements normalises every batch to period
+   movements from it. Same deploy-in-either-order guard as partner_expr: on a
+   control table that predates the column every batch reads '' (undeclared),
+   which assert_tb_submission_has_basis refuses rather than guessing. #}
+{% set basis_expr = "''" %}
+{% if execute %}
+    {% set control_columns = adapter.get_columns_in_relation(source('submission_raw', 'trial_balance_submission_control')) | map(attribute='name') | list %}
+    {% if 'amount_basis' in control_columns %}
+        {% set basis_expr = latest_value_by('amount_basis', 'claimed_at') %}
+    {% endif %}
+{% endif %}
+
 with claims as (
 
     select
@@ -40,7 +54,8 @@ with claims as (
            SELECT aliases inside sibling aggregates, so `as claimed_at` would
            put max() inside argMax() — ILLEGAL_AGGREGATION #}
         max(claimed_at) as last_claimed_at,
-        {{ latest_value_by('row_count', 'claimed_at') }} as claimed_row_count
+        {{ latest_value_by('row_count', 'claimed_at') }} as claimed_row_count,
+        {{ basis_expr }} as amount_basis
     from {{ source('submission_raw', 'trial_balance_submission_control') }}
     group by batch_id
 
@@ -59,7 +74,8 @@ select
     {{ cast_to_string('raw.submission_name') }}           as submission_name,
     raw.submitted_at                                      as submitted_at,
     claims.last_claimed_at                                as claimed_at,
-    claims.claimed_row_count                              as claimed_row_count
+    claims.claimed_row_count                              as claimed_row_count,
+    {{ cast_to_string('claims.amount_basis') }}           as amount_basis
 from {{ source('submission_raw', 'trial_balance_submissions') }} as raw
 inner join claims
     on raw.batch_id = claims.batch_id

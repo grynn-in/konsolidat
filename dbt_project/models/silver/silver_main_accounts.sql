@@ -25,6 +25,20 @@
 -- depends_on: {{ source('epm_staging', 'main_accounts') }}
 {%- set governed_rel = governed_chart_relation() %}
 
+{# konsolidat#199: which account the year-end close of a period-end-balance
+   file posts the year's P&L to (konsol row K7 declares it, one per chart).
+   The two repos deploy in either order, so the column is read only when the
+   staging table has it (the bronze partner_expr / basis_expr guard); on a
+   table that predates it every account reads 0, and
+   assert_year_end_close_declared names the years that then cannot close. #}
+{%- set retained_expr = 'toUInt8(0)' %}
+{%- if governed_rel %}
+    {%- set chart_columns = adapter.get_columns_in_relation(governed_rel) | map(attribute='name') | list %}
+    {%- if 'is_retained_earnings' in chart_columns %}
+        {%- set retained_expr = 'toUInt8(is_retained_earnings)' %}
+    {%- endif %}
+{%- endif %}
+
 with governed as (
 {%- if governed_rel %}
     select distinct
@@ -44,7 +58,8 @@ with governed as (
         parent_account,
         toUInt8(allow_ic) as allow_ic,
         cf_category, cf_line_item,
-        toUInt8(is_cash) as is_cash
+        toUInt8(is_cash) as is_cash,
+        {{ retained_expr }} as is_retained_earnings
     from {{ source('epm_staging', 'main_accounts') }}
     where status = 'Published' and is_group = 0
     {# Two concurrent TRUNCATE+INSERT syncs can double a row. The guard refuses
@@ -63,7 +78,7 @@ with governed as (
            toInt8(0) as is_suspended, '' as statement_section, '' as sub_section,
            '' as normal_balance, '' as time_balance, '' as fx_method, toUInt8(0) as is_posting,
            '' as parent_account, toUInt8(0) as allow_ic, '' as cf_category, '' as cf_line_item,
-           toUInt8(0) as is_cash
+           toUInt8(0) as is_cash, toUInt8(0) as is_retained_earnings
     where 0
 {%- endif %}
 )

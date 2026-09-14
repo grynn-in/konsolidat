@@ -146,3 +146,69 @@ Trial balance from D365 snapshot entity — used as a validation baseline agains
 | `credit_amount` | Decimal(18,2) | Annual credit total |
 
 **Source**: `bronze_trial_balance_snapshot`.
+
+## silver_tb_movements
+
+Every uploaded trial-balance batch normalised to **period movements**, whatever the ERP exported.
+`silver_gl_entries` reads its Trial Balance Submission rows from here, so nothing downstream
+needs to know how a batch was declared.
+
+Each claimed batch carries an `amount_basis` (declared on upload, konsolidat#199). Per entity and
+key (`data_area_id`, `main_account`, `partner_data_area_id`), periods ordered by
+(`fiscal_year`, `fiscal_period`) among the periods the entity has a claimed batch for:
+
+| Declared basis | Movement for period p |
+|---|---|
+| `Period movement` | net(p), where net = debit − credit |
+| `Year-to-date movement` | net(p) − net(previous period of the same fiscal year); first period of a year: net(p) |
+| `Period-end balance` | net(p) − net(previous period with data, any year); first period with data: net(p), the balance from inception |
+
+The model works on a spine (the entity's claimed periods × the entity's keys), so a key present in
+an earlier period and absent later is read as net 0 there and its movement is −previous. Spine
+rows with movement 0 and no source row are dropped. Each period is computed with its own basis; a
+mixed history is not reconciled — `assert_entity_has_one_amount_basis` refuses it, and
+`assert_tb_submission_has_basis` refuses an undeclared (empty or unknown) basis.
+
+**Year-end close.** A period-end-balance file carries the year's P&L in its accounts until the year
+end; the next year's file starts them from zero with the result in retained earnings, a close no
+file shows. Differencing across the year end would read that as activity, so for every
+entity-year of period-end balances that a later year follows, the model synthesizes a post-close
+period in the year's Closing period (`epm_staging.fiscal_periods`, `period_type = 'Closing'`): the
+last claimed period's balances with every P&L account (`silver_main_accounts.is_pnl = 1`) at 0 and
+the retained-earnings account (`is_retained_earnings = 1`) increased by their sum. The differencing
+then yields the closing entry there (`movement_kind = 'year_end_close'`, `batch_id = ''`,
+`submission_name = 'Year-end close'`) and activity only in the next year's first period. Nothing is
+synthesized when the year has no Closing period sorting after its last claimed period, the chart
+has no or several retained-earnings accounts, or the entity claimed a batch in the Closing period
+itself; `assert_year_end_close_declared` names the first two cases for years in which any P&L
+account still holds a balance at the last claimed period — not only when the net result is non-zero,
+since every P&L key is closed (a balance-sheet-only entity, or a file that already zeroes its P&L,
+needs no close). The flagged retained-earnings account must be the one the ERP's
+files carry the result in: if the next year's first file does not list it, the spine reverses the
+close as activity, and `assert_year_end_close_carried` (warn) names the closed year.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `data_area_id` | String | Legal entity | not_null |
+| `fiscal_year` | UInt16 | Fiscal year of the batch |  |
+| `fiscal_period` | UInt8 | Fiscal period of the batch |  |
+| `main_account` | String | Account code |  |
+| `partner_data_area_id` | String | Intercompany partner entity, `''` when none |  |
+| `amount_basis` | String | The batch's declared basis |  |
+| `batch_id` | String | Claimed batch the period's rows came from |  |
+| `submission_name` | String | Trial Balance Submission document name |  |
+| `description` | String | The single distinct source description at the key, else `''` |  |
+| `source_net_amount` | Decimal(38,2) | Source debit − credit summed at the key; 0 on a spine row with no source |  |
+| `movement_amount` | Decimal(38,2) | Period movement per the table above |  |
+| `debit_amount` | Decimal(38,2) | `greatest(movement_amount, 0)` |  |
+| `credit_amount` | Decimal(38,2) | `greatest(-movement_amount, 0)` |  |
+| `movement_kind` | String | `activity`, or `year_end_close` for the synthetic close of a period-end-balance year | accepted_values |
+
+**Tests**: `assert_tb_movements_balance` (each entity-period nets to 0),
+`assert_tb_movements_cumulate_to_source` (movements cumulate back to the declared source amounts
+under the batch's basis), `assert_year_end_close_declared` (a period-end-balance year that a
+later year follows, with any non-zero P&L balance, has a Closing period and a single
+retained-earnings account to close into) and `assert_year_end_close_carried` (warn: the first file
+after a close lists the retained-earnings account the close posted to).
+
+**Sources**: `bronze_trial_balance_submissions`, `silver_main_accounts`, `epm_staging.fiscal_periods`.
