@@ -138,7 +138,7 @@ models:
       reverses the P&L keys into the chart's retained-earnings account
       (movement_kind 'year_end_close'), so the next year's first period
       carries activity only; assert_year_end_close_declared names a year
-      that needs this (a result in its P&L accounts) and lacks a Closing
+      that needs this (any non-zero P&L balance at its last period, not only a non-zero net result) and lacks a Closing
       period or a single retained-earnings account, and
       assert_year_end_close_carried (warn) names a close whose next file
       does not carry the result in the flagged account. Guarded by
