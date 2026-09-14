@@ -41,7 +41,7 @@ Tests have two severity levels:
 | `assert_nci_plus_group_equals_translated` | error | `\|translated − (group + nci)\| ≤ 0.01` |
 | `assert_nci_zero_for_full_ownership` | error | NCI = 0 when ownership = 100% |
 | `assert_translation_follows_fx_method` | warn | Each translated account uses the rate its declared `fx_method` names (closing, average, or historical) |
-| `assert_cta_not_zero_when_rates_differ` | error | CTA is non-zero when closing ≠ average rate |
+| `assert_cta_not_zero_when_rates_differ` | error | CTA is non-zero when at least one row of the entity-period translated at a rate other than its closing rate |
 | `assert_cta_zero_for_same_currency` | error | CTA = 0 when entity currency = reporting currency |
 | `assert_ic_elimination_nets_zero` | error | IC eliminations net to zero per group/period |
 | `assert_topside_journal_balanced` | error | Each top-side journal balances (debits = credits) |

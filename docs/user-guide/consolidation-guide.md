@@ -175,7 +175,7 @@ The NCI share of the translation difference does **not** go to CTA — it rides 
 
 | Test | Assertion |
 |------|-----------|
-| `assert_cta_not_zero_when_rates_differ` | CTA is non-zero when closing ≠ average rate |
+| `assert_cta_not_zero_when_rates_differ` | CTA is non-zero when at least one row of the entity-period translated at a rate other than its closing rate |
 | `assert_cta_zero_for_same_currency` | CTA = 0 when entity currency = reporting currency |
 
 ## Top-Side Adjustments
