@@ -53,11 +53,12 @@ class TbOnlyFirstBuildRunsTheCastTest(unittest.TestCase):
         )
 
     def test_cast_test_runs_as_an_explicit_dbt_select(self):
-        # Named in a real `dbt test --select ...` / `dbt build --select ...`
-        # invocation (a run_dbt(...) args list), not merely in a comment.
+        # Named (literally, or via the CAST_TEST constant) in a real
+        # `dbt test --select ...` / `dbt build --select ...` invocation (a
+        # run_dbt(...) args list), not merely in a comment.
         calls = re.findall(r'\[\s*"(?:test|build)"\s*,\s*"--select"[^\]]*\]', self.src)
         self.assertTrue(
-            any(CAST_TEST in call for call in calls),
+            any(CAST_TEST in call or "CAST_TEST" in call for call in calls),
             f"no explicit `dbt test/build --select ...` call in "
             f"{os.path.basename(SCRIPT)} names {CAST_TEST}",
         )
@@ -70,12 +71,19 @@ class TbOnlyFirstBuildRunsTheCastTest(unittest.TestCase):
         self.assertNotIn(CAST_TEST, erp_tuple.group(0))
 
     def test_a_failing_cast_test_would_be_recorded_as_a_problem(self):
-        # Immediately around the CAST_TEST dbt call, the script must check the
+        # Immediately after the CAST_TEST dbt call, the script must check the
         # outcome and record a problem when it is not a clean pass — otherwise
         # running it is theatre: a regression would not fail the job.
-        select_idx = self.src.index('"--select"')
-        cast_idx = self.src.index(CAST_TEST, select_idx)
-        window = self.src[cast_idx: cast_idx + 600]
+        match = re.search(
+            r'\[\s*"(?:test|build)"\s*,\s*"--select"[^\]]*\bCAST_TEST\b[^\]]*\]',
+            self.src,
+        )
+        self.assertIsNotNone(
+            match,
+            f"no `dbt test/build --select ...` call in {os.path.basename(SCRIPT)} "
+            "passes the CAST_TEST constant",
+        )
+        window = self.src[match.end(): match.end() + 600]
         self.assertIn(
             "problems", window,
             f"the {CAST_TEST} dbt call's result is never checked against "
