@@ -74,11 +74,20 @@ left join fiscal_dates as fp
 {# F8: submitted trial balances enter the ledger flow HERE, as one GL-shaped
    row per account. A submission is already at trial-balance grain (period
    totals per account), which is exactly what gold_trial_balance aggregates GL
-   entries down to — so shaping each claimed row as a single synthetic entry
-   lets every downstream model work unchanged, with no fork in the gold layer.
+   entries down to — so shaping each row as a single synthetic entry lets
+   every downstream model work unchanged, with no fork in the gold layer.
 
-   Only CLAIMED batches reach bronze_trial_balance_submissions, so
-   cancellation removes a submission from here without any delete.
+   konsolidat#199: the rows come from silver_tb_movements, not bronze. Every
+   downstream reader treats a GL entry as a PERIOD MOVEMENT (gold_balance_sheet
+   running sums, gold_ytd_trial_balance), but an ERP exports period movements,
+   year-to-date movements or period-end balances. silver_tb_movements undoes
+   the batch's declared amount_basis once, on a spine of entity periods x
+   entity keys, so this branch only ever sees movements — a balance file's
+   vanished account arrives here as the reversing movement it is.
+
+   Only CLAIMED batches reach bronze_trial_balance_submissions and hence
+   silver_tb_movements, so cancellation removes a submission from here
+   without any delete.
 
    POSITIONAL TWIN: UNION ALL binds by position and ignores aliases — this
    column list MUST mirror the select above exactly, in order and type. Any
@@ -100,9 +109,13 @@ union all
 {% set tbs_marker = 'Trial Balance Submission' %}
 select
     -- strictly negative synthetic id: no collision with real (positive) ERP
-    -- recids; hash includes description so two legitimate rows for one
-    -- account differ even if landed outside the doctype's dedup validation
-    -toInt64(bitShiftRight(cityHash64(tbs.batch_id, tbs.main_account, tbs.partner_data_area_id, tbs.description), 1)) as recid,
+    -- recids. silver_tb_movements is one row per (entity, period, account,
+    -- partner) whatever the batch held, so that key IS the identity: batch_id
+    -- left the hash because a spine row (an account that vanished from a
+    -- balance file) belongs to the period, not to a row of the batch, and
+    -- description left because the key already sums a batch's two rows for one
+    -- account into one movement.
+    -toInt64(bitShiftRight(cityHash64(tbs.data_area_id, tbs.fiscal_year, tbs.fiscal_period, tbs.main_account, tbs.partner_data_area_id), 1)) as recid,
     tbs.data_area_id as data_area_id,
     tbs.period_start as accounting_date,
     tbs.fiscal_year as fiscal_year,
@@ -120,7 +133,8 @@ select
     toDecimal128(0, 2) as reporting_currency_amount,
     tbs.net_amount as transaction_currency_amount,
     '' as transaction_currency_code,
-    {# a TB row carries explicit debit and credit columns — no sign derivation #}
+    {# silver_tb_movements already split the movement into debit/credit
+       (greatest(movement, 0) / greatest(-movement, 0)) — no sign derivation #}
     tbs.credit_amount as credit_amount,
     tbs.debit_amount as debit_amount,
     '{{ tbs_marker }}' as posting_type,
@@ -134,18 +148,21 @@ select
     tbs.period_start as document_date,
     '' as posting_layer
 from (
+    {# one normalised period movement per key (konsolidat#199); the batch and
+       submission the period was claimed under ride along for the journal
+       columns #}
     select
-        b.batch_id as batch_id,
-        b.data_area_id as data_area_id,
-        b.fiscal_year as fiscal_year,
-        b.fiscal_period as fiscal_period,
-        b.main_account as main_account,
-        b.debit_amount as debit_amount,
-        b.credit_amount as credit_amount,
-        b.description as description,
-        b.partner_data_area_id as partner_data_area_id,
-        b.submission_name as submission_name,
-        b.debit_amount - b.credit_amount as net_amount,
+        m.batch_id as batch_id,
+        m.data_area_id as data_area_id,
+        m.fiscal_year as fiscal_year,
+        m.fiscal_period as fiscal_period,
+        m.main_account as main_account,
+        m.debit_amount as debit_amount,
+        m.credit_amount as credit_amount,
+        m.description as description,
+        m.partner_data_area_id as partner_data_area_id,
+        m.submission_name as submission_name,
+        m.movement_amount as net_amount,
         {# ClickHouse LEFT JOIN fills an unmatched sfp row with the column
            default under join_use_nulls=0 -- Date's default is toDate(0) =
            1970-01-01, NOT NULL -- so coalesce() never falls through. A
@@ -156,16 +173,16 @@ from (
            above. #}
         if(
             sfp.period_start_date = toDate(0),
-            {{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }},
+            {{ build_date_from_year_period('m.fiscal_year', 'm.fiscal_period') }},
             sfp.period_start_date
         ) as period_start
-    from {{ ref('bronze_trial_balance_submissions') }} as b
+    from {{ ref('silver_tb_movements') }} as m
     left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
-        on b.data_area_id = efc.data_area_id
+        on m.data_area_id = efc.data_area_id
     left join {{ ref('silver_fiscal_periods') }} as sfp
         on sfp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
-        and {{ extract_year('sfp.year_start_date') }} = b.fiscal_year
-        and sfp.calendar_month = b.fiscal_period
+        and {{ extract_year('sfp.year_start_date') }} = m.fiscal_year
+        and sfp.calendar_month = m.fiscal_period
 ) as tbs
 left join {{ ref('silver_main_accounts') }} as ma
     on tbs.main_account = ma.main_account_id
