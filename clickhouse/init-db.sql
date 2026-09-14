@@ -320,6 +320,9 @@ CREATE TABLE IF NOT EXISTS epm_staging.intercompany_accounts (
 -- ensure_reference_tables() creates it on volumes that predate it. Identical to
 -- konsol's _REFERENCE_TABLE_DDL.
 CREATE TABLE IF NOT EXISTS epm_staging.main_accounts (main_account String, account_name String, chart_of_accounts String, parent_account String, is_group UInt8, account_type String, statement_section String, sub_section String, normal_balance String, time_balance String, fx_method String, is_posting UInt8, is_suspended UInt8, allow_ic UInt8, cf_category String, cf_line_item String, is_cash UInt8, main_account_category String, status String, is_retained_earnings UInt8 DEFAULT 0) ENGINE = MergeTree ORDER BY main_account;
+-- konsolidat#199: the fiscal calendar, owned and written through by konsol (one row per fiscal year
+-- and period, period_type 'Regular' or 'Closing'); silver_tb_movements reads the Closing period from it. Identical to konsol's _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_staging.fiscal_periods (fiscal_year UInt16, fiscal_period UInt8, period_code String, period_label String, period_type String, start_date Date, end_date Date, quarter String, status String) ENGINE = MergeTree ORDER BY (fiscal_year, fiscal_period);
 
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so

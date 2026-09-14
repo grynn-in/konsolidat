@@ -147,6 +147,30 @@ sources:
           decides the rate gold_consolidated_trial_balance translates at.
           May be absent on a volume konsol has not upgraded yet;
           governed_chart_relation() then reads as "no chart" (silver empty).
+      - name: fiscal_periods
+        description: >
+          konsolidat#199: the fiscal calendar konsol owns and writes through —
+          one row per fiscal year and period, Closing periods included. DDL is
+          konsol's _REFERENCE_TABLE_DDL, pinned by tests/test_fiscal_periods_ddl.py.
+        columns:
+          - name: fiscal_year
+            description: "The fiscal year the period belongs to."
+          - name: fiscal_period
+            description: "The period's number within the fiscal year (a Closing period follows the last Regular one)."
+          - name: period_code
+            description: "konsol's code for the period, e.g. FY2026-P01."
+          - name: period_label
+            description: "The period's display name."
+          - name: period_type
+            description: "'Regular' or 'Closing'; the Closing period is where the year-end close of a period-end-balance file posts."
+          - name: start_date
+            description: "First calendar day of the period."
+          - name: end_date
+            description: "Last calendar day of the period."
+          - name: quarter
+            description: "The fiscal quarter the period falls in, as konsol labels it."
+          - name: status
+            description: "konsol's period status (Open, Closed, ...); the warehouse does not filter on it."
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at

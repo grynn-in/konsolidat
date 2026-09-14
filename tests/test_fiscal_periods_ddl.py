@@ -78,7 +78,7 @@ class FiscalPeriodsDDL(unittest.TestCase):
     def test_the_fiscal_calendar_is_a_declared_epm_staging_source(self):
         block = _source_block(_read(SOURCES), "epm_staging")
         self.assertTrue(block, "_staging__sources.yml has no `- name: epm_staging` source")
-        self.assertRegex(block, r"^      - name: fiscal_periods\s*$",
+        self.assertRegex(block, re.compile(r"^      - name: fiscal_periods\s*$", re.M),
                          "fiscal_periods is not a table of the epm_staging source")
 
     def test_ci_fixture_seeds_a_calendar_by_name_with_a_closing_period(self):

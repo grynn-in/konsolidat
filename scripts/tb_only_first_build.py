@@ -142,6 +142,9 @@ def fixture_sql(p):
         "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published'), "
         "('ZZ3100', 'Financing', 'Retained earnings', 0, 1, 'Published')",
         f"INSERT INTO {p}_staging.entities VALUES ('ZZOP', 'ZZ Operating', 'ZZGRP', 0, 'Active', 'USD', 'US', '')",
+        # konsolidat#199: the fiscal calendar for the ZZ batch's year (2026 P1) with its
+        # Closing period, columns named (tests/test_fiscal_periods_ddl.py)
+        f"INSERT INTO {p}_staging.fiscal_periods (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status) VALUES (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'), (2026, 13, 'FY2026-P13', 'FY2026 closing', 'Closing', '2026-12-31', '2026-12-31', 'Q4', 'Open')",
         f"INSERT INTO {p}_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency) VALUES "
         "('ZZGRP', '', 'ZZ Group', 'USD'), ('ZZGRP', 'ZZOP', 'ZZ Operating', 'USD')",
         f"INSERT INTO {p}_staging.consolidation_hierarchy (consolidation_group, data_area_id, parent_group, hierarchy_level, path) VALUES "
