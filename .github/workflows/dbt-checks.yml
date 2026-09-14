@@ -9,6 +9,7 @@ on:
       - '.github/workflows/dbt-checks.yml'
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
+      - 'tests/test_tb_only_first_build.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   pull_request:
@@ -18,6 +19,7 @@ on:
       - '.github/workflows/dbt-checks.yml'
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
+      - 'tests/test_tb_only_first_build.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   workflow_dispatch:
@@ -73,6 +75,9 @@ jobs:
       # installs: nothing else in tests/ runs in CI.
       - name: governed chart DDL and column coverage
         run: python -m unittest -v tests.test_governed_chart_ddl
+      # #191: the TB-only first build runs the cast test by name.
+      - name: first-build script runs the cast test
+        run: python -m unittest -v tests.test_tb_only_first_build
 
   tb-only-first-build:
     name: first build on a fresh TB-only site

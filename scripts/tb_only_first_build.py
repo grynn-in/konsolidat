@@ -47,6 +47,11 @@ SCHEMA_RE = re.compile(r"\bepm_(?=(?:%s)\b)" % "|".join(LAYERS))
 BARE_DB_RE = re.compile(r"\bepm(?=\s*;)")  # CREATE DATABASE IF NOT EXISTS epm;
 MUST_CREATE = ("silver_main_accounts", "gold_consolidated_trial_balance")
 ERP_QUOTE_TESTS = ("assert_exchange_rate_currencies_are_iso", "assert_exchange_rate_sane_magnitude")
+# #191: cast_to_decimal128's regression test. The empty-site build already
+# selects it (its `-- depends_on:` makes it reachable from @silver_main_accounts),
+# but show() never names a passing test, so the log can't show it ran. Run it
+# by name as a must-pass check, so a regression fails the job under its own name.
+CAST_TEST = "assert_cast_to_decimal128_is_exact"
 
 
 def rewrite(text, prefix):
@@ -237,6 +242,16 @@ def main():
 
         print("\n== empty site: dbt build --select @silver_main_accounts")
         problems += build_selection(a.dbt, project, a.prefix, work, "empty")
+
+        print(f"\n== {CAST_TEST}: must pass (a pure-literal test, needs no fixture)")
+        code, out = run_dbt(a.dbt, project, ["test", "--select", CAST_TEST],
+                            os.path.join(work, "cast_test.log"))
+        show(out)
+        s = summary(out)
+        if s is None:
+            problems.append(f"{CAST_TEST}: no dbt summary line (exit {code})")
+        elif s.get("ERROR") or s.get("PASS", 0) < 1:
+            problems.append(f"{CAST_TEST}: expected a clean PASS, got {s}")
 
         if a.fixture:
             for stmt in fixture_sql(a.prefix):
