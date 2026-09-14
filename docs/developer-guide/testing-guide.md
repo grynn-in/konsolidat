@@ -43,6 +43,7 @@ Tests have two severity levels:
 | `assert_translation_follows_fx_method` | warn | Each translated account uses the rate its declared `fx_method` names (closing, average, or historical) |
 | `assert_cta_not_zero_when_rates_differ` | error | CTA is non-zero when closing ≠ average rate |
 | `assert_cta_zero_for_same_currency` | error | CTA = 0 when entity currency = reporting currency |
+| `assert_translation_rate_resolved` | error | `translation_rate` is neither 0 nor NULL on a translated row; a missing rate stops the build before this test runs |
 | `assert_ic_elimination_nets_zero` | error | IC eliminations net to zero per group/period |
 | `assert_topside_journal_balanced` | error | Each top-side journal balances (debits = credits) |
 | `assert_adjustment_type_populated` | error | `adjustment_type` is never null in FCTB |
