@@ -29,10 +29,12 @@ with rate_check as (
     from {{ ref('gold_consolidated_trial_balance') }}
     where accounting_currency != reporting_currency
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
-    having abs(max(closing_rate) - max(average_rate)) > 0.0001
-        -- translation_rate is Nullable: a NULL comparison is not true, so countIf
-        -- ignores those rows (a NULL rate is assert_translation_rate_resolved's job)
-        and countIf(translation_rate != closing_rate) > 0
+    -- Not `closing_rate != average_rate`: with equal closing and average rates an
+    -- equity row at a historical rate still produces a residual, and that CTA
+    -- must not be 0 either. translation_rate is Nullable: a NULL comparison is
+    -- not true, so countIf ignores those rows (a NULL rate is
+    -- assert_translation_rate_resolved's job).
+    having countIf(translation_rate != closing_rate) > 0
 )
 
 select
