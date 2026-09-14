@@ -142,7 +142,7 @@ ClickHouse-specific adapter macros. All wrap `assumeNotNull()` for null safety.
 | `cast_to_float64(expr)` | `(expr)` | `toFloat64(assumeNotNull(expr))` |
 | `cast_to_date(expr)` | `(expr)` | `toDate(assumeNotNull(expr))` |
 | `cast_to_datetime(expr)` | `(expr)` | `toDateTime(assumeNotNull(expr))` |
-| `cast_to_decimal128(expr, scale)` | `(expr, scale)` | `toDecimal128(assumeNotNull(expr), scale)` |
+| `cast_to_decimal128(expr, scale)` | `(expr, scale)` | `toDecimal128(toString(assumeNotNull(expr)), scale)`: goes through text so a Float64 input casts to the exact decimal it was submitted as, instead of truncating the binary double (konsolidat#191) |
 
 ### Date Functions
 

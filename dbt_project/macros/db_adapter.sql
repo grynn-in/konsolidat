@@ -37,8 +37,14 @@
     toDateTime(assumeNotNull({{ expr }}))
 {% endmacro %}
 
+{# toDecimal128(Float64, scale) truncates the binary double toward zero, so a
+   value like 0.29 (not exactly representable in binary) becomes 0.28
+   (konsolidat#191). Going through toString first uses ClickHouse's
+   shortest-round-trip decimal text for the float, which parses back to the
+   exact value that was submitted; a Decimal or Nullable input passes
+   through toString unchanged either way. #}
 {% macro cast_to_decimal128(expr, scale) %}
-    toDecimal128(assumeNotNull({{ expr }}), {{ scale }})
+    toDecimal128(toString(assumeNotNull({{ expr }})), {{ scale }})
 {% endmacro %}
 
 {% macro extract_year(expr) %}
