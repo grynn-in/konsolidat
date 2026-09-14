@@ -77,6 +77,8 @@ models:
         description: "Cash-flow line, as declared; inert until konsol#182 PR5b"
       - name: is_cash
         description: "1 for a cash account, as declared; inert until konsol#182 PR5b"
+      - name: is_retained_earnings
+        description: "konsolidat#199: 1 for the one account the year-end close of a period-end-balance file posts the year's P&L to, as declared in konsol (row K7). 0 for every account while epm_staging.main_accounts predates the column; assert_year_end_close_declared then names the years that cannot close"
 
   - name: silver_legal_entities
     description: "Clean company master with currency"

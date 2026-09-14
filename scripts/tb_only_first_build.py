@@ -124,19 +124,23 @@ def fixture_sql(p):
     chart_cols = (
         "main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, "
         "statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, "
-        "is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status"
+        "is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, "
+        # konsolidat#199 (konsol row K7): the year-end close's account, one per chart
+        "is_retained_earnings"
     )
     return [
         f"INSERT INTO {p}_staging.main_accounts ({chart_cols}) VALUES "
-        "('ZZ', 'ZZ group chart', 'ZZCOA', '', 1, '', '', '', '', '', '', 0, 0, 0, '', '', 0, '', 'Published'), "
-        "('ZZ1000', 'ZZ cash', 'ZZCOA', 'ZZ', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'CASH', 'Published'), "
-        "('ZZ3000', 'ZZ share capital', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published'), "
-        "('ZZ4000', 'ZZ revenue', 'ZZCOA', 'ZZ', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published')",
+        "('ZZ', 'ZZ group chart', 'ZZCOA', '', 1, '', '', '', '', '', '', 0, 0, 0, '', '', 0, '', 'Published', 0), "
+        "('ZZ1000', 'ZZ cash', 'ZZCOA', 'ZZ', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'CASH', 'Published', 0), "
+        "('ZZ3000', 'ZZ share capital', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0), "
+        "('ZZ3100', 'ZZ retained earnings', 'ZZCOA', 'ZZ', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 1), "
+        "('ZZ4000', 'ZZ revenue', 'ZZCOA', 'ZZ', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published', 0)",
         # every balance-sheet account is categorised for the cash flow
         # (the relationships test on gold_bs_movement.main_account)
         f"INSERT INTO {p}_staging.cash_flow_categories VALUES "
         "('ZZ1000', 'Operating', 'Cash', 1, 1, 'Published'), "
-        "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published')",
+        "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published'), "
+        "('ZZ3100', 'Financing', 'Retained earnings', 0, 1, 'Published')",
         f"INSERT INTO {p}_staging.entities VALUES ('ZZOP', 'ZZ Operating', 'ZZGRP', 0, 'Active', 'USD', 'US', '')",
         f"INSERT INTO {p}_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency) VALUES "
         "('ZZGRP', '', 'ZZ Group', 'USD'), ('ZZGRP', 'ZZOP', 'ZZ Operating', 'USD')",
