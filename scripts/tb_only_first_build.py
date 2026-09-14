@@ -47,14 +47,10 @@ SCHEMA_RE = re.compile(r"\bepm_(?=(?:%s)\b)" % "|".join(LAYERS))
 BARE_DB_RE = re.compile(r"\bepm(?=\s*;)")  # CREATE DATABASE IF NOT EXISTS epm;
 MUST_CREATE = ("silver_main_accounts", "gold_consolidated_trial_balance")
 ERP_QUOTE_TESTS = ("assert_exchange_rate_currencies_are_iso", "assert_exchange_rate_sane_magnitude")
-# konsol#191: cast_to_decimal128's regression test. @silver_main_accounts's
-# indirect selection already reaches it (its `-- depends_on:` ref makes
-# bronze_trial_balance_submissions a real ancestor, via silver_gl_entries, of
-# a @silver_main_accounts descendant) and a pass there is folded anonymously
-# into the empty-site build's PASS= count — show() never prints its name for
-# a pass, so nothing in the log says it ran. Run it explicitly, by name, as a
-# must-pass check, so a regression fails the job under its own name instead
-# of only nudging a TOTAL count.
+# #191: cast_to_decimal128's regression test. The empty-site build already
+# selects it (its `-- depends_on:` makes it reachable from @silver_main_accounts),
+# but show() never names a passing test, so the log can't show it ran. Run it
+# by name as a must-pass check, so a regression fails the job under its own name.
 CAST_TEST = "assert_cast_to_decimal128_is_exact"
 
 
