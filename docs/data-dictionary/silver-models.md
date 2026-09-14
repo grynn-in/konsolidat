@@ -146,3 +146,47 @@ Trial balance from D365 snapshot entity — used as a validation baseline agains
 | `credit_amount` | Decimal(18,2) | Annual credit total |
 
 **Source**: `bronze_trial_balance_snapshot`.
+
+## silver_tb_movements
+
+Every uploaded trial-balance batch normalised to **period movements**, whatever the ERP exported.
+`silver_gl_entries` reads its Trial Balance Submission rows from here, so nothing downstream
+needs to know how a batch was declared.
+
+Each claimed batch carries an `amount_basis` (declared on upload, konsolidat#199). Per entity and
+key (`data_area_id`, `main_account`, `partner_data_area_id`), periods ordered by
+(`fiscal_year`, `fiscal_period`) among the periods the entity has a claimed batch for:
+
+| Declared basis | Movement for period p |
+|---|---|
+| `Period movement` | net(p), where net = debit − credit |
+| `Year-to-date movement` | net(p) − net(previous period of the same fiscal year); first period of a year: net(p) |
+| `Period-end balance` | net(p) − net(previous period with data, any year); first period with data: net(p), the balance from inception |
+
+The model works on a spine (the entity's claimed periods × the entity's keys), so a key present in
+an earlier period and absent later is read as net 0 there and its movement is −previous. Spine
+rows with movement 0 and no source row are dropped. Each period is computed with its own basis; a
+mixed history is not reconciled — `assert_entity_has_one_amount_basis` refuses it, and
+`assert_tb_submission_has_basis` refuses an undeclared (empty or unknown) basis.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `data_area_id` | String | Legal entity | not_null |
+| `fiscal_year` | UInt16 | Fiscal year of the batch |  |
+| `fiscal_period` | UInt8 | Fiscal period of the batch |  |
+| `main_account` | String | Account code |  |
+| `partner_data_area_id` | String | Intercompany partner entity, `''` when none |  |
+| `amount_basis` | String | The batch's declared basis |  |
+| `batch_id` | String | Claimed batch the period's rows came from |  |
+| `submission_name` | String | Trial Balance Submission document name |  |
+| `description` | String | The single distinct source description at the key, else `''` |  |
+| `source_net_amount` | Decimal(38,2) | Source debit − credit summed at the key; 0 on a spine row with no source |  |
+| `movement_amount` | Decimal(38,2) | Period movement per the table above |  |
+| `debit_amount` | Decimal(38,2) | `greatest(movement_amount, 0)` |  |
+| `credit_amount` | Decimal(38,2) | `greatest(-movement_amount, 0)` |  |
+
+**Tests**: `assert_tb_movements_balance` (each entity-period nets to 0) and
+`assert_tb_movements_cumulate_to_source` (movements cumulate back to the declared source amounts
+under the batch's basis).
+
+**Source**: `bronze_trial_balance_submissions`.
