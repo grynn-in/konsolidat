@@ -11,7 +11,7 @@
 The consolidation engine already covers the base cases but stops short of the full IAS 21 / IFRS 3 / IFRS 10 acquisition-and-disposal mechanics:
 
 - `gold_fx_revaluation` computes CTA only from the **P&L closing-vs-average spread** (`sum(local_amount × (closing_rate - average_rate) × ownership_pct)`, `is_equity = 0` excluded). It has **no CTA on goodwill** — goodwill recorded in foreign currency (`gold_acquisition_adjustments`, `adjustment_type='goodwill'`) is never re-translated, so the group BS does not balance for foreign acquisitions (IAS 21.47).
-- CTA recycling on disposal (`gold_disposal_adjustments`, `adjustment_type='cta_recycling'`) recycles **only** the accumulated `cta_amount` from `gold_fx_revaluation`. Since goodwill CTA is not tracked, the recycled amount understates the IAS 21.48 reclassification.
+- CTA recycling on disposal (`gold_business_disposal_journal`, `account_role='cta'`, `adjustment_type='disposal'`; konsolidat#198 row J6b: the former disposal-adjustments model is deleted) recycles **only** the accumulated `cta_amount` from `gold_fx_revaluation`. Since goodwill CTA is not tracked, the recycled amount understates the IAS 21.48 reclassification.
 - `historical_equity_rates` applies one historical rate per equity account but the rate is **not pinned to acquisition date** for the pre-acquisition equity of an acquired sub; there is no remeasurement-vs-translation distinction (`fx-translation.md` assumes a single functional currency).
 - `gold_acquisition_adjustments` computes goodwill as `acquisition_price - net_assets × ownership%` (parent share only = **partial goodwill**). There is no **full goodwill** option (NCI measured at fair value), and `gold_nci_movement_schedule` carries a `consolidation_method` column but no goodwill-method dimension.
 - There is no model for **changes in ownership without loss of control** (IFRS 10.23) — a parent buying/selling NCI while retaining control. Today an ownership % change flows through `ownership_periods` as if it were an acquisition/disposal, producing a spurious P&L gain instead of an equity transaction.
@@ -70,13 +70,13 @@ nci_transferred = nci_bs_total × (ownership_pct_after - ownership_pct_before) /
 equity_adjustment = consideration_amount - nci_transferred
 ```
 
-Output grain: one row per `consolidation_group, data_area_id, fiscal_year, fiscal_period` derived from `transaction_date`, with `adjustment_type='equity_transaction'`, `main_account='EQ_TXN'`, columns `equity_adjustment`, `nci_transferred`. `nci_bs_total` sourced from `gold_nci_movement_schedule.nci_closing_balance`. Rows where the sub appears in `ownership_periods` with `is_disposal=1` (loss of control) are excluded — those stay in `gold_disposal_adjustments`.
+Output grain: one row per `consolidation_group, data_area_id, fiscal_year, fiscal_period` derived from `transaction_date`, with `adjustment_type='equity_transaction'`, `main_account='EQ_TXN'`, columns `equity_adjustment`, `nci_transferred`. `nci_bs_total` sourced from `gold_nci_movement_schedule.nci_closing_balance`. Rows where the sub appears in `ownership_periods` with `is_disposal=1` (loss of control) are excluded — those are posted by `gold_business_disposal_journal` (`adjustment_type = 'disposal'`, `account_role` `gain_loss` / `cta`; konsolidat#198 row J6b: the former disposal-adjustments model is deleted).
 
 ### 7. Wiring into consolidated output
 Add `gold_equity_transactions` and the new `remeasurement` / `goodwill_cta` lines to `gold_consolidation_adjustments` (the model that unions topside adjustment sources) so they flow into `gold_consolidated_trial_balance` and the Cube `consolidated_trial_balance` schema. No new Cube measures required — entries reuse existing `adjustment_amount` / `group_amount` measures.
 
 ## Out of Scope
-- Loss-of-control disposals (full deconsolidation) — already covered by `gold_disposal_adjustments` (PRD-12).
+- Loss-of-control disposals (full deconsolidation) — already covered by `gold_business_disposal_journal` (PRD-12 as re-homed by konsolidat#198 row J6b: the former disposal-adjustments model is deleted; `adjustment_type = 'disposal'`, `account_role` `gain_loss` / `cta`).
 - Step acquisitions remeasuring previously-held interest to fair value (IFRS 3.42) — separate enhancement.
 - Hyperinflationary economies (IAS 29) restatement.
 - Hedge of a net investment in a foreign operation (IAS 21.32 / IFRS 9 net-investment hedging).
@@ -84,12 +84,12 @@ Add `gold_equity_transactions` and the new `remeasurement` / `goodwill_cta` line
 - Frappe doctype UI/form design for the new source fields (data contract only here).
 
 ## Acceptance Criteria
-1. `dbt build` produces the same model count plus exactly **one** new model (`gold_equity_transactions`); `gold_acquisition_adjustments`, `gold_disposal_adjustments`, `gold_fx_revaluation`, `gold_nci_movement_schedule`, `gold_consolidated_trial_balance` are modified in place (no new parallel CTA/goodwill models).
+1. `dbt build` produces the same model count plus exactly **one** new model (`gold_equity_transactions`); `gold_acquisition_adjustments`, `gold_fx_revaluation`, `gold_nci_movement_schedule`, `gold_consolidated_trial_balance` are modified in place (no new parallel CTA/goodwill models; disposal mechanics live in `gold_business_disposal_journal` — konsolidat#198 row J6b: the former disposal-adjustments model is deleted).
 2. New singular test `assert_goodwill_cta_when_foreign`: for any `goodwill` entry where `accounting_currency != reporting_currency` and `closing_rate != prior_closing_rate`, `gold_fx_revaluation.goodwill_cta_component != 0`.
 3. New singular test `assert_goodwill_cta_zero_same_currency`: `goodwill_cta_component = 0` for all rows where `accounting_currency = reporting_currency` (mirrors `assert_cta_zero_for_same_currency`).
 4. Existing `assert_cta_recycled_on_disposal` still passes, and recycled amount now equals `-(pnl_cta_component + goodwill_cta_component)` summed to disposal date.
 5. New singular test `assert_full_goodwill_includes_nci`: where `goodwill_method='full'`, `gold_nci_movement_schedule.nci_goodwill_amount != 0`; where `'partial'`, it is `0`.
-6. New singular test `assert_equity_transaction_no_pnl`: rows in `gold_equity_transactions` never appear in `gold_disposal_adjustments` with `adjustment_type='disposal_gain_loss'` for the same group/date (no spurious P&L).
+6. New singular test `assert_equity_transaction_no_pnl`: rows in `gold_equity_transactions` never appear in `gold_business_disposal_journal` with `account_role='gain_loss'` (`adjustment_type='disposal'`) for the same group/date (no spurious P&L). (konsolidat#198 row J6b: the former disposal-adjustments model is deleted.)
 7. New singular test `assert_remeasurement_excluded_from_cta`: entities with `is_remeasured=1` have no row in `gold_fx_revaluation` (FX gain went to P&L `RM` line instead).
 8. `assert_consolidated_bs_balances_with_cta` still passes for a foreign acquisition fixture including goodwill (group BS nets to 0 within 0.01 tolerance with goodwill CTA included).
 9. Existing tests unchanged: `assert_cta_zero_for_same_currency`, `assert_equity_historical_no_cta`, `assert_nci_movement_reconciles`, `assert_nci_plus_group_equals_translated`, `assert_goodwill_calculated`, `assert_cta_not_zero_when_rates_differ` all still pass.
