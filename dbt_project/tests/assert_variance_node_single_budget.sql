@@ -20,10 +20,6 @@
     {% set node_cols = adapter.get_columns_in_relation(ref('gold_variance_at_hierarchy_node')) | map(attribute='name') | list %}
 {% endif %}
 {% set node_has_scenario = 'budget_scenario_id' in node_cols %}
-{# the node model selects lc.hierarchy_dimension from a join whose other side
-   has hierarchy_dimension too, so ClickHouse names the column
-   `lc.hierarchy_dimension`: read whichever name the relation has #}
-{% set node_dim_col = 'hierarchy_dimension' if 'hierarchy_dimension' in node_cols else '`lc.hierarchy_dimension`' %}
 
 with leaves as (
     select hierarchy_name, dimension, member_code
@@ -55,7 +51,7 @@ expected as (
 node as (
     select
         nm.hierarchy_name as node_hierarchy,
-        nm.{{ node_dim_col }} as node_dimension,
+        nm.hierarchy_dimension as node_dimension,
         {% if node_has_scenario %}nm.budget_scenario_id as node_scenario,{% endif %}
         nm.data_area_id as node_entity,
         nm.fiscal_year as node_year,

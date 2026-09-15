@@ -34,7 +34,9 @@ leaf_closure as (
 
 select
     lc.hierarchy_name,
-    lc.hierarchy_dimension,
+    {# aliased: variance_long has hierarchy_dimension too, and ClickHouse would
+       name the duplicated column `lc.hierarchy_dimension` #}
+    lc.hierarchy_dimension as hierarchy_dimension,
     lc.hierarchy_member_code,
     lc.hierarchy_member_label,
     lc.hierarchy_level,
