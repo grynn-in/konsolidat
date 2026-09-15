@@ -22,9 +22,9 @@
 --   Cr ZZ1800 6,720  goodwill      (no amortisation: Impairment only)
 --   Cr ZZ1900   930  fva
 --   (no cta line: the entity's accumulated CTA is 0; no nci line: 100% owned)
---   Dr ZZ1000 9,000  proceeds
---   Cr ZZ4950   600  gain_loss  = 9,000 - (750 + 6,720 + 930)
--- 7 lines, which sum to 0. The entity's equity accounts are not touched: the acquisition journal eliminated
+--   Dr ZZ1000 9,000  proceeds   (line 111: 110 + the proceeds row's idx)
+--   Cr ZZ4950   600  gain_loss  = 9,000 - (750 + 6,720 + 930)   (line 199)
+-- 8 lines, which sum to 0. The entity's equity accounts are not touched: the acquisition journal eliminated
 -- the pre-acquisition equity, and the 100 earned since stays in group retained earnings.
 --
 -- The six deal tables do not exist live yet: the fixture creates the six the two journals read (the costs and

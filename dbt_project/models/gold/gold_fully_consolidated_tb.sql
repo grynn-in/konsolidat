@@ -149,7 +149,11 @@ equity_method as (
    submitted Business Combination), not from gold_acquisition_adjustments,
    which keeps only the P&L proration. Row J5: the monthly goodwill
    amortisation journal (gold_goodwill_amortisation_journal, empty unless the
-   group's goodwill_treatment is 'Amortise') joins the layer. #}
+   group's goodwill_treatment is 'Amortise') joins the layer. Row J6: the
+   disposal journal (gold_business_disposal_journal, posted from the
+   submitted Business Disposal: derecognition, goodwill, FVA, CTA recycling,
+   NCI, proceeds, gain or loss) replaces gold_disposal_adjustments' one-sided
+   'DISPOSAL' rows; that model is now empty. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -206,14 +210,14 @@ acquisition_disposal as (
         data_area_id,
         fiscal_year,
         fiscal_period,
-        'DISPOSAL' as main_account,
-        'Disposal gain/loss' as account_name,
+        main_account,
+        account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        gain_loss_amount as amount,
+        adjustment_amount as amount,
         adjustment_type,
-        concat('DSP_', data_area_id) as journal_id
-    from {{ ref('gold_disposal_adjustments') }}
+        journal_id
+    from {{ ref('gold_business_disposal_journal') }}
 ),
 
 {# Union all layers #}

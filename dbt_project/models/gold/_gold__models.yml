@@ -456,16 +456,74 @@ models:
       - name: n_instalments
         description: "goodwill_amortisation_years x the Regular periods the calendar declares for the acquisition year"
 
+  - name: gold_business_disposal_journal
+    description: >
+      konsolidat#198 (design §5): the balanced disposal journal per submitted
+      Business Disposal (epm_staging.business_disposals and its proceeds lines),
+      journal_id DSP-<group>-<entity>-<date>, group currency, posted once in the
+      disposal period; full disposals only (retained_interest_pct = 0). Lines: (0)
+      every non-equity balance-sheet account of the entity derecognised at
+      -(cumulative balance at the disposal period-end) x 100% (from
+      gold_trial_balance, at the period's Closing rate; the equity accounts stay,
+      the acquisition eliminated the pre-acquisition part and the rest is group
+      reserves), Cr goodwill the acquisition journal booked net of the amortisation
+      posted before the disposal period, Cr FVA, the group's CTA line by -(the
+      entity's accumulated CTA) (IAS 21.48), Dr NCI as booked at acquisition, Dr
+      disposal_proceeds_account per proceeds line, and disposal_gain_loss_account as
+      the balancing line (a credit is a gain). Accounts come from the group's root
+      row in consolidation_groups. Replaces gold_disposal_adjustments. Every journal
+      sums to zero (assert_consolidation_journals_balance).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "The disposed entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Closing periods skipped)"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
+      - name: adjustment_type
+        description: "'disposal'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['disposal']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: disposal_date
+      - name: journal_id
+        description: "DSP-<group>-<entity>-<disposal_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss"
+      - name: account_role
+        description: "derecognised, goodwill, fva, cta, nci, proceeds, gain_loss"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
+      - name: deal
+        description: "The Business Disposal document name"
+
   - name: gold_disposal_adjustments
-    description: "PRD-12: Disposal gain/loss and CTA recycling"
+    description: >
+      PRD-12, emptied by konsolidat#198 (row J6): the one-sided disposal gain/loss
+      and CTA recycling rows it posted on the pseudo-account 'DISPOSAL' moved to
+      gold_business_disposal_journal as a balanced journal. Yields no rows; the
+      columns stay until the PRD-12 tests that read it are retargeted.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: adjustment_type
-        description: "disposal_gain_loss or cta_recycling"
+        description: "(none: the model is empty) formerly disposal_gain_loss or cta_recycling"
       - name: gain_loss_amount
-        description: "Disposal gain/loss or recycled CTA amount"
+        description: "(none: the model is empty) formerly the disposal gain/loss or recycled CTA amount"
 
   - name: gold_nci_movement_schedule
     description: "PRD-13: NCI movement schedule with opening/closing reconciliation"

@@ -4,9 +4,11 @@
 -- data problem: one-sided rows were exactly what made assert_end_to_end_bs_balances (PRD-22)
 -- fail on every acquisition period before this.
 --
--- Written against a UNION of the journal models that exist: gold_business_combination_journal
--- (acquisitions, row J2). Row J6 adds the disposal journal and row J5 the goodwill amortisation
--- journal to the union. Fixture: dbt_project/test_fixtures/business_combination_100pct.sql.
+-- Written against a UNION of the journal models: gold_business_combination_journal (acquisitions,
+-- ACQ-…, row J2), gold_goodwill_amortisation_journal (GWA-…, row J5) and
+-- gold_business_disposal_journal (disposals, DSP-…, row J6). Fixtures:
+-- dbt_project/test_fixtures/business_combination_100pct.sql, goodwill_amortisation.sql,
+-- business_disposal.sql.
 with journals as (
     select
         journal_id,
@@ -15,6 +17,26 @@ with journals as (
         fiscal_period,
         adjustment_amount
     from {{ ref('gold_business_combination_journal') }}
+
+    union all
+
+    select
+        journal_id,
+        consolidation_group,
+        fiscal_year,
+        fiscal_period,
+        adjustment_amount
+    from {{ ref('gold_goodwill_amortisation_journal') }}
+
+    union all
+
+    select
+        journal_id,
+        consolidation_group,
+        fiscal_year,
+        fiscal_period,
+        adjustment_amount
+    from {{ ref('gold_business_disposal_journal') }}
 )
 
 select

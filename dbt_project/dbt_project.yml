@@ -203,6 +203,8 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_business_combination_journal:
         +tags: ['gold', 'domain:consolidation']
+      gold_business_disposal_journal:
+        +tags: ['gold', 'domain:consolidation']
       gold_goodwill_amortisation_journal:
         +tags: ['gold', 'domain:consolidation']
       gold_consolidated_ytd:
