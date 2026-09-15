@@ -129,6 +129,7 @@ nav:
               - CTA Calculation: developer-guide/design/cta-calculation.md
               - Minority Interest: developer-guide/design/minority-interest.md
               - Topside Journals: developer-guide/design/topside-journals.md
+              - Business Combinations: developer-guide/design/business-combinations.md
           - Planning:
               - Multi-Step Allocations: developer-guide/design/multistep-allocations.md
               - Budget Spreading: developer-guide/design/budget-spreading.md

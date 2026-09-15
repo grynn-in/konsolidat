@@ -5,10 +5,14 @@
     )
 }}
 
-{# PRD-11: Step acquisitions — P&L proration and goodwill calculation
-   - Prorates P&L to post-acquisition months only
-   - Calculates goodwill = acquisition_price - (net_assets × ownership%)
-   - Generates fair value adjustment topside entries #}
+{# PRD-11: Step acquisitions — P&L proration
+   - Prorates P&L to post-acquisition months only.
+   konsolidat#198: the goodwill and fair-value adjustment entries this model
+   used to post (one-sided debits to the hardcoded accounts '1800'/'1900',
+   from the Ownership Period's acquisition_price and net assets summed over
+   every period) are gone. gold_business_combination_journal posts the
+   balanced acquisition journal from the submitted Business Combination, to
+   the accounts the group declares. Only the proration remains here. #}
 
 with acquisition_periods as (
     select
@@ -61,38 +65,6 @@ pnl_proration as (
           <= toDate(concat(toString(toYear(ap.acquisition_date)), '-12-31'))
 ),
 
-{# Goodwill calculation per acquisition #}
-net_assets as (
-    select
-        ctb.consolidation_group as consolidation_group,
-        ctb.data_area_id as data_area_id,
-        sum(case when ctb.is_balance_sheet = 1 then ctb.local_amount else 0 end) as total_net_assets
-    from {{ ref('gold_consolidated_trial_balance') }} as ctb
-    inner join acquisition_periods as ap
-        on ctb.consolidation_group = ap.consolidation_group
-        and ctb.data_area_id = ap.data_area_id
-    group by ctb.consolidation_group, ctb.data_area_id
-),
-
-goodwill as (
-    select
-        ap.consolidation_group as consolidation_group,
-        ap.data_area_id as data_area_id,
-        ap.acquisition_price as acquisition_price,
-        na.total_net_assets as net_assets,
-        ap.ownership_pct as ownership_pct,
-        toFloat64(ap.acquisition_price) - (toFloat64(na.total_net_assets) * toFloat64(ap.ownership_pct) / 100.0) as goodwill_amount,
-        ap.fair_value_adjustment as fair_value_adjustment,
-        ap.acquisition_date as acquisition_date,
-        'goodwill' as adjustment_type
-    from acquisition_periods as ap
-    left join net_assets as na
-        on ap.consolidation_group = na.consolidation_group
-        and ap.data_area_id = na.data_area_id
-    where ap.is_first_acquisition = 1
-      and ap.acquisition_price > 0
-),
-
 {# Output: proration adjustments (negative entries to remove pre-acq P&L) #}
 proration_entries as (
     select
@@ -107,42 +79,6 @@ proration_entries as (
         acquisition_date
     from pnl_proration
     where abs(pre_acquisition_excluded) > 0.01
-),
-
-{# Output: goodwill topside journal entries #}
-goodwill_entries as (
-    select
-        consolidation_group,
-        data_area_id,
-        toUInt16(toYear(acquisition_date)) as fiscal_year,
-        toUInt8(toMonth(acquisition_date)) as fiscal_period,
-        '1800' as main_account,
-        'Goodwill on acquisition' as account_name,
-        'goodwill' as adjustment_type,
-        goodwill_amount as adjustment_amount,
-        acquisition_date
-    from goodwill
-    where abs(goodwill_amount) > 0.01
-),
-
-{# Output: fair value adjustment entries #}
-fva_entries as (
-    select
-        consolidation_group,
-        data_area_id,
-        toUInt16(toYear(acquisition_date)) as fiscal_year,
-        toUInt8(toMonth(acquisition_date)) as fiscal_period,
-        '1900' as main_account,
-        'Fair value adjustment on acquisition' as account_name,
-        'fair_value_adjustment' as adjustment_type,
-        toFloat64(fair_value_adjustment) as adjustment_amount,
-        acquisition_date
-    from goodwill
-    where abs(fair_value_adjustment) > 0.01
 )
 
 select * from proration_entries
-union all
-select * from goodwill_entries
-union all
-select * from fva_entries

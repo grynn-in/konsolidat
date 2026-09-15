@@ -20,6 +20,32 @@ Each staging view typically:
 
 Staging views are not directly queried by the API or Excel — they're internal to the dbt pipeline.
 
+## Deal Tables (konsol writes, dbt reads)
+
+konsolidat#198: konsol syncs its **submitted** Business Combination and Business
+Disposal documents into six `epm_staging` tables (DDL in `clickhouse/init-db.sql`,
+pinned verbatim by `tests/test_deal_tables_ddl.py`, declared as sources in
+`dbt_project/models/staging/_staging__sources.yml`). The three deal journals read
+them; see [Business Combinations](../developer-guide/design/business-combinations.md).
+Amounts in the header Result columns are group currency as konsol computed them;
+child-table amounts are in their own `currency` (acquired balances: the entity's
+accounting currency, Dr positive / Cr negative).
+
+| Table | Grain | Columns |
+|-------|-------|---------|
+| `business_combinations` | one row per deal (`name`) | `consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period` |
+| `business_combination_consideration` | `(parent, idx)` | `component, amount, currency, settlement_date, description` |
+| `business_combination_acquired_balances` | `(parent, idx)` | `main_account, book_amount, fair_value_adjustment, note` (empty when konsol measured from the TB) |
+| `business_combination_costs` | `(parent, idx)` | `kind, amount, currency, description` |
+| `business_disposals` | one row per disposal (`name`) | `consolidation_group, disposed_entity, disposal_date, share_disposed_pct, retained_interest_pct, proceeds_currency, total_proceeds, ownership_period` |
+| `business_disposal_proceeds` | `(parent, idx)` | `component, amount, currency, settlement_date, description` |
+
+The declared accounts and the Consolidation Policy the journals post with live on the
+root row (`data_area_id = ''`) of `epm_gold.consolidation_groups`: `nci_measurement,
+accounting_framework, framework_note, goodwill_treatment, goodwill_amortisation_years,
+acquisition_costs_treatment, measurement_period, bargain_purchase` and the nine
+`*_account` columns.
+
 ## Write-Back Tables (Planned)
 
 The `epm_staging` database is also reserved for future write-back scenarios:

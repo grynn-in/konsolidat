@@ -12,6 +12,14 @@ the test must PASS on; `<test_name>.must_flag.sql` holds rows the test must stil
 - Use an explicit column list in every INSERT so a fixture keeps working when a column is added.
 - A fixture may open with `ALTER TABLE epm_<layer>.<table> ADD COLUMN IF NOT EXISTS …;` statements
   (run first, in order) when it needs a column the live DDL does not have yet.
+- A consolidation fixture may `CREATE TABLE IF NOT EXISTS epm_staging.<table> (<body>) …;` the deal
+  tables konsol owns (`business_combinations`, `business_combination_consideration`,
+  `business_combination_acquired_balances`, `business_combination_costs`, `business_disposals`,
+  `business_disposal_proceeds`) before inserting into them: the gate creates a table from the live
+  DDL only when it exists live, and konsol's tables are not there until konsol deploys them. Use the
+  exact bodies from `clickhouse/init-db.sql` (pinned by `tests/test_deal_tables_ddl.py`); the gate
+  rewrites `epm_` to `zzg_`. The deal rows themselves follow the `ZZ` rule (`ZZG`, `ZZS`,
+  `BC-ZZG-ZZS-<date>`). `deal_tables_empty.sql` holds the six CREATEs with no rows, for `build-live`.
 - dbt ignores this folder: `test-paths` in `dbt_project.yml` is `["tests"]`, so nothing in
   here runs as a test. The fixtures are only read by the gate script below.
 

@@ -145,13 +145,26 @@ models:
         description: "debit_amount - credit_amount"
 
   - name: gold_fully_consolidated_tb
-    description: "Unified consolidated TB: entity balances + IC elims + CTA + topside"
+    description: >
+      Unified consolidated TB: entity balances + IC elims + CTA + topside + equity
+      method + the deal journals (konsolidat#198: acquisition, goodwill amortisation,
+      disposal). Every layer is at the account grain — one row per (group, entity,
+      year, period, account, adjustment_type, the configured dimension columns) —
+      because gold_consolidated_ytd runs a ROWS window partitioned by exactly those
+      columns; layer 6 SUMs each journal's lines to that grain (rows J11, J13:
+      journal_id is not in the grain — the YTD window does not partition by it;
+      any(journal_id) is kept for the reader), and assert_journal_grain_unique,
+      keyed on the window's partition columns, proves it for the three journal
+      adjustment types.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: adjustment_type
-        description: "Layer: entity, ic_elimination, cta, or topside adjustment type"
+        description: >
+          Layer: entity, ic_elimination, ic_elimination_nci, cta, equity_method,
+          pnl_proration, acquisition, goodwill_amortisation, disposal, or the
+          topside adjustment type
         tests:
           - not_null
 
@@ -337,26 +350,201 @@ models:
         description: "Equity income or investment movement amount"
 
   - name: gold_acquisition_adjustments
-    description: "PRD-11: Step acquisition adjustments — P&L proration and goodwill"
+    description: >
+      PRD-11: P&L proration of an acquisition year to the post-acquisition months.
+      konsolidat#198: the goodwill and fair-value lines it used to post one-sided
+      to '1800'/'1900' moved to gold_business_combination_journal.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: adjustment_type
-        description: "pnl_proration, goodwill, or fair_value_adjustment"
+        description: "pnl_proration"
       - name: adjustment_amount
         description: "Amount of the acquisition adjustment"
 
-  - name: gold_disposal_adjustments
-    description: "PRD-12: Disposal gain/loss and CTA recycling"
+  - name: gold_business_combination_journal
+    description: >
+      konsolidat#198 (design §4): the balanced acquisition journal per submitted
+      Business Combination (epm_staging.business_combinations and its child tables),
+      journal_id ACQ-<group>-<entity>-<date>, group currency, posted once in the
+      acquisition period. Lines: (0) the entity's balance-sheet position at the last
+      pre-acquisition period-end (100%, from gold_trial_balance; only when the entity
+      has trial-balance history before the acquisition, which its ownership window
+      excludes), the acquired equity eliminated account by account, Dr fair-value
+      adjustments, Dr goodwill, Cr investment (consideration), Cr NCI when the share
+      is below 100% (partial: share of fair-value net assets; full: consideration /
+      share x (1 - share), goodwill then includes the NCI's share); row J4 adds bargain
+      gain and costs. Accounts and the NCI policy come from the group's root row in
+      consolidation_groups. Every rate the journal translates at (entity currency,
+      each consideration or costs line's currency, the header's consideration_currency
+      when there are no lines) is INNER JOINed: a deal with a currency that has no
+      governed Closing rate for its period posts nothing, and assert_deal_rate_resolved
+      names the pair (row J9). The root row is read with any() per column, so a
+      duplicated root row cannot double the lines; assert_consolidation_group_root_unique
+      stops the build on one, and assert_acquired_balances_complete warns on an
+      acquired balance sheet that does not sum to zero or names an account the chart
+      does not know (row J10). Every journal sums to zero
+      (assert_acquisition_journal_balances).
     columns:
       - name: consolidation_group
         tests:
           - not_null
+      - name: data_area_id
+        description: "The acquired entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Closing periods skipped)"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
       - name: adjustment_type
-        description: "disposal_gain_loss or cta_recycling"
-      - name: gain_loss_amount
-        description: "Disposal gain/loss or recycled CTA amount"
+        description: "'acquisition'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['acquisition']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: acquisition_date
+      - name: journal_id
+        description: "ACQ-<group>-<entity>-<acquisition_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "0 for every opening_balance line; the child table's idx for equity lines; 101 fva, 102 goodwill, 103 investment, 104 nci, 105 bargain_gain, 110+ costs"
+      - name: account_role
+        description: "opening_balance, equity_eliminated, fva, goodwill, investment, nci, bargain_gain, costs, proceeds"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['opening_balance', 'equity_eliminated', 'fva', 'goodwill', 'investment', 'nci', 'bargain_gain', 'costs', 'proceeds']
+      - name: deal
+        description: "The Business Combination document name"
+      - name: measurement_basis
+        description: "How the net assets were measured (design §3): acquired_balances, header_net_assets or measured_from_tb"
+
+  - name: gold_goodwill_amortisation_journal
+    description: >
+      konsolidat#198 (design §1, §5): straight-line goodwill amortisation per the
+      group's policy. When the group's root row in consolidation_groups declares
+      goodwill_treatment = 'Amortise' with goodwill_amortisation_years > 0, each
+      deal whose acquisition journal booked goodwill gets journal
+      GWA-<group>-<entity>-<date>: in every Regular period from the acquisition
+      period until fully amortised (years x the calendar's Regular periods per
+      year instalments; rounded cumulatively so they sum to the goodwill exactly),
+      Dr goodwill_amortisation_expense_account / Cr goodwill_account. Group
+      currency. Empty under 'Impairment only'. Stopping at a disposal is row J5b.
+      The root row is read with any() per column, so a duplicated root row cannot
+      double the schedule (row J10; assert_consolidation_group_root_unique names it).
+      Every journal sums to zero per period (assert_goodwill_amortisation_journal_balances).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "The acquired entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "A Regular period of epm_staging.fiscal_periods, from the acquisition period on"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
+      - name: adjustment_type
+        description: "'goodwill_amortisation'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['goodwill_amortisation']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: acquisition_date
+      - name: journal_id
+        description: "GWA-<group>-<entity>-<acquisition_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "1 the expense debit, 2 the goodwill credit"
+      - name: account_role
+        description: "amortisation_expense or goodwill"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['amortisation_expense', 'goodwill']
+      - name: deal
+        description: "The Business Combination document name"
+      - name: instalment
+        description: "The period's number within the schedule, 1 .. n_instalments"
+      - name: n_instalments
+        description: "goodwill_amortisation_years x the Regular periods the calendar declares for the acquisition year"
+
+  - name: gold_business_disposal_journal
+    description: >
+      konsolidat#198 (design §5): the balanced disposal journal per submitted
+      Business Disposal (epm_staging.business_disposals and its proceeds lines),
+      journal_id DSP-<group>-<entity>-<date>, group currency, posted once in the
+      disposal period; full disposals only (retained_interest_pct = 0). Lines: (0)
+      every non-equity balance-sheet account of the entity derecognised at
+      -(cumulative balance at the disposal period-end) x 100% (from
+      gold_trial_balance, at the period's Closing rate; the equity accounts stay,
+      the acquisition eliminated the pre-acquisition part and the rest is group
+      reserves), Cr goodwill the acquisition journal booked net of the amortisation
+      posted before the disposal period, Cr FVA, the group's CTA line by -(the
+      entity's accumulated CTA) (IAS 21.48), Dr NCI as booked at acquisition, Dr
+      disposal_proceeds_account per proceeds line, and disposal_gain_loss_account as
+      the balancing line (a credit is a gain). Accounts come from the group's root
+      row in consolidation_groups. Every rate the journal translates at (entity
+      currency, each proceeds line's currency, the header's proceeds_currency when
+      there are no lines) is INNER JOINed: a disposal with a currency that has no
+      governed Closing rate for its period posts nothing, and
+      assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
+      stops the build on a disposal whose group has not declared an account this journal
+      posts to, and refuses a partial share by name (retained_interest_pct > 0 or
+      share_disposed_pct < 100: partial-share deals wait for konsolidat#204, row J12);
+      assert_disposal_has_balances warns on a disposal whose entity has no
+      trial-balance row through the disposal period (nothing to derecognise); the root
+      row is read with any() per column and assert_consolidation_group_root_unique stops
+      the build on a duplicate (row J10). Replaced
+      gold_disposal_adjustments (deleted in row J6b). Every journal
+      sums to zero (assert_disposal_journal_balances).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "The disposed entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Closing periods skipped)"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
+      - name: adjustment_type
+        description: "'disposal'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['disposal']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: disposal_date
+      - name: journal_id
+        description: "DSP-<group>-<entity>-<disposal_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss"
+      - name: account_role
+        description: "derecognised, goodwill, fva, cta, nci, proceeds, gain_loss"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
+      - name: deal
+        description: "The Business Disposal document name"
 
   - name: gold_nci_movement_schedule
     description: "PRD-13: NCI movement schedule with opening/closing reconciliation"

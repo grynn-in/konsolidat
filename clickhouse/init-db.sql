@@ -270,10 +270,18 @@ CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
 -- konsol#159: a group node also carries its intercompany-difference account
 -- and tolerance (gold_ic_reconciliation, gold_ic_eliminations). konsol's
 -- ensure_reference_tables() adds both to a table created before.
+-- konsolidat#198: the root row (data_area_id = '') also carries the group's
+-- Consolidation Policy (nci_measurement 'partial'|'full', accounting_framework,
+-- goodwill_treatment 'Impairment only'|'Amortise' + years,
+-- acquisition_costs_treatment 'Expense'|'Capitalise', measurement_period,
+-- bargain_purchase 'Recognise gain'|'Refuse') and its declared deal accounts;
+-- the acquisition and disposal journals read them and never assume a code.
+-- tests/test_deal_tables_ddl.py pins this body to konsol's.
 CREATE TABLE IF NOT EXISTS epm_gold.consolidation_groups (
     consolidation_group String, data_area_id String, entity_name String,
     reporting_currency String, ic_difference_account String DEFAULT '',
-    ic_difference_tolerance Float64 DEFAULT 0
+    ic_difference_tolerance Float64 DEFAULT 0,
+    nci_measurement String DEFAULT '', accounting_framework String DEFAULT '', framework_note String DEFAULT '', goodwill_treatment String DEFAULT '', goodwill_amortisation_years UInt16 DEFAULT 0, acquisition_costs_treatment String DEFAULT '', measurement_period String DEFAULT '', bargain_purchase String DEFAULT '', goodwill_account String DEFAULT '', fair_value_adjustment_account String DEFAULT '', investment_account String DEFAULT '', nci_account String DEFAULT '', bargain_purchase_gain_account String DEFAULT '', disposal_gain_loss_account String DEFAULT '', disposal_proceeds_account String DEFAULT '', goodwill_amortisation_expense_account String DEFAULT '', acquisition_costs_account String DEFAULT ''
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id);
 
 -- One row per (ancestor group, entity, link on the chain between them), written
@@ -323,6 +331,25 @@ CREATE TABLE IF NOT EXISTS epm_staging.main_accounts (main_account String, accou
 -- konsolidat#199: the fiscal calendar, owned and written through by konsol (one row per fiscal year
 -- and period, period_type 'Regular' or 'Closing'); silver_tb_movements reads the Closing period from it. Identical to konsol's _REFERENCE_TABLE_DDL.
 CREATE TABLE IF NOT EXISTS epm_staging.fiscal_periods (fiscal_year UInt16, fiscal_period UInt8, period_code String, period_label String, period_type String, start_date Date, end_date Date, quarter String, status String) ENGINE = MergeTree ORDER BY (fiscal_year, fiscal_period);
+
+-- konsolidat#198: the deal documents. konsol owns them (Business Combination and Business Disposal
+-- doctypes, submitted rows only); the acquisition/disposal journals read them. Header: the deal and konsol's Result figures in group currency.
+CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+-- konsolidat#198: consideration lines of a Business Combination (konsol, submitted rows only), one per
+-- IFRS 3 component (Cash / Deferred / Contingent / Equity instruments / ...), each in its own currency.
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+-- konsolidat#198: the acquired balance sheet of a Business Combination (konsol, submitted rows only), entity
+-- currency, Dr positive / Cr negative, with the fair-value step-up per line; empty when the entity's TB is measured instead.
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
+-- konsolidat#198: acquisition costs of a Business Combination (konsol, submitted rows only), posted per the
+-- group's acquisition_costs_treatment (Expense to the costs account, or Capitalise into consideration).
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+-- konsolidat#198: the disposal documents (konsol's Business Disposal, submitted rows only): loss of control
+-- of an entity, its proceeds in group currency; the disposal journal derecognises the entity from this row.
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposals (name String, consolidation_group String, disposed_entity String, disposal_date Date, share_disposed_pct Float64, retained_interest_pct Float64, proceeds_currency String, total_proceeds Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+-- konsolidat#198: proceeds lines of a Business Disposal (konsol, submitted rows only), one per component
+-- (Cash / Deferred / Contingent / Other), each in its own currency.
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposal_proceeds (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 
 -- konsolidat#146: two more relations that a dbt seed and a konsol write-through
 -- both owned. Seeds materialise into epm_gold (`seeds: +schema: gold`), so

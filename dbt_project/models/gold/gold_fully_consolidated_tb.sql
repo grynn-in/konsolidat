@@ -143,7 +143,34 @@ equity_method as (
    #175 re-review F3: the pnl_proration rows are one per consolidated row,
    and gold_consolidated_trial_balance has a row per intercompany partner,
    so they are summed to the account grain here, like layer 1. Otherwise
-   gold_consolidated_ytd ran a separate running total per row. #}
+   gold_consolidated_ytd ran a separate running total per row.
+   konsolidat#198: the goodwill and fair-value lines come from the balanced
+   acquisition journal (gold_business_combination_journal, posted from the
+   submitted Business Combination), not from gold_acquisition_adjustments,
+   which keeps only the P&L proration. Row J5: the monthly goodwill
+   amortisation journal (gold_goodwill_amortisation_journal, empty unless the
+   group's goodwill_treatment is 'Amortise') joins the layer. Row J6: the
+   disposal journal (gold_business_disposal_journal, posted from the
+   submitted Business Disposal: derecognition, goodwill, FVA, CTA recycling,
+   NCI, proceeds, gain or loss) replaces gold_disposal_adjustments' one-sided
+   'DISPOSAL' rows; that model is now empty.
+   Row J11 (PR #203 review 7): the journals post several lines to one account
+   in one period when the roles differ (the acquisition journal's
+   opening_balance and equity_eliminated lines on the same equity account,
+   the disposal journal's derecognised and proceeds lines on the same cash
+   account), so each journal branch is SUMmed to the account grain
+   (group, entity, year, period, account, adjustment_type, journal_id) like
+   the proration branch: passed through line by line, gold_consolidated_ytd's
+   ROWS window ran a separate running total per line (-687.5, then 0, instead
+   of 0). account_role is a line attribute, not part of the grain, and stays
+   in the journal models; assert_journal_grain_unique proves the grain.
+   Row J13 (PR #203 second review 2): journal_id left the grain too. The YTD
+   window partitions by (group, entity, year, account, adjustment_type,
+   dimensions) and NOT by journal_id, so two journals of one entity on one
+   account in one period (a second deal; an amortisation instalment is a
+   different adjustment_type) were two rows under one running total again.
+   Each branch now groups without journal_id and emits any(journal_id);
+   assert_journal_grain_unique keys on the window's partition columns. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -168,14 +195,52 @@ acquisition_disposal as (
         data_area_id,
         fiscal_year,
         fiscal_period,
-        'DISPOSAL' as main_account,
-        'Disposal gain/loss' as account_name,
+        main_account,
+        any(account_name) as account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        gain_loss_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
-        concat('DSP_', data_area_id) as journal_id
-    from {{ ref('gold_disposal_adjustments') }}
+        any(journal_id) as journal_id
+    from {{ ref('gold_business_combination_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        any(account_name) as account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        sum(adjustment_amount) as amount,
+        adjustment_type,
+        any(journal_id) as journal_id
+    from {{ ref('gold_goodwill_amortisation_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        any(account_name) as account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        sum(adjustment_amount) as amount,
+        adjustment_type,
+        any(journal_id) as journal_id
+    from {{ ref('gold_business_disposal_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type
 ),
 
 {# Union all layers #}
