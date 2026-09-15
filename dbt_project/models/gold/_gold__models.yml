@@ -149,10 +149,13 @@ models:
       Unified consolidated TB: entity balances + IC elims + CTA + topside + equity
       method + the deal journals (konsolidat#198: acquisition, goodwill amortisation,
       disposal). Every layer is at the account grain — one row per (group, entity,
-      year, period, account, adjustment_type, journal_id) — because
-      gold_consolidated_ytd runs a ROWS window over it; layer 6 SUMs each journal's
-      lines to that grain (row J11), and assert_journal_grain_unique proves it for
-      the three journal adjustment types.
+      year, period, account, adjustment_type, the configured dimension columns) —
+      because gold_consolidated_ytd runs a ROWS window partitioned by exactly those
+      columns; layer 6 SUMs each journal's lines to that grain (rows J11, J13:
+      journal_id is not in the grain — the YTD window does not partition by it;
+      any(journal_id) is kept for the reader), and assert_journal_grain_unique,
+      keyed on the window's partition columns, proves it for the three journal
+      adjustment types.
     columns:
       - name: consolidation_group
         tests:
