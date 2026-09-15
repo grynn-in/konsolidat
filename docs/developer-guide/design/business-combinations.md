@@ -109,6 +109,15 @@ carry, so the journal closes whatever the asset and liability rows sum to.
 `acquired_balances` → `header_net_assets` → `measured_from_tb`; today only the first
 posts, `assert_acquisition_measured_in_period` warns when the third would be late).
 
+**Deriving the acquired balance sheet in konsol.** The accountant does not have to key
+the Acquired Balance Sheet lines by hand: konsol can derive them from the warehouse
+trial balance of the acquired entity at the acquisition date. Balance-sheet accounts
+come in at their balance; P&L accounts are folded into retained earnings (the chart's
+`is_retained_earnings` account), so the lines are a closed balance sheet. The FVA
+total is placed on the policy's `fair_value_adjustment_account` line, or spread across
+accounts by a Fair Value Allocation Profile. dbt sees only the submitted lines either
+way, so the journal above does not change.
+
 **Line 0, `opening_balance`** (only when the entity has trial-balance history before
 the acquisition period): the entity's ownership window starts at the acquisition,
 so `gold_consolidated_trial_balance` never carries its opening position. The journal
@@ -122,14 +131,35 @@ eliminated 125 / 687.5, FVA 1,162.5, goodwill 6,325, investment −8,300.
 
 **Line 104, `nci`** (share below 100%; `business_combination_80pct.sql`, 80% for 8,300):
 
-| `nci_measurement` | NCI (Cr ZZ3400) | Goodwill | Rule |
+| deal's `nci_measurement` | NCI (Cr ZZ3400) | Goodwill | Rule |
 |---|---|---|---|
 | `partial` | −316 | 7,036 | NCI = (net assets + FVA) × (1 − share) = 1,580 × 0.2; goodwill = 8,300 + 316 − 1,580 |
-| `full` | −2,075 | 8,795 | NCI = consideration ÷ share × (1 − share) = 8,300 ÷ 0.8 × 0.2 (IFRS 3.32, NCI at the fair value the price implies); goodwill = 8,300 + 2,075 − 1,580 |
+| `full` | −1,900 | 8,620 | NCI = the deal's declared `nci_fair_value` 1,900 USD × the USD Closing rate 1 (IFRS 3.19, NCI at its own acquisition-date fair value); goodwill = 8,300 + 1,900 − 1,580 |
 
 The equity elimination and the FVA stay 100% in both cases.
 
-**Partial share (open: konsolidat#204).** The NCI arithmetic above is right on its own,
+**NCI measurement is per deal (konsol#205).** The Consolidation Policy's
+`nci_measurement` on the group root is the default; a Business Combination may
+override it, and konsol writes the value in force for the deal (its override, or the
+group's) into `epm_staging.business_combinations.nci_measurement`. The journal reads
+only the deal's column. IFRS 3.19 lets each combination choose; under US GAAP
+(ASC 805) konsol allows `full` only. `assert_acquisition_accounts_declared` names a
+submitted deal with `share_acquired_pct < 100` whose `nci_measurement` is empty or not
+`partial` / `full`.
+
+**Full takes the declared NCI Fair Value (konsol#204), never a gross-up.** Under `full`
+the deal declares `nci_fair_value`, the minority's own acquisition-date fair value in
+the header's `consideration_currency` (a quoted price of the shares the parent did not
+buy, or a valuation). The journal translates it at that currency's Closing rate, the
+same `deal_rates` row the header consideration uses, and posts it as the NCI. It does
+not gross up the price (8,300 ÷ 0.8 × 0.2 = 2,075 before konsol#204): the price the
+parent paid carries a control premium the minority's shares do not carry (IFRS 3.B45),
+so the gross-up overstates both the NCI and the goodwill. A partial-share `full` deal
+with `nci_fair_value <= 0` is named by `assert_acquisition_accounts_declared`
+(`field = 'nci_fair_value'`); one whose `consideration_currency` has no Closing rate
+posts nothing and `assert_deal_rate_resolved` names the missing pair.
+
+**Partial share (open: konsolidat#204, not konsol#204).** The NCI arithmetic above is right on its own,
 but layer 1 of `gold_fully_consolidated_tb` carries a full-method subsidiary at the
 parent's *share* (an 80% entity contributes 80% of every account), while the IFRS 3
 template brings in 100% of the acquired net assets and books the minority as an NCI
@@ -161,8 +191,8 @@ both directions.
 | `Expense` | Dr ZZ6950 120 / Cr ZZ1000 −120; Dr ZZ6950 80 / Cr ZZ1000 −80 | 6,720 (IFRS 3.53: costs of the period, outside goodwill) |
 | `Capitalise` | Cr ZZ1000 −120; Cr ZZ1000 −80 | 6,920 (the costs join the consideration) |
 
-Capitalised costs do not enter the `full` NCI measurement: the price paid is the
-fair-value signal, the deal's costs are not.
+Capitalised costs do not enter the `full` NCI measurement: the NCI is the declared
+`nci_fair_value`, taken from neither the price nor the deal's costs.
 
 ### The amortisation journal `GWA-ZZG-ZZS-2026-03-15`
 
@@ -226,7 +256,7 @@ is what makes that fallback unreachable in a passing build.
 | Field | Options | Effect in the journals | Fallback the guard stops |
 |---|---|---|---|
 | `accounting_framework` | IFRS / US GAAP / Local (+ `framework_note`) | labels; konsol's `validate()` restricts the combinations (US GAAP → Full NCI; IFRS → Impairment only; Local needs a note). dbt does **not** re-check these | — |
-| `nci_measurement` | `partial` / `full` | NCI = share of fair-value net assets / NCI at the fair value the price implies, goodwill then includes the NCI's share | `partial` |
+| `nci_measurement` | `partial` / `full` | the group's default; a deal may override it and the journal reads the deal's value (konsol#205). NCI = share of fair-value net assets / the deal's declared `nci_fair_value` (konsol#204), goodwill then includes the NCI's share | `partial` |
 | `goodwill_treatment` | Impairment only / Amortise (+ `goodwill_amortisation_years`) | GWA journal empty / monthly Dr `goodwill_amortisation_expense_account`, Cr `goodwill_account` | Impairment only |
 | `acquisition_costs_treatment` | Expense / Capitalise | Dr `acquisition_costs_account` per cost line, Cr settlement / costs join consideration, only the settlement credit posts | Expense |
 | `bargain_purchase` | Recognise gain / Refuse | Cr `bargain_purchase_gain_account` / the deal posts nothing and `assert_bargain_purchase_refused` stops the build | Recognise gain |
@@ -275,7 +305,7 @@ the ACQ and GWA journals booked); post the counterpart topside in the disposal p
 | `assert_acquisition_journal_balances` | error | each ACQ `journal_id` sums to 0 per group and period (±0.01) |
 | `assert_goodwill_amortisation_journal_balances` | error | the same for GWA |
 | `assert_disposal_journal_balances` | error | the same for DSP |
-| `assert_acquisition_accounts_declared` | error | one row per submitted deal and missing/invalid policy field or account |
+| `assert_acquisition_accounts_declared` | error | one row per submitted deal and missing/invalid policy field or account, including the deal's `nci_measurement` (share < 100) and `nci_fair_value` (`full`, share < 100) |
 | `assert_bargain_purchase_refused` | error | a bargain under `'Refuse'`, unposted, named |
 | `assert_goodwill_calculated` (PRD-11, retargeted) | error | a submitted deal with consideration has a `goodwill` or `bargain_gain` line |
 | `assert_disposal_gain_loss_exists` (PRD-12, retargeted) | error | a submitted disposal has a `gain_loss` line (names a retained interest) |

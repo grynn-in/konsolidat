@@ -33,12 +33,20 @@ accounting currency, Dr positive / Cr negative).
 
 | Table | Grain | Columns |
 |-------|-------|---------|
-| `business_combinations` | one row per deal (`name`) | `consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period` |
+| `business_combinations` | one row per deal (`name`) | `consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement, nci_fair_value` |
 | `business_combination_consideration` | `(parent, idx)` | `component, amount, currency, settlement_date, description` |
 | `business_combination_acquired_balances` | `(parent, idx)` | `main_account, book_amount, fair_value_adjustment, note` (empty when konsol measured from the TB) |
 | `business_combination_costs` | `(parent, idx)` | `kind, amount, currency, description` |
 | `business_disposals` | one row per disposal (`name`) | `consolidation_group, disposed_entity, disposal_date, share_disposed_pct, retained_interest_pct, proceeds_currency, total_proceeds, ownership_period` |
 | `business_disposal_proceeds` | `(parent, idx)` | `component, amount, currency, settlement_date, description` |
+
+`business_combinations.nci_measurement` (`String DEFAULT ''`, `'partial'` | `'full'`)
+is the NCI measurement in force for the deal: its override or the group's
+(konsol#205); the acquisition journal reads this, not the group's value.
+`business_combinations.nci_fair_value` (`Float64 DEFAULT 0`) is the minority's own
+acquisition-date fair value in the deal's `consideration_currency`, declared when the
+deal measures NCI at `full` (konsol#204); the journal posts it as the NCI instead of
+grossing up the consideration.
 
 The declared accounts and the Consolidation Policy the journals post with live on the
 root row (`data_area_id = ''`) of `epm_gold.consolidation_groups`: `nci_measurement,
