@@ -6,6 +6,11 @@
     )
 }}
 
+{# konsolidat#206: gold_variance_analysis carries one set of rows per active
+   budget-type scenario (budget_scenario_id), the actuals repeated against
+   each. Grouping without it counted the actuals once per budget scenario and
+   added the budgets together, so every node row is per budget scenario. #}
+
 with variance_long as (
     {{ variance_dimension_long_sql('v') }}
 ),
@@ -38,6 +43,7 @@ select
     v.fiscal_year,
     v.fiscal_period,
     v.main_account,
+    v.budget_scenario_id,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %},
@@ -57,6 +63,7 @@ group by
     v.fiscal_year,
     v.fiscal_period,
     v.main_account,
+    v.budget_scenario_id,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}
