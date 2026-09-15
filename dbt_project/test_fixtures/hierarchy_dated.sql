@@ -109,3 +109,11 @@ INSERT INTO epm_gold.budget_monthly_input
 VALUES
   ('ZZ_PLAN_H', 'ZZE1', 2018, 'ZZ4000', 'ZZ_EX', '', 6, -70, 'base'),
   ('ZZ_PLAN_H', 'ZZE1', 2025, 'ZZ4000', 'ZZ_EX', '', 6, -600, 'base');
+--
+-- Scenarios (row H5b): gold_scenario_trial_balance and gold_variance_analysis read epm_gold.scenario_definitions;
+-- ZZ_PLAN_H must be an active budget-type scenario for its budget rows to reach variance.
+INSERT INTO epm_gold.scenario_definitions
+  (scenario_id, scenario_name, scenario_type, is_active)
+VALUES
+  ('ACTUAL', 'Actual', 'actual', 1),
+  ('ZZ_PLAN_H', 'ZZ plan H', 'budget', 1);
