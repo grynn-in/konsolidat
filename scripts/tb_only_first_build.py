@@ -153,6 +153,12 @@ def fixture_sql(p):
         f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method) VALUES "
         "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full')",
         f"INSERT INTO {p}_gold.currencies VALUES ('USD', 'US Dollar', '$', 2, 0)",
+        # konsolidat#206: the scenarios a real site gets from konsol's Scenario
+        # fixtures (synced to epm_gold.scenario_definitions); the GL branch of
+        # gold_scenario_trial_balance stamps the one active actual scenario, and
+        # assert_scenario_rows_declared fails rows under an undeclared id
+        f"INSERT INTO {p}_gold.scenario_definitions (scenario_id, scenario_name, scenario_type, is_active) VALUES "
+        "('ACTUAL', 'Actual', 'actual', 1), ('BUDGET', 'Budget', 'budget', 1), ('FORECAST', 'Forecast', 'forecast', 1)",
         f"INSERT INTO {p}_raw.trial_balance_submissions (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at) VALUES "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ1000', 150, 0, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ3000', 0, 50, '', 'ZZ-TBS-1', now()), "
