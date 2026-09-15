@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     D365 F&O GL entries adapter.
     Joins GeneralJournalAccountEntryBiEntities with GeneralJournalEntryBiEntities.

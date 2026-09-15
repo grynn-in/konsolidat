@@ -1,4 +1,4 @@
-{{ config(enabled = 'erpnext' in var('erp_sources', ['d365_fo'])) }}
+{{ config(enabled = 'erpnext' in var('erp_sources', [])) }}
 {#
     Enabled here, not in dbt_project.yml: var() inside a dbt_project.yml
     +enabled config does not see the project's own vars: block and silently

@@ -5,9 +5,13 @@
     )
 }}
 
--- ACTUAL: from gold_trial_balance (GL-sourced)
+-- ACTUAL: from gold_trial_balance (GL-sourced), stamped with the site's declared
+-- actual scenario: the single active scenario_definitions row of type 'actual'
+-- (PR #211 review 2, konsolidat#206). With none or several declared, the rows
+-- keep 'ACTUAL', and assert_scenario_rows_declared names the problem instead of
+-- this model failing.
 select
-    'ACTUAL' as scenario_id,
+    sd.actual_scenario_id as scenario_id,
     data_area_id,
     fiscal_year,
     fiscal_period,
@@ -18,6 +22,13 @@ select
     period_net_amount as amount,
     'gl' as data_source
 from {{ ref('gold_trial_balance') }}
+cross join (
+    select
+        if(uniqExact(scenario_id) = 1, any(scenario_id), 'ACTUAL') as actual_scenario_id
+    from {{ source('epm_gold', 'scenario_definitions') }}
+    where scenario_type = 'actual'
+      and is_active = 1
+) as sd
 
 union all
 
@@ -41,8 +52,8 @@ union all
 -- monthly, grynn-in/konsolidat#94). Replaces the empty epm_staging.budget_input
 -- placeholder, which nothing populated — so app-entered budgets never reached
 -- this scenario fact. gold_spread_budget scenario_ids (BUDGET_2024/2025,
--- FORECAST_*) are disjoint from the 'ACTUAL' and D365 'BUDGET' branches above,
--- so no double-count.
+-- FORECAST_*) are disjoint from the declared actual and D365 'BUDGET' branches
+-- above, so no double-count.
 -- gold_spread_budget now carries one row per layer (base/challenge/management/
 -- board); the scenario TB is the FINAL budget, so layers are summed back to one
 -- row per (scenario, entity, period, account, dims) here.

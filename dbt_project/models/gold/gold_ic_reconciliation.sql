@@ -27,7 +27,7 @@
      share of the same balance there.
    - Decision 13: one intercompany-difference account per group, and each
      difference is labelled by cause (difference_cause). The rule:
-       * 'none'    when |difference| < 0.005;
+       * 'none'    when |difference| < materiality_floor();
        * 'fx'      when the sides' functional currencies differ. A trial
                    balance carries no transaction currency or booking rate, so
                    such a difference cannot be shown to be a booking error;
@@ -399,8 +399,8 @@ select
     group_a as group_balance_a,
     group_b as group_balance_b,
     {# the share of each side the group view holds (ownership) #}
-    if(abs(translated_a) >= 0.005, group_a / translated_a, 1.0) as share_a,
-    if(abs(translated_b) >= 0.005, group_b / translated_b, 1.0) as share_b,
+    if(abs(translated_a) >= {{ materiality_floor() }}, group_a / translated_a, 1.0) as share_a,
+    if(abs(translated_b) >= {{ materiality_floor() }}, group_b / translated_b, 1.0) as share_b,
     {# offsetting sides only: two debits (or two credits) match nothing #}
     if(translated_a * translated_b < 0, least(abs(translated_a), abs(translated_b)), 0) as matched_amount,
     translated_a + translated_b as difference,
@@ -410,9 +410,9 @@ select
     translated_a - sign(translated_a) * matched_amount as residual_a,
     translated_b - sign(translated_b) * matched_amount as residual_b,
     multiIf(
-        abs(translated_a + translated_b) < 0.005, 'none',
+        abs(translated_a + translated_b) < {{ materiality_floor() }}, 'none',
         currency_a != currency_b, 'fx',
-        abs(local_a + local_b) >= 0.005, 'booking',
+        abs(local_a + local_b) >= {{ materiality_floor() }}, 'booking',
         'fx'
     ) as difference_cause,
     ic_difference_account,

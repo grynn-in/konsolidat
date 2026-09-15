@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     Financial Dimensions staging model.
     Maps DimensionAttributes → financial_dimensions.

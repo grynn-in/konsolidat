@@ -95,7 +95,7 @@ Select only the canonical column set in the union-facing model (extra adapter co
 
 ### 3. Wiring
 
-- Add `sap_b1` to `vars.erp_sources` in `dbt_project.yml` (per-deployment opt-in; default stays `['d365_fo']`).
+- Add `sap_b1` to `vars.erp_sources` in `dbt_project.yml` (per-deployment opt-in; the default is `[]` since konsolidat#207).
 - No changes to canonical, bronze, silver, gold, Cube.js, or `konsol` API — the canonical contract is the seam. Connector Registry integration (Frappe) is PRD 37, out of scope here.
 
 ## Out of Scope
@@ -115,7 +115,7 @@ Select only the canonical column set in the union-facing model (extra adapter co
 4. `models/staging/sap_b1/` contains exactly 7 SQL models + sources yml; each GL/TB/accounts/entities/FX/budget/periods model outputs the canonical column set with `erp_source = 'sap_b1'`.
 5. With `erp_sources: [d365_fo, sap_b1]`, `dbt build` passes all existing canonical tests (`test_erp_source_valid.sql` accepts `sap_b1`; `not_null` on key columns) plus zero regressions on D365 outputs.
 6. `select distinct erp_source from stg_gl_entries` returns both `d365_fo` and `sap_b1`; B1 GL rows flow through bronze → gold unchanged and balance (sum of `amount` per journal = 0 for balanced JEs).
-7. With `erp_sources: [d365_fo]` (default), no B1 models are referenced and `dbt build` output is byte-identical to pre-B1.
+7. With `erp_sources: [d365_fo]` (no `sap_b1`), no B1 models are referenced and `dbt build` output is byte-identical to pre-B1.
 
 ## Open Questions
 

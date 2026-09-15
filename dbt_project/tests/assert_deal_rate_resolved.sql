@@ -208,7 +208,7 @@ needed as (
         on n.deal = d.deal
         and n.kind = d.kind
     where coalesce(n.n_lines, 0) = 0
-      and abs(d.header_amount) > 0.005
+      and abs(d.header_amount) > {{ materiality_floor() }}
 
     union all
 

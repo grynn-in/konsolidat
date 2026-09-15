@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     D365 F&O trial balance adapter.
     Maps TrialBalanceFiscalYearSnapshots → canonical stg_trial_balance schema.

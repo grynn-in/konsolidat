@@ -5,12 +5,41 @@
     )
 }}
 
-{# PRD-7: Variance analysis — actual vs budget with favorable/unfavorable logic #}
+{# PRD-7: Variance analysis — actual vs budget with favorable/unfavorable logic.
+
+   konsolidat#206: which scenario is the actual and which are budgets is what
+   each site declares on konsol's Scenario doctype (epm_gold.scenario_definitions
+   .scenario_type, active only), never a scenario code. Every active
+   budget-type scenario gets its own set of variance rows, keyed by
+   budget_scenario_id: the actuals are repeated against each budget that has
+   lines for their entity and fiscal year, and two budgets are never summed.
+   An actual no budget scenario covers comes out once with budget_scenario_id
+   '' and no budget.
+
+   One stream plus conditional aggregation rather than a full outer join:
+   under join_use_nulls=0 the unmatched side of a join fills '' and 0, which
+   lost the entity and account of budget-only lines. #}
 
 {% set budget_dims = get_budget_dimensions() %}
 
-with actuals as (
+with actual_scenarios as (
+    select distinct scenario_id
+    from {{ source('epm_gold', 'scenario_definitions') }}
+    where scenario_type = 'actual'
+      and is_active = 1
+),
+
+budget_scenarios as (
+    select distinct scenario_id
+    from {{ source('epm_gold', 'scenario_definitions') }}
+    where scenario_type = 'budget'
+      and is_active = 1
+),
+
+typed as (
     select
+        if(scenario_id in (select scenario_id from actual_scenarios), 'actual', 'budget') as scenario_type,
+        scenario_id,
         data_area_id,
         fiscal_year,
         fiscal_period,
@@ -18,25 +47,97 @@ with actuals as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims) }},
-        sum(amount) as actual_amount
+        amount
     from {{ ref('gold_scenario_trial_balance') }}
-    where scenario_id = 'ACTUAL'
-    group by data_area_id, fiscal_year, fiscal_period, main_account,
-             account_name, account_type_name, {{ dim_group_by(dims=budget_dims) }}
+    where scenario_id in (select scenario_id from actual_scenarios)
+       or scenario_id in (select scenario_id from budget_scenarios)
 ),
 
-budgets as (
+{# the (entity, fiscal year)s each budget scenario has lines for #}
+budget_years as (
+    select distinct
+        scenario_id as pair_scenario_id,
+        data_area_id as pair_data_area_id,
+        fiscal_year as pair_fiscal_year
+    from typed
+    where scenario_type = 'budget'
+),
+
+{# PR #211 review 3: an actual (entity, fiscal year) is compared only with the
+   budget scenarios that budget that entity and year; with none, it comes out
+   once under '' (never once per scenario, never against another year's budget) #}
+actual_years as (
+    select distinct
+        data_area_id as pair_data_area_id,
+        fiscal_year as pair_fiscal_year
+    from typed
+    where scenario_type = 'actual'
+),
+
+pairings as (
+    select
+        a.pair_data_area_id as pair_data_area_id,
+        a.pair_fiscal_year as pair_fiscal_year,
+        coalesce(b.pair_scenario_id, '') as budget_scenario_id
+    from actual_years as a
+    left join budget_years as b
+        on a.pair_data_area_id = b.pair_data_area_id
+       and a.pair_fiscal_year = b.pair_fiscal_year
+),
+
+paired as (
+    select
+        scenario_type,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        account_type_name,
+        {{ dim_select(dims=budget_dims) }},
+        amount,
+        budget_scenario_id
+    from typed
+    inner join pairings
+        on typed.data_area_id = pairings.pair_data_area_id
+       and typed.fiscal_year = pairings.pair_fiscal_year
+    where scenario_type = 'actual'
+
+    union all
+
+    select
+        scenario_type,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        account_type_name,
+        {{ dim_select(dims=budget_dims) }},
+        amount,
+        scenario_id as budget_scenario_id
+    from typed
+    where scenario_type = 'budget'
+),
+
+grouped as (
     select
         data_area_id,
         fiscal_year,
         fiscal_period,
         main_account,
         {{ dim_select(dims=budget_dims) }},
-        sum(amount) as budget_amount
-    from {{ ref('gold_scenario_trial_balance') }}
-    where scenario_id = 'BUDGET'
+        budget_scenario_id,
+        max(account_name) as account_name,
+        max(account_type_name) as account_type_name,
+        sumIf(amount, scenario_type = 'actual') as actual_amount,
+        {# no budget line for this grain in this scenario: null, not 0 #}
+        if(countIf(scenario_type = 'budget') > 0,
+           sumIf(amount, scenario_type = 'budget'),
+           null) as budget_amount
+    from paired
     group by data_area_id, fiscal_year, fiscal_period, main_account,
-             {{ dim_group_by(dims=budget_dims) }}
+             {{ dim_group_by(dims=budget_dims) }}, budget_scenario_id
 ),
 
 {# Get account metadata for accounts that only appear in budget #}
@@ -51,44 +152,41 @@ account_meta as (
 
 combined as (
     select
-        coalesce(a.data_area_id, b.data_area_id) as data_area_id,
-        coalesce(a.fiscal_year, b.fiscal_year) as fiscal_year,
-        coalesce(a.fiscal_period, b.fiscal_period) as fiscal_period,
-        coalesce(a.main_account, b.main_account) as main_account,
-        coalesce(a.account_name, am.account_name, '') as account_name,
-        coalesce(a.account_type_name, am.account_type_name, '') as account_type_name,
+        g.data_area_id as data_area_id,
+        g.fiscal_year as fiscal_year,
+        g.fiscal_period as fiscal_period,
+        g.main_account as main_account,
+        if(g.account_name != '', g.account_name, am.account_name) as account_name,
+        if(g.account_type_name != '', g.account_type_name, am.account_type_name) as account_type_name,
         coalesce(am.is_pnl, 0) as is_pnl,
-        {{ dim_coalesce('a', 'b', dims=budget_dims) }},
-        coalesce(a.actual_amount, 0) as actual_amount,
-        b.budget_amount as budget_amount,
-        coalesce(a.actual_amount, 0) - coalesce(b.budget_amount, 0) as variance_abs,
+        {% for d in budget_dims %}
+        g.{{ d.name }} as {{ d.name }},
+        {% endfor %}
+        g.actual_amount as actual_amount,
+        g.budget_amount as budget_amount,
+        g.actual_amount - coalesce(g.budget_amount, 0) as variance_abs,
         case
-            when b.budget_amount is not null and b.budget_amount != 0
-            then (coalesce(a.actual_amount, 0) - b.budget_amount) / abs(b.budget_amount) * 100
+            when g.budget_amount is not null and g.budget_amount != 0
+            then (g.actual_amount - g.budget_amount) / abs(g.budget_amount) * 100
             else null
         end as variance_pct,
         {# Favorable logic: revenue up = good, expense down = good #}
         case
-            when b.budget_amount is null then false
+            when g.budget_amount is null then false
             when coalesce(am.is_pnl, 0) = 0 then false
             {# The konsol group chart's account_type vocabulary (konsol#182).
                The generic 'Profit and loss' type has no favourable direction
                by design: it falls to the else. #}
-            when coalesce(a.account_type_name, am.account_type_name, '') = 'Revenue'
-                then coalesce(a.actual_amount, 0) > b.budget_amount
-            when coalesce(a.account_type_name, am.account_type_name, '') = 'Expense'
-                then coalesce(a.actual_amount, 0) < b.budget_amount
+            when if(g.account_type_name != '', g.account_type_name, am.account_type_name) = 'Revenue'
+                then g.actual_amount > g.budget_amount
+            when if(g.account_type_name != '', g.account_type_name, am.account_type_name) = 'Expense'
+                then g.actual_amount < g.budget_amount
             else false
-        end as variance_favorable
-    from actuals as a
-    full outer join budgets as b
-        on a.data_area_id = b.data_area_id
-        and a.fiscal_year = b.fiscal_year
-        and a.fiscal_period = b.fiscal_period
-        and a.main_account = b.main_account
-        {{ dim_join_on('a', 'b', dims=budget_dims) }}
+        end as variance_favorable,
+        g.budget_scenario_id as budget_scenario_id
+    from grouped as g
     left join account_meta as am
-        on coalesce(a.main_account, b.main_account) = am.main_account
+        on g.main_account = am.main_account
 )
 
 select * from combined

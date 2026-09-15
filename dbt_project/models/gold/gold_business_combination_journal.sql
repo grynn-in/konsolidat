@@ -327,7 +327,7 @@ header_consideration_rated as (
     inner join deal_rates as r
         on r.deal = d.deal
         and r.from_currency = d.consideration_currency
-    where abs(d.header_consideration) > 0.005
+    where abs(d.header_consideration) > {{ materiality_floor() }}
 
     union all
 
@@ -335,7 +335,7 @@ header_consideration_rated as (
         deal,
         header_consideration as consideration
     from deals
-    where abs(header_consideration) <= 0.005
+    where abs(header_consideration) <= {{ materiality_floor() }}
 ),
 
 {# line (5) under 'full' (konsol#204): the deal's declared nci_fair_value,
@@ -510,7 +510,7 @@ figures as (
     from figures_raw
     where not (
         bargain_purchase = 'Refuse'
-        and consideration + capitalised_costs + nci - (net_assets + fva) < -0.005
+        and consideration + capitalised_costs + nci - (net_assets + fva) < -{{ materiality_floor() }}
     )
 ),
 
@@ -559,7 +559,7 @@ opening_residual as (
         -sum(adjustment_amount) as residual_amount
     from opening_raw
     group by deal
-    having abs(residual_amount) > 0.005
+    having abs(residual_amount) > {{ materiality_floor() }}
 ),
 
 opening_lines as (
@@ -580,7 +580,7 @@ opening_lines as (
     from opening_raw as o
     inner join figures as f
         on f.deal = o.deal
-    where abs(o.adjustment_amount) > 0.005
+    where abs(o.adjustment_amount) > {{ materiality_floor() }}
 ),
 
 {# line (0)'s balancing line, to the chart's retained-earnings account
@@ -654,7 +654,7 @@ fixed_raw as (
         [toUInt16(101), toUInt16(102), toUInt16(103), toUInt16(104), toUInt16(105)] as line_no,
         ['fva', 'goodwill', 'investment', 'nci', 'bargain_gain'] as account_role,
         ['Fair value adjustment on acquisition', 'Goodwill on acquisition', 'Investment in subsidiary eliminated', 'Non-controlling interest at acquisition', 'Gain on bargain purchase'] as default_name
-    where abs(line_amount) > 0.005
+    where abs(line_amount) > {{ materiality_floor() }}
 ),
 
 {# line (6): per costs row, the P&L debit (Expense only; under Capitalise the
@@ -705,7 +705,7 @@ cost_raw as (
         [debit_line_no, credit_line_no] as line_no,
         ['costs', 'proceeds'] as account_role,
         [concat('Acquisition costs: ', kind), concat('Acquisition costs settled: ', kind)] as default_name
-    where abs(line_amount) > 0.005
+    where abs(line_amount) > {{ materiality_floor() }}
 ),
 
 fixed_and_cost_raw as (

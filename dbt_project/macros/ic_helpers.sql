@@ -32,10 +32,35 @@
 {% endmacro %}
 
 {# Decision 12 (13 Sep 2026): the minority owners' portion of an eliminated
-   intragroup balance goes to their line in the consolidated view, this
-   account. A pseudo-account like DISPOSAL; set var ic_nci_account to post it
-   to a chart account instead. #}
-{% macro ic_nci_account() %}{{ var('ic_nci_account', 'NCI') }}{% endmacro %}
+   intragroup balance goes to their line in the consolidated view. That line
+   is the NCI Account the group declares on its Consolidation Group root
+   (konsolidat#208). The placeholder a group posts to until it declares its
+   NCI Account on the Consolidation Group root: a pseudo-account, like
+   DISPOSAL, that no chart holds. assert_ic_nci_account_declared names every
+   group still posting to it. A SQL string literal. #}
+{% macro ic_nci_placeholder() %}'NCI'{% endmacro %}
+
+{# One row per group: the NCI Account its root row (data_area_id = '')
+   declares, '' when none. konsol#202 adds the column; read only if present,
+   so the models deploy in either order with konsol. #}
+{% macro ic_group_nci_accounts() %}
+    {% set has_column = false %}
+    {% if execute %}
+        {% set group_columns = adapter.get_columns_in_relation(source('epm_gold', 'consolidation_groups')) | map(attribute='name') | list %}
+        {% set has_column = 'nci_account' in group_columns %}
+    {% endif %}
+    select
+        consolidation_group as nci_group,
+        {% if has_column %}any(nci_account){% else %}''{% endif %} as declared_nci_account
+    from {{ source('epm_gold', 'consolidation_groups') }}
+    where data_area_id = ''
+    group by consolidation_group
+{% endmacro %}
+
+{# The account a group's NCI line posts to, from its declared account
+   (ic_group_nci_accounts().declared_nci_account; '' on a join miss): the
+   declared account when non-empty, else the placeholder. #}
+{% macro ic_nci_account_or_placeholder(declared) %}if({{ declared }} != '', {{ declared }}, {{ ic_nci_placeholder() }}){% endmacro %}
 
 {# The partner-keyed slices of gold_consolidated_trial_balance, at 100%
    (translated_amount, never the ownership-weighted group_amount; and the

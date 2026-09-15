@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     Budget Register Entries staging model.
     Deduplicates by EntryNumber to produce header-level rows.

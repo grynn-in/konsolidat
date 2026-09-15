@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     D365 F&O GL journal entry headers.
     Internal helper — not part of canonical interface.

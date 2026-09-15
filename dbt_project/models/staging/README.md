@@ -87,9 +87,12 @@ Column rules:
 
 ## Enablement
 
-`d365_fo` is mandatory, because bronze refs several `stg_d365_fo__*` models
-directly. Every other ERP is optional. Each of its models starts with a
-`config(enabled = '<erp>' in var('erp_sources', ['d365_fo']))` line, and it
+Every ERP is optional, and `dbt_project.yml` sets `erp_sources: []` by
+default: the trial-balance upload is the canonical source, and no adapter is
+built until its ERP is listed. The bronze models that read `stg_d365_fo__*`
+directly return an empty relation of their normal shape when `d365_fo` is not
+listed. Each adapter model starts with a
+`config(enabled = '<erp>' in var('erp_sources', []))` line, and it
 must live in the model, not in `dbt_project.yml` (see any `erpnext/` model
 for why). The canonical models UNION the same var, so enablement and the
 union can't drift apart.

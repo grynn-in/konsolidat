@@ -12,21 +12,36 @@
     pair's two sides.
 #}
 
-{% set nci = ic_nci_account() %}
+{# The NCI line is the group's own: its declared NCI Account, or the
+   placeholder (konsolidat#208), resolved as gold_ic_eliminations does. #}
+with group_nci as (
+    {{ ic_group_nci_accounts() }}
+),
 
-with entries as (
+nci_entries as (
     select
-        consolidation_group, fiscal_year, fiscal_period, elimination_view, elimination_kind,
-        entity_a, account_a, entity_b, account_b,
-        debit_account, debit_entity, credit_account, credit_entity,
-        toUInt8(debit_account = '{{ nci }}') + toUInt8(credit_account = '{{ nci }}') as nci_legs,
-        if(debit_account = '{{ nci }}', credit_account, debit_account) as side_account,
-        if(debit_account = '{{ nci }}', credit_entity, debit_entity) as side_entity,
-        if(debit_account = '{{ nci }}', debit_entity, credit_entity) as nci_entity
-    from {{ ref('gold_ic_eliminations') }}
-    where rule_type = 'balance'
-      and ((elimination_view = 'group' and elimination_kind = 'nci')
-           or (elimination_view = 'nci' and elimination_kind = 'matched'))
+        e.consolidation_group as consolidation_group, e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period, e.elimination_view as elimination_view,
+        e.elimination_kind as elimination_kind,
+        e.entity_a as entity_a, e.account_a as account_a, e.entity_b as entity_b, e.account_b as account_b,
+        e.debit_account as debit_account, e.debit_entity as debit_entity,
+        e.credit_account as credit_account, e.credit_entity as credit_entity,
+        {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }} as nci_account
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join group_nci as gn on gn.nci_group = e.consolidation_group
+    where e.rule_type = 'balance'
+      and ((e.elimination_view = 'group' and e.elimination_kind = 'nci')
+           or (e.elimination_view = 'nci' and e.elimination_kind = 'matched'))
+),
+
+entries as (
+    select
+        *,
+        toUInt8(debit_account = nci_account) + toUInt8(credit_account = nci_account) as nci_legs,
+        if(debit_account = nci_account, credit_account, debit_account) as side_account,
+        if(debit_account = nci_account, credit_entity, debit_entity) as side_entity,
+        if(debit_account = nci_account, debit_entity, credit_entity) as nci_entity
+    from nci_entries
 )
 
 select *

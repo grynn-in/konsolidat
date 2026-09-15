@@ -35,8 +35,9 @@
      least(share_a, share_b).
    - 'nci' (group view, decision 12): the side the group holds more of (for
      example the 100%-owned entity against an 80%-owned one) is eliminated at
-     its own share. The rest of it goes to the NCI line (ic_nci_account()),
-     attributed to the other, partly owned side's entity, whose minority
+     its own share. The rest of it goes to the NCI line: the NCI Account
+     the group declares on its root (konsolidat#208), or
+     ic_nci_placeholder() until it declares one. It is attributed to the other, partly owned side's entity, whose minority
      owners hold that share; never to the difference account. Each side's
      entry is computed and posted on its own account (re-review L1). With
      1000 against 1000 at 100% and 80%, the group view eliminates 1000 and
@@ -79,18 +80,28 @@ with ic_rules as (
     from {{ source('epm_staging', 'ic_elimination_rules') }}
 ),
 
+{# konsolidat#208: the NCI Account each group declares on its root #}
+group_nci as (
+    {{ ic_group_nci_accounts() }}
+),
+
 pairs as (
     select
-        consolidation_group, fiscal_year, fiscal_period, basis,
-        entity_a, account_a, entity_b, account_b,
-        ic_difference_account, difference_cause,
-        share_a, share_b,
+        r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
+        r.fiscal_period as fiscal_period, r.basis as basis,
+        r.entity_a as entity_a, r.account_a as account_a, r.entity_b as entity_b, r.account_b as account_b,
+        r.ic_difference_account as ic_difference_account, r.difference_cause as difference_cause,
+        {# join_use_nulls=0: a group with no root row gets '' and so the placeholder #}
+        {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }} as nci_account,
+        r.share_a as share_a, r.share_b as share_b,
         {# each side's full (100%) elimination: it takes the side to its residual #}
-        -sign(balance_a) * matched_amount as full_a,
-        -sign(balance_b) * matched_amount as full_b,
-        residual_a,
-        residual_b
-    from {{ ref('gold_ic_reconciliation') }}
+        -sign(r.balance_a) * r.matched_amount as full_a,
+        -sign(r.balance_b) * r.matched_amount as full_b,
+        r.residual_a as residual_a,
+        r.residual_b as residual_b
+    from {{ ref('gold_ic_reconciliation') }} as r
+    left join group_nci as gn
+        on gn.nci_group = r.consolidation_group
 ),
 
 {# every leg on the pair's basis: to date (balance) or for the period (movement) #}
@@ -140,15 +151,15 @@ posted as (
    period, not per entity: the group view's is attributed to the other,
    partly owned side, the NCI view's to its own side. #}
 {% set legs = [
-    ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= 0.005'),
-    ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_n_a) >= 0.005'),
-    ('group', 'nci',     "''",           'account_b', 'entity_b', 'post_n_b',   "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_n_b) >= 0.005'),
-    ('group', 'difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= 0.005"),
-    ('group', 'difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= 0.005"),
-    ('nci',   'matched', "''",           'account_a', 'entity_a', 'post_v_m_a', "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_v_m_a) >= 0.005'),
-    ('nci',   'matched', "''",           'account_b', 'entity_b', 'post_v_m_b', "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_v_m_b) >= 0.005'),
-    ('nci',   'difference', 'posted_cause', 'account_a', 'entity_a', 'post_v_d_a', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_v_d_a) >= 0.005"),
-    ('nci',   'difference', 'posted_cause', 'account_b', 'entity_b', 'post_v_d_b', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_v_d_b) >= 0.005"),
+    ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= ' ~ materiality_floor()),
+    ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   'nci_account',           'entity_b', 'abs(post_n_a) >= ' ~ materiality_floor()),
+    ('group', 'nci',     "''",           'account_b', 'entity_b', 'post_n_b',   'nci_account',           'entity_a', 'abs(post_n_b) >= ' ~ materiality_floor()),
+    ('group', 'difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= " ~ materiality_floor()),
+    ('group', 'difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= " ~ materiality_floor()),
+    ('nci',   'matched', "''",           'account_a', 'entity_a', 'post_v_m_a', 'nci_account',           'entity_a', 'abs(post_v_m_a) >= ' ~ materiality_floor()),
+    ('nci',   'matched', "''",           'account_b', 'entity_b', 'post_v_m_b', 'nci_account',           'entity_b', 'abs(post_v_m_b) >= ' ~ materiality_floor()),
+    ('nci',   'difference', 'posted_cause', 'account_a', 'entity_a', 'post_v_d_a', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_v_d_a) >= " ~ materiality_floor()),
+    ('nci',   'difference', 'posted_cause', 'account_b', 'entity_b', 'post_v_d_b', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_v_d_b) >= " ~ materiality_floor()),
 ] %}
 entries as (
     {% for view, kind, cause, acc1, ent1, amount, acc2, ent2, cond in legs %}

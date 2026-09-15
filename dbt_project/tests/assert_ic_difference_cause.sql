@@ -5,7 +5,7 @@
     1. currency: each side's currency is its entity's functional currency
        (silver_entity_currencies), the input the rule reads.
     2. cause: difference_cause follows the rule (see gold_ic_reconciliation):
-       none below 0.005; fx across currencies; booking in one currency when
+       none below materiality_floor(); fx across currencies; booking in one currency when
        the local amounts do not net to zero; fx in one currency when they do
        (translation only). The local amounts are recomputed from
        gold_consolidated_trial_balance (ic_expected_pair_values), not taken
@@ -25,9 +25,9 @@ rec as (
     select
         r.*,
         multiIf(
-            abs(r.difference) < 0.005, 'none',
+            abs(r.difference) < {{ materiality_floor() }}, 'none',
             r.currency_a != r.currency_b, 'fx',
-            abs(e.expected_local_a + e.expected_local_b) >= 0.005, 'booking',
+            abs(e.expected_local_a + e.expected_local_b) >= {{ materiality_floor() }}, 'booking',
             'fx'
         ) as expected_cause
     from {{ ref('gold_ic_reconciliation') }} as r
