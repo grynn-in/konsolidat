@@ -17,8 +17,8 @@
 -- and must not be flagged (konsolidat#195). Since konsolidat#176 a missing historical
 -- equity rate is a warning, not an error, and such equity rows fall back to the
 -- closing rate, which makes balance-sheet-only entities with CTA 0 a normal case.
--- Hence the extra `countIf(translation_rate != closing_rate and local_amount != 0) > 0`
--- condition below (rows with a zero amount translated nothing, whatever their rate).
+-- Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0`
+-- condition below (a row that put nothing into the group translated nothing, whatever its rate).
 with rate_check as (
     select
         consolidation_group,
@@ -35,9 +35,10 @@ with rate_check as (
     -- must not be 0 either. translation_rate is Nullable: a NULL comparison is
     -- not true, so countIf ignores those rows (a NULL rate is
     -- assert_translation_rate_resolved's job).
-    -- and only rows that carried an amount: a period whose file repeats the previous
-    -- balances has zero movements, translated nothing, and a CTA of 0 is right
-    having countIf(translation_rate != closing_rate and local_amount != 0) > 0
+    -- and only rows that put something into the group: CTA is -sum(group_amount), so a
+    -- row with group_amount 0 (a zero movement, or 0% ownership before acquisition /
+    -- after disposal) translated nothing into the residual, and a CTA of 0 is right
+    having countIf(translation_rate != closing_rate and group_amount != 0) > 0
 )
 
 select
