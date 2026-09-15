@@ -88,3 +88,24 @@ VALUES
   (990208, 'ZZE1', '2025-06-15', 'ZZ4000', -500, 0, -500, 'USD', 'LedgerJournal', 0, 'ZZ4000-ZZ_EX', 'ZZ revenue', 'ZZ_EX', '', '', '2026-09-15 00:00:00', 'zz-h3-8'),
   (990209, 'ZZE1', '2025-06-15', 'ZZ1000', 4000, 0, 4000, 'USD', 'LedgerJournal', 0, 'ZZ1000-ZZ_AX', 'ZZ cash', 'ZZ_AX', '', '', '2026-09-15 00:00:00', 'zz-h3-9'),
   (990210, 'ZZE1', '2025-06-15', 'ZZ4000', -4000, 0, -4000, 'USD', 'LedgerJournal', 0, 'ZZ4000-ZZ_AX', 'ZZ revenue', 'ZZ_AX', '', '', '2026-09-15 00:00:00', 'zz-h3-10');
+--
+-- Budgets (row H4). A budget carries no business unit (dim_business_unit is in_budget: false), so the move of
+-- ZZ_EX is mirrored on dim_cost_center as hierarchy ZZ_DIV_CC, same codes and windows:
+--   ZZ_ROOT group 2010-01-01 .. open | ZZ_B group 2010-01-01 .. open | ZZ_E group 2017-01-01 .. 2024-12-31
+--   ZZ_EX leaf under ZZ_E 2017-01-01 .. 2024-12-31, under ZZ_B 2025-01-01 .. open
+-- Budget Sheet (epm_gold.budget_monthly_input), scenario ZZ_PLAN_H, base layer, ZZ4000, cost centre ZZ_EX:
+--   FY2018 P6 -70 -> ZZ_EX, ZZ_E, ZZ_ROOT (not ZZ_B) | FY2025 P6 -600 -> ZZ_EX, ZZ_B, ZZ_ROOT (not ZZ_E).
+-- gold_spread_budget also reads epm_gold.budget_annual_input and epm_gold.spread_profiles, empty here.
+INSERT INTO epm_staging.reporting_hierarchies
+  (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
+VALUES
+  ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_ROOT', 'ZZ root', '', 1, 1, 'ZZ_ROOT', '', '', 1, 'Published', '2010-01-01', '2299-12-31'),
+  ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_B', 'ZZ B', 'ZZ_ROOT', 1, 2, 'ZZ_ROOT/ZZ_B', '', '', 1, 'Published', '2010-01-01', '2299-12-31'),
+  ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_E', 'ZZ E', 'ZZ_ROOT', 1, 2, 'ZZ_ROOT/ZZ_E', '', '', 1, 'Published', '2017-01-01', '2024-12-31'),
+  ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_EX', 'ZZ EX', 'ZZ_E', 0, 3, 'ZZ_ROOT/ZZ_E/ZZ_EX', '', '', 1, 'Published', '2017-01-01', '2024-12-31'),
+  ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_EX', 'ZZ EX', 'ZZ_B', 0, 3, 'ZZ_ROOT/ZZ_B/ZZ_EX', '', '', 1, 'Published', '2025-01-01', '2299-12-31');
+INSERT INTO epm_gold.budget_monthly_input
+  (scenario_id, data_area_id, fiscal_year, main_account, dim_cost_center, dim_department, fiscal_period, amount, layer)
+VALUES
+  ('ZZ_PLAN_H', 'ZZE1', 2018, 'ZZ4000', 'ZZ_EX', '', 6, -70, 'base'),
+  ('ZZ_PLAN_H', 'ZZE1', 2025, 'ZZ4000', 'ZZ_EX', '', 6, -600, 'base');
