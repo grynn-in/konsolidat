@@ -364,7 +364,7 @@ models:
       share x (1 - share), goodwill then includes the NCI's share); row J4 adds bargain
       gain and costs. Accounts and the NCI policy come from the group's root row in
       consolidation_groups. Every journal sums to zero
-      (assert_consolidation_journals_balance).
+      (assert_acquisition_journal_balances).
     columns:
       - name: consolidation_group
         tests:
@@ -415,6 +415,7 @@ models:
       year instalments; rounded cumulatively so they sum to the goodwill exactly),
       Dr goodwill_amortisation_expense_account / Cr goodwill_account. Group
       currency. Empty under 'Impairment only'. Stopping at a disposal is row J5b.
+      Every journal sums to zero per period (assert_goodwill_amortisation_journal_balances).
     columns:
       - name: consolidation_group
         tests:
@@ -472,7 +473,7 @@ models:
       disposal_proceeds_account per proceeds line, and disposal_gain_loss_account as
       the balancing line (a credit is a gain). Accounts come from the group's root
       row in consolidation_groups. Replaces gold_disposal_adjustments. Every journal
-      sums to zero (assert_consolidation_journals_balance).
+      sums to zero (assert_disposal_journal_balances).
     columns:
       - name: consolidation_group
         tests:
