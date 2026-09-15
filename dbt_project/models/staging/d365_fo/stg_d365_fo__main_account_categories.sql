@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', ['d365_fo'])) }}
 {#
     Main Account Categories staging model.
     Maps ReferenceId → RecId, MainAccountCategory → AccountCategory,

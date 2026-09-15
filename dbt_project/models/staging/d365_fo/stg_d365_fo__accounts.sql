@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', ['d365_fo'])) }}
 {#
     D365 F&O chart of accounts adapter.
     Maps MainAccounts → canonical stg_accounts schema.

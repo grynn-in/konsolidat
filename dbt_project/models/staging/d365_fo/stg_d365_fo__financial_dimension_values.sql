@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', ['d365_fo'])) }}
 {#
     Financial Dimension Values staging model.
     Maps FinancialDimension → FinancialDimensionName.

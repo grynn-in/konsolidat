@@ -1,3 +1,4 @@
+{{ config(enabled = 'd365_fo' in var('erp_sources', ['d365_fo'])) }}
 {#
     Fiscal Calendars staging model.
     Derives one row per distinct Calendar from FiscalCalendarYears,
