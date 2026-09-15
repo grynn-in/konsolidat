@@ -17,10 +17,12 @@
 --     amount, no consideration line and one cost line falls back to the header and needs its rate; counting
 --     the cost row as "a line" left that header unchecked while the journal dropped the deal silently. Fixture:
 --     dbt_project/test_fixtures/assert_deal_rate_resolved.header.must_flag.sql.
---   a combination's consideration_currency when it measures NCI at 'full', share_acquired_pct < 100 and
---     nci_fair_value > 0 (konsol#204, row M2b): the journal translates the declared NCI fair value at that
---     currency's rate and drops the deal when it is missing, even when every consideration line is in another
---     currency. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql.
+--   a combination's consideration_currency when it measures NCI at 'full' and share_acquired_pct < 100
+--     (konsol#204, row M2b): the journal translates the declared NCI fair value at that currency's rate and
+--     drops the deal when it is missing, even when every consideration line is in another currency. Row M4
+--     (PR #205 review): whatever nci_fair_value says, exactly the journal's condition. Fixtures:
+--     dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql,
+--     dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value_zero.must_flag.sql.
 -- into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period:
 -- epm_staging.fiscal_periods by start_date <= date <= end_date (Closing periods skipped), then
 -- rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every
@@ -211,7 +213,9 @@ needed as (
     union all
 
     -- konsol#204 (row M2b): a partial-share 'full' deal's declared nci_fair_value, stated in the header's
-    -- consideration_currency (the journal's nci_fair_value_rated), whatever currency its lines are in
+    -- consideration_currency (the journal's nci_fair_value_rated), whatever currency its lines are in.
+    -- Row M4 (PR #205 review): the journal's own condition, with no nci_fair_value > 0 test, so a deal that has
+    -- not declared the figure yet is still checked for the rate (the J7 guard names the missing figure)
     select
         d.deal as deal,
         d.kind as kind,
@@ -225,7 +229,6 @@ needed as (
     where d.kind = 'business_combination'
       and d.nci_measurement = 'full'
       and d.share_acquired_pct < 100.0
-      and d.nci_fair_value > 0.0
 )
 
 select distinct

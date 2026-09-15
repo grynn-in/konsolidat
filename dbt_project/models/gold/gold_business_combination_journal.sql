@@ -343,7 +343,10 @@ header_consideration_rated as (
    the header consideration uses. Only a partial-share 'full' deal needs it;
    such a deal whose consideration currency has no rate has no row here and
    is dropped by figures_raw (row J9: a missing rate stops the deal, it never
-   zeroes the NCI). #}
+   zeroes the NCI). Row M4 (PR #205 review): nor does an undeclared figure —
+   a deal with nci_fair_value <= 0 has no row here either, so it posts
+   nothing rather than NCI 0 with understated goodwill (the J7 guard
+   assert_acquisition_accounts_declared names the missing nci_fair_value). #}
 nci_fair_value_rated as (
     select
         d.deal as deal,
@@ -354,6 +357,7 @@ nci_fair_value_rated as (
         and r.from_currency = d.consideration_currency
     where d.nci_measurement = 'full'
       and d.share_acquired_pct < 100.0
+      and d.nci_fair_value > 0.0
 ),
 
 consideration as (
@@ -487,7 +491,8 @@ figures_raw as (
       {# row J9: every cost row found its rate, or the deal posts nothing #}
       and coalesce(lc.n_lines, 0) = coalesce(ct.n_rated, 0)
       {# row J9 for line (5): a partial-share 'full' deal needs its NCI fair
-         value's rate; a join miss reads '' (join_use_nulls = 0) or NULL #}
+         value's rate and (row M4) a declared figure > 0; a join miss reads ''
+         (join_use_nulls = 0) or NULL #}
       and (d.nci_measurement != 'full'
            or d.share_acquired_pct >= 100.0
            or coalesce(nf.deal, '') != '')

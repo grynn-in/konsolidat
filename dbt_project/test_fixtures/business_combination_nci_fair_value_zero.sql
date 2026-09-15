@@ -1,8 +1,9 @@
 -- Acquisition journal, konsol#204 (row M4; PR #205 review): an 80% deal that measures NCI at 'full' but has NOT
 -- declared its nci_fair_value (0) must post NOTHING, never an NCI of 0 with understated goodwill.
 -- Gate: `+gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared`
--- must BUILD with ERROR=0, and zzg_gold.gold_business_combination_journal must hold 0 rows for
--- ACQ-ZZH-ZZT-2026-03-15. (assert_acquisition_accounts_declared is selected out on purpose: it FAILs on these rows —
+-- must give `FAIL 1 assert_goodwill_calculated` and no other failure (the deal is priced but now unmeasured, so
+-- that guard names it: intended), and zzg_gold.gold_business_combination_journal must hold 0 rows for
+-- BC-ZZH-ZZT-2026-03-15. (assert_acquisition_accounts_declared is selected out on purpose: it FAILs on these rows —
 -- the J12 share refusal, konsolidat#204, and the J7 row naming nci_fair_value — and, reading only the sources, would
 -- SKIP the journal.)
 -- Why: nci_fair_value_rated translates the declared figure at the consideration_currency Closing rate. Before row
