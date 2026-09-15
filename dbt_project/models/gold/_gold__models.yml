@@ -363,7 +363,11 @@ models:
       is below 100% (partial: share of fair-value net assets; full: consideration /
       share x (1 - share), goodwill then includes the NCI's share); row J4 adds bargain
       gain and costs. Accounts and the NCI policy come from the group's root row in
-      consolidation_groups. Every journal sums to zero
+      consolidation_groups. Every rate the journal translates at (entity currency,
+      each consideration or costs line's currency, the header's consideration_currency
+      when there are no lines) is INNER JOINed: a deal with a currency that has no
+      governed Closing rate for its period posts nothing, and assert_deal_rate_resolved
+      names the pair (row J9). Every journal sums to zero
       (assert_acquisition_journal_balances).
     columns:
       - name: consolidation_group
@@ -472,7 +476,12 @@ models:
       entity's accumulated CTA) (IAS 21.48), Dr NCI as booked at acquisition, Dr
       disposal_proceeds_account per proceeds line, and disposal_gain_loss_account as
       the balancing line (a credit is a gain). Accounts come from the group's root
-      row in consolidation_groups. Replaced gold_disposal_adjustments (deleted in row J6b). Every journal
+      row in consolidation_groups. Every rate the journal translates at (entity
+      currency, each proceeds line's currency, the header's proceeds_currency when
+      there are no lines) is INNER JOINed: a disposal with a currency that has no
+      governed Closing rate for its period posts nothing, and
+      assert_deal_rate_resolved names the pair (row J9). Replaced
+      gold_disposal_adjustments (deleted in row J6b). Every journal
       sums to zero (assert_disposal_journal_balances).
     columns:
       - name: consolidation_group

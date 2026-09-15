@@ -119,8 +119,18 @@
    group's reporting currency at the acquisition period's governed Closing
    rate, the period mapped through rate_period_map() like every trial-balance
    translation. A line already in group currency translates at 1. When a deal
-   has no consideration lines, the header's total_consideration (group
-   currency, as konsol computed it) is used.
+   has no consideration lines, the header's total_consideration is used,
+   translated from the header's consideration_currency the same way.
+
+   A missing rate stops the deal, it never zeroes it (row J9, PR #203 review
+   3 + 4): every translation INNER JOINs the deal's rate set (deal_rates), so
+   a currency with no governed Closing rate for the period matches nothing,
+   and the line counts below then drop the whole deal. Before, a LEFT JOIN
+   miss read 0 under join_use_nulls = 0: an unrated consideration currency
+   booked consideration 0 and a false bargain gain (or a 'Refuse' stop for
+   the wrong reason), and an unrated entity currency booked net assets 0 and
+   goodwill = consideration. assert_deal_rate_resolved names the pair (deal,
+   from, to, period) before this model runs.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
    end_date, never from the month: a Closing period (one day inside the last
@@ -180,6 +190,7 @@ deals as (
         bc.acquisition_date as acquisition_date,
         toFloat64(bc.share_acquired_pct) as share_acquired_pct,
         toFloat64(bc.total_consideration) as header_consideration,
+        bc.consideration_currency as consideration_currency,
         dp.fiscal_year as fiscal_year,
         dp.fiscal_period as fiscal_period,
         if(rpm.mapped = 1, rpm.rate_year, dp.fiscal_year) as rate_year,
@@ -223,67 +234,139 @@ closing_rates as (
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 
-{# each deal's rate from the entity's currency into the group's: 1 when they
-   are the same currency #}
+{# the rates a deal may translate at (row J9): the governed Closing rates into
+   the group's currency for the deal's rate period, plus 1 for the group
+   currency itself (a governed row quoting the group currency against itself
+   is left out, so it cannot double a line). Every translation below INNER
+   JOINs this set on the line's currency: a currency with no rate matches
+   nothing, and the deal is dropped by the line counts that follow. #}
+deal_rates as (
+    select
+        d.deal as deal,
+        cr.from_currency as from_currency,
+        cr.closing_rate as rate
+    from deals as d
+    inner join closing_rates as cr
+        on cr.to_currency = d.reporting_currency
+        and cr.fiscal_year = d.rate_year
+        and cr.fiscal_period = d.rate_period
+    where cr.from_currency != d.reporting_currency
+
+    union all
+
+    select
+        deal,
+        reporting_currency as from_currency,
+        1.0 as rate
+    from deals
+),
+
+{# each deal's rate from the entity's currency into the group's; no row when
+   the entity's currency is unrated (or the entity is not in the registry, so
+   its currency reads ''), and then no acquired or opening balance posts #}
 deal_entity_rate as (
     select
         d.deal as deal,
-        if(d.entity_currency = d.reporting_currency, 1.0, cr.closing_rate) as entity_rate
+        r.rate as entity_rate
     from deals as d
-    left join closing_rates as cr
-        on cr.from_currency = d.entity_currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join deal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = d.entity_currency
 ),
 
 {# consideration in group currency: the lines translated at the closing rate,
-   or the header figure when the deal has no lines #}
+   or the header figure when the deal has no lines. A deal keeps its
+   consideration only when EVERY line found a rate (n_rated = n_lines): a
+   line dropped by the INNER JOIN would understate the price and book a
+   false bargain, so the deal posts nothing instead. #}
+consideration_line_count as (
+    select parent as deal, count() as n_lines
+    from {{ source('epm_staging', 'business_combination_consideration') }}
+    group by parent
+),
+
 consideration_lines as (
     select
         d.deal as deal,
-        count() as n_lines,
-        sum(toFloat64(c.amount) * if(c.currency = d.reporting_currency, 1.0, cr.closing_rate)) as consideration
+        count() as n_rated,
+        sum(toFloat64(c.amount) * r.rate) as consideration
     from {{ source('epm_staging', 'business_combination_consideration') }} as c
     inner join deals as d
         on d.deal = c.parent
-    left join closing_rates as cr
-        on cr.from_currency = c.currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join deal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = c.currency
     group by d.deal
+),
+
+{# the header's total_consideration, stated in consideration_currency
+   (_staging__sources.yml), translated the same way; a zero header needs no
+   rate. Named apart from the header_consideration column: ClickHouse reads a
+   CTE name inside an expression as a scalar subquery. #}
+header_consideration_rated as (
+    select
+        d.deal as deal,
+        d.header_consideration * r.rate as consideration
+    from deals as d
+    inner join deal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = d.consideration_currency
+    where abs(d.header_consideration) > 0.005
+
+    union all
+
+    select
+        deal,
+        header_consideration as consideration
+    from deals
+    where abs(header_consideration) <= 0.005
 ),
 
 consideration as (
     select
-        d.deal as deal,
-        if(cl.n_lines > 0, cl.consideration, d.header_consideration) as consideration
-    from deals as d
-    left join consideration_lines as cl
-        on cl.deal = d.deal
+        cl.deal as deal,
+        cl.consideration as consideration
+    from consideration_lines as cl
+    inner join consideration_line_count as lc
+        on lc.deal = cl.deal
+    where lc.n_lines = cl.n_rated
+
+    union all
+
+    select
+        h.deal as deal,
+        h.consideration as consideration
+    from header_consideration_rated as h
+    left join consideration_line_count as lc
+        on lc.deal = h.deal
+    where coalesce(lc.n_lines, 0) = 0
 ),
 
 {# line (6): the deal's acquisition costs, each translated from its own
-   currency like a consideration line #}
+   currency like a consideration line; the same all-or-nothing rule
+   (figures_raw compares n_rated with the deal's cost rows) #}
+cost_line_count as (
+    select parent as deal, count() as n_lines
+    from {{ source('epm_staging', 'business_combination_costs') }}
+    group by parent
+),
+
 cost_lines as (
     select
         d.deal as deal,
         cc.idx as idx,
         cc.kind as kind,
-        toFloat64(cc.amount) * if(cc.currency = d.reporting_currency, 1.0, cr.closing_rate) as amount
+        toFloat64(cc.amount) * r.rate as amount
     from {{ source('epm_staging', 'business_combination_costs') }} as cc
     inner join deals as d
         on d.deal = cc.parent
-    left join closing_rates as cr
-        on cr.from_currency = cc.currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join deal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = cc.currency
 ),
 
 costs_total as (
-    select deal, sum(amount) as costs
+    select deal, count() as n_rated, sum(amount) as costs
     from cost_lines
     group by deal
 ),
@@ -363,7 +446,11 @@ figures_raw as (
         on m.deal = d.deal
     left join costs_total as ct
         on ct.deal = d.deal
+    left join cost_line_count as lc
+        on lc.deal = d.deal
     where m.n_balance_rows > 0
+      {# row J9: every cost row found its rate, or the deal posts nothing #}
+      and coalesce(lc.n_lines, 0) = coalesce(ct.n_rated, 0)
 ),
 
 {# goodwill (3) or, when negative, the bargain (3b): consideration + capitalised

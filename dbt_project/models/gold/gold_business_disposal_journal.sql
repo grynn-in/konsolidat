@@ -83,8 +83,20 @@
    their own currency to the group's reporting currency at the disposal
    period's governed Closing rate, the period mapped through
    rate_period_map() like every trial-balance translation. A line already
-   in group currency translates at 1. The goodwill, FVA, NCI and CTA figures
-   are already in group currency.
+   in group currency translates at 1. The header's total_proceeds, used when
+   the document has no lines, is translated from its proceeds_currency the
+   same way. The goodwill, FVA, NCI and CTA figures are already in group
+   currency.
+
+   A missing rate stops the disposal, it never zeroes it (row J9, PR #203
+   review 3 + 4): the entity's rate and every proceeds line's rate are INNER
+   JOINed from the disposal's rate set (disposal_rates), and `disposals`
+   keeps only the documents whose every line found one, so an unrated
+   disposal posts NOTHING. Before, a LEFT JOIN miss read 0 under
+   join_use_nulls = 0: an unrated proceeds currency booked proceeds 0 and a
+   false loss, an unrated entity currency derecognised nothing and booked a
+   false gain. assert_deal_rate_resolved names the pair (deal, from, to,
+   period) before this model runs.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
    end_date, never from the month: a Closing period (one day inside the last
@@ -96,7 +108,23 @@
    104 nci, 110 + idx for a proceeds line (110 for the header figure),
    199 gain_loss. #}
 
-with group_policy as (
+{# the submitted disposals in scope: full disposals only (retained_interest_pct
+   = 0). Filtered here, on the source alone, so that no multi-join CTE below
+   carries a WHERE of its own (the old analyzer's predicate pushdown into a
+   rewritten multi-join is what a filtered CTE invites). #}
+with full_disposals as (
+    select
+        name,
+        consolidation_group,
+        disposed_entity,
+        disposal_date,
+        proceeds_currency,
+        total_proceeds
+    from {{ source('epm_staging', 'business_disposals') }}
+    where toFloat64(retained_interest_pct) <= 0.0
+),
+
+group_policy as (
     select
         consolidation_group,
         reporting_currency,
@@ -117,7 +145,7 @@ disposal_period as (
         bd.name as deal,
         argMin(toUInt16(fp.fiscal_year), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_year,
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
-    from {{ source('epm_staging', 'business_disposals') }} as bd
+    from full_disposals as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where fp.start_date <= bd.disposal_date
       and fp.end_date >= bd.disposal_date
@@ -131,14 +159,16 @@ entity_currency as (
     group by data_area_id
 ),
 
-{# the submitted full disposals with their group's accounts and period #}
-disposals as (
+{# the disposals in scope with their group's accounts and period, before the
+   rate check #}
+disposals_all as (
     select
         bd.name as deal,
         bd.consolidation_group as consolidation_group,
         bd.disposed_entity as data_area_id,
         bd.disposal_date as disposal_date,
         toFloat64(bd.total_proceeds) as header_proceeds,
+        bd.proceeds_currency as proceeds_currency,
         dp.fiscal_year as fiscal_year,
         dp.fiscal_period as fiscal_period,
         if(rpm.mapped = 1, rpm.rate_year, dp.fiscal_year) as rate_year,
@@ -151,7 +181,7 @@ disposals as (
         gp.disposal_proceeds_account as proceeds_account,
         gp.disposal_gain_loss_account as gain_loss_account,
         concat('DSP-', bd.consolidation_group, '-', bd.disposed_entity, '-', toString(bd.disposal_date)) as journal_id
-    from {{ source('epm_staging', 'business_disposals') }} as bd
+    from full_disposals as bd
     inner join group_policy as gp
         on gp.consolidation_group = bd.consolidation_group
     inner join disposal_period as dp
@@ -161,7 +191,6 @@ disposals as (
         and rpm.fiscal_period = dp.fiscal_period
     left join entity_currency as ec
         on ec.data_area_id = bd.disposed_entity
-    where toFloat64(bd.retained_interest_pct) <= 0.0
 ),
 
 {# the governed Closing rate per (from, to, rate period); the same rows
@@ -178,18 +207,113 @@ closing_rates as (
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 
-{# each disposal's rate from the entity's currency into the group's: 1 when
-   they are the same currency #}
+proceeds_line_count as (
+    select parent as deal, count() as n_lines
+    from {{ source('epm_staging', 'business_disposal_proceeds') }}
+    group by parent
+),
+
+{# a proceeds line whose currency has no governed Closing rate into the
+   group's currency for the disposal's rate period (a line already in group
+   currency needs none) #}
+unrated_proceeds as (
+    select d.deal as deal
+    from {{ source('epm_staging', 'business_disposal_proceeds') }} as p
+    inner join disposals_all as d
+        on d.deal = p.parent
+    where p.currency != d.reporting_currency
+      and (p.currency, d.reporting_currency, d.rate_year, d.rate_period) not in (
+          select from_currency, to_currency, fiscal_year, fiscal_period from closing_rates
+      )
+    group by d.deal
+),
+
+{# the disposals that post (row J9): the entity's currency is rated (or is
+   the group currency), no proceeds line is unrated, and a document with no
+   lines has a rated header currency (or a zero header, which posts no
+   proceeds line anyway). Decided here once, by set membership on the rate
+   keys, so that the translation joins below cannot miss; everything below
+   reads this set, so an unrated disposal has no line at all. The rate sets
+   are IN-subqueries, not joins: ClickHouse inlines a WITH subquery at every
+   reference, and this CTE is read nine times below, so every join layered
+   into it is multiplied by nine. NOT IN / IN rather than a LEFT JOIN null
+   test (join_use_nulls = 0). #}
+disposals as (
+    select
+        d.deal as deal,
+        d.consolidation_group as consolidation_group,
+        d.data_area_id as data_area_id,
+        d.disposal_date as disposal_date,
+        d.header_proceeds as header_proceeds,
+        d.proceeds_currency as proceeds_currency,
+        d.fiscal_year as fiscal_year,
+        d.fiscal_period as fiscal_period,
+        d.rate_year as rate_year,
+        d.rate_period as rate_period,
+        d.entity_currency as entity_currency,
+        d.reporting_currency as reporting_currency,
+        d.goodwill_account as goodwill_account,
+        d.fair_value_adjustment_account as fair_value_adjustment_account,
+        d.nci_account as nci_account,
+        d.proceeds_account as proceeds_account,
+        d.gain_loss_account as gain_loss_account,
+        d.journal_id as journal_id
+    from disposals_all as d
+    left join proceeds_line_count as lc
+        on lc.deal = d.deal
+    where (
+            d.entity_currency = d.reporting_currency
+            or (d.entity_currency, d.reporting_currency, d.rate_year, d.rate_period) in (
+                select from_currency, to_currency, fiscal_year, fiscal_period from closing_rates
+            )
+          )
+      and d.deal not in (select deal from unrated_proceeds)
+      and (
+            coalesce(lc.n_lines, 0) > 0
+            or abs(d.header_proceeds) <= 0.005
+            or d.proceeds_currency = d.reporting_currency
+            or (d.proceeds_currency, d.reporting_currency, d.rate_year, d.rate_period) in (
+                select from_currency, to_currency, fiscal_year, fiscal_period from closing_rates
+            )
+          )
+),
+
+{# the rates a posting disposal translates at: the governed Closing rates
+   into the group's currency for its rate period, plus 1 for the group
+   currency itself (a governed row quoting the group currency against itself
+   is left out, so it cannot double a line). Every translation below INNER
+   JOINs this set on the line's currency; `disposals` guarantees the hit, and
+   the INNER JOIN guarantees that a miss could still never read as 0. #}
+disposal_rates as (
+    select
+        d.deal as deal,
+        cr.from_currency as from_currency,
+        cr.closing_rate as rate
+    from disposals as d
+    inner join closing_rates as cr
+        on cr.to_currency = d.reporting_currency
+        and cr.fiscal_year = d.rate_year
+        and cr.fiscal_period = d.rate_period
+    where cr.from_currency != d.reporting_currency
+
+    union all
+
+    select
+        deal,
+        reporting_currency as from_currency,
+        1.0 as rate
+    from disposals
+),
+
+{# each disposal's rate from the entity's currency into the group's #}
 disposal_entity_rate as (
     select
         d.deal as deal,
-        if(d.entity_currency = d.reporting_currency, 1.0, cr.closing_rate) as entity_rate
+        r.rate as entity_rate
     from disposals as d
-    left join closing_rates as cr
-        on cr.from_currency = d.entity_currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join disposal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = d.entity_currency
 ),
 
 {# line (5): the proceeds lines, each translated from its own currency #}
@@ -198,21 +322,28 @@ proceeds_lines as (
         d.deal as deal,
         p.idx as idx,
         p.component as component,
-        toFloat64(p.amount) * if(p.currency = d.reporting_currency, 1.0, cr.closing_rate) as amount
+        toFloat64(p.amount) * r.rate as amount
     from {{ source('epm_staging', 'business_disposal_proceeds') }} as p
     inner join disposals as d
         on d.deal = p.parent
-    left join closing_rates as cr
-        on cr.from_currency = p.currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join disposal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = p.currency
 ),
 
-proceeds_line_count as (
-    select deal, count() as n_lines
-    from proceeds_lines
-    group by deal
+{# the header's total_proceeds, stated in proceeds_currency
+   (_staging__sources.yml), translated the same way (a zero header posts no
+   line). Named apart from the header_proceeds column: ClickHouse reads a
+   CTE name inside an expression as a scalar subquery. #}
+header_proceeds_rated as (
+    select
+        d.deal as deal,
+        d.header_proceeds * r.rate as amount
+    from disposals as d
+    inner join disposal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = d.proceeds_currency
+    where abs(d.header_proceeds) > 0.005
 ),
 
 {# lines (1), (2), (4): what the entity's acquisition journal(s) booked in
@@ -394,15 +525,17 @@ proceeds_raw as (
         d.disposal_date as disposal_date,
         d.journal_id as journal_id,
         d.proceeds_account as line_account,
-        d.header_proceeds as line_amount,
+        hp.amount as line_amount,
         toUInt16(110) as line_no,
         'proceeds' as account_role,
         'Disposal proceeds' as default_name
     from disposals as d
+    inner join header_proceeds_rated as hp
+        on hp.deal = d.deal
     left join proceeds_line_count as pc
         on pc.deal = d.deal
     where coalesce(pc.n_lines, 0) = 0
-      and abs(d.header_proceeds) > 0.005
+      and abs(hp.amount) > 0.005
 ),
 
 {# chart names for the declared accounts; the default name when the chart

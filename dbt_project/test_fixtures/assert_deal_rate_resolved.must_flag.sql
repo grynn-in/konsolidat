@@ -3,13 +3,14 @@
 -- Gate: `+gold_business_disposal_journal assert_deal_rate_resolved assert_acquisition_journal_balances` must
 -- show `FAIL 1 assert_deal_rate_resolved` / `Got 1 result` (GBP -> USD, FY2026 P3, kind business_combination),
 -- and gold_business_combination_journal must hold NO row for the deal: the journal INNER JOINs every rate it
--- needs, so an unrated deal posts nothing. Because the guard reads only sources, dbt runs it before the journal
--- and its FAIL SKIPs the journal under that selector; `+gold_business_combination_journal
--- assert_acquisition_journal_balances` builds the journal on these rows (0 rows for the deal, and
--- assert_goodwill_calculated FAIL 1 as the predicted side effect: a deal with consideration and no goodwill
--- or bargain-gain line). Before row J9 the same rows posted consideration 0 (the LEFT JOIN miss read 0 under
--- join_use_nulls = 0): Cr ZZ4900 bargain_gain -1,580 against equity 100/550 and FVA 930, a balanced journal
--- with a false bargain gain, and no investment line.
+-- needs, so an unrated deal posts nothing. The guard reads only sources, so dbt runs it first; its FAIL SKIPs
+-- gold_goodwill_amortisation_journal and gold_business_disposal_journal (both downstream of the disposal
+-- tables the guard reads) while the acquisition journal still builds: 0 rows, assert_acquisition_journal_balances
+-- PASS, and assert_goodwill_calculated FAIL 1 as the predicted side effect (a deal with consideration and no
+-- goodwill or bargain-gain line).
+-- Before row J9 the same rows posted consideration 0 (the LEFT JOIN miss read 0 under join_use_nulls = 0):
+-- Cr ZZ4900 bargain_gain -1,580 against equity 100/550 and FVA 930, a balanced journal with a false bargain
+-- gain, and no investment line.
 --
 -- business_combination_100pct.sql verbatim except the one consideration line: 6,500 GBP cash instead of
 -- 8,300 USD (the header's total_consideration stays konsol's 8,300 USD Result figure; the journal never reads
