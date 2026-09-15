@@ -48,7 +48,7 @@ unmeasured as (
     ) as ab
         on ab.parent = bc.name
     where coalesce(ab.n_rows, 0) = 0
-      and abs(toFloat64(bc.net_assets_acquired)) < 0.005
+      and abs(toFloat64(bc.net_assets_acquired)) < {{ materiality_floor() }}
 ),
 
 -- the first trial-balance period at or after the acquisition period (tuple order, never a date or month)

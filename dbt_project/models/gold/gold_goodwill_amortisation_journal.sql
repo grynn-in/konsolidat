@@ -84,7 +84,7 @@ deal_goodwill as (
     from {{ ref('gold_business_combination_journal') }}
     where account_role = 'goodwill'
     group by deal, consolidation_group, data_area_id, fiscal_year, fiscal_period
-    having sum(adjustment_amount) > 0.005
+    having sum(adjustment_amount) > {{ materiality_floor() }}
 ),
 
 {# the declared Regular periods, one row each #}
@@ -217,7 +217,7 @@ lines_raw as (
         [toUInt16(1), toUInt16(2)] as line_no,
         ['amortisation_expense', 'goodwill'] as account_role,
         ['Goodwill amortisation', 'Goodwill amortised'] as default_name
-    where abs(line_amount) > 0.005
+    where abs(line_amount) > {{ materiality_floor() }}
 ),
 
 {# chart names for the declared accounts; the default name when the chart

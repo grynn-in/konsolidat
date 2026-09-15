@@ -2,7 +2,7 @@
 -- konsolidat#198 (design §2/§3, row J10; PR #203 review 5): a submitted Business Combination whose acquired
 -- balance sheet (epm_staging.business_combination_acquired_balances, konsol's table: entity currency, Dr
 -- positive, Cr negative) does not agree with itself. Two problems, one row per deal and problem:
---   'acquired balance sheet does not sum to zero'          sum(book_amount) over the deal's rows, abs > 0.005:
+--   'acquired balance sheet does not sum to zero'          sum(book_amount) over the deal's rows, abs > materiality_floor():
 --                                                          a balance sheet balances; one that does not is
 --                                                          missing a line or carries a mistyped amount
 --   'main_account is not a posting account of the chart'   a row whose account is not a Published posting leaf
@@ -39,7 +39,7 @@ unbalanced as (
         concat('sum(book_amount) = ', toString(round(sum(book_amount), 2)), ' over ', toString(count()), ' rows') as detail
     from balances
     group by deal
-    having abs(sum(book_amount)) > 0.005
+    having abs(sum(book_amount)) > {{ materiality_floor() }}
 ),
 
 unknown_account as (

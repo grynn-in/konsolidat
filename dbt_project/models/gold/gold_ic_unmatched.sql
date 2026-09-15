@@ -41,4 +41,4 @@ group by
     ctb.data_area_id,
     ctb.main_account,
     ica.counterpart
-having abs(sum(ctb.group_amount)) >= 0.005
+having abs(sum(ctb.group_amount)) >= {{ materiality_floor() }}

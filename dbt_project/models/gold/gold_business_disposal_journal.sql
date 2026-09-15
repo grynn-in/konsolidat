@@ -274,7 +274,7 @@ disposals as (
       and d.deal not in (select deal from unrated_proceeds)
       and (
             coalesce(lc.n_lines, 0) > 0
-            or abs(d.header_proceeds) <= 0.005
+            or abs(d.header_proceeds) <= {{ materiality_floor() }}
             or d.proceeds_currency = d.reporting_currency
             or (d.proceeds_currency, d.reporting_currency, d.rate_year, d.rate_period) in (
                 select from_currency, to_currency, fiscal_year, fiscal_period from closing_rates
@@ -347,7 +347,7 @@ header_proceeds_rated as (
     inner join disposal_rates as r
         on r.deal = d.deal
         and r.from_currency = d.proceeds_currency
-    where abs(d.header_proceeds) > 0.005
+    where abs(d.header_proceeds) > {{ materiality_floor() }}
 ),
 
 {# lines (1), (2), (4): what the entity's acquisition journal(s) booked in
@@ -441,7 +441,7 @@ derecognised_lines as (
         on d.deal = cb.deal
     inner join disposal_entity_rate as er
         on er.deal = cb.deal
-    where abs(cb.local_balance * er.entity_rate) > 0.005
+    where abs(cb.local_balance * er.entity_rate) > {{ materiality_floor() }}
 ),
 
 {# one row per disposal with every fixed figure, joined BEFORE the ARRAY
@@ -494,7 +494,7 @@ fixed_raw as (
         [toUInt16(101), toUInt16(102), toUInt16(103), toUInt16(104)] as line_no,
         ['goodwill', 'fva', 'cta', 'nci'] as account_role,
         ['Goodwill derecognised on disposal', 'Fair value adjustments derecognised on disposal', 'CTA recycled on disposal', 'Non-controlling interest derecognised on disposal'] as default_name
-    where abs(line_amount) > 0.005
+    where abs(line_amount) > {{ materiality_floor() }}
 ),
 
 {# line (5): one line per proceeds row, or the header figure when the
@@ -516,7 +516,7 @@ proceeds_raw as (
     from proceeds_lines as pl
     inner join disposals as d
         on d.deal = pl.deal
-    where abs(pl.amount) > 0.005
+    where abs(pl.amount) > {{ materiality_floor() }}
 
     union all
 
@@ -539,7 +539,7 @@ proceeds_raw as (
     left join proceeds_line_count as pc
         on pc.deal = d.deal
     where coalesce(pc.n_lines, 0) = 0
-      and abs(hp.amount) > 0.005
+      and abs(hp.amount) > {{ materiality_floor() }}
 ),
 
 {# chart names for the declared accounts; the default name when the chart
@@ -610,7 +610,7 @@ gain_loss_lines as (
         on d.deal = b.deal
     left join chart as ch
         on ch.main_account_id = d.gain_loss_account
-    where abs(b.balancing_amount) > 0.005
+    where abs(b.balancing_amount) > {{ materiality_floor() }}
 ),
 
 journal as (

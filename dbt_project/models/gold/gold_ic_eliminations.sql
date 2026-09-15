@@ -140,15 +140,15 @@ posted as (
    period, not per entity: the group view's is attributed to the other,
    partly owned side, the NCI view's to its own side. #}
 {% set legs = [
-    ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= 0.005'),
-    ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_n_a) >= 0.005'),
-    ('group', 'nci',     "''",           'account_b', 'entity_b', 'post_n_b',   "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_n_b) >= 0.005'),
-    ('group', 'difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= 0.005"),
-    ('group', 'difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= 0.005"),
-    ('nci',   'matched', "''",           'account_a', 'entity_a', 'post_v_m_a', "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_v_m_a) >= 0.005'),
-    ('nci',   'matched', "''",           'account_b', 'entity_b', 'post_v_m_b', "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_v_m_b) >= 0.005'),
-    ('nci',   'difference', 'posted_cause', 'account_a', 'entity_a', 'post_v_d_a', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_v_d_a) >= 0.005"),
-    ('nci',   'difference', 'posted_cause', 'account_b', 'entity_b', 'post_v_d_b', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_v_d_b) >= 0.005"),
+    ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= ' ~ materiality_floor()),
+    ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_n_a) >= ' ~ materiality_floor()),
+    ('group', 'nci',     "''",           'account_b', 'entity_b', 'post_n_b',   "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_n_b) >= ' ~ materiality_floor()),
+    ('group', 'difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= " ~ materiality_floor()),
+    ('group', 'difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= " ~ materiality_floor()),
+    ('nci',   'matched', "''",           'account_a', 'entity_a', 'post_v_m_a', "'" ~ ic_nci_account() ~ "'", 'entity_a', 'abs(post_v_m_a) >= ' ~ materiality_floor()),
+    ('nci',   'matched', "''",           'account_b', 'entity_b', 'post_v_m_b', "'" ~ ic_nci_account() ~ "'", 'entity_b', 'abs(post_v_m_b) >= ' ~ materiality_floor()),
+    ('nci',   'difference', 'posted_cause', 'account_a', 'entity_a', 'post_v_d_a', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_v_d_a) >= " ~ materiality_floor()),
+    ('nci',   'difference', 'posted_cause', 'account_b', 'entity_b', 'post_v_d_b', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_v_d_b) >= " ~ materiality_floor()),
 ] %}
 entries as (
     {% for view, kind, cause, acc1, ent1, amount, acc2, ent2, cond in legs %}
