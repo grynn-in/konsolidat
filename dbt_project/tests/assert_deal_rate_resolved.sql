@@ -10,8 +10,13 @@
 --   the entity's accounting currency (epm_staging.entities; '' when the entity is not in the registry, and
 --     that is reported as such): the acquired balances, the opening balances, the derecognised balances
 --   each consideration / acquisition-costs / proceeds line's own currency
---   the header's consideration_currency / proceeds_currency, when the document has no lines and the header
---     amount is not zero (the journals fall back to the header figure then)
+--   the header's consideration_currency / proceeds_currency, when the document has no consideration (proceeds)
+--     lines and the header amount is not zero (the journals fall back to the header figure then). Row J13
+--     (PR #203 second review 1): the acquisition-costs lines do NOT count here — the journal's
+--     consideration_line_count reads only business_combination_consideration, so a combination with a header
+--     amount, no consideration line and one cost line falls back to the header and needs its rate; counting
+--     the cost row as "a line" left that header unchecked while the journal dropped the deal silently. Fixture:
+--     dbt_project/test_fixtures/assert_deal_rate_resolved.header.must_flag.sql.
 -- into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period:
 -- epm_staging.fiscal_periods by start_date <= date <= end_date (Closing periods skipped), then
 -- rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every
@@ -132,10 +137,16 @@ line_currencies as (
     from {{ source('epm_staging', 'business_disposal_proceeds') }}
 ),
 
-line_counts as (
-    select deal, kind, count() as n_lines
-    from line_currencies
-    group by deal, kind
+-- the lines that switch the journals OFF the header fallback: exactly the tables their
+-- consideration_line_count / proceeds_line_count read (costs are line (6), not consideration)
+header_fallback_line_counts as (
+    select parent as deal, 'business_combination' as kind, count() as n_lines
+    from {{ source('epm_staging', 'business_combination_consideration') }}
+    group by parent
+    union all
+    select parent as deal, 'business_disposal' as kind, count() as n_lines
+    from {{ source('epm_staging', 'business_disposal_proceeds') }}
+    group by parent
 ),
 
 -- every (deal, from_currency) pair the journals need
@@ -181,7 +192,7 @@ needed as (
         d.rate_year as rate_year,
         d.rate_period as rate_period
     from deals as d
-    left join line_counts as n
+    left join header_fallback_line_counts as n
         on n.deal = d.deal
         and n.kind = d.kind
     where coalesce(n.n_lines, 0) = 0
