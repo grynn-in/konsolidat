@@ -151,6 +151,16 @@ sources:
         description: >
           F3: flattened reporting hierarchies from the Reporting Hierarchy
           doctype, computed member-by-member. Replaces the regenerated seed.
+          konsolidat#220: one row per member tranche — a renamed, moved or
+          ended node is a second row of the same member_code with its own
+          window; the gold hierarchy models resolve the tree per period. DDL
+          is konsol's _REFERENCE_TABLE_DDL, pinned by
+          tests/test_reporting_hierarchies_ddl.py.
+        columns:
+          - name: member_effective_from
+            description: "First day this tranche of the member (its label, parent and group flag) holds; '1900-01-01' when konsol gives none. Date32 (1900-01-01..2299-12-31)."
+          - name: member_effective_to
+            description: "Last day this tranche holds; '2299-12-31' = open (Date32, 1900-01-01..2299-12-31). Tranches of one member_code never overlap."
       - name: sync_watermark
         description: >
           One row per successfully synced table, stamped by konsol's

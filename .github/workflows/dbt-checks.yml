@@ -13,6 +13,7 @@ on:
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
+      - 'tests/test_reporting_hierarchies_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   pull_request:
@@ -26,6 +27,7 @@ on:
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
+      - 'tests/test_reporting_hierarchies_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
   workflow_dispatch:
@@ -96,6 +98,10 @@ jobs:
       # columns are konsol's DDL, verbatim, and declared dbt sources.
       - name: deal tables DDL and sources
         run: python -m unittest -v tests.test_deal_tables_ddl
+      # konsol#220: reporting_hierarchies is konsol's DDL, verbatim, including
+      # the dated member tranche columns, declared on the dbt source.
+      - name: reporting hierarchies DDL and tranche columns
+        run: python -m unittest -v tests.test_reporting_hierarchies_ddl
 
   tb-only-first-build:
     name: first build on a fresh TB-only site
