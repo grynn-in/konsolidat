@@ -19,8 +19,12 @@
     Consumes canonical stg_gl_entries for ERP-agnostic columns.
     Joins D365 F&O adapter directly for reporting_currency_amount
     and general_journal_entry_recid (D365-specific fields).
+
+    With `d365_fo` not in `erp_sources`, an empty relation with the same
+    columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
+{% if 'd365_fo' in var('erp_sources', []) %}
 select
     {{ cast_to_int64('gl.record_id') }} as recid,
     {{ cast_to_string('gl.entity_id') }} as data_area_id,
@@ -51,4 +55,27 @@ left join {{ ref('stg_d365_fo__gl_entries') }} d365
    need no FINAL. #}
 {% if is_incremental() %}
 where {{ cast_to_datetime('gl._loaded_at') }} >= (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}
+{% else %}
+{% set columns = [
+    ('recid', 'Int64'),
+    ('data_area_id', 'String'),
+    ('accounting_date', 'Date'),
+    ('main_account', 'String'),
+    ('accounting_currency_amount', 'Decimal(38, 2)'),
+    ('reporting_currency_amount', 'Decimal(38, 2)'),
+    ('transaction_currency_amount', 'Decimal(38, 2)'),
+    ('transaction_currency_code', 'String'),
+    ('posting_type', 'String'),
+    ('general_journal_entry_recid', 'Int64'),
+    ('ledger_account', 'String'),
+    ('description', 'String'),
+    ('partner_data_area_id', 'String'),
+] %}
+{% for d in var('dimensions') %}{% do columns.append((d.name, 'String')) %}{% endfor %}
+{% do columns.extend([
+    ('_airbyte_extracted_at', 'DateTime'),
+    ('_airbyte_raw_id', 'String'),
+]) %}
+{{ empty_relation(columns) }}
 {% endif %}

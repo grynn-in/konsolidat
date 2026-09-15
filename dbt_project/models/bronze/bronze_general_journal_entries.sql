@@ -10,6 +10,10 @@
     )
 }}
 
+{# D365 F&O only. With `d365_fo` not in `erp_sources`, an empty relation with
+   the same columns and types (empty_relation, macros/erp_sources.sql). #}
+
+{% if 'd365_fo' in var('erp_sources', []) %}
 select
     {{ cast_to_int64('RecId') }} as recid,
     {{ cast_to_string('dataAreaId') }} as data_area_id,
@@ -32,4 +36,21 @@ from {{ ref('stg_d365_fo__gl_journal_entries') }}
    and downstream reads need no FINAL. #}
 {% if is_incremental() %}
 where {{ cast_to_datetime('_airbyte_extracted_at') }} >= (select max(_airbyte_extracted_at) from {{ this }})
+{% endif %}
+{% else %}
+{{ empty_relation([
+    ('recid', 'Int64'),
+    ('data_area_id', 'String'),
+    ('accounting_date', 'Date'),
+    ('journal_number', 'String'),
+    ('journal_category', 'String'),
+    ('document_number', 'String'),
+    ('document_date', 'Date'),
+    ('description', 'String'),
+    ('posting_layer', 'String'),
+    ('fiscal_calendar_period', 'String'),
+    ('fiscal_calendar_year_recid', 'Int64'),
+    ('_airbyte_extracted_at', 'DateTime'),
+    ('_airbyte_raw_id', 'String'),
+]) }}
 {% endif %}
