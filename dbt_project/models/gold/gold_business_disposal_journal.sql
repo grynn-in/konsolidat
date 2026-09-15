@@ -124,17 +124,21 @@ with full_disposals as (
     where toFloat64(retained_interest_pct) <= 0.0
 ),
 
+{# the group's root row, aggregated with any() per column so that a
+   duplicated root row cannot double every line of the journal (row J10;
+   assert_consolidation_group_root_unique names the duplicate) #}
 group_policy as (
     select
         consolidation_group,
-        reporting_currency,
-        goodwill_account,
-        fair_value_adjustment_account,
-        nci_account,
-        disposal_proceeds_account,
-        disposal_gain_loss_account
+        any(reporting_currency) as reporting_currency,
+        any(goodwill_account) as goodwill_account,
+        any(fair_value_adjustment_account) as fair_value_adjustment_account,
+        any(nci_account) as nci_account,
+        any(disposal_proceeds_account) as disposal_proceeds_account,
+        any(disposal_gain_loss_account) as disposal_gain_loss_account
     from {{ source('epm_gold', 'consolidation_groups') }}
     where data_area_id = ''
+    group by consolidation_group
 ),
 
 {# the calendar period holding the disposal date; the lowest-numbered

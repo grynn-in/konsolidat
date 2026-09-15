@@ -141,23 +141,27 @@
    105 bargain_gain, 110 + idx for a costs debit and 130 + idx for its
    settlement credit. #}
 
+{# the group's root row, aggregated with any() per column so that a
+   duplicated root row cannot double every line of the journal (row J10;
+   assert_consolidation_group_root_unique names the duplicate) #}
 with group_policy as (
     select
         consolidation_group,
-        reporting_currency,
-        nci_measurement,
-        goodwill_treatment,
-        acquisition_costs_treatment,
-        bargain_purchase,
-        goodwill_account,
-        fair_value_adjustment_account,
-        investment_account,
-        nci_account,
-        bargain_purchase_gain_account,
-        disposal_proceeds_account,
-        acquisition_costs_account
+        any(reporting_currency) as reporting_currency,
+        any(nci_measurement) as nci_measurement,
+        any(goodwill_treatment) as goodwill_treatment,
+        any(acquisition_costs_treatment) as acquisition_costs_treatment,
+        any(bargain_purchase) as bargain_purchase,
+        any(goodwill_account) as goodwill_account,
+        any(fair_value_adjustment_account) as fair_value_adjustment_account,
+        any(investment_account) as investment_account,
+        any(nci_account) as nci_account,
+        any(bargain_purchase_gain_account) as bargain_purchase_gain_account,
+        any(disposal_proceeds_account) as disposal_proceeds_account,
+        any(acquisition_costs_account) as acquisition_costs_account
     from {{ source('epm_gold', 'consolidation_groups') }}
     where data_area_id = ''
+    group by consolidation_group
 ),
 
 {# the calendar period holding the acquisition date; the lowest-numbered

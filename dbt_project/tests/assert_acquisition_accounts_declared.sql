@@ -40,8 +40,8 @@
 --
 -- Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local ->
 -- framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal
--- accounts belong to the disposal journal (assert_disposal_gain_loss_exists names a disposal that could not
--- post).
+-- journal's accounts are assert_disposal_accounts_declared's (row J10); a duplicated root row is
+-- assert_consolidation_group_root_unique's (the root CTE below reads any() per column, as the journals do).
 with root as (
     select
         consolidation_group,

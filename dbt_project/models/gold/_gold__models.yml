@@ -367,7 +367,11 @@ models:
       each consideration or costs line's currency, the header's consideration_currency
       when there are no lines) is INNER JOINed: a deal with a currency that has no
       governed Closing rate for its period posts nothing, and assert_deal_rate_resolved
-      names the pair (row J9). Every journal sums to zero
+      names the pair (row J9). The root row is read with any() per column, so a
+      duplicated root row cannot double the lines; assert_consolidation_group_root_unique
+      stops the build on one, and assert_acquired_balances_complete warns on an
+      acquired balance sheet that does not sum to zero or names an account the chart
+      does not know (row J10). Every journal sums to zero
       (assert_acquisition_journal_balances).
     columns:
       - name: consolidation_group
@@ -419,6 +423,8 @@ models:
       year instalments; rounded cumulatively so they sum to the goodwill exactly),
       Dr goodwill_amortisation_expense_account / Cr goodwill_account. Group
       currency. Empty under 'Impairment only'. Stopping at a disposal is row J5b.
+      The root row is read with any() per column, so a duplicated root row cannot
+      double the schedule (row J10; assert_consolidation_group_root_unique names it).
       Every journal sums to zero per period (assert_goodwill_amortisation_journal_balances).
     columns:
       - name: consolidation_group
@@ -480,7 +486,12 @@ models:
       currency, each proceeds line's currency, the header's proceeds_currency when
       there are no lines) is INNER JOINed: a disposal with a currency that has no
       governed Closing rate for its period posts nothing, and
-      assert_deal_rate_resolved names the pair (row J9). Replaced
+      assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
+      stops the build on a disposal whose group has not declared an account this journal
+      posts to; assert_disposal_has_balances warns on a disposal whose entity has no
+      trial-balance row through the disposal period (nothing to derecognise); the root
+      row is read with any() per column and assert_consolidation_group_root_unique stops
+      the build on a duplicate (row J10). Replaced
       gold_disposal_adjustments (deleted in row J6b). Every journal
       sums to zero (assert_disposal_journal_balances).
     columns:

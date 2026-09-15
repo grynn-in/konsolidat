@@ -53,16 +53,21 @@
    line_no: 1 for the expense line, 2 for the goodwill credit; `instalment`
    (1 .. n_instalments) numbers the period within the schedule. #}
 
+{# the group's root row, aggregated with any() per column so that a
+   duplicated root row cannot double every line of the journal (row J10;
+   assert_consolidation_group_root_unique names the duplicate); the
+   Amortise policy is read from the aggregate, in HAVING #}
 with group_policy as (
     select
         consolidation_group,
-        toUInt32(goodwill_amortisation_years) as amortisation_years,
-        goodwill_account,
-        goodwill_amortisation_expense_account
+        toUInt32(any(goodwill_amortisation_years)) as amortisation_years,
+        any(goodwill_account) as goodwill_account,
+        any(goodwill_amortisation_expense_account) as goodwill_amortisation_expense_account
     from {{ source('epm_gold', 'consolidation_groups') }}
     where data_area_id = ''
-      and goodwill_treatment = 'Amortise'
-      and goodwill_amortisation_years > 0
+    group by consolidation_group
+    having any(goodwill_treatment) = 'Amortise'
+       and any(goodwill_amortisation_years) > 0
 ),
 
 {# the goodwill each deal's acquisition journal booked, and the period it
