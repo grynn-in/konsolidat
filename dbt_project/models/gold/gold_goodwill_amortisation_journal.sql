@@ -24,22 +24,31 @@
    the instalments sum to the goodwill exactly whatever the division leaves.
 
    The schedule stops when the goodwill is fully amortised (years x periods
-   per year instalments), or at the end of the declared calendar: a period not
-   yet declared posts when it is. Under 'Impairment only' (or any other
-   value: row J7's guard names an undeclared policy) the model is empty. A
-   deal that booked no goodwill (a bargain purchase, or goodwill 0) has no
+   per year instalments), at the disposal of the entity (design §1: "until
+   fully amortised or disposal"), or at the end of the declared calendar: a
+   period not yet declared posts when it is. Under 'Impairment only' (or any
+   other value: row J7's guard names an undeclared policy) the model is empty.
+   A deal that booked no goodwill (a bargain purchase, or goodwill 0) has no
    schedule.
 
-   Not yet here: the schedule does not stop at a disposal (design §1: "until
-   fully amortised or disposal"). That needs epm_staging.business_disposals,
-   which every acquisition fixture would then have to create; row J5b adds it
-   once row J6's disposal journal exists, and the disposal journal
-   derecognises goodwill net of the amortisation posted to date.
+   The disposal stop (row J5b): a submitted Business Disposal
+   (epm_staging.business_disposals) for the same group and entity ends the
+   schedule BEFORE its disposal period: the last instalment falls in the
+   Regular period preceding the one that holds disposal_date (mapped through
+   epm_staging.fiscal_periods by start_date <= date <= end_date, never by
+   month, as the acquisition date is), and the disposal journal
+   (gold_business_disposal_journal) derecognises the goodwill net of the
+   amortisation posted to date in the disposal period itself. The earliest
+   disposal of the entity in the group counts; a disposal with a retained
+   interest stops the schedule too, though nothing derecognises the goodwill
+   then (out of scope, design §7; row J6b's assert_disposal_gain_loss_exists
+   names it). Fixtures that build this model must CREATE business_disposals
+   (konsol's tables do not exist live yet).
 
    Every journal sums to zero per period by construction (the two lines are
    each other's counterpart); assert_consolidation_journals_balance proves it
-   once its union includes this model (row J5b). Layer 6 of
-   gold_fully_consolidated_tb reads it, adjustment_type 'goodwill_amortisation'.
+   (its union reads this model). Layer 6 of gold_fully_consolidated_tb reads
+   it, adjustment_type 'goodwill_amortisation'.
 
    line_no: 1 for the expense line, 2 for the goodwill credit; `instalment`
    (1 .. n_instalments) numbers the period within the schedule. #}
@@ -89,8 +98,29 @@ periods_per_year as (
     group by fiscal_year
 ),
 
-{# one row per amortised deal: the goodwill, the number of instalments and
-   the accounts #}
+{# the earliest submitted disposal of each entity in each group, as the
+   calendar period holding its date: the lowest-numbered non-Closing period
+   whose span holds it, exactly as gold_business_disposal_journal maps it.
+   The schedule ends before that period. A range condition is not a
+   ClickHouse join key, so the calendar is cross-joined and filtered. #}
+disposal_stop as (
+    select
+        bd.consolidation_group as consolidation_group,
+        bd.disposed_entity as data_area_id,
+        argMin(toUInt16(fp.fiscal_year), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as stop_year,
+        argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as stop_period,
+        toUInt8(1) as has_disposal
+    from {{ source('epm_staging', 'business_disposals') }} as bd
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    where fp.start_date <= bd.disposal_date
+      and fp.end_date >= bd.disposal_date
+      and fp.period_type != 'Closing'
+    group by bd.consolidation_group, bd.disposed_entity
+),
+
+{# one row per amortised deal: the goodwill, the number of instalments, the
+   accounts and the disposal stop when there is one (a join miss reads 0
+   under either join_use_nulls) #}
 schedules as (
     select
         dg.deal as deal,
@@ -103,18 +133,25 @@ schedules as (
         toUInt32(gp.amortisation_years * ppy.periods_in_year) as n_instalments,
         gp.goodwill_account as goodwill_account,
         gp.goodwill_amortisation_expense_account as expense_account,
-        concat('GWA-', dg.consolidation_group, '-', dg.data_area_id, '-', toString(dg.acquisition_date)) as journal_id
+        concat('GWA-', dg.consolidation_group, '-', dg.data_area_id, '-', toString(dg.acquisition_date)) as journal_id,
+        coalesce(ds.has_disposal, 0) as has_disposal,
+        coalesce(ds.stop_year, 0) as stop_year,
+        coalesce(ds.stop_period, 0) as stop_period
     from deal_goodwill as dg
     inner join group_policy as gp
         on gp.consolidation_group = dg.consolidation_group
     inner join periods_per_year as ppy
         on ppy.fiscal_year = dg.acquisition_year
+    left join disposal_stop as ds
+        on ds.consolidation_group = dg.consolidation_group
+        and ds.data_area_id = dg.data_area_id
 ),
 
-{# every declared Regular period from the acquisition period on, numbered
-   within the deal's schedule. A tuple comparison, never a date or month; a
-   range condition is not a ClickHouse join key, so the calendar is
-   cross-joined and filtered. #}
+{# every declared Regular period from the acquisition period on and, when the
+   entity is disposed of, before the disposal period, numbered within the
+   deal's schedule. A tuple comparison, never a date or month; a range
+   condition is not a ClickHouse join key, so the calendar is cross-joined and
+   filtered. #}
 schedule_periods as (
     select
         s.deal as deal,
@@ -124,6 +161,7 @@ schedule_periods as (
     from schedules as s
     cross join regular_periods as rp
     where (rp.fiscal_year, rp.fiscal_period) >= (s.acquisition_year, s.acquisition_period)
+      and (s.has_disposal = 0 or (rp.fiscal_year, rp.fiscal_period) < (s.stop_year, s.stop_period))
 ),
 
 {# the instalment amount: the rounded cumulative share less the previous
