@@ -404,6 +404,58 @@ models:
       - name: measurement_basis
         description: "How the net assets were measured (design §3): acquired_balances, header_net_assets or measured_from_tb"
 
+  - name: gold_goodwill_amortisation_journal
+    description: >
+      konsolidat#198 (design §1, §5): straight-line goodwill amortisation per the
+      group's policy. When the group's root row in consolidation_groups declares
+      goodwill_treatment = 'Amortise' with goodwill_amortisation_years > 0, each
+      deal whose acquisition journal booked goodwill gets journal
+      GWA-<group>-<entity>-<date>: in every Regular period from the acquisition
+      period until fully amortised (years x the calendar's Regular periods per
+      year instalments; rounded cumulatively so they sum to the goodwill exactly),
+      Dr goodwill_amortisation_expense_account / Cr goodwill_account. Group
+      currency. Empty under 'Impairment only'. Stopping at a disposal is row J5b.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "The acquired entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "A Regular period of epm_staging.fiscal_periods, from the acquisition period on"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
+      - name: adjustment_type
+        description: "'goodwill_amortisation'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['goodwill_amortisation']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: acquisition_date
+      - name: journal_id
+        description: "GWA-<group>-<entity>-<acquisition_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "1 the expense debit, 2 the goodwill credit"
+      - name: account_role
+        description: "amortisation_expense or goodwill"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['amortisation_expense', 'goodwill']
+      - name: deal
+        description: "The Business Combination document name"
+      - name: instalment
+        description: "The period's number within the schedule, 1 .. n_instalments"
+      - name: n_instalments
+        description: "goodwill_amortisation_years x the Regular periods the calendar declares for the acquisition year"
+
   - name: gold_disposal_adjustments
     description: "PRD-12: Disposal gain/loss and CTA recycling"
     columns:

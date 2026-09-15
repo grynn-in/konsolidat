@@ -147,7 +147,9 @@ equity_method as (
    konsolidat#198: the goodwill and fair-value lines come from the balanced
    acquisition journal (gold_business_combination_journal, posted from the
    submitted Business Combination), not from gold_acquisition_adjustments,
-   which keeps only the P&L proration. #}
+   which keeps only the P&L proration. Row J5: the monthly goodwill
+   amortisation journal (gold_goodwill_amortisation_journal, empty unless the
+   group's goodwill_treatment is 'Amortise') joins the layer. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -180,6 +182,22 @@ acquisition_disposal as (
         adjustment_type,
         journal_id
     from {{ ref('gold_business_combination_journal') }}
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        adjustment_amount as amount,
+        adjustment_type,
+        journal_id
+    from {{ ref('gold_goodwill_amortisation_journal') }}
 
     union all
 
