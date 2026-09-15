@@ -1,18 +1,27 @@
-{# PR #211 review 2 (konsolidat#206): every scenario_id in gold_scenario_trial_balance
-   is an ACTIVE scenario declared in epm_gold.scenario_definitions with the
-   scenario_type its branch needs. The variance models keep only active scenarios
-   of the matching type, so rows under any other scenario (a site that marks
-   ACTUAL inactive, or declares its own actual id) would silently drop out of
-   variance; this test names them instead.
+{# PR #211 review 2 (konsolidat#206): the scenarios of gold_scenario_trial_balance
+   are declared. This test checks declaration, activeness and branch type: every
+   scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions
+   whose scenario_type suits its branch, and the site declares at most one active
+   actual scenario (the GL branch is stamped with it; with several it keeps the
+   fallback 'ACTUAL').
 
    Branch (data_source) -> accepted scenario_type:
      gl                    -> actual
      budget, d365_budget   -> budget or forecast
 
-   One row per (scenario_id, data_source) with rows, problem one of:
-     undeclared - no scenario_definitions row for the id;
-     inactive   - declared, but no row with is_active = 1;
-     wrong_type - active, but no active row has the branch's type. #}
+   Forecasts are legitimate rows of the scenario trial balance, so the budget
+   branches accept them here. The variance models read only 'budget'-type
+   scenarios, so forecast rows never reach variance; that is by design, not a
+   problem this test names.
+
+   Problems:
+     undeclared     - one row per (scenario_id, data_source) with rows: no
+                      scenario_definitions row for the id;
+     inactive       - declared, but no row with is_active = 1;
+     wrong_type     - active, but no active row has the branch's type;
+     several_actual - one row whenever more than one active 'actual' scenario is
+                      declared, whatever the rows say: scenario_id lists the
+                      active actual ids (sorted, comma-separated), data_source ''. #}
 
 with tb_scenarios as (
     select
@@ -49,6 +58,14 @@ checked as (
     from tb_scenarios as t
     left join definitions as d
         on t.t_scenario_id = d.d_scenario_id
+),
+
+active_actuals as (
+    select
+        arraySort(groupUniqArray(scenario_id)) as a_ids
+    from {{ source('epm_gold', 'scenario_definitions') }}
+    where scenario_type = 'actual'
+      and is_active = 1
 )
 
 select
@@ -61,3 +78,12 @@ select
     ) as problem
 from checked
 where c_type_ok = 0
+
+union all
+
+select
+    arrayStringConcat(a_ids, ',') as scenario_id,
+    '' as data_source,
+    'several_actual' as problem
+from active_actuals
+where length(a_ids) > 1
