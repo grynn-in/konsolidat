@@ -53,15 +53,13 @@ vars:
   # block at the top of each models/staging/<erp>/ model — it CANNOT live here,
   # because var() inside a dbt_project.yml config does not see this vars: block)
   # AND which sources the canonical models UNION together. The default is
-  # d365_fo (see the NOTE below). ERPNext deployments add
-  # 'erpnext' here, or override at run time:
-  #   dbt build --vars '{erp_sources: [d365_fo, erpnext]}'
-  # NOTE: d365_fo must stay in this list. The bronze layer refs several
-  # stg_d365_fo__* models directly (not via the canonical erp_sources loop), so
-  # removing d365_fo would disable models that bronze still depends on. The
-  # switch is "D365 mandatory, ERPNext optional", not a symmetric toggle.
-  erp_sources:
-    - d365_fo
+  # empty: no ERP connector is built, and the trial-balance upload is the
+  # canonical source (konsolidat#207). The switch is symmetric: list d365_fo
+  # or erpnext to build that connector's staging, here or at run time:
+  #   dbt build --vars '{erp_sources: [d365_fo]}'
+  # With the list empty, the canonical models and the bronze models that read
+  # D365 staging compile to empty relations of their normal shape.
+  erp_sources: []
 
   # --- BEGIN konsol-managed vars (regenerated; do not edit by hand) ---
   dimensions:

@@ -63,11 +63,13 @@ Every canonical model includes `erp_source` (String) identifying the source ERP:
 
 ```yaml
 vars:
-  erp_sources:
-    - d365_fo
+  erp_sources: []      # default: no ERP connector; the trial-balance upload is the source
+  # erp_sources: [d365_fo]   # a site that loads D365 lists it
 ```
 
-Canonical models conditionally include adapters based on this list. Adding a new ERP is:
+Canonical models conditionally include adapters based on this list. With the
+default empty list, each canonical model is an empty relation of its normal
+shape. Adding a new ERP is:
 1. Write the adapter models in `models/staging/<erp>/`
 2. Add the ERP key to `erp_sources`
 3. `dbt build` — canonical models automatically UNION the new adapter

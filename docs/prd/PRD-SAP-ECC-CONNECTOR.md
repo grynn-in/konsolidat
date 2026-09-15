@@ -7,7 +7,7 @@
 
 ## Problem
 
-- The canonical staging interface (`models/staging/canonical/stg_*`) and the reference D365 F&O adapter (`stg_d365_fo__*`) are complete, but the only ERP that lands data today is D365 F&O. `var('erp_sources')` in `dbt_project.yml` defaults to `['d365_fo']`.
+- The canonical staging interface (`models/staging/canonical/stg_*`) and the reference D365 F&O adapter (`stg_d365_fo__*`) are complete, but the only ERP that lands data today is D365 F&O. `var('erp_sources')` in `dbt_project.yml` defaulted to `['d365_fo']` when this PRD was written; since konsolidat#207 the default is `[]` (trial-balance upload only).
 - SAP ECC 6.0 (classic R/3, pre-S/4HANA) is the most common legacy ERP among enterprise consolidation customers. Unlike S/4HANA (PRD 33), ECC exposes **no OData/CDS layer** — GL data lives in classic transparent tables `BSEG` (line items) and `BKPF` (document headers) and must be pulled via RFC/BAPI or IDoc.
 - There is no adapter producing `erp_source = 'sap_ecc'`, and no Airbyte source connector for RFC extraction. The `erp_source` enum already reserves `sap_ecc` (canonical-staging-schema.md) but nothing emits it.
 - ECC's GL line items (`BSEG`) carry no posting date — that lives only on the header (`BKPF`). Without a header join, every line lacks `posting_date`, `fiscal_year`, `fiscal_period`, and document type, breaking the canonical contract.

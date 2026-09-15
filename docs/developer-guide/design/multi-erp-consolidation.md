@@ -190,6 +190,8 @@ Multi-ERP is configuration, not code-forking, end to end:
   (`d365_fo`, `erpnext`, `sap_s4`, …), credentials, and Airbyte source + connection.
   `dimension_mappings` rows hang off the connector for that source's crosswalk.
 - **`erp_sources` dbt var** — the list of active sources the canonical models union.
+  `dbt_project.yml` sets it to `[]` by default: no ERP connector is built, and the
+  trial-balance upload is the canonical source.
 - **Connector registry & per-ERP specs** — see the
   [Connector Registry PRD](../../prd/PRD-CONNECTOR-REGISTRY.md) and the per-ERP PRDs
   (SAP S/4HANA, ECC, B1, D365 BC, ERPNext) for the roadmap.

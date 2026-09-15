@@ -71,7 +71,7 @@ Because dbt sources directly from `epm_raw`, the demo Alpine Manufacturing D365 
 
 To replace the demo data with a real F&O pull:
 1. **Register a D365 `Connector`** (`erp_type = d365`). The extract profile needs: `environment_url`, `tenant_id`, `extract_client_id`, `extract_client_secret`, `legal_entities`, page-size/cross-company options.
-2. **Enable it** → appears in `source list` / dbt `vars.erp_sources`.
+2. **Enable it** → appears in `source list` (informational only). dbt builds the D365 adapter only when `d365_fo` is listed in `vars.erp_sources` in `dbt_project.yml`; the default is `[]` (trial-balance upload only).
 3. **Provision + run Airbyte** (`provision_connector_airbyte`) → `epm_raw`.
 4. **`konsol schema apply`** → regenerate dbt vars + ClickHouse DDL.
 5. **Build** → Pipeline Build Request runs dbt; consolidation recomputes on real data.
