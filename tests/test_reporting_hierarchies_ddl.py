@@ -26,6 +26,7 @@ import unittest
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INIT_DB = os.path.join(PROJECT_ROOT, "clickhouse", "init-db.sql")
 SOURCES = os.path.join(PROJECT_ROOT, "dbt_project", "models", "staging", "_staging__sources.yml")
+WORKFLOW = os.path.join(PROJECT_ROOT, ".github", "workflows", "dbt-checks.yml")
 
 TABLE = "epm_staging.reporting_hierarchies"
 KONSOL_BODY = (
@@ -98,6 +99,12 @@ class ReportingHierarchiesDDL(unittest.TestCase):
         for col in TRANCHE_COLUMNS:
             with self.subTest(column=col):
                 self.assertIn(col, documented)
+
+    def test_ci_runs_this_test_and_watches_its_inputs(self):
+        wf = _read(WORKFLOW)
+        self.assertIn("python -m unittest -v tests.test_reporting_hierarchies_ddl", wf)
+        self.assertEqual(wf.count("- 'tests/test_reporting_hierarchies_ddl.py'"), 2,
+                         "list this test under both the push and pull_request path filters")
 
 
 if __name__ == "__main__":
