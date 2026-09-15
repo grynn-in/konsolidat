@@ -4,7 +4,7 @@
    that does not yet carry budget_scenario_id covers no scenario, so the test
    fails on it rather than erroring. One row per (model, uncovered scenario). #}
 
-{% set variance_models = ['gold_variance_analysis'] %}
+{% set variance_models = ['gold_variance_analysis', 'gold_variance_quarterly'] %}
 {# the refs below sit behind `execute`, so declare them for the DAG #}
 {% for m in variance_models %}
 -- depends_on: {{ ref(m) }}
