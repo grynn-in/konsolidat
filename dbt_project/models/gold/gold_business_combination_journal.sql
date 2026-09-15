@@ -56,9 +56,23 @@
                             reserves)
      (2) fva                Dr fair_value_adjustment_account by the sum of the
                             fair-value adjustments (100%)
-     (3) goodwill           Dr goodwill_account by consideration + NCI - (net
-                            assets + FVA); a negative figure is still posted
-                            here until row J4 books it as a bargain purchase
+     (3) goodwill           Dr goodwill_account by consideration (+ capitalised
+                            costs, see 6) + NCI - (net assets + FVA), when that
+                            figure is positive
+     (3b) bargain_gain      when it is negative (the price is below the fair
+                            value acquired), per the group's bargain_purchase
+                            policy (row J4):
+                              'Recognise gain': Cr bargain_purchase_gain_account
+                                         (P&L) by the shortfall, and no goodwill
+                                         line (IFRS 3.34: a gain, never negative
+                                         goodwill);
+                              'Refuse':  the deal posts NOTHING here, and
+                                         assert_bargain_purchase_refused names
+                                         it (deal, group, amount) so the build
+                                         stops until konsol's Business
+                                         Combination is reassessed (IFRS 3.36).
+                            Any other value posts as 'Recognise gain'; row J7's
+                            guard names an undeclared policy.
      (4) investment         Cr investment_account by the consideration
      (5) nci                Cr nci_account when share_acquired_pct < 100, per
                             the group's nci_measurement:
@@ -72,11 +86,32 @@
                                          NCI's share (design §1a).
                             Any other value posts as 'partial'; row J7's
                             guard names an undeclared policy.
+     (6) costs / proceeds   each business_combination_costs row of the deal,
+                            translated like the consideration, per the group's
+                            acquisition_costs_treatment (row J4):
+                              'Expense':    Dr acquisition_costs_account (P&L,
+                                            role 'costs') / Cr the settlement
+                                            account (role 'proceeds') per line
+                                            (IFRS 3.53: costs of the period,
+                                            outside goodwill);
+                              'Capitalise': the costs join the consideration,
+                                            so goodwill (3) is higher by the
+                                            costs, and only the Cr to the
+                                            settlement account is posted per
+                                            line (role 'proceeds').
+                            The settlement account is the group's
+                            disposal_proceeds_account: the account the group
+                            settles deal cash through (the design calls it
+                            "proceeds-or-payable"; one declared account serves
+                            both directions). Any other value posts as
+                            'Expense'. The capitalised costs do not enter the
+                            'full' NCI measurement: the price paid is the
+                            fair-value signal, the deal's costs are not.
 
    Net assets at acquisition = -(sum of the eliminated equity), the figure the
    equity lines carry, so the journal closes whatever the asset and liability
    rows of the acquired balance sheet sum to (measurement_basis
-   'acquired_balances'). Row J4 adds (3b) bargain gain and (6) costs.
+   'acquired_balances').
 
    Currency: the consideration lines are translated from their own currency,
    and the acquired balances and the opening balances from the entity's
@@ -92,8 +127,9 @@
    Regular period) is skipped, so the deal lands in the Regular period.
 
    line_no: 0 for every opening-balance line, the child table's idx for the
-   equity lines, then 101 fva, 102 goodwill, 103 investment, 104 nci
-   (105 bargain_gain, 110+ costs later). #}
+   equity lines, then 101 fva, 102 goodwill, 103 investment, 104 nci,
+   105 bargain_gain, 110 + idx for a costs debit and 130 + idx for its
+   settlement credit. #}
 
 with group_policy as (
     select
@@ -151,10 +187,15 @@ deals as (
         ec.accounting_currency as entity_currency,
         gp.reporting_currency as reporting_currency,
         gp.nci_measurement as nci_measurement,
+        gp.bargain_purchase as bargain_purchase,
+        gp.acquisition_costs_treatment as acquisition_costs_treatment,
         gp.goodwill_account as goodwill_account,
         gp.fair_value_adjustment_account as fair_value_adjustment_account,
         gp.investment_account as investment_account,
         gp.nci_account as nci_account,
+        gp.bargain_purchase_gain_account as bargain_purchase_gain_account,
+        gp.acquisition_costs_account as acquisition_costs_account,
+        gp.disposal_proceeds_account as settlement_account,
         concat('ACQ-', bc.consolidation_group, '-', bc.acquired_entity, '-', toString(bc.acquisition_date)) as journal_id
     from {{ source('epm_staging', 'business_combinations') }} as bc
     inner join group_policy as gp
@@ -223,6 +264,30 @@ consideration as (
         on cl.deal = d.deal
 ),
 
+{# line (6): the deal's acquisition costs, each translated from its own
+   currency like a consideration line #}
+cost_lines as (
+    select
+        d.deal as deal,
+        cc.idx as idx,
+        cc.kind as kind,
+        toFloat64(cc.amount) * if(cc.currency = d.reporting_currency, 1.0, cr.closing_rate) as amount
+    from {{ source('epm_staging', 'business_combination_costs') }} as cc
+    inner join deals as d
+        on d.deal = cc.parent
+    left join closing_rates as cr
+        on cr.from_currency = cc.currency
+        and cr.to_currency = d.reporting_currency
+        and cr.fiscal_year = d.rate_year
+        and cr.fiscal_period = d.rate_period
+),
+
+costs_total as (
+    select deal, sum(amount) as costs
+    from cost_lines
+    group by deal
+),
+
 {# the acquired balance sheet konsol recorded, translated to group currency #}
 acquired_balances as (
     select
@@ -252,7 +317,7 @@ measured as (
     group by deal
 ),
 
-figures as (
+figures_raw as (
     select
         d.deal as deal,
         d.consolidation_group as consolidation_group,
@@ -261,11 +326,20 @@ figures as (
         d.fiscal_period as fiscal_period,
         d.acquisition_date as acquisition_date,
         d.journal_id as journal_id,
+        d.bargain_purchase as bargain_purchase,
+        d.acquisition_costs_treatment as acquisition_costs_treatment,
         d.goodwill_account as goodwill_account,
         d.fair_value_adjustment_account as fair_value_adjustment_account,
         d.investment_account as investment_account,
         d.nci_account as nci_account,
+        d.bargain_purchase_gain_account as bargain_purchase_gain_account,
+        d.acquisition_costs_account as acquisition_costs_account,
+        d.settlement_account as settlement_account,
         c.consideration as consideration,
+        {# line (6): capitalised costs join the consideration in goodwill;
+           expensed costs stay out of it. A deal with no costs rows joins
+           nothing (0 under join_use_nulls = 0, NULL otherwise). #}
+        if(d.acquisition_costs_treatment = 'Capitalise', coalesce(ct.costs, 0.0), 0.0) as capitalised_costs,
         m.net_assets as net_assets,
         m.fva as fva,
         d.share_acquired_pct / 100.0 as share,
@@ -287,7 +361,25 @@ figures as (
         on c.deal = d.deal
     inner join measured as m
         on m.deal = d.deal
+    left join costs_total as ct
+        on ct.deal = d.deal
     where m.n_balance_rows > 0
+),
+
+{# goodwill (3) or, when negative, the bargain (3b): consideration + capitalised
+   costs + NCI - (net assets + FVA). Under bargain_purchase = 'Refuse' a deal
+   with a negative figure is dropped here, so none of its lines post
+   (assert_bargain_purchase_refused names it). A separate CTE so the WHERE
+   reads the computed figure, not an alias ClickHouse would re-expand. #}
+figures as (
+    select
+        *,
+        consideration + capitalised_costs + nci - (net_assets + fva) as goodwill_raw
+    from figures_raw
+    where not (
+        bargain_purchase = 'Refuse'
+        and consideration + capitalised_costs + nci - (net_assets + fva) < -0.005
+    )
 ),
 
 {# chart names for the declared accounts; '' when the chart lacks the code #}
@@ -403,9 +495,11 @@ equity_lines as (
     where ab.is_equity = 1
 ),
 
-{# one row per fixed line of each deal; a zero line (no FVA, 100% share) is
-   left out. goodwill = consideration + NCI - (net assets + FVA): the amount
-   that closes the journal, and design §4 line 3 under either policy. #}
+{# one row per fixed line of each deal; a zero line (no FVA, 100% share, no
+   bargain) is left out. goodwill_raw = consideration + capitalised costs +
+   NCI - (net assets + FVA): the amount that closes the journal, and design
+   §4 line 3 under either NCI policy; positive it is goodwill (3), negative
+   the bargain gain (3b), so exactly one of the two lines survives. #}
 fixed_raw as (
     select
         deal,
@@ -423,12 +517,69 @@ fixed_raw as (
         default_name
     from figures
     array join
-        [fair_value_adjustment_account, goodwill_account, investment_account, nci_account] as line_account,
-        [fva, consideration + nci - (net_assets + fva), -consideration, -nci] as line_amount,
-        [toUInt16(101), toUInt16(102), toUInt16(103), toUInt16(104)] as line_no,
-        ['fva', 'goodwill', 'investment', 'nci'] as account_role,
-        ['Fair value adjustment on acquisition', 'Goodwill on acquisition', 'Investment in subsidiary eliminated', 'Non-controlling interest at acquisition'] as default_name
+        [fair_value_adjustment_account, goodwill_account, investment_account, nci_account, bargain_purchase_gain_account] as line_account,
+        [fva, greatest(goodwill_raw, 0.0), -consideration, -nci, least(goodwill_raw, 0.0)] as line_amount,
+        [toUInt16(101), toUInt16(102), toUInt16(103), toUInt16(104), toUInt16(105)] as line_no,
+        ['fva', 'goodwill', 'investment', 'nci', 'bargain_gain'] as account_role,
+        ['Fair value adjustment on acquisition', 'Goodwill on acquisition', 'Investment in subsidiary eliminated', 'Non-controlling interest at acquisition', 'Gain on bargain purchase'] as default_name
     where abs(line_amount) > 0.005
+),
+
+{# line (6): per costs row, the P&L debit (Expense only; under Capitalise the
+   debit sits inside goodwill) and the settlement credit (both treatments).
+   Joined first, then ARRAY JOINed from one source: ClickHouse reads ARRAY
+   JOIN before JOIN and cannot fan out over joined columns. #}
+cost_figures as (
+    select
+        f.deal as deal,
+        f.consolidation_group as consolidation_group,
+        f.data_area_id as data_area_id,
+        f.fiscal_year as fiscal_year,
+        f.fiscal_period as fiscal_period,
+        f.acquisition_date as acquisition_date,
+        f.journal_id as journal_id,
+        f.measurement_basis as measurement_basis,
+        f.acquisition_costs_account as acquisition_costs_account,
+        f.settlement_account as settlement_account,
+        if(f.acquisition_costs_treatment = 'Capitalise', 0.0, cl.amount) as expensed_amount,
+        cl.amount as settled_amount,
+        toUInt16(110 + cl.idx) as debit_line_no,
+        toUInt16(130 + cl.idx) as credit_line_no,
+        cl.kind as kind
+    from cost_lines as cl
+    inner join figures as f
+        on f.deal = cl.deal
+),
+
+cost_raw as (
+    select
+        deal,
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        acquisition_date,
+        journal_id,
+        measurement_basis,
+        line_account,
+        line_amount,
+        line_no,
+        account_role,
+        default_name
+    from cost_figures
+    array join
+        [acquisition_costs_account, settlement_account] as line_account,
+        [expensed_amount, -settled_amount] as line_amount,
+        [debit_line_no, credit_line_no] as line_no,
+        ['costs', 'proceeds'] as account_role,
+        [concat('Acquisition costs: ', kind), concat('Acquisition costs settled: ', kind)] as default_name
+    where abs(line_amount) > 0.005
+),
+
+fixed_and_cost_raw as (
+    select * from fixed_raw
+    union all
+    select * from cost_raw
 ),
 
 fixed_lines as (
@@ -446,7 +597,7 @@ fixed_lines as (
         l.line_no as line_no,
         l.account_role as account_role,
         l.measurement_basis as measurement_basis
-    from fixed_raw as l
+    from fixed_and_cost_raw as l
     left join chart as ch
         on ch.main_account_id = l.line_account
 ),

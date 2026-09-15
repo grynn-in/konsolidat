@@ -10,7 +10,8 @@
 -- Expected: 0 journal lines for ACQ-ZZG-ZZS-2026-03-15; the test returns one row
 --   (BC-ZZG-ZZS-2026-03-15, ZZG, ZZS, total_consideration 1,200, bargain_purchase_gain 380).
 --
--- The deal tables do not exist live yet: the fixture creates the three it needs with konsol's exact
+-- The deal tables do not exist live yet: the fixture creates the four the journal reads (the costs table is
+-- empty here: no acquisition costs on this deal) with konsol's exact
 -- DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
 -- main_accounts and submission control may predate their policy/flag/basis columns: add them first.
 -- The journal reads gold_trial_balance (pre-acquisition history), whose lineage reads these tables, empty on a
@@ -41,6 +42,7 @@ ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS acquisition_c
 CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
