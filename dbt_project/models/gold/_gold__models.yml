@@ -355,10 +355,15 @@ models:
       konsolidat#198 (design §4): the balanced acquisition journal per submitted
       Business Combination (epm_staging.business_combinations and its child tables),
       journal_id ACQ-<group>-<entity>-<date>, group currency, posted once in the
-      acquisition period. Lines: the acquired equity eliminated account by account,
-      Dr fair-value adjustments, Dr goodwill, Cr investment (consideration); rows
-      J3/J4 add pre-acquisition history, NCI, bargain gain and costs. Accounts come
-      from the group's root row in consolidation_groups. Every journal sums to zero
+      acquisition period. Lines: (0) the entity's balance-sheet position at the last
+      pre-acquisition period-end (100%, from gold_trial_balance; only when the entity
+      has trial-balance history before the acquisition, which its ownership window
+      excludes), the acquired equity eliminated account by account, Dr fair-value
+      adjustments, Dr goodwill, Cr investment (consideration), Cr NCI when the share
+      is below 100% (partial: share of fair-value net assets; full: consideration /
+      share x (1 - share), goodwill then includes the NCI's share); row J4 adds bargain
+      gain and costs. Accounts and the NCI policy come from the group's root row in
+      consolidation_groups. Every journal sums to zero
       (assert_consolidation_journals_balance).
     columns:
       - name: consolidation_group
@@ -387,13 +392,13 @@ models:
         tests:
           - not_null
       - name: line_no
-        description: "The child table's idx for equity lines; 101 fva, 102 goodwill, 103 investment, 104 nci, 105 bargain_gain, 110+ costs"
+        description: "0 for every opening_balance line; the child table's idx for equity lines; 101 fva, 102 goodwill, 103 investment, 104 nci, 105 bargain_gain, 110+ costs"
       - name: account_role
-        description: "equity_eliminated, fva, goodwill, investment, nci, bargain_gain, costs, proceeds"
+        description: "opening_balance, equity_eliminated, fva, goodwill, investment, nci, bargain_gain, costs, proceeds"
         tests:
           - accepted_values:
               arguments:
-                values: ['equity_eliminated', 'fva', 'goodwill', 'investment', 'nci', 'bargain_gain', 'costs', 'proceeds']
+                values: ['opening_balance', 'equity_eliminated', 'fva', 'goodwill', 'investment', 'nci', 'bargain_gain', 'costs', 'proceeds']
       - name: deal
         description: "The Business Combination document name"
       - name: measurement_basis

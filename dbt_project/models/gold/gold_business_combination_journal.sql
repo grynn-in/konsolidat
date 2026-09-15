@@ -11,51 +11,89 @@
    tables; submit = approval, so every row here is a submitted deal). One
    journal per deal, `journal_id = ACQ-<group>-<entity>-<acquisition_date>`,
    in group currency, posted once in the acquisition period, and balanced by
-   construction: the investment credit is the counterpart of every other line.
-   assert_consolidation_journals_balance proves it per journal and period.
+   construction: the investment and NCI credits are the counterpart of every
+   other line. assert_consolidation_journals_balance proves it per journal
+   and period.
 
    Replaces gold_acquisition_adjustments' goodwill_entries and fva_entries,
    which were one-sided debits to the hardcoded accounts '1800'/'1900' and
    made assert_end_to_end_bs_balances (PRD-22) fail on every acquisition
-   period. The accounts come from the group's root row in
+   period. The accounts and the policy come from the group's root row in
    epm_gold.consolidation_groups (data_area_id = ''), declared in konsol: a
    deal whose group has no root row, or whose date is outside the declared
    calendar, posts nothing here (row J7's assert_acquisition_accounts_declared
    names it).
 
-   Row J2 — the 100% case with an acquired-balances table:
+   The lines, with the acquired-balances table (row J2) and rows J3's
+   pre-acquisition history and NCI:
+     (0) opening_balance    only when the entity has trial-balance history
+                            BEFORE the acquisition period: every balance-sheet
+                            account at its balance at the last pre-acquisition
+                            period-end (100%, the cumulative movements of
+                            gold_trial_balance, year-end close rows included),
+                            translated at the acquisition period's closing
+                            rate. Its ownership window starts at the
+                            acquisition, so gold_consolidated_trial_balance
+                            carries only its in-window movements and never its
+                            opening position (gold_entity_ownership resolves
+                            the earlier periods as outside the window, and the
+                            consolidated TB drops them); this line brings the
+                            acquired balance sheet into the group from the
+                            acquisition period on (design §3). When those
+                            balances do not sum to zero (a mid-year position
+                            whose current-year result still sits in the P&L
+                            accounts), one more opening_balance line books the
+                            difference to the chart's retained-earnings
+                            account (silver_main_accounts.is_retained_earnings):
+                            pre-acquisition profit is pre-acquisition equity,
+                            and konsol's acquired balance sheet nets to that
+                            equity. So line (0) sums to zero on its own.
      (1) equity_eliminated  each acquired-balance row whose account the chart
                             declares as equity (silver_main_accounts.is_equity):
                             -(book amount), so the credit balance konsol
-                            recorded becomes a debit here (100%)
+                            recorded becomes a debit here (100%, whatever the
+                            share: pre-acquisition equity is never group
+                            reserves)
      (2) fva                Dr fair_value_adjustment_account by the sum of the
-                            fair-value adjustments
-     (3) goodwill           Dr goodwill_account by consideration - (net assets
-                            + FVA); a negative figure is still posted here
-                            until row J4 books it as a bargain purchase
+                            fair-value adjustments (100%)
+     (3) goodwill           Dr goodwill_account by consideration + NCI - (net
+                            assets + FVA); a negative figure is still posted
+                            here until row J4 books it as a bargain purchase
      (4) investment         Cr investment_account by the consideration
+     (5) nci                Cr nci_account when share_acquired_pct < 100, per
+                            the group's nci_measurement:
+                              'partial': (net assets + FVA) x (1 - share), the
+                                         NCI's share of the fair-value net
+                                         assets, so goodwill = consideration
+                                         - (net assets + FVA) x share;
+                              'full':    consideration / share x (1 - share),
+                                         the NCI at fair value implied by the
+                                         price paid, so goodwill includes the
+                                         NCI's share (design §1a).
+                            Any other value posts as 'partial'; row J7's
+                            guard names an undeclared policy.
 
    Net assets at acquisition = -(sum of the eliminated equity), the figure the
    equity lines carry, so the journal closes whatever the asset and liability
    rows of the acquired balance sheet sum to (measurement_basis
-   'acquired_balances'). Rows J3 and J4 add lines (0) pre-acquisition
-   history, (5) NCI, (3b) bargain gain and (6) costs.
+   'acquired_balances'). Row J4 adds (3b) bargain gain and (6) costs.
 
-   Currency: the consideration lines are translated from their own currency
-   and the acquired balances from the entity's accounting currency
-   (epm_staging.entities, konsol's registry) to the group's reporting
-   currency at the acquisition period's governed Closing rate, the period
-   mapped through rate_period_map() like every trial-balance translation. A
-   line already in group currency translates at 1. When a deal has no
-   consideration lines, the header's total_consideration (group currency, as
-   konsol computed it) is used.
+   Currency: the consideration lines are translated from their own currency,
+   and the acquired balances and the opening balances from the entity's
+   accounting currency (epm_staging.entities, konsol's registry), to the
+   group's reporting currency at the acquisition period's governed Closing
+   rate, the period mapped through rate_period_map() like every trial-balance
+   translation. A line already in group currency translates at 1. When a deal
+   has no consideration lines, the header's total_consideration (group
+   currency, as konsol computed it) is used.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
    end_date, never from the month: a Closing period (one day inside the last
    Regular period) is skipped, so the deal lands in the Regular period.
 
-   line_no: the child table's idx for the equity lines, then 101 fva,
-   102 goodwill, 103 investment (104 nci, 105 bargain_gain, 110+ costs later). #}
+   line_no: 0 for every opening-balance line, the child table's idx for the
+   equity lines, then 101 fva, 102 goodwill, 103 investment, 104 nci
+   (105 bargain_gain, 110+ costs later). #}
 
 with group_policy as (
     select
@@ -112,9 +150,11 @@ deals as (
         if(rpm.mapped = 1, rpm.rate_period, dp.fiscal_period) as rate_period,
         ec.accounting_currency as entity_currency,
         gp.reporting_currency as reporting_currency,
+        gp.nci_measurement as nci_measurement,
         gp.goodwill_account as goodwill_account,
         gp.fair_value_adjustment_account as fair_value_adjustment_account,
         gp.investment_account as investment_account,
+        gp.nci_account as nci_account,
         concat('ACQ-', bc.consolidation_group, '-', bc.acquired_entity, '-', toString(bc.acquisition_date)) as journal_id
     from {{ source('epm_staging', 'business_combinations') }} as bc
     inner join group_policy as gp
@@ -140,6 +180,20 @@ closing_rates as (
     from {{ source('epm_staging', 'group_exchange_rates') }}
     where rate_type = 'Closing'
     group by from_currency, to_currency, fiscal_year, fiscal_period
+),
+
+{# each deal's rate from the entity's currency into the group's: 1 when they
+   are the same currency #}
+deal_entity_rate as (
+    select
+        d.deal as deal,
+        if(d.entity_currency = d.reporting_currency, 1.0, cr.closing_rate) as entity_rate
+    from deals as d
+    left join closing_rates as cr
+        on cr.from_currency = d.entity_currency
+        and cr.to_currency = d.reporting_currency
+        and cr.fiscal_year = d.rate_year
+        and cr.fiscal_period = d.rate_period
 ),
 
 {# consideration in group currency: the lines translated at the closing rate,
@@ -177,16 +231,13 @@ acquired_balances as (
         ab.main_account as main_account,
         ma.account_name as account_name,
         ma.is_equity as is_equity,
-        toFloat64(ab.book_amount) * if(d.entity_currency = d.reporting_currency, 1.0, cr.closing_rate) as book_amount,
-        toFloat64(ab.fair_value_adjustment) * if(d.entity_currency = d.reporting_currency, 1.0, cr.closing_rate) as fair_value_adjustment
+        toFloat64(ab.book_amount) * er.entity_rate as book_amount,
+        toFloat64(ab.fair_value_adjustment) * er.entity_rate as fair_value_adjustment
     from {{ source('epm_staging', 'business_combination_acquired_balances') }} as ab
     inner join deals as d
         on d.deal = ab.parent
-    left join closing_rates as cr
-        on cr.from_currency = d.entity_currency
-        and cr.to_currency = d.reporting_currency
-        and cr.fiscal_year = d.rate_year
-        and cr.fiscal_period = d.rate_period
+    inner join deal_entity_rate as er
+        on er.deal = d.deal
     left join {{ ref('silver_main_accounts') }} as ma
         on ma.main_account_id = ab.main_account
 ),
@@ -213,10 +264,23 @@ figures as (
         d.goodwill_account as goodwill_account,
         d.fair_value_adjustment_account as fair_value_adjustment_account,
         d.investment_account as investment_account,
+        d.nci_account as nci_account,
         c.consideration as consideration,
         m.net_assets as net_assets,
         m.fva as fva,
-        c.consideration - (m.net_assets + m.fva) as goodwill,
+        d.share_acquired_pct / 100.0 as share,
+        {# line (5): the NCI's share of the fair-value net assets ('partial'),
+           or the NCI at the fair value the price implies ('full'); nothing at
+           100%, and nothing under 'full' with a zero share (no division).
+           The minority factor is (100 - pct) / 100, not 1 - pct / 100: the
+           former is exact in Float64 for a whole-number percentage, the
+           latter leaves 0.19999999999999996 on an 80% deal. #}
+        multiIf(
+            d.share_acquired_pct >= 100.0, 0.0,
+            d.nci_measurement = 'full' and d.share_acquired_pct > 0.0,
+                c.consideration / (d.share_acquired_pct / 100.0) * ((100.0 - d.share_acquired_pct) / 100.0),
+            (m.net_assets + m.fva) * ((100.0 - d.share_acquired_pct) / 100.0)
+        ) as nci,
         'acquired_balances' as measurement_basis
     from deals as d
     inner join consideration as c
@@ -231,6 +295,91 @@ chart as (
     select main_account_id, any(account_name) as account_name
     from {{ ref('silver_main_accounts') }}
     group by main_account_id
+),
+
+{# line (0): the entity's balance-sheet position at the last period-end
+   before the acquisition period, from the entity trial balance (which knows
+   every period the entity has, in or out of the ownership window), in local
+   currency: the cumulative signed movements up to that period, year-end
+   close rows included. A tuple comparison, never a date or month. #}
+pre_acquisition_balances as (
+    select
+        f.deal as deal,
+        tb.main_account as main_account,
+        any(tb.account_name) as account_name,
+        sum(toFloat64(tb.period_debit) - toFloat64(tb.period_credit)) as local_balance
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join figures as f
+        on f.data_area_id = tb.data_area_id
+    where tb.is_balance_sheet = 1
+      and (toUInt16(tb.fiscal_year), toUInt16(tb.fiscal_period)) < (f.fiscal_year, f.fiscal_period)
+    group by f.deal, tb.main_account
+),
+
+opening_raw as (
+    select
+        pb.deal as deal,
+        pb.main_account as main_account,
+        pb.account_name as account_name,
+        pb.local_balance * er.entity_rate as adjustment_amount
+    from pre_acquisition_balances as pb
+    inner join deal_entity_rate as er
+        on er.deal = pb.deal
+),
+
+{# the current-year result still sitting in the P&L accounts at that
+   period-end: what the balance-sheet accounts alone do not sum to #}
+opening_residual as (
+    select
+        deal,
+        -sum(adjustment_amount) as residual_amount
+    from opening_raw
+    group by deal
+    having abs(residual_amount) > 0.005
+),
+
+opening_lines as (
+    select
+        f.deal as deal,
+        f.consolidation_group as consolidation_group,
+        f.data_area_id as data_area_id,
+        f.fiscal_year as fiscal_year,
+        f.fiscal_period as fiscal_period,
+        o.main_account as main_account,
+        o.account_name as account_name,
+        o.adjustment_amount as adjustment_amount,
+        f.acquisition_date as acquisition_date,
+        f.journal_id as journal_id,
+        toUInt16(0) as line_no,
+        'opening_balance' as account_role,
+        f.measurement_basis as measurement_basis
+    from opening_raw as o
+    inner join figures as f
+        on f.deal = o.deal
+    where abs(o.adjustment_amount) > 0.005
+),
+
+{# line (0)'s balancing line, to the chart's retained-earnings account
+   (silver_main_accounts.is_retained_earnings; '' when the chart flags none,
+   which row J7's guard names). Scalar subqueries: one chart, one account. #}
+opening_residual_lines as (
+    select
+        f.deal as deal,
+        f.consolidation_group as consolidation_group,
+        f.data_area_id as data_area_id,
+        f.fiscal_year as fiscal_year,
+        f.fiscal_period as fiscal_period,
+        (select anyIf(main_account_id, is_retained_earnings = 1) from {{ ref('silver_main_accounts') }}) as main_account,
+        (select anyIf(account_name, is_retained_earnings = 1) from {{ ref('silver_main_accounts') }}) as account_name,
+        r.residual_amount as adjustment_amount,
+        f.acquisition_date as acquisition_date,
+        f.journal_id as journal_id,
+        toUInt16(0) as line_no,
+        'opening_balance' as account_role,
+        f.measurement_basis as measurement_basis
+    from opening_residual as r
+    inner join figures as f
+        on f.deal = r.deal
 ),
 
 equity_lines as (
@@ -254,7 +403,9 @@ equity_lines as (
     where ab.is_equity = 1
 ),
 
-{# one row per fixed line of each deal; a zero line (no FVA, say) is left out #}
+{# one row per fixed line of each deal; a zero line (no FVA, 100% share) is
+   left out. goodwill = consideration + NCI - (net assets + FVA): the amount
+   that closes the journal, and design §4 line 3 under either policy. #}
 fixed_raw as (
     select
         deal,
@@ -272,11 +423,11 @@ fixed_raw as (
         default_name
     from figures
     array join
-        [fair_value_adjustment_account, goodwill_account, investment_account] as line_account,
-        [fva, goodwill, -consideration] as line_amount,
-        [toUInt16(101), toUInt16(102), toUInt16(103)] as line_no,
-        ['fva', 'goodwill', 'investment'] as account_role,
-        ['Fair value adjustment on acquisition', 'Goodwill on acquisition', 'Investment in subsidiary eliminated'] as default_name
+        [fair_value_adjustment_account, goodwill_account, investment_account, nci_account] as line_account,
+        [fva, consideration + nci - (net_assets + fva), -consideration, -nci] as line_amount,
+        [toUInt16(101), toUInt16(102), toUInt16(103), toUInt16(104)] as line_no,
+        ['fva', 'goodwill', 'investment', 'nci'] as account_role,
+        ['Fair value adjustment on acquisition', 'Goodwill on acquisition', 'Investment in subsidiary eliminated', 'Non-controlling interest at acquisition'] as default_name
     where abs(line_amount) > 0.005
 ),
 
@@ -301,6 +452,10 @@ fixed_lines as (
 ),
 
 journal as (
+    select * from opening_lines
+    union all
+    select * from opening_residual_lines
+    union all
     select * from equity_lines
     union all
     select * from fixed_lines
