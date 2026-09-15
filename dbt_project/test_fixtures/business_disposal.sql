@@ -1,5 +1,8 @@
 -- Disposal journal, the full-disposal case (konsolidat#198 row J6, design §5):
--- `+gold_business_disposal_journal assert_disposal_journal_balances` must BUILD and PASS on these rows.
+-- `+gold_business_disposal_journal assert_disposal_journal_balances` must BUILD and PASS on these rows,
+-- and so must `+gold_fully_consolidated_tb assert_journal_grain_unique assert_disposal_journal_balances`
+-- (row J11c: layer 6 of the fully consolidated TB sums each journal to one row per account, so the
+-- derecognised ZZ1000 -100 and the proceeds ZZ1000 +9,000 below land there as ONE 'disposal' row of 8,900).
 --
 -- The J2 deal (business_combination_100pct.sql) disposed of one year later: group ZZG (USD; IFRS, NCI partial,
 -- goodwill Impairment only, costs Expense, measurement period Off, bargain purchase Recognise gain) with its
@@ -35,7 +38,9 @@
 -- trial-balance-only site, so they are named here to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
 -- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
--- epm_staging.dimension_mappings.
+-- epm_staging.dimension_mappings. The fully consolidated TB's other layers (topside layer 4, IC eliminations
+-- layer 2) read these live tables, empty here too: epm_staging.consolidation_adjustments, epm_staging.ic_balances,
+-- epm_staging.ic_elimination_rules, epm_staging.intercompany_accounts.
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
