@@ -27,12 +27,54 @@ GUARDED = [
     "bronze_financial_dimensions",
     "bronze_fiscal_calendar_years",
     "bronze_fiscal_calendars",
+    "bronze_general_journal_account_entries",
+    "bronze_general_journal_entries",
+    "bronze_main_account_categories",
 ]
+
+MODELS = os.path.join(PROJECT_ROOT, "dbt_project", "models")
+SCANNED_LAYERS = ("bronze", "silver", "gold")
 
 
 def _read(model):
     with open(os.path.join(BRONZE, model + ".sql")) as f:
         return f.read()
+
+
+def _guarded_spans(sql):
+    """(start, end) of every `if 'd365_fo' in erp_sources` branch, up to its else."""
+    spans = []
+    g = sql.find(GUARD)
+    while g >= 0:
+        else_m = ELSE.search(sql, g)
+        end = else_m.start() if else_m else g
+        spans.append((g, end))
+        g = sql.find(GUARD, g + len(GUARD))
+    return spans
+
+
+def _unguarded_d365_refs():
+    found = []
+    for layer in SCANNED_LAYERS:
+        for dirpath, _, files in os.walk(os.path.join(MODELS, layer)):
+            for name in sorted(files):
+                if not name.endswith(".sql"):
+                    continue
+                path = os.path.join(dirpath, name)
+                with open(path) as f:
+                    sql = f.read()
+                spans = _guarded_spans(sql)
+                for m in D365_REF.finditer(sql):
+                    if not any(s < m.start() < e for s, e in spans):
+                        found.append(os.path.relpath(path, MODELS))
+    return sorted(set(found))
+
+
+def test_no_unguarded_d365_ref_in_bronze_silver_gold():
+    unguarded = _unguarded_d365_refs()
+    assert not unguarded, (
+        f"stg_d365_fo__ read outside the erp_sources guard in: {unguarded}"
+    )
 
 
 @pytest.mark.parametrize("model", GUARDED)
