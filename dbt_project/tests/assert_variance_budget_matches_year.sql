@@ -7,7 +7,7 @@
 
    Checked on each variance model (its period column in brackets):
    gold_variance_analysis (fiscal_period), gold_variance_quarterly
-   (fiscal_quarter).
+   (fiscal_quarter), gold_variance_ytd (fiscal_period).
 
    One row per problem:
      unbudgeted_year  - a (budget_scenario_id, data_area_id, fiscal_year) in the
@@ -16,11 +16,13 @@
 
 -- depends_on: {{ ref('gold_variance_analysis') }}
 -- depends_on: {{ ref('gold_variance_quarterly') }}
+-- depends_on: {{ ref('gold_variance_ytd') }}
 
 {% set budget_dims = get_budget_dimensions() %}
 {% set variance_models = [
     ('gold_variance_analysis', 'fiscal_period'),
     ('gold_variance_quarterly', 'fiscal_quarter'),
+    ('gold_variance_ytd', 'fiscal_period'),
 ] %}
 
 with budget_years as (
