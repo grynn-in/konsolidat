@@ -257,6 +257,10 @@ sources:
             description: "konsol's NCI at acquisition under the group's nci_measurement policy."
           - name: ownership_period
             description: "The Ownership Period konsol created or linked on submit."
+          - name: nci_measurement
+            description: "NCI measurement in force for this deal: its override or the group's (konsol#205)."
+          - name: nci_fair_value
+            description: "The minority's own acquisition-date fair value in the consideration currency, declared when the deal measures NCI at full (konsol#204)."
       - name: business_combination_consideration
         description: >
           konsolidat#198: the consideration lines of a Business Combination,

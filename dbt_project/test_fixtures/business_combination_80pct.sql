@@ -12,16 +12,19 @@
 -- same acquired balance sheet (EUR; Dr positive, Cr negative; closing rate EUR->USD 1.0 for FY2026 P3):
 --   ZZ1100 receivables +200 | ZZ1420 plant +600 (fair-value adjustment +930) | ZZ2100 payables -150
 --   ZZ3000 share capital -100 | ZZ3100 retained earnings -550
--- so net assets at book = 650, at fair value 1,580. The policies differ on the root row:
---   ZZG (nci_measurement 'partial') acquires ZZS: NCI = 20% x 1,580 = 316; goodwill = 8,300 - 80% x 1,580 = 7,036
---   ZZH (nci_measurement 'full')    acquires ZZT: NCI = 8,300 / 0.8 x 0.2 = 2,075; goodwill = 8,300 / 0.8 - 1,580 = 8,795
+-- so net assets at book = 650, at fair value 1,580. The NCI measurement is the deal's own (konsol#205: its
+-- override or the group's value; each deal here declares its group's root-row value):
+--   ZZG deal (nci_measurement 'partial') acquires ZZS: NCI = 20% x 1,580 = 316; goodwill = 8,300 - 80% x 1,580 = 7,036
+--   ZZH deal (nci_measurement 'full')    acquires ZZT: NCI = the declared nci_fair_value 1,900 USD x the USD->USD
+--     rate 1 = 1,900 (konsol#204: the minority's own fair value, which carries no control premium; no longer the
+--     8,300 / 0.8 x 0.2 = 2,075 gross-up of the price paid); goodwill = 8,300 + 1,900 - 1,580 = 8,620
 -- (US GAAP requires full; the ZZH root row says so.) Both groups declare the same accounts:
 --   ZZ1800 goodwill | ZZ1900 fair-value adjustment | ZZ3500 investment | ZZ3400 NCI | ZZ4900 bargain gain
 --   ZZ4950 disposal gain/loss | ZZ1000 proceeds (cash) | ZZ6900 amortisation expense | ZZ6950 acquisition costs
 --
 -- Expected journals in FY2026 P3 (USD), the equity elimination and FVA at 100% in both:
 --   ACQ-ZZG-ZZS-2026-03-15: Dr ZZ3000 100 | Dr ZZ3100 550 | Dr ZZ1900 930 | Dr ZZ1800 7,036 | Cr ZZ3500 8,300 | Cr ZZ3400   316   (sum 0)
---   ACQ-ZZH-ZZT-2026-03-15: Dr ZZ3000 100 | Dr ZZ3100 550 | Dr ZZ1900 930 | Dr ZZ1800 8,795 | Cr ZZ3500 8,300 | Cr ZZ3400 2,075   (sum 0)
+--   ACQ-ZZH-ZZT-2026-03-15: Dr ZZ3000 100 | Dr ZZ3100 550 | Dr ZZ1900 930 | Dr ZZ1800 8,620 | Cr ZZ3500 8,300 | Cr ZZ3400 1,900   (sum 0)
 -- Neither entity has a trial balance before the acquisition, so no opening-balance (line 0) rows.
 --
 -- The deal tables do not exist live yet: the fixture creates the four the journal reads (the costs table is
@@ -53,6 +56,8 @@ ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_proc
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS goodwill_amortisation_expense_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS acquisition_costs_account String DEFAULT '';
 CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_fair_value Float64 DEFAULT 0;
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
@@ -127,10 +132,10 @@ VALUES
   ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03'),
   ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03');
 INSERT INTO epm_staging.business_combinations
-  (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period)
+  (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement, nci_fair_value)
 VALUES
-  ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', '2026-03-15', 80, 'USD', 8300, 650, 930, 7036, 0, 316, 'ZZ-OP-ZZS-1'),
-  ('BC-ZZH-ZZT-2026-03-15', 'ZZH', 'ZZT', '2026-03-15', 80, 'USD', 8300, 650, 930, 8795, 0, 2075, 'ZZ-OP-ZZT-1');
+  ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', '2026-03-15', 80, 'USD', 8300, 650, 930, 7036, 0, 316, 'ZZ-OP-ZZS-1', 'partial', 0),
+  ('BC-ZZH-ZZT-2026-03-15', 'ZZH', 'ZZT', '2026-03-15', 80, 'USD', 8300, 650, 930, 8620, 0, 1900, 'ZZ-OP-ZZT-1', 'full', 1900);
 INSERT INTO epm_staging.business_combination_consideration
   (parent, idx, component, amount, currency, settlement_date, description)
 VALUES

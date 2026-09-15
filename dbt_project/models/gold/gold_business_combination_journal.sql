@@ -75,17 +75,25 @@
                             guard names an undeclared policy.
      (4) investment         Cr investment_account by the consideration
      (5) nci                Cr nci_account when share_acquired_pct < 100, per
-                            the group's nci_measurement:
+                            the DEAL's nci_measurement (konsol#205: the deal's
+                            override or its group's value, resolved by konsol
+                            into epm_staging.business_combinations):
                               'partial': (net assets + FVA) x (1 - share), the
                                          NCI's share of the fair-value net
                                          assets, so goodwill = consideration
                                          - (net assets + FVA) x share;
-                              'full':    consideration / share x (1 - share),
-                                         the NCI at fair value implied by the
-                                         price paid, so goodwill includes the
-                                         NCI's share (design §1a).
+                              'full':    the deal's declared nci_fair_value
+                                         (konsol#204: the minority's own
+                                         acquisition-date fair value, in
+                                         consideration_currency) translated at
+                                         the consideration currency's Closing
+                                         rate, so goodwill includes the NCI's
+                                         share. Never the price grossed up:
+                                         the price carries a control premium
+                                         the minority's stake does not.
                             Any other value posts as 'partial'; row J7's
-                            guard names an undeclared policy.
+                            guard names an undeclared measurement or an
+                            undeclared NCI fair value.
      (6) costs / proceeds   each business_combination_costs row of the deal,
                             translated like the consideration, per the group's
                             acquisition_costs_treatment (row J4):
@@ -105,8 +113,8 @@
                             "proceeds-or-payable"; one declared account serves
                             both directions). Any other value posts as
                             'Expense'. The capitalised costs do not enter the
-                            'full' NCI measurement: the price paid is the
-                            fair-value signal, the deal's costs are not.
+                            'full' NCI measurement: it is the declared NCI
+                            fair value alone.
 
    Net assets at acquisition = -(sum of the eliminated equity), the figure the
    equity lines carry, so the journal closes whatever the asset and liability
@@ -148,7 +156,6 @@ with group_policy as (
     select
         consolidation_group,
         any(reporting_currency) as reporting_currency,
-        any(nci_measurement) as nci_measurement,
         any(goodwill_treatment) as goodwill_treatment,
         any(acquisition_costs_treatment) as acquisition_costs_treatment,
         any(bargain_purchase) as bargain_purchase,
@@ -201,7 +208,12 @@ deals as (
         if(rpm.mapped = 1, rpm.rate_period, dp.fiscal_period) as rate_period,
         ec.accounting_currency as entity_currency,
         gp.reporting_currency as reporting_currency,
-        gp.nci_measurement as nci_measurement,
+        {# the deal's own NCI measurement (konsol#205: its override or the
+           group's value, resolved by konsol) and, under 'full', the
+           minority's declared fair value in consideration_currency
+           (konsol#204) #}
+        bc.nci_measurement as nci_measurement,
+        toFloat64(bc.nci_fair_value) as nci_fair_value,
         gp.bargain_purchase as bargain_purchase,
         gp.acquisition_costs_treatment as acquisition_costs_treatment,
         gp.goodwill_account as goodwill_account,
@@ -326,6 +338,28 @@ header_consideration_rated as (
     where abs(header_consideration) <= 0.005
 ),
 
+{# line (5) under 'full' (konsol#204): the deal's declared nci_fair_value,
+   stated in consideration_currency, translated at the same deal_rates row
+   the header consideration uses. Only a partial-share 'full' deal needs it;
+   such a deal whose consideration currency has no rate has no row here and
+   is dropped by figures_raw (row J9: a missing rate stops the deal, it never
+   zeroes the NCI). Row M4 (PR #205 review): nor does an undeclared figure —
+   a deal with nci_fair_value <= 0 has no row here either, so it posts
+   nothing rather than NCI 0 with understated goodwill (the J7 guard
+   assert_acquisition_accounts_declared names the missing nci_fair_value). #}
+nci_fair_value_rated as (
+    select
+        d.deal as deal,
+        d.nci_fair_value * r.rate as nci_fair_value
+    from deals as d
+    inner join deal_rates as r
+        on r.deal = d.deal
+        and r.from_currency = d.consideration_currency
+    where d.nci_measurement = 'full'
+      and d.share_acquired_pct < 100.0
+      and d.nci_fair_value > 0.0
+),
+
 consideration as (
     select
         cl.deal as deal,
@@ -430,16 +464,15 @@ figures_raw as (
         m.net_assets as net_assets,
         m.fva as fva,
         d.share_acquired_pct / 100.0 as share,
-        {# line (5): the NCI's share of the fair-value net assets ('partial'),
-           or the NCI at the fair value the price implies ('full'); nothing at
-           100%, and nothing under 'full' with a zero share (no division).
-           The minority factor is (100 - pct) / 100, not 1 - pct / 100: the
-           former is exact in Float64 for a whole-number percentage, the
+        {# line (5), per the deal's nci_measurement: the NCI's share of the
+           fair-value net assets ('partial'), or the minority's declared fair
+           value in group currency ('full', nci_fair_value_rated); nothing at
+           100%. The minority factor is (100 - pct) / 100, not 1 - pct / 100:
+           the former is exact in Float64 for a whole-number percentage, the
            latter leaves 0.19999999999999996 on an 80% deal. #}
         multiIf(
             d.share_acquired_pct >= 100.0, 0.0,
-            d.nci_measurement = 'full' and d.share_acquired_pct > 0.0,
-                c.consideration / (d.share_acquired_pct / 100.0) * ((100.0 - d.share_acquired_pct) / 100.0),
+            d.nci_measurement = 'full', coalesce(nf.nci_fair_value, 0.0),
             (m.net_assets + m.fva) * ((100.0 - d.share_acquired_pct) / 100.0)
         ) as nci,
         'acquired_balances' as measurement_basis
@@ -452,9 +485,17 @@ figures_raw as (
         on ct.deal = d.deal
     left join cost_line_count as lc
         on lc.deal = d.deal
+    left join nci_fair_value_rated as nf
+        on nf.deal = d.deal
     where m.n_balance_rows > 0
       {# row J9: every cost row found its rate, or the deal posts nothing #}
       and coalesce(lc.n_lines, 0) = coalesce(ct.n_rated, 0)
+      {# row J9 for line (5): a partial-share 'full' deal needs its NCI fair
+         value's rate and (row M4) a declared figure > 0; a join miss reads ''
+         (join_use_nulls = 0) or NULL #}
+      and (d.nci_measurement != 'full'
+           or d.share_acquired_pct >= 100.0
+           or coalesce(nf.deal, '') != '')
 ),
 
 {# goodwill (3) or, when negative, the bargain (3b): consideration + capitalised

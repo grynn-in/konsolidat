@@ -1,10 +1,12 @@
 -- Must-flag fixture for assert_acquisition_accounts_declared (konsolidat#198 row J7, design §1/§1a):
 -- `+gold_business_combination_journal assert_acquisition_accounts_declared` must BUILD and the test must
--- FAIL with `Got 4 results` on these rows.
+-- FAIL with `Got 3 results` on these rows.
 --
 -- business_combination_100pct.sql verbatim, except the root row of group ZZG, which now lacks or misdeclares
--- four things the acquisition journal needs (one flagged row per deal and field):
---   nci_measurement      ''               -> missing
+-- four things; three of them the acquisition journal needs (one flagged row per deal and field):
+--   nci_measurement      ''               -> NOT flagged since konsol#205: the journal reads the deal's own
+--                                           nci_measurement (here '', its group's value), required only when
+--                                           share_acquired_pct < 100, and this deal is 100%
 --   bargain_purchase     'Recognize gain' -> not a declared option ('Recognise gain' | 'Refuse')
 --   goodwill_account     ''               -> missing (the deal has consideration 8,300, so goodwill is posted)
 --   investment_account   'ZZ3599'         -> not a posting account of the chart (ZZCOA has no ZZ3599)
@@ -47,6 +49,8 @@ ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_proc
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS goodwill_amortisation_expense_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS acquisition_costs_account String DEFAULT '';
 CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_fair_value Float64 DEFAULT 0;
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
@@ -126,9 +130,9 @@ VALUES
   ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03'),
   ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03');
 INSERT INTO epm_staging.business_combinations
-  (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period)
+  (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement)
 VALUES
-  ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', '2026-03-15', 100, 'USD', 8300, 650, 930, 6720, 0, 0, 'ZZ-OP-ZZS-1');
+  ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', '2026-03-15', 100, 'USD', 8300, 650, 930, 6720, 0, 0, 'ZZ-OP-ZZS-1', '');
 INSERT INTO epm_staging.business_combination_consideration
   (parent, idx, component, amount, currency, settlement_date, description)
 VALUES

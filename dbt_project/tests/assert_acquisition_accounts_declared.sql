@@ -12,7 +12,11 @@
 --                                of the group is checked (one line says it all)
 --   acquisition_period           a non-Closing epm_staging.fiscal_periods row spanning acquisition_date
 --   accounting_framework         IFRS | US GAAP | Local
---   nci_measurement              partial | full
+--   nci_measurement              partial | full, the DEAL's (konsol#205: its override or the group's value,
+--                                resolved by konsol into business_combinations), when share_acquired_pct < 100
+--                                (at 100% the journal posts no NCI)
+--   nci_fair_value               > 0 when the deal's nci_measurement = 'full' and share_acquired_pct < 100
+--                                (konsol#204: line (5) is this declared figure; undeclared it would post NCI 0)
 --   goodwill_treatment           Impairment only | Amortise
 --   acquisition_costs_treatment  Expense | Capitalise
 --   measurement_period           Off | 12 months
@@ -55,7 +59,6 @@ with root as (
         consolidation_group,
         count() as n_root,
         any(accounting_framework) as accounting_framework,
-        any(nci_measurement) as nci_measurement,
         any(goodwill_treatment) as goodwill_treatment,
         any(goodwill_amortisation_years) as goodwill_amortisation_years,
         any(acquisition_costs_treatment) as acquisition_costs_treatment,
@@ -109,6 +112,8 @@ deals_base as (
         bc.acquisition_date as acquisition_date,
         toFloat64(bc.total_consideration) as total_consideration,
         toFloat64(bc.share_acquired_pct) as share_acquired_pct,
+        bc.nci_measurement as nci_measurement,
+        toFloat64(bc.nci_fair_value) as nci_fair_value,
         toFloat64(bc.fair_value_adjustments) as header_fva,
         toFloat64(bc.goodwill) as header_goodwill,
         toFloat64(bc.bargain_purchase_gain) as header_bargain_gain,
@@ -153,7 +158,8 @@ deals as (
         d.n_periods as n_periods,
         toUInt8(coalesce(r.n_root, 0) > 0) as has_root,
         coalesce(r.accounting_framework, '') as accounting_framework,
-        coalesce(r.nci_measurement, '') as nci_measurement,
+        d.nci_measurement as nci_measurement,
+        d.nci_fair_value as nci_fair_value,
         coalesce(r.goodwill_treatment, '') as goodwill_treatment,
         coalesce(r.goodwill_amortisation_years, 0) as goodwill_amortisation_years,
         coalesce(r.acquisition_costs_treatment, '') as acquisition_costs_treatment,
@@ -204,7 +210,7 @@ checks as (
          'goodwill_account', 'investment_account', 'fair_value_adjustment_account', 'nci_account',
          'bargain_purchase_gain_account', 'disposal_proceeds_account', 'acquisition_costs_account',
          'is_retained_earnings',
-         'share_acquired_pct'] as field,
+         'share_acquired_pct', 'nci_fair_value'] as field,
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          accounting_framework, nci_measurement, goodwill_treatment, acquisition_costs_treatment,
          measurement_period, bargain_purchase,
@@ -212,9 +218,11 @@ checks as (
          goodwill_account, investment_account, fair_value_adjustment_account, nci_account,
          bargain_purchase_gain_account, disposal_proceeds_account, acquisition_costs_account,
          retained_account,
-         toString(share_acquired_pct)] as value,
+         toString(share_acquired_pct), if(nci_fair_value > 0.0, toString(nci_fair_value), '')] as value,
+        -- nci_measurement and nci_fair_value are the deal's own columns (konsol#204/#205), required whatever
+        -- the root row declares
         [toUInt8(1), toUInt8(1),
-         has_root, has_root, has_root, has_root,
+         has_root, toUInt8(share_acquired_pct < 100.0), has_root, has_root,
          has_root, has_root,
          toUInt8(has_root = 1 and goodwill_treatment = 'Amortise'), toUInt8(has_root = 1 and goodwill_treatment = 'Amortise'),
          toUInt8(has_root = 1 and total_consideration > 0.0), toUInt8(has_root = 1 and total_consideration > 0.0),
@@ -224,7 +232,7 @@ checks as (
          toUInt8(has_root = 1 and n_costs > 0),
          toUInt8(has_root = 1 and n_costs > 0 and acquisition_costs_treatment = 'Expense'),
          toUInt8(has_root = 1 and n_history > 0),
-         toUInt8(share_acquired_pct < 100.0)] as required,
+         toUInt8(share_acquired_pct < 100.0), toUInt8(share_acquired_pct < 100.0 and nci_measurement = 'full')] as required,
         [emptyArrayString(), emptyArrayString(),
          ['IFRS', 'US GAAP', 'Local'], ['partial', 'full'], ['Impairment only', 'Amortise'], ['Expense', 'Capitalise'],
          ['Off', '12 months'], ['Recognise gain', 'Refuse'],
@@ -232,7 +240,7 @@ checks as (
          emptyArrayString(), emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(),
-         emptyArrayString()] as options,
+         emptyArrayString(), emptyArrayString()] as options,
         [0, 0,
          0, 0, 0, 0,
          0, 0,
@@ -240,7 +248,7 @@ checks as (
          1, 1, 1, 1,
          1, 1, 1,
          1,
-         0] as is_account,
+         0, 0] as is_account,
         -- the partial-share refusal (row J12): the value is present and valid, the deal is still refused
         [0, 0,
          0, 0, 0, 0,
@@ -249,7 +257,7 @@ checks as (
          0, 0, 0, 0,
          0, 0, 0,
          0,
-         1] as is_refusal
+         1, 0] as is_refusal
 ),
 
 judged as (
