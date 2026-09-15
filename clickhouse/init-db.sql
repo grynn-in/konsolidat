@@ -334,7 +334,7 @@ CREATE TABLE IF NOT EXISTS epm_staging.fiscal_periods (fiscal_year UInt16, fisca
 
 -- konsolidat#198: the deal documents. konsol owns them (Business Combination and Business Disposal
 -- doctypes, submitted rows only); the acquisition/disposal journals read them. Header: the deal and konsol's Result figures in group currency.
-CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String, nci_measurement String DEFAULT '', nci_fair_value Float64 DEFAULT 0) ENGINE = MergeTree ORDER BY name;
 -- konsolidat#198: consideration lines of a Business Combination (konsol, submitted rows only), one per
 -- IFRS 3 component (Cash / Deferred / Contingent / Equity instruments / ...), each in its own currency.
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
