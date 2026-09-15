@@ -4,7 +4,11 @@
    over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension,
    the node model's actual_amount for a (budget_scenario_id, entity, year,
    period, account) must equal gold_variance_analysis' actual_amount over the
-   rows whose dimension value is a leaf of that hierarchy.
+   rows whose dimension value is a leaf of that hierarchy. So must its
+   budget_amount (PR #211 review 4): a node that adds two budget scenarios
+   together, or shows one scenario's budget under another, fails. The budget
+   is compared NULL-safely: two missing budgets (null) agree, and a null
+   against a number differs.
 
    A node model that does not carry budget_scenario_id is compared on the rest
    of the key, so each budget scenario's actuals meet the node's sum across
@@ -36,7 +40,8 @@ expected as (
         vl.fiscal_year as fiscal_year,
         vl.fiscal_period as fiscal_period,
         vl.main_account as main_account,
-        sum(vl.actual_amount) as actual_amount
+        sum(vl.actual_amount) as actual_amount,
+        sum(vl.budget_amount) as budget_amount
     from (
         {{ variance_dimension_long_sql('v') }}
     ) as vl
@@ -57,7 +62,8 @@ node as (
         nm.fiscal_year as node_year,
         nm.fiscal_period as node_period,
         nm.main_account as node_account,
-        sum(nm.actual_amount) as node_actual
+        sum(nm.actual_amount) as node_actual,
+        sum(nm.budget_amount) as node_budget
     from {{ ref('gold_variance_at_hierarchy_node') }} as nm
     where nm.hierarchy_is_group = 0
     group by
@@ -74,7 +80,9 @@ select
     if(coalesce(e.hierarchy_name, '') != '', e.fiscal_period, n.node_period) as key_period,
     if(coalesce(e.hierarchy_name, '') != '', e.main_account, n.node_account) as account,
     e.actual_amount as analysis_actual_amount,
-    n.node_actual as node_actual_amount
+    n.node_actual as node_actual_amount,
+    e.budget_amount as analysis_budget_amount,
+    n.node_budget as node_budget_amount
 from expected as e
 full outer join node as n
     on e.hierarchy_name = n.node_hierarchy
@@ -87,3 +95,8 @@ full outer join node as n
 where coalesce(e.hierarchy_name, '') = ''
    or coalesce(n.node_hierarchy, '') = ''
    or abs(toFloat64(e.actual_amount) - toFloat64(n.node_actual)) > {{ materiality_floor() }}
+   {# NULL-safe, spelled out (isNotDistinctFrom in this WHERE was a Database
+      Error on the stack's ClickHouse): null against a number differs, two
+      nulls agree, two numbers differ beyond the floor #}
+   or (e.budget_amount is null) != (n.node_budget is null)
+   or abs(toFloat64(e.budget_amount) - toFloat64(n.node_budget)) > {{ materiality_floor() }}
