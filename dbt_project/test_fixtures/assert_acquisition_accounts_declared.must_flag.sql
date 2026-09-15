@@ -8,10 +8,12 @@
 --   bargain_purchase     'Recognize gain' -> not a declared option ('Recognise gain' | 'Refuse')
 --   goodwill_account     ''               -> missing (the deal has consideration 8,300, so goodwill is posted)
 --   investment_account   'ZZ3599'         -> not a posting account of the chart (ZZCOA has no ZZ3599)
--- The journal itself still posts (goodwill 6,720 to main_account '', the investment credit to ZZ3599, and the
--- 'partial' / 'Recognise gain' fallbacks for the undeclared policies): exactly the silent posting this guard
--- stops. The other acquisition tests (assert_acquisition_journal_balances, assert_goodwill_calculated,
--- assert_bargain_purchase_refused) PASS here; only this test fails.
+-- Left alone, the journal would post (goodwill 6,720 to main_account '', the investment credit to ZZ3599,
+-- and the 'partial' / 'Recognise gain' fallbacks for the undeclared policies): exactly the silent posting
+-- this guard stops. The test reads only the sources, the chart and the entity trial balance, so dbt build
+-- runs it BEFORE gold_business_combination_journal and its FAIL SKIPs the journal and every test on it
+-- (assert_acquisition_journal_balances, assert_goodwill_calculated, assert_bargain_purchase_refused): the
+-- build stops at the declaration, as design §1 asks.
 --
 -- The six deal tables do not exist live yet: the fixture creates the six the three journals read (the costs,
 -- disposals and disposal-proceeds tables are empty here: no acquisition costs and no disposal on this deal) with
