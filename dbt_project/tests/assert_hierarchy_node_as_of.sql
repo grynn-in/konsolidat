@@ -11,7 +11,11 @@
    Variance (row H5) the same way, on the same cost-centre tree (business unit never reaches variance): the
    budget_amount of budget_scenario_id ZZ_PLAN_H on ZZ4000 is -70 at FY2018 P6 on ZZ_EX, ZZ_E and ZZ_ROOT (not
    ZZ_B), and -600 at FY2025 P6 on ZZ_EX, ZZ_B and ZZ_ROOT (not ZZ_E).
-   The node rows must be exactly the expected ones: one row per missing or wrong node, one per unexpected node. #}
+   The node rows must be exactly the expected ones: one row per missing or wrong node, one per unexpected node.
+
+   Without hierarchies ZZ_DIV / ZZ_DIV_CC (a site that did not load hierarchy_dated.sql) the test has nothing to
+   check and returns no rows: the close runs every singular test on every site, so it must not flag the
+   fixture's nodes as missing there. #}
 
 with actual as (
     select
@@ -86,7 +90,13 @@ variance_actual as (
       and data_area_id = 'ZZE1'
       and main_account = 'ZZ4000'
     group by code, fy, fp, label
+),
+
+present as (
+    select count() as n from {{ ref('gold_reporting_hierarchy') }} where hierarchy_name in ('ZZ_DIV', 'ZZ_DIV_CC')
 )
+
+select * from (
 
 -- an expected node that is missing, or carries the wrong amount
 select
@@ -172,3 +182,6 @@ left join budget_expected as e
     and e.fp = a.fp
     and e.label = a.label
 where e.hit = 0
+
+) as checks
+where (select n from present) > 0
