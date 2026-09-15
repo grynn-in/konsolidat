@@ -6,6 +6,8 @@
 **Repos:** `konsolidat` (dbt/data stack — gold consolidation models), `konsol` (Frappe app — source tables `ownership_periods`, `historical_equity_rates`, new `equity_transactions`)
 
 ## Problem
+> Correction (konsolidat#198): goodwill and fair-value adjustments are no longer posted by `gold_acquisition_adjustments` (which keeps only the P&L proration) but by `gold_business_combination_journal`, from the submitted Business Combination and the accounts the group declares; read the `gold_acquisition_adjustments` goodwill references below as that model, and `assert_goodwill_calculated` now reads `business_combinations` rather than `ownership_periods`.
+
 The consolidation engine already covers the base cases but stops short of the full IAS 21 / IFRS 3 / IFRS 10 acquisition-and-disposal mechanics:
 
 - `gold_fx_revaluation` computes CTA only from the **P&L closing-vs-average spread** (`sum(local_amount × (closing_rate - average_rate) × ownership_pct)`, `is_equity = 0` excluded). It has **no CTA on goodwill** — goodwill recorded in foreign currency (`gold_acquisition_adjustments`, `adjustment_type='goodwill'`) is never re-translated, so the group BS does not balance for foreign acquisitions (IAS 21.47).

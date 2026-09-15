@@ -10,7 +10,8 @@
 -- acquired balance sheet (business_combination_acquired_balances is created empty) and the header's
 -- net_assets_acquired is 0: nothing tells the warehouse what was bought. gold_business_combination_journal
 -- therefore posts no journal for BC-ZZG-ZZS-2026-03-15 (no measurement basis), so the deal has consideration
--- and no goodwill (or bargain_gain) line, which is exactly what the test must name:
+-- and no goodwill (or bargain_gain) line, which is exactly what the test must name
+-- (business_combination, consolidation_group, acquired_entity, total_consideration):
 --   ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', 8300)
 --
 -- The six deal tables do not exist live yet: the fixture creates the three the model reads with konsol's
