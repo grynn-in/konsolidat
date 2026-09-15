@@ -31,7 +31,7 @@ leaf_closure as (
 
 select
     lc.hierarchy_name,
-    lc.hierarchy_dimension,
+    lc.hierarchy_dimension as hierarchy_dimension,
     lc.hierarchy_member_code,
     lc.hierarchy_member_label,
     lc.hierarchy_level,
