@@ -16,26 +16,28 @@
    silently (dbt inserts only the columns the target already has). #}
 
 {#
-    Consumes canonical stg_gl_entries for ERP-agnostic columns.
-    Joins D365 F&O adapter directly for reporting_currency_amount
-    and general_journal_entry_recid (D365-specific fields).
+    Consumes canonical stg_gl_entries for ERP-agnostic columns, for every ERP
+    in `erp_sources` (it is already an empty typed relation when none is
+    listed, macros/erp_sources.sql), so it is read unconditionally.
 
-    With `d365_fo` not in `erp_sources`, an empty relation with the same
-    columns and types (empty_relation, macros/erp_sources.sql).
+    Joins the D365 F&O adapter for reporting_currency_amount and
+    general_journal_entry_recid (D365-specific fields) only when `d365_fo`
+    is listed; otherwise both are 0.
 #}
 
-{% if 'd365_fo' in var('erp_sources', []) %}
+{% set d365_joined = 'd365_fo' in var('erp_sources', []) %}
+
 select
     {{ cast_to_int64('gl.record_id') }} as recid,
     {{ cast_to_string('gl.entity_id') }} as data_area_id,
     {{ cast_to_date('gl.posting_date') }} as accounting_date,
     {{ cast_to_string('gl.main_account') }} as main_account,
     {{ cast_to_decimal128('gl.amount', 2) }} as accounting_currency_amount,
-    {{ cast_to_decimal128('coalesce(d365.reporting_currency_amount, 0)', 2) }} as reporting_currency_amount,
+    {{ cast_to_decimal128('coalesce(d365.reporting_currency_amount, 0)' if d365_joined else '0', 2) }} as reporting_currency_amount,
     {{ cast_to_decimal128('gl.transaction_currency_amount', 2) }} as transaction_currency_amount,
     {{ cast_to_string('gl.transaction_currency') }} as transaction_currency_code,
     {{ cast_to_string('gl.posting_type') }} as posting_type,
-    {{ cast_to_int64('coalesce(d365.general_journal_entry_recid, 0)') }} as general_journal_entry_recid,
+    {{ cast_to_int64('coalesce(d365.general_journal_entry_recid, 0)' if d365_joined else '0') }} as general_journal_entry_recid,
     {{ cast_to_string('gl.ledger_account') }} as ledger_account,
     {{ cast_to_string('gl.description') }} as description,
     {# '' = no partner (the canonical column is NULL for every ERP today) #}
@@ -44,9 +46,11 @@ select
     {{ cast_to_datetime('gl._loaded_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('gl._raw_id') }} as _airbyte_raw_id
 from {{ ref('stg_gl_entries') }} gl
+{% if 'd365_fo' in var('erp_sources', []) %}
 left join {{ ref('stg_d365_fo__gl_entries') }} d365
     on gl.record_id = d365.record_id
     and gl.erp_source = 'd365_fo'
+{% endif %}
 
 {# CDC delta: reprocess rows extracted at/after the last loaded batch. `>=`
    re-reads the boundary second (toDateTime is second-precision) so same-second
@@ -55,27 +59,4 @@ left join {{ ref('stg_d365_fo__gl_entries') }} d365
    need no FINAL. #}
 {% if is_incremental() %}
 where {{ cast_to_datetime('gl._loaded_at') }} >= (select max(_airbyte_extracted_at) from {{ this }})
-{% endif %}
-{% else %}
-{% set columns = [
-    ('recid', 'Int64'),
-    ('data_area_id', 'String'),
-    ('accounting_date', 'Date'),
-    ('main_account', 'String'),
-    ('accounting_currency_amount', 'Decimal(38, 2)'),
-    ('reporting_currency_amount', 'Decimal(38, 2)'),
-    ('transaction_currency_amount', 'Decimal(38, 2)'),
-    ('transaction_currency_code', 'String'),
-    ('posting_type', 'String'),
-    ('general_journal_entry_recid', 'Int64'),
-    ('ledger_account', 'String'),
-    ('description', 'String'),
-    ('partner_data_area_id', 'String'),
-] %}
-{% for d in var('dimensions') %}{% do columns.append((d.name, 'String')) %}{% endfor %}
-{% do columns.extend([
-    ('_airbyte_extracted_at', 'DateTime'),
-    ('_airbyte_raw_id', 'String'),
-]) %}
-{{ empty_relation(columns) }}
 {% endif %}
