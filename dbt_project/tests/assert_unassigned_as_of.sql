@@ -6,7 +6,10 @@
    checks pass vacuously. One row per broken expectation.
 
    A model without fiscal_year / fiscal_period is read as "unassigned in every period" (fy = 0), so the checks
-   fail on their merits rather than with a missing-column error. #}
+   fail on their merits rather than with a missing-column error.
+
+   Without hierarchy ZZ_DIV (a site that did not load hierarchy_dated.sql) the test has nothing to check and
+   returns no rows. #}
 
 -- depends_on: {{ ref('gold_unassigned_hierarchy_members') }}
 {% set has_period = false %}
@@ -44,7 +47,13 @@ tb as (
 
 zx_2024 as (
     select count() as n from u where code = 'ZZ_ZX' and (fy = 0 or (fy = 2024 and fp = 6))
+),
+
+present as (
+    select count() as n from {{ ref('gold_reporting_hierarchy') }} where hierarchy_name = 'ZZ_DIV'
 )
+
+select * from (
 
 -- ZZ_ZX has no leaf tranche in FY2024: it must be reported unassigned there
 select
@@ -77,3 +86,6 @@ from (
 ) as e
 where concat(e.code, '|', toString(e.fy), '|', toString(e.fp))
     not in (select concat(code, '|', toString(fy), '|', toString(fp)) from tb)
+
+) as checks
+where (select n from present) > 0

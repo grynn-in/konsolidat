@@ -9,7 +9,10 @@
    One row per broken expectation.
 
    A closure without the window columns is read as "every link holds always" (1900-01-01 .. 2299-12-31), so
-   the checks fail on their merits rather than with a missing-column error. #}
+   the checks fail on their merits rather than with a missing-column error.
+
+   Without hierarchy ZZ_DIV (a site that did not load hierarchy_dated.sql) the test has nothing to check and
+   returns no rows. #}
 
 -- depends_on: {{ ref('gold_reporting_hierarchy_closure') }}
 {% set has_window = false %}
@@ -41,7 +44,13 @@ expectations as (
     union all select 'ZZ_GX', 'ZZ_G', '', toDate('2013-04-01'), toDate('2020-06-03')
     union all select 'ZZ_AX', 'ZZ_A', 'Alpha', toDate32('1900-01-01'), toDate('2024-12-31')
     union all select 'ZZ_AX', 'ZZ_A', 'Alpha New', toDate('2025-01-01'), toDate32('2299-12-31')
+),
+
+present as (
+    select count() as n from {{ ref('gold_reporting_hierarchy') }} where hierarchy_name = 'ZZ_DIV'
 )
+
+select * from (
 
 -- a link that holds outside its window
 select
@@ -76,3 +85,6 @@ select
     concat('valid_from ', toString(valid_from), ' > valid_to ', toString(valid_to)) as problem
 from c
 where valid_from > valid_to
+
+) as checks
+where (select n from present) > 0
