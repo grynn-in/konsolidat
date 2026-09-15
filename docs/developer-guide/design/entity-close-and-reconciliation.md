@@ -6,8 +6,8 @@ of the **legal-entity close** that must happen *before* consolidation — the
 controls that make each entity's numbers trustworthy. Today the whole thing runs
 as **one group build**: every entity's TB is computed and immediately
 consolidated in the same dbt pass. A *group-level* sign-off gate does exist (the
-**Period Close** doctype runs the dbt close-assertion suite and records green/red,
-via `Assertion Result` / the Assertions process) — but there is **no per-entity
+**Assertion Run** doctype runs the dbt close-assertion suite and records green/red,
+via `Assertion Step` / the Assertions process) — but there is **no per-entity
 lock**, **no sub-ledger reconciliations**, and no per-entity gate before an
 entity flows into the group. A wrong or unreconciled entity is caught only after
 consolidation, if at all.
@@ -116,7 +116,7 @@ The sub-ledger detail is not ingested today (`epm_raw` is GL + dimensions + rate
 - Reuse `Pipeline Run` / `Run Step` for the run record. Persist the lock in
   a **new `Entity Close` doctype** keyed by (entity, fiscal_year, fiscal_period)
   holding lock status + per-control results + a waiver reason (the existing
-  `Period Close` is keyed by period only, with no entity field).
+  `Assertion Run` is keyed by period only, with no entity field).
 
 ### R4: konsol-exec plane
 - New **Entity Close** domain: scoped per entity. (Today's build scope is a

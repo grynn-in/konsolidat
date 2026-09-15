@@ -2,7 +2,7 @@
 
 **Status:** Proposed · **Scope:** konsol app (`konsol-exec` SPA + `control_api.py` + pipeline doctypes) · **Related:** konsol#55 (year selector), konsolidat#91 (FX surfacing), konsolidat#109/#110/#111 (data-quality follow-ups)
 
-> **Naming updated 2026-07:** the doctypes proposed here shipped and were then renamed — "Pipeline Definition" is now the **Pipeline** doctype, its template steps are **Pipeline Step** (formerly "Step Definition"), and the per-run execution rows are **Run Step**. "Close Run" is now **Period Close**. This doc uses the current names.
+> **Naming updated 2026-07:** the doctypes proposed here shipped and were then renamed — "Pipeline Definition" is now the **Pipeline** doctype, its template steps are **Pipeline Step** (formerly "Step Definition"), and the per-run execution rows are **Run Step**. "Close Run" → **Period Close** → **Assertion Run** (it runs the close-assertion suite; it does not close entities). This doc uses the current names.
 
 ## Context
 

@@ -195,7 +195,7 @@ Budget Sheets (one per layer)
 
 ## Forecast Uses the Same Structure
 
-The budget chain (Budget Cycle → Budget Sheet → Budget Line) handles both budget and forecast. The cycle's `scenario_id` field links to a Scenario Definition where `scenario_type` = `budget` or `forecast`. Everything else — layers, cycle locking, roles, Excel retrieval — works identically:
+The budget chain (Budget Cycle → Budget Sheet → Budget Line) handles both budget and forecast. The cycle's `scenario_id` field links to a Scenario where `scenario_type` = `budget` or `forecast`. Everything else — layers, cycle locking, roles, Excel retrieval — works identically:
 
 | Formula | What It Returns |
 |:--------|:----------------|
