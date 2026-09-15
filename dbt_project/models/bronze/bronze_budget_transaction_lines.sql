@@ -10,8 +10,12 @@
     Consumes canonical stg_budget_entries for ERP-agnostic columns.
     Joins D365 F&O adapter for budget_register_entry_recid and
     include_in_cash_flow (D365-specific fields).
+
+    With `d365_fo` not in `erp_sources`, an empty relation with the same
+    columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
+{% if 'd365_fo' in var('erp_sources', []) %}
 select
     {{ cast_to_int64('b.record_id') }} as recid,
     {{ cast_to_int64('coalesce(d365.budget_register_entry_recid, 0)') }} as budget_register_entry_recid,
@@ -28,6 +32,24 @@ from {{ ref('stg_budget_entries') }} b
 left join {{ ref('stg_d365_fo__budget_entries') }} d365
     on b.record_id = d365.record_id
     and b.erp_source = 'd365_fo'
+{% else %}
+{% set columns = [
+    ('recid', 'Int64'),
+    ('budget_register_entry_recid', 'Int64'),
+    ('transaction_date', 'Date'),
+    ('main_account', 'String'),
+    ('accounting_currency_amount', 'Decimal(38, 2)'),
+    ('transaction_currency_amount', 'Decimal(38, 2)'),
+    ('transaction_currency', 'String'),
+] %}
+{% for d in get_budget_dimensions() %}{% do columns.append((d.name, 'String')) %}{% endfor %}
+{% do columns.extend([
+    ('include_in_cash_flow', 'Int8'),
+    ('_airbyte_extracted_at', 'DateTime'),
+    ('_airbyte_raw_id', 'String'),
+]) %}
+{{ empty_relation(columns) }}
+{% endif %}
 
 {# Budget stays a full `table` (not incremental): it is low-volume and its
    staging record_id is rowNumberInAllBlocks() (positional, non-deterministic),
