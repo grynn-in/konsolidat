@@ -20,8 +20,15 @@
 -- which sums to 0.
 --
 -- The six deal tables do not exist live yet: the fixture creates the three it needs with konsol's
--- exact DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live
--- consolidation_groups and main_accounts may predate their policy/flag columns: add them first.
+-- exact DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
+-- main_accounts and submission control may predate their policy/flag/basis columns: add them first.
+-- The journal reads gold_trial_balance (pre-acquisition history), whose lineage reads these tables, empty on a
+-- trial-balance-only site with no upload, so they are named here to exist (empty): epm_raw.trial_balance_submissions,
+-- epm_raw.trial_balance_submission_control, epm_raw.general_journal_account_entry_bi_entities,
+-- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
+-- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
+-- epm_staging.dimension_mappings.
+ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
