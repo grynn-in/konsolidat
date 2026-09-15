@@ -4,7 +4,7 @@
     columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
-{% set erp_sources = var('erp_sources', ['d365_fo']) %}
+{% set erp_sources = var('erp_sources', []) %}
 
 {% if erp_sources | length == 0 %}
 {{ empty_relation([

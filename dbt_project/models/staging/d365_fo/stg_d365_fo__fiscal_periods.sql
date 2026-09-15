@@ -1,4 +1,4 @@
-{{ config(enabled = 'd365_fo' in var('erp_sources', ['d365_fo'])) }}
+{{ config(enabled = 'd365_fo' in var('erp_sources', [])) }}
 {#
     D365 F&O fiscal periods adapter.
     Combines fiscal calendar years into canonical stg_fiscal_periods schema.
