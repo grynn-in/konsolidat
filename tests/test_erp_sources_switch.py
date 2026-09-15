@@ -153,3 +153,23 @@ def test_canonical_reader_reads_canonical_unguarded(model, canonical):
     assert "empty_relation(" not in sql, (
         f"{model}: no empty branch; {canonical} is already empty without an ERP"
     )
+
+
+# `var('erp_sources', [<something>])`: a non-empty in-model fallback. It applies
+# only when dbt_project.yml has no erp_sources key, and must not rebuild an ERP.
+NON_EMPTY_FALLBACK = re.compile(r"var\(\s*['\"]erp_sources['\"]\s*,\s*\[\s*[^\]\s]")
+FALLBACK_SCAN_DIRS = ("models", "macros", "tests")
+
+
+def test_no_non_empty_erp_sources_fallback():
+    found = []
+    for top in FALLBACK_SCAN_DIRS:
+        for dirpath, _, files in os.walk(os.path.join(PROJECT_ROOT, "dbt_project", top)):
+            for name in sorted(files):
+                path = os.path.join(dirpath, name)
+                with open(path, errors="replace") as f:
+                    if NON_EMPTY_FALLBACK.search(f.read()):
+                        found.append(os.path.relpath(path, PROJECT_ROOT))
+    assert not found, (
+        f"{len(found)} file(s) fall back to a non-empty erp_sources: {sorted(found)}"
+    )
