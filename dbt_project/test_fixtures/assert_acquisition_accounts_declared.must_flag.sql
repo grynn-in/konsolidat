@@ -1,10 +1,12 @@
 -- Must-flag fixture for assert_acquisition_accounts_declared (konsolidat#198 row J7, design §1/§1a):
 -- `+gold_business_combination_journal assert_acquisition_accounts_declared` must BUILD and the test must
--- FAIL with `Got 4 results` on these rows.
+-- FAIL with `Got 3 results` on these rows.
 --
 -- business_combination_100pct.sql verbatim, except the root row of group ZZG, which now lacks or misdeclares
--- four things the acquisition journal needs (one flagged row per deal and field):
---   nci_measurement      ''               -> missing
+-- four things; three of them the acquisition journal needs (one flagged row per deal and field):
+--   nci_measurement      ''               -> NOT flagged since konsol#205: the journal reads the deal's own
+--                                           nci_measurement (here '', its group's value), required only when
+--                                           share_acquired_pct < 100, and this deal is 100%
 --   bargain_purchase     'Recognize gain' -> not a declared option ('Recognise gain' | 'Refuse')
 --   goodwill_account     ''               -> missing (the deal has consideration 8,300, so goodwill is posted)
 --   investment_account   'ZZ3599'         -> not a posting account of the chart (ZZCOA has no ZZ3599)
