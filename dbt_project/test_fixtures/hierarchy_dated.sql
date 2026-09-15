@@ -117,3 +117,19 @@ INSERT INTO epm_gold.scenario_definitions
 VALUES
   ('ACTUAL', 'Actual', 'actual', 1),
   ('ZZ_PLAN_H', 'ZZ plan H', 'budget', 1);
+--
+-- Unassigned per period (row H6): business unit ZZ_ZX becomes a leaf of ZZ_DIV (under ZZ_B) only from
+-- 2025-01-01, and carries actuals in FY2024 P6 (7) and FY2025 P6 (9). So ZZ_ZX is unassigned in FY2024 and
+-- assigned in FY2025. The cash line has no business unit, so ZZ_ZX adds nothing to the ZZ1000 nodes that
+-- assert_hierarchy_node_as_of checks.
+INSERT INTO epm_staging.reporting_hierarchies
+  (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
+VALUES
+  ('ZZ_DIV', 'dim_business_unit', 'ZZ_ZX', 'ZZ ZX', 'ZZ_B', 0, 3, 'ZZ_ROOT/ZZ_B/ZZ_ZX', '', '', 1, 'Published', '2025-01-01', '2299-12-31');
+INSERT INTO epm_bronze.bronze_general_journal_account_entries
+  (recid, data_area_id, accounting_date, main_account, accounting_currency_amount, reporting_currency_amount, transaction_currency_amount, transaction_currency_code, posting_type, general_journal_entry_recid, ledger_account, description, dim_business_unit, dim_cost_center, dim_department, _airbyte_extracted_at, _airbyte_raw_id)
+VALUES
+  (990211, 'ZZE1', '2024-06-15', 'ZZ1000', 7, 0, 7, 'USD', 'LedgerJournal', 0, 'ZZ1000', 'ZZ cash', '', '', '', '2026-09-15 00:00:00', 'zz-h6-1'),
+  (990212, 'ZZE1', '2024-06-15', 'ZZ4000', -7, 0, -7, 'USD', 'LedgerJournal', 0, 'ZZ4000-ZZ_ZX', 'ZZ revenue', 'ZZ_ZX', '', '', '2026-09-15 00:00:00', 'zz-h6-2'),
+  (990213, 'ZZE1', '2025-06-15', 'ZZ1000', 9, 0, 9, 'USD', 'LedgerJournal', 0, 'ZZ1000', 'ZZ cash', '', '', '', '2026-09-15 00:00:00', 'zz-h6-3'),
+  (990214, 'ZZE1', '2025-06-15', 'ZZ4000', -9, 0, -9, 'USD', 'LedgerJournal', 0, 'ZZ4000-ZZ_ZX', 'ZZ revenue', 'ZZ_ZX', '', '', '2026-09-15 00:00:00', 'zz-h6-4');
