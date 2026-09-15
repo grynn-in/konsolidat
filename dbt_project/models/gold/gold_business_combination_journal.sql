@@ -12,7 +12,7 @@
    journal per deal, `journal_id = ACQ-<group>-<entity>-<acquisition_date>`,
    in group currency, posted once in the acquisition period, and balanced by
    construction: the investment and NCI credits are the counterpart of every
-   other line. assert_consolidation_journals_balance proves it per journal
+   other line. assert_acquisition_journal_balances proves it per journal
    and period.
 
    Replaces gold_acquisition_adjustments' goodwill_entries and fva_entries,

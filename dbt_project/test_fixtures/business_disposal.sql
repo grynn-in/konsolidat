@@ -1,5 +1,5 @@
 -- Disposal journal, the full-disposal case (konsolidat#198 row J6, design §5):
--- `+gold_business_disposal_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows.
+-- `+gold_business_disposal_journal assert_disposal_journal_balances` must BUILD and PASS on these rows.
 --
 -- The J2 deal (business_combination_100pct.sql) disposed of one year later: group ZZG (USD; IFRS, NCI partial,
 -- goodwill Impairment only, costs Expense, measurement period Off, bargain purchase Recognise gain) with its

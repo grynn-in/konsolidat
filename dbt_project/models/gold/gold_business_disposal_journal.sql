@@ -12,7 +12,7 @@
    journal per full disposal, `journal_id = DSP-<group>-<entity>-
    <disposal_date>`, in group currency, posted once in the disposal period,
    and balanced by construction: the gain or loss is the counterpart of every
-   other line. assert_consolidation_journals_balance proves it per journal
+   other line. assert_disposal_journal_balances proves it per journal
    and period.
 
    Replaces gold_disposal_adjustments' disposal_gain_loss and cta_recycling

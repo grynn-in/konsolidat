@@ -1,5 +1,5 @@
 -- Acquisition journal with ACQUISITION COSTS, `acquisition_costs_treatment` Expense vs Capitalise (konsolidat#198 row J4, design §1a):
--- `+gold_business_combination_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows.
+-- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
 --
 -- Two groups, each acquiring 100% of an EUR entity on 2026-03-15 (FY2026 P3) for 8,300 USD cash, with the
 -- same acquired balance sheet (EUR; Dr positive, Cr negative; closing rate EUR->USD 1.0 for FY2026 P3):

@@ -46,9 +46,9 @@
    (konsol's tables do not exist live yet).
 
    Every journal sums to zero per period by construction (the two lines are
-   each other's counterpart); assert_consolidation_journals_balance proves it
-   (its union reads this model). Layer 6 of gold_fully_consolidated_tb reads
-   it, adjustment_type 'goodwill_amortisation'.
+   each other's counterpart); assert_goodwill_amortisation_journal_balances
+   proves it per journal and period. Layer 6 of gold_fully_consolidated_tb
+   reads it, adjustment_type 'goodwill_amortisation'.
 
    line_no: 1 for the expense line, 2 for the goodwill credit; `instalment`
    (1 .. n_instalments) numbers the period within the schedule. #}

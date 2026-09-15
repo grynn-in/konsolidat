@@ -1,5 +1,5 @@
 -- Acquisition journal with PRE-ACQUISITION TB HISTORY (konsolidat#198 row J3, design §3-4 line 0):
--- `+gold_business_combination_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows.
+-- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,
 -- bargain purchase Recognise gain) with its accounts declared on the root row:

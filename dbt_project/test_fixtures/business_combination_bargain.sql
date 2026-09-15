@@ -1,5 +1,5 @@
 -- Acquisition journal, a BARGAIN PURCHASE under `bargain_purchase = 'Recognise gain'` (konsolidat#198 row J4, design §4 line 3b):
--- `+gold_business_combination_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows,
+-- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows,
 -- and the journal must carry a `bargain_gain` credit and NO `goodwill` line.
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,

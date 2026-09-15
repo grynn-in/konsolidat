@@ -1,8 +1,8 @@
 -- Goodwill amortisation stops at the disposal (konsolidat#198 row J5b, design §1 "until fully amortised or
--- disposal"): `+gold_business_disposal_journal assert_consolidation_journals_balance` must BUILD and PASS on
--- these rows, and the schedule must hold 12 instalments, not 120. (Since row J6 the balance test unions the
--- disposal journal, so the selector builds all three journals; `+gold_goodwill_amortisation_journal` alone
--- leaves the test without gold_business_disposal_journal.)
+-- disposal"): `+gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances` must BUILD
+-- and PASS on these rows, and the schedule must hold 12 instalments, not 120. (Since row J5cb each journal has
+-- its own balance test, so this selector is self-contained; the disposal journal itself is proved under
+-- `+gold_business_disposal_journal assert_disposal_journal_balances`.)
 --
 -- goodwill_amortisation.sql (row J5) plus one submitted Business Disposal: the group sells 100% of ZZS on
 -- 2027-03-31 (FY2027 P3, BD-ZZG-ZZS-2027-03-31, 9,000 USD). The amortisation journal posts in every Regular

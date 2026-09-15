@@ -1,7 +1,6 @@
 -- Goodwill amortisation per policy (konsolidat#198 row J5):
--- `+gold_business_disposal_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows
--- (since row J6 the balance test unions the disposal journal, so the selector builds all three journals;
--- `+gold_goodwill_amortisation_journal` alone leaves the test without gold_business_disposal_journal).
+-- `+gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances` must BUILD and PASS on
+-- these rows (since row J5cb each journal has its own balance test, so this selector is self-contained).
 --
 -- The J2 deal (business_combination_100pct.sql) under a group whose goodwill policy is Amortise over 10 years:
 -- group ZZG (USD; IFRS, NCI partial, goodwill Amortise / goodwill_amortisation_years 10, costs Expense,

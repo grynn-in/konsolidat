@@ -1,9 +1,10 @@
 -- Acquisition journal, the 100% case with an acquired-balances table (konsolidat#198 row J2):
--- `+gold_business_combination_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows.
+-- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
 -- It is also the Impairment-only proof for goodwill amortisation (row J5): with
--- `+gold_business_disposal_journal assert_consolidation_journals_balance` (the selector that builds all three
--- journals, since the balance test unions them) the gate must PASS and gold_goodwill_amortisation_journal and
--- gold_business_disposal_journal must both yield 0 rows, while the acquisition journal keeps the 5 lines below.
+-- `+gold_business_disposal_journal assert_disposal_journal_balances` (the selector that builds all three
+-- journals, since the disposal journal reads the other two) the gate must PASS and
+-- gold_goodwill_amortisation_journal and gold_business_disposal_journal must both yield 0 rows, while the
+-- acquisition journal keeps the 5 lines below.
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,
 -- bargain purchase Recognise gain) with its accounts declared on the root row:
