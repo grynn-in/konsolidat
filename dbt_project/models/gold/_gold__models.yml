@@ -145,13 +145,23 @@ models:
         description: "debit_amount - credit_amount"
 
   - name: gold_fully_consolidated_tb
-    description: "Unified consolidated TB: entity balances + IC elims + CTA + topside"
+    description: >
+      Unified consolidated TB: entity balances + IC elims + CTA + topside + equity
+      method + the deal journals (konsolidat#198: acquisition, goodwill amortisation,
+      disposal). Every layer is at the account grain — one row per (group, entity,
+      year, period, account, adjustment_type, journal_id) — because
+      gold_consolidated_ytd runs a ROWS window over it; layer 6 SUMs each journal's
+      lines to that grain (row J11), and assert_journal_grain_unique proves it for
+      the three journal adjustment types.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: adjustment_type
-        description: "Layer: entity, ic_elimination, cta, or topside adjustment type"
+        description: >
+          Layer: entity, ic_elimination, ic_elimination_nci, cta, equity_method,
+          pnl_proration, acquisition, goodwill_amortisation, disposal, or the
+          topside adjustment type
         tests:
           - not_null
 

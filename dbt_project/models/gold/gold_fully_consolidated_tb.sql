@@ -153,7 +153,17 @@ equity_method as (
    disposal journal (gold_business_disposal_journal, posted from the
    submitted Business Disposal: derecognition, goodwill, FVA, CTA recycling,
    NCI, proceeds, gain or loss) replaces gold_disposal_adjustments' one-sided
-   'DISPOSAL' rows; that model is now empty. #}
+   'DISPOSAL' rows; that model is now empty.
+   Row J11 (PR #203 review 7): the journals post several lines to one account
+   in one period when the roles differ (the acquisition journal's
+   opening_balance and equity_eliminated lines on the same equity account,
+   the disposal journal's derecognised and proceeds lines on the same cash
+   account), so each journal branch is SUMmed to the account grain
+   (group, entity, year, period, account, adjustment_type, journal_id) like
+   the proration branch: passed through line by line, gold_consolidated_ytd's
+   ROWS window ran a separate running total per line (-687.5, then 0, instead
+   of 0). account_role is a line attribute, not part of the grain, and stays
+   in the journal models; assert_journal_grain_unique proves the grain. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -179,13 +189,15 @@ acquisition_disposal as (
         fiscal_year,
         fiscal_period,
         main_account,
-        account_name,
+        any(account_name) as account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        adjustment_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
         journal_id
     from {{ ref('gold_business_combination_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type, journal_id
 
     union all
 
@@ -195,13 +207,15 @@ acquisition_disposal as (
         fiscal_year,
         fiscal_period,
         main_account,
-        account_name,
+        any(account_name) as account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        adjustment_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
         journal_id
     from {{ ref('gold_goodwill_amortisation_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type, journal_id
 
     union all
 
@@ -211,13 +225,15 @@ acquisition_disposal as (
         fiscal_year,
         fiscal_period,
         main_account,
-        account_name,
+        any(account_name) as account_name,
         {{ dim_empty_strings() }},
         '' as reporting_currency,
-        adjustment_amount as amount,
+        sum(adjustment_amount) as amount,
         adjustment_type,
         journal_id
     from {{ ref('gold_business_disposal_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type, journal_id
 ),
 
 {# Union all layers #}
