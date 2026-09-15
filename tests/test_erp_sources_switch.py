@@ -106,6 +106,37 @@ def test_d365_ref_inside_erp_sources_guard(model):
     )
 
 
+STAGING = os.path.join(MODELS, "staging")
+ERP_STAGING_DIRS = ("d365_fo", "erpnext")
+
+
+def _erp_staging_models():
+    out = []
+    for erp in ERP_STAGING_DIRS:
+        d = os.path.join(STAGING, erp)
+        for name in sorted(os.listdir(d)):
+            if name.startswith(f"stg_{erp}__") and name.endswith(".sql"):
+                out.append((erp, name))
+    return out
+
+
+def test_every_erp_has_staging_models():
+    erps = {erp for erp, _ in _erp_staging_models()}
+    assert erps == set(ERP_STAGING_DIRS), f"staging models found only for {erps}"
+
+
+@pytest.mark.parametrize("erp,name", _erp_staging_models())
+def test_erp_staging_model_enabled_by_erp_sources(erp, name):
+    """Each connector's staging model is disabled unless its ERP is listed in
+    `erp_sources`, so an unguarded bronze ref fails the parse."""
+    with open(os.path.join(STAGING, erp, name)) as f:
+        first = f.readline()
+    expected = "{{ config(enabled = '%s' in var('erp_sources'" % erp
+    assert first.startswith(expected), (
+        f"{erp}/{name}: first line must start with {expected!r}, got {first.strip()!r}"
+    )
+
+
 @pytest.mark.parametrize("model,canonical", sorted(CANONICAL_READERS.items()))
 def test_canonical_reader_reads_canonical_unguarded(model, canonical):
     sql = _read(model)
