@@ -128,7 +128,9 @@ models:
     columns:
       - name: scenario_id
         description: >
-          'ACTUAL' on the GL branch (data_source 'gl'), 'BUDGET' on the D365
+          On the GL branch (data_source 'gl') the one active scenario declared
+          with scenario_type 'actual' in epm_gold.scenario_definitions ('ACTUAL'
+          when none or several are declared), 'BUDGET' on the D365
           budget branch ('d365_budget'), and konsol's own scenario ids on the
           gold_spread_budget branch ('budget'). The variance models keep only
           active scenarios declared in epm_gold.scenario_definitions with the
