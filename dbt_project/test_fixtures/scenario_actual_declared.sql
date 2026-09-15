@@ -49,3 +49,11 @@ INSERT INTO epm_gold.budget_monthly_input
   (scenario_id, data_area_id, fiscal_year, main_account, dim_cost_center, dim_department, fiscal_period, amount, layer)
 VALUES
   ('ZZ_B26', 'ZZE1', 2026, 'ZZ4000', '', '', 1, -1200, 'base');
+-- konsol#220 row H9b: these lines name epm_staging.reporting_hierarchies so the gate clones it empty, as on a
+-- fresh site with no hierarchy (the dated hierarchy tests must then have nothing to check). No hierarchy rows.
+-- The live table may predate the two tranche columns: add them first.
+ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
+ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
+-- A table that already has them as plain Date (1970-01-01..2149-06-06 clamps both ends) becomes Date32.
+ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_from Date32 DEFAULT '1900-01-01';
+ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_to Date32 DEFAULT '2299-12-31';
