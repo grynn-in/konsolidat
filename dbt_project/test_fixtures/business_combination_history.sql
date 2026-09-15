@@ -1,5 +1,7 @@
 -- Acquisition journal with PRE-ACQUISITION TB HISTORY (konsolidat#198 row J3, design §3-4 line 0):
--- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
+-- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows,
+-- and so must `+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`
+-- (row J11's selector: layer 6 of the fully consolidated TB reads the journals).
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,
 -- bargain purchase Recognise gain) with its accounts declared on the root row:
@@ -24,14 +26,17 @@
 --   Cr ZZ3500 8,300    investment
 -- 10 lines, which sum to 0.
 --
--- The deal tables do not exist live yet: the fixture creates the four the journal reads (the costs table is
--- empty here: no acquisition costs on this deal) with konsol's exact DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
+-- The deal tables do not exist live yet: the fixture creates the six the three journals read (the costs and
+-- the two disposal tables are empty here: no acquisition costs, no disposal) with konsol's exact DDL
+-- (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
 -- main_accounts and submission control may predate their policy/flag/basis columns: add them first.
 -- The journal reads gold_trial_balance, whose lineage also reads these ERP-side tables, empty on a
 -- trial-balance-only site, so they are named here to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
 -- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
--- epm_staging.dimension_mappings.
+-- epm_staging.dimension_mappings. The fully consolidated TB's other layers (topside layer 4, IC eliminations
+-- layer 2) read these live tables, empty here too: epm_staging.consolidation_adjustments, epm_staging.ic_balances,
+-- epm_staging.ic_elimination_rules, epm_staging.intercompany_accounts.
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
@@ -55,6 +60,8 @@ CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, conso
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposals (name String, consolidation_group String, disposed_entity String, disposal_date Date, share_disposed_pct Float64, retained_interest_pct Float64, proceeds_currency String, total_proceeds Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposal_proceeds (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
