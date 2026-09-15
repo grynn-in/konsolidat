@@ -498,7 +498,9 @@ models:
       governed Closing rate for its period posts nothing, and
       assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
       stops the build on a disposal whose group has not declared an account this journal
-      posts to; assert_disposal_has_balances warns on a disposal whose entity has no
+      posts to, and refuses a partial share by name (retained_interest_pct > 0 or
+      share_disposed_pct < 100: partial-share deals wait for konsolidat#204, row J12);
+      assert_disposal_has_balances warns on a disposal whose entity has no
       trial-balance row through the disposal period (nothing to derecognise); the root
       row is read with any() per column and assert_consolidation_group_root_unique stops
       the build on a duplicate (row J10). Replaced

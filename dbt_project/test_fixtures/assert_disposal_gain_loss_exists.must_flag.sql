@@ -1,7 +1,13 @@
 -- Must-flag fixture for assert_disposal_gain_loss_exists (konsolidat#198 row J6b, design §5/§7):
--- `+gold_business_disposal_journal assert_disposal_gain_loss_exists assert_cta_recycled_on_disposal` must
+-- `+gold_business_disposal_journal assert_disposal_gain_loss_exists assert_cta_recycled_on_disposal
+--  --exclude assert_disposal_accounts_declared` must
 -- BUILD, and assert_disposal_gain_loss_exists must FAIL with exactly `Got 1 result` on these rows;
 -- assert_cta_recycled_on_disposal PASSes (the entity's accumulated CTA is 0 at rate 1.0, so no recycling is owed).
+-- Since row J12 the disposal guard assert_disposal_accounts_declared refuses this disposal by name first
+-- (retained_interest_pct > 0: partial-share deals wait for konsolidat#204; `Got 1 result` there too), and it reads
+-- only sources + chart, so dbt runs it before the journal and its FAIL would SKIP the journal and the gain/loss
+-- test — the `--exclude` selects the guard out so the gate reaches assert_disposal_gain_loss_exists (row J12b).
+-- Both refusals name the same deal; this fixture proves the gain/loss one.
 --
 -- business_disposal.sql (the J2 deal disposed of one year later for 9,000 USD) with ONE change: the Business
 -- Disposal BD-ZZG-ZZS-2027-03-15 sells 80% and keeps a retained interest of 20% (share_disposed_pct 80,
