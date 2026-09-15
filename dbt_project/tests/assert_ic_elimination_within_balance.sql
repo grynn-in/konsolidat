@@ -26,7 +26,11 @@
 
 {% set pair = "consolidation_group, entity_a, account_a, entity_b, account_b" %}
 
-with eliminations as (
+with group_nci as (
+    {{ ic_group_nci_accounts() }}
+),
+
+eliminations as (
     select * from {{ ref('gold_ic_eliminations') }}
     where rule_type = 'balance' and elimination_view = 'group'
 ),
@@ -48,8 +52,11 @@ destinations as (
     from {{ ref('gold_ic_reconciliation') }}
     where ic_difference_account != ''
     union distinct
-    select distinct consolidation_group, '{{ ic_nci_account() }}'
-    from {{ ref('gold_ic_reconciliation') }}
+    {# the group's NCI line: its declared NCI Account, or the placeholder
+       (konsolidat#208), resolved as gold_ic_eliminations does #}
+    select distinct r.consolidation_group, {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }}
+    from {{ ref('gold_ic_reconciliation') }} as r
+    left join group_nci as gn on gn.nci_group = r.consolidation_group
 ),
 
 account_basis as (

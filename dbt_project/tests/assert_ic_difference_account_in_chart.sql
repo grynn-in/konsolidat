@@ -12,31 +12,38 @@
     The column is konsol#159's; on a volume konsol has not upgraded yet there
     is nothing to check.
 
-    Also (#175 re-review L3): the NCI line's account, when var ic_nci_account
-    maps it to a chart account instead of the NCI pseudo-account, is in the
-    chart.
+    Also (#175 re-review L3, konsolidat#208): the NCI Account a group declares
+    on its root, which its intercompany NCI line posts to, is in the chart.
+    A group that declares none posts to the placeholder, which
+    assert_ic_nci_account_declared reports.
 #}
 
-{% set nci_account = ic_nci_account() | trim %}
-
 {% set has_column = false %}
+{% set has_nci_column = false %}
 {% if execute %}
     {% set group_columns = adapter.get_columns_in_relation(source('epm_gold', 'consolidation_groups')) | map(attribute='name') | list %}
     {% set has_column = 'ic_difference_account' in group_columns %}
+    {% set has_nci_column = 'nci_account' in group_columns %}
 {% endif %}
 
 {% if has_column %}
-select consolidation_group, ic_difference_account
+select consolidation_group, 'ic_difference_account' as account_role, ic_difference_account as account
 from {{ source('epm_gold', 'consolidation_groups') }}
 where data_area_id = ''
   and ic_difference_account != ''
   and ic_difference_account not in (select main_account_id from {{ ref('silver_main_accounts') }})
 {% else %}
-select '' as consolidation_group, '' as ic_difference_account where 0
+select '' as consolidation_group, '' as account_role, '' as account where 0
 {% endif %}
 
 union all
 
-select 'var ic_nci_account' as consolidation_group, '{{ nci_account }}' as ic_difference_account
-where '{{ nci_account }}' != 'NCI'
-  and '{{ nci_account }}' not in (select main_account_id from {{ ref('silver_main_accounts') }})
+{% if has_nci_column %}
+select consolidation_group, 'nci_account' as account_role, nci_account as account
+from {{ source('epm_gold', 'consolidation_groups') }}
+where data_area_id = ''
+  and nci_account != ''
+  and nci_account not in (select main_account_id from {{ ref('silver_main_accounts') }})
+{% else %}
+select '' as consolidation_group, '' as account_role, '' as account where 0
+{% endif %}

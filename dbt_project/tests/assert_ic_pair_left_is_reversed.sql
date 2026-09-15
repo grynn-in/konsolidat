@@ -18,8 +18,6 @@
     joins (nothing posted yet) and every period after it left (all reversed).
 #}
 
-{% set nci = ic_nci_account() %}
-
 with bs_pairs as (
     select consolidation_group, entity_a, account_a, entity_b, account_b,
            min(tuple(fiscal_year, fiscal_period)) as first_period

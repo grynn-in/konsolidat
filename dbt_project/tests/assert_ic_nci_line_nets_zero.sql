@@ -10,16 +10,32 @@
     else (the difference account, a wrong sign) leaves the line unbalanced.
 #}
 
-{% set nci = ic_nci_account() %}
+{# The NCI line is the group's own: its declared NCI Account, or the
+   placeholder (konsolidat#208), resolved as gold_ic_eliminations does. #}
+with group_nci as (
+    {{ ic_group_nci_accounts() }}
+),
 
-with legs as (
+eliminations as (
+    select
+        e.consolidation_group as consolidation_group, e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        e.debit_account as debit_account, e.debit_elimination as debit_elimination,
+        e.credit_account as credit_account, e.credit_elimination as credit_elimination,
+        {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }} as nci_account
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join group_nci as gn on gn.nci_group = e.consolidation_group
+    where e.rule_type = 'balance'
+),
+
+legs as (
     select consolidation_group, fiscal_year, fiscal_period, debit_elimination as amount
-    from {{ ref('gold_ic_eliminations') }}
-    where rule_type = 'balance' and debit_account = '{{ nci }}'
+    from eliminations
+    where debit_account = nci_account
     union all
     select consolidation_group, fiscal_year, fiscal_period, credit_elimination
-    from {{ ref('gold_ic_eliminations') }}
-    where rule_type = 'balance' and credit_account = '{{ nci }}'
+    from eliminations
+    where credit_account = nci_account
 )
 
 select consolidation_group, fiscal_year, fiscal_period, sum(amount) as nci_line

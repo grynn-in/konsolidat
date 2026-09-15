@@ -74,7 +74,10 @@ models:
       net to zero. Balance rows come from gold_ic_reconciliation (konsolidat#148):
       the matched amount of each pair, and the difference moved to the group's
       intercompany-difference account. Unrealized-profit rows come from IC
-      Elimination Rules.
+      Elimination Rules. The minority owners' portion (decision 12) posts to
+      the NCI Account the group declares on its Consolidation Group root
+      (konsolidat#208), or to the 'NCI' placeholder (ic_nci_placeholder())
+      until it declares one; assert_ic_nci_account_declared names such a group.
     columns:
       - name: rule_id
         tests:
