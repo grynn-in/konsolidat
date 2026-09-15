@@ -91,5 +91,58 @@ class TbOnlyFirstBuildRunsTheCastTest(unittest.TestCase):
         )
 
 
+MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "models", "gold", "gold_scenario_trial_balance.sql")
+
+
+def _fixture_scenarios():
+    """(scenario_id, scenario_type, is_active) rows the --fixture data inserts
+    into <prefix>_gold.scenario_definitions, read from fixture_sql()."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("tb_only_first_build", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # stdlib only at import time; main() is not run
+    rows = []
+    for stmt in mod.fixture_sql("zz"):
+        m = re.match(r"\s*INSERT INTO zz_gold\.scenario_definitions\s*\(([^)]*)\)\s*VALUES\s*(.*)$", stmt, flags=re.S)
+        if not m:
+            continue
+        cols = [c.strip() for c in m.group(1).split(",")]
+        for tup in re.findall(r"\(([^)]*)\)", m.group(2)):
+            vals = dict(zip(cols, [v.strip().strip("'") for v in tup.split(",")]))
+            rows.append((vals.get("scenario_id"), vals.get("scenario_type"), vals.get("is_active")))
+    return rows
+
+
+class TbOnlyFixtureDeclaresItsScenarios(unittest.TestCase):
+    """konsolidat#206 (row D7c): assert_scenario_rows_declared (error severity)
+    requires every scenario id in gold_scenario_trial_balance to be an active,
+    declared scenario of its branch's type. A real site gets ACTUAL / BUDGET /
+    FORECAST from konsol's Scenario fixtures, synced to epm_gold.scenario_definitions;
+    the fresh TB-only fixture must declare them the same way, or its GL rows
+    (stamped with the undeclared fallback id) fail the build."""
+
+    def setUp(self):
+        self.rows = _fixture_scenarios()
+
+    def test_fallback_actual_id_is_declared_active_actual(self):
+        with open(MODEL, encoding="utf-8") as f:
+            m = re.search(r"any\(scenario_id\)\s*,\s*'([^']+)'\s*\)", f.read())
+        self.assertIsNotNone(m, "fallback actual scenario id not found in gold_scenario_trial_balance.sql")
+        fallback = m.group(1)
+        self.assertIn(
+            (fallback, "actual", "1"), self.rows,
+            f"fixture_sql() declares no active 'actual' scenario {fallback!r} "
+            f"in <prefix>_gold.scenario_definitions (got {self.rows})",
+        )
+
+    def test_budget_and_forecast_are_declared(self):
+        for sid, stype in (("BUDGET", "budget"), ("FORECAST", "forecast")):
+            self.assertIn((sid, stype, "1"), self.rows, f"fixture_sql() does not declare {sid} ({stype}, active)")
+
+    def test_exactly_one_active_actual(self):
+        actual = [r for r in self.rows if r[1] == "actual" and r[2] == "1"]
+        self.assertEqual(len(actual), 1, f"expected one active actual scenario, got {actual}")
+
+
 if __name__ == "__main__":
     unittest.main()
