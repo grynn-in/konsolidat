@@ -23,6 +23,10 @@ GUARDED = [
     "bronze_budget_transaction_lines",
     "bronze_consolidation_account_groups",
     "bronze_exchange_rate_types",
+    "bronze_financial_dimension_values",
+    "bronze_financial_dimensions",
+    "bronze_fiscal_calendar_years",
+    "bronze_fiscal_calendars",
 ]
 
 
