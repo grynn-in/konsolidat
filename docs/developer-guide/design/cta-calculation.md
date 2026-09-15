@@ -53,4 +53,5 @@ CTA = sum(PnL items × (closing_rate - average_rate))
 
 ## Out of Scope
 - Goodwill CTA (no acquisition accounting)
-- Recycling CTA to P&L on disposal
+- Recycling CTA to P&L on disposal — done since konsolidat#198 by the `cta` line of
+  `gold_business_disposal_journal` ([Business Combinations](business-combinations.md))

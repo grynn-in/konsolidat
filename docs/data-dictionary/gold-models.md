@@ -246,14 +246,96 @@ Top-side journal adjustments for consolidation.
 
 **Test**: `assert_topside_journal_balanced` — each journal must balance (debits = credits).
 
+### gold_business_combination_journal
+
+The balanced acquisition journal per submitted Business Combination
+(`epm_staging.business_combinations` and its child tables), `journal_id =
+ACQ-<group>-<entity>-<acquisition_date>`, group currency, posted once in the
+acquisition period. Design: [Business Combinations](../developer-guide/design/business-combinations.md).
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `consolidation_group` | String | The acquiring group | not_null |
+| `data_area_id` | String | The acquired entity | — |
+| `fiscal_year` | UInt16 | Acquisition fiscal year | — |
+| `fiscal_period` | UInt8 | Acquisition period from `epm_staging.fiscal_periods` (`start_date <= acquisition_date <= end_date`, Closing periods skipped) | — |
+| `main_account` | String | Account posted to (declared on the group root, or the acquired balance's account) | not_null |
+| `account_name` | String | Account name from the chart | — |
+| `adjustment_type` | String | `acquisition` | accepted_values |
+| `adjustment_amount` | Decimal | Group currency; debit positive, credit negative | — |
+| `acquisition_date` | Date | From the deal header | — |
+| `journal_id` | String | `ACQ-<group>-<entity>-<acquisition_date>` | not_null |
+| `line_no` | UInt16 | 0 opening_balance lines; the child idx for equity lines; 101 fva, 102 goodwill, 103 investment, 104 nci, 105 bargain_gain, 110+idx costs, 130+idx their settlement credit | — |
+| `account_role` | String | `opening_balance`, `equity_eliminated`, `fva`, `goodwill`, `investment`, `nci`, `bargain_gain`, `costs`, `proceeds` | accepted_values |
+| `deal` | String | The Business Combination document name | — |
+| `measurement_basis` | String | How net assets were measured: `acquired_balances`, `header_net_assets` or `measured_from_tb` | — |
+
+**Tests**: `assert_acquisition_journal_balances` (each journal sums to 0 per period),
+`assert_acquisition_accounts_declared`, `assert_bargain_purchase_refused`,
+`assert_goodwill_calculated`, `assert_acquisition_measured_in_period` (warn).
+
+### gold_goodwill_amortisation_journal
+
+Straight-line goodwill amortisation per the group's `goodwill_treatment`; empty under
+`Impairment only`. `journal_id = GWA-<group>-<entity>-<acquisition_date>`, two lines in
+every Regular period from the acquisition period until fully amortised or the
+disposal period.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `consolidation_group` | String | Group | not_null |
+| `data_area_id` | String | The acquired entity | — |
+| `fiscal_year` | UInt16 | Fiscal year | — |
+| `fiscal_period` | UInt8 | A Regular period of the declared calendar | — |
+| `main_account` | String | `goodwill_amortisation_expense_account` or `goodwill_account` | not_null |
+| `account_name` | String | Account name | — |
+| `adjustment_type` | String | `goodwill_amortisation` | accepted_values |
+| `adjustment_amount` | Decimal | Group currency; the instalment (+ expense, − goodwill) | — |
+| `acquisition_date` | Date | From the deal header | — |
+| `journal_id` | String | `GWA-<group>-<entity>-<acquisition_date>` | not_null |
+| `line_no` | UInt8 | 1 the expense debit, 2 the goodwill credit | — |
+| `account_role` | String | `amortisation_expense`, `goodwill` | accepted_values |
+| `deal` | String | The Business Combination document name | — |
+| `instalment` | UInt32 | The period's number within the schedule, 1 .. `n_instalments` | — |
+| `n_instalments` | UInt32 | `goodwill_amortisation_years` × Regular periods of the acquisition year | — |
+
+**Test**: `assert_goodwill_amortisation_journal_balances`.
+
+### gold_business_disposal_journal
+
+The balanced disposal journal per submitted Business Disposal
+(`epm_staging.business_disposals` and its proceeds lines), full disposals only
+(`retained_interest_pct = 0`), `journal_id = DSP-<group>-<entity>-<disposal_date>`,
+posted once in the disposal period. Replaced `gold_disposal_adjustments`.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `consolidation_group` | String | Group | not_null |
+| `data_area_id` | String | The disposed entity | — |
+| `fiscal_year` | UInt16 | Disposal fiscal year | — |
+| `fiscal_period` | UInt8 | Disposal period from `epm_staging.fiscal_periods` | — |
+| `main_account` | String | Account posted to (`CTA` for the recycling line) | not_null |
+| `account_name` | String | Account name | — |
+| `adjustment_type` | String | `disposal` | accepted_values |
+| `adjustment_amount` | Decimal | Group currency; debit positive, credit negative | — |
+| `disposal_date` | Date | From the deal header | — |
+| `journal_id` | String | `DSP-<group>-<entity>-<disposal_date>` | not_null |
+| `line_no` | UInt16 | 0 derecognised lines; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss | — |
+| `account_role` | String | `derecognised`, `goodwill`, `fva`, `cta`, `nci`, `proceeds`, `gain_loss` | accepted_values |
+| `deal` | String | The Business Disposal document name | — |
+
+**Tests**: `assert_disposal_journal_balances`, `assert_disposal_gain_loss_exists`,
+`assert_cta_recycled_on_disposal`.
+
 ### gold_fully_consolidated_tb
 
-Unified consolidated TB: entity balances + IC eliminations + CTA + topside adjustments.
+Unified consolidated TB: entity balances + IC eliminations + CTA + topside adjustments
++ equity method + the acquisition/disposal layer (P&L proration and the three deal journals).
 
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
 | `consolidation_group` | String | Group identifier | not_null |
-| `adjustment_type` | String | Layer: `entity`, `ic_elimination`, `cta`, or topside type | not_null |
+| `adjustment_type` | String | Layer: `entity`, `ic_elimination`, `ic_elimination_nci`, `cta`, `equity_method`, `pnl_proration`, `acquisition`, `goodwill_amortisation`, `disposal`, or topside type | not_null |
 | `data_area_id` | String | Entity (or blank for non-entity layers) | — |
 | `fiscal_year` | UInt16 | Fiscal year | — |
 | `fiscal_period` | UInt8 | Fiscal period | — |
