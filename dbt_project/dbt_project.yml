@@ -213,8 +213,6 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_consolidation_waterfall:
         +tags: ['gold', 'domain:consolidation']
-      gold_disposal_adjustments:
-        +tags: ['gold', 'domain:consolidation']
       gold_entity_ownership:
         +tags: ['gold', 'domain:consolidation']
       gold_equity_method_associates:

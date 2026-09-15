@@ -472,7 +472,7 @@ models:
       entity's accumulated CTA) (IAS 21.48), Dr NCI as booked at acquisition, Dr
       disposal_proceeds_account per proceeds line, and disposal_gain_loss_account as
       the balancing line (a credit is a gain). Accounts come from the group's root
-      row in consolidation_groups. Replaces gold_disposal_adjustments. Every journal
+      row in consolidation_groups. Replaced gold_disposal_adjustments (deleted in row J6b). Every journal
       sums to zero (assert_disposal_journal_balances).
     columns:
       - name: consolidation_group
@@ -510,21 +510,6 @@ models:
                 values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
       - name: deal
         description: "The Business Disposal document name"
-
-  - name: gold_disposal_adjustments
-    description: >
-      PRD-12, emptied by konsolidat#198 (row J6): the one-sided disposal gain/loss
-      and CTA recycling rows it posted on the pseudo-account 'DISPOSAL' moved to
-      gold_business_disposal_journal as a balanced journal. Yields no rows; the
-      columns stay until the PRD-12 tests that read it are retargeted.
-    columns:
-      - name: consolidation_group
-        tests:
-          - not_null
-      - name: adjustment_type
-        description: "(none: the model is empty) formerly disposal_gain_loss or cta_recycling"
-      - name: gain_loss_amount
-        description: "(none: the model is empty) formerly the disposal gain/loss or recycled CTA amount"
 
   - name: gold_nci_movement_schedule
     description: "PRD-13: NCI movement schedule with opening/closing reconciliation"
