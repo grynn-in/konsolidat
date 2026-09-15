@@ -3,7 +3,7 @@ repos, identically, and its dated member columns are declared on the dbt source.
 
 konsol's Reporting Hierarchy doctype writes one row per member TRANCHE: a code
 whose label, parent or life changes gets a second row, each with its own
-`member_effective_from` / `member_effective_to` window (open = 2999-12-31).
+`member_effective_from` / `member_effective_to` window (open = 2299-12-31, Date32: 1900-01-01..2299-12-31).
 `effective_from` / `effective_to` (String) stay the hierarchy HEADER's dates.
 konsol's `_REFERENCE_TABLE_DDL` creates the table on every migrate and this
 repo's clickhouse/init-db.sql creates it on a fresh volume. Whichever runs
@@ -34,8 +34,8 @@ KONSOL_BODY = (
     "member_label String, parent_member_code String, is_group UInt8, "
     "hierarchy_level UInt16, path String, effective_from String, "
     "effective_to String, is_default UInt8, status String, "
-    "member_effective_from Date DEFAULT '1900-01-01', "
-    "member_effective_to Date DEFAULT '2999-12-31') "
+    "member_effective_from Date32 DEFAULT '1900-01-01', "
+    "member_effective_to Date32 DEFAULT '2299-12-31') "
     "ENGINE = MergeTree ORDER BY (hierarchy_name, member_code)"
 )
 EXPECTED_STATEMENT = f"CREATE TABLE IF NOT EXISTS {TABLE} {KONSOL_BODY};"
