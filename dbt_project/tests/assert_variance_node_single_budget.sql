@@ -26,9 +26,38 @@
 {% set node_has_scenario = 'budget_scenario_id' in node_cols %}
 
 with leaves as (
-    select hierarchy_name, dimension, member_code
+    select hierarchy_name, dimension, member_code, member_effective_from, member_effective_to
     from {{ ref('gold_reporting_hierarchy') }}
     where is_group = 0
+),
+
+{# konsolidat#220: a code may be a leaf in several dated tranches (a moved leaf). A variance row matches only the
+   leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period
+   the calendar does not list is judged at the last day of its month), or its amount is counted once per tranche. #}
+periods as (
+    select
+        toUInt16(fiscal_year) as fiscal_year,
+        toUInt16(fiscal_period) as fiscal_period,
+        max(end_date) as end_date
+    from {{ source('epm_staging', 'fiscal_periods') }}
+    group by fiscal_year, fiscal_period
+),
+
+variance_dated as (
+    select
+        vd.*,
+        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
+        if(
+            p.end_date = toDate(0),
+            toLastDayOfMonth({{ build_date_from_year_period('vd.fiscal_year', 'vd.fiscal_period') }}),
+            p.end_date
+        ) as period_end_date
+    from (
+        {{ variance_dimension_long_sql('v') }}
+    ) as vd
+    left join periods as p
+        on p.fiscal_year = toUInt16(vd.fiscal_year)
+        and p.fiscal_period = toUInt16(vd.fiscal_period)
 ),
 
 expected as (
@@ -42,12 +71,12 @@ expected as (
         vl.main_account as main_account,
         sum(vl.actual_amount) as actual_amount,
         sum(vl.budget_amount) as budget_amount
-    from (
-        {{ variance_dimension_long_sql('v') }}
-    ) as vl
+    from variance_dated as vl
     inner join leaves as l
         on l.dimension = vl.hierarchy_dimension
         and l.member_code = vl.dimension_member_code
+    where vl.period_end_date >= l.member_effective_from
+      and vl.period_end_date <= l.member_effective_to
     group by
         l.hierarchy_name, l.dimension, vl.budget_scenario_id,
         vl.data_area_id, vl.fiscal_year, vl.fiscal_period, vl.main_account
