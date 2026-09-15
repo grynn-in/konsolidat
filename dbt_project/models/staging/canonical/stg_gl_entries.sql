@@ -10,10 +10,36 @@
     Dimension values are harmonized centrally here (keyed on the per-row
     erp_source) via the dimension_mappings crosswalk; unmapped values pass
     through unchanged. See dim_harmonize_* in macros/dimension_helpers.sql.
+
+    With no ERP listed in `erp_sources`, an empty relation with the same
+    columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
 {% set erp_sources = var('erp_sources', ['d365_fo']) %}
 
+{% if erp_sources | length == 0 %}
+{% set columns = [
+    ('erp_source', 'String'),
+    ('record_id', 'Nullable(Int64)'),
+    ('entity_id', 'String'),
+    ('posting_date', 'String'),
+    ('fiscal_year', 'Int64'),
+    ('fiscal_period', 'Int64'),
+    ('main_account', 'String'),
+    ('account_name', 'String'),
+    ('amount', 'Nullable(Decimal(38, 9))'),
+    ('transaction_currency_amount', 'Decimal(38, 9)'),
+    ('transaction_currency', 'String'),
+    ('description', 'String'),
+    ('journal_number', 'String'),
+    ('posting_type', 'String'),
+    ('ledger_account', 'String'),
+    ('partner_data_area_id', 'Nullable(String)'),
+] %}
+{% for d in get_dimensions() %}{% do columns.append((d.name, 'String')) %}{% endfor %}
+{% do columns.extend([('_loaded_at', 'DateTime64(3)'), ('_raw_id', 'String')]) %}
+{{ empty_relation(columns) }}
+{% else %}
 with unioned as (
     {% for erp in erp_sources %}
     select
@@ -74,3 +100,4 @@ from unioned
 -- to an entity or consolidated, and they fail test_canonical_gl_entries_not_null
 -- (which blocks every downstream model in the governed `dbt build`).
 where coalesce(unioned.entity_id, '') != ''
+{% endif %}

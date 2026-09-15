@@ -1,9 +1,29 @@
 {#
     Canonical trial balance — UNION ALL from per-ERP adapters.
+    With no ERP listed in `erp_sources`, an empty relation with the same
+    columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
 {% set erp_sources = var('erp_sources', ['d365_fo']) %}
 
+{% if erp_sources | length == 0 %}
+{{ empty_relation([
+    ('erp_source', 'String'),
+    ('entity_id', 'String'),
+    ('main_account', 'String'),
+    ('account_name', 'String'),
+    ('fiscal_year', 'UInt16'),
+    ('opening_balance', 'Decimal(38, 9)'),
+    ('debit_amount', 'Decimal(38, 9)'),
+    ('credit_amount', 'Decimal(38, 9)'),
+    ('closing_balance', 'Decimal(38, 9)'),
+    ('currency_code', 'String'),
+    ('account_type', 'String'),
+    ('partner_data_area_id', 'Nullable(String)'),
+    ('_loaded_at', 'DateTime64(3)'),
+    ('_raw_id', 'String'),
+]) }}
+{% else %}
 {% for erp in erp_sources %}
 select
     erp_source,
@@ -23,3 +43,4 @@ select
 from {{ ref('stg_' ~ erp ~ '__trial_balance') }}
 {% if not loop.last %}union all{% endif %}
 {% endfor %}
+{% endif %}

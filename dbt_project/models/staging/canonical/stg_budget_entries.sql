@@ -5,11 +5,31 @@
 
     Dimensions harmonized centrally (keyed on per-row erp_source) over the
     budget dimension subset (cost_center, department — no business_unit).
+
+    With no ERP listed in `erp_sources`, an empty relation with the same
+    columns and types (empty_relation, macros/erp_sources.sql).
 #}
 
 {% set erp_sources = var('erp_sources', ['d365_fo']) %}
 {% set budget_dims = get_budget_dimensions() %}
 
+{% if erp_sources | length == 0 %}
+{% set columns = [
+    ('erp_source', 'String'),
+    ('record_id', 'UInt64'),
+    ('entity_id', 'String'),
+    ('posting_date', 'String'),
+    ('main_account', 'String'),
+    ('amount', 'Decimal(38, 9)'),
+    ('transaction_amount', 'Decimal(38, 9)'),
+    ('transaction_currency', 'String'),
+    ('budget_model', 'String'),
+    ('budget_status', 'String'),
+] %}
+{% for d in budget_dims %}{% do columns.append((d.name, 'String')) %}{% endfor %}
+{% do columns.extend([('_loaded_at', 'DateTime64(3)'), ('_raw_id', 'String')]) %}
+{{ empty_relation(columns) }}
+{% else %}
 with unioned as (
     {% for erp in erp_sources %}
     select
@@ -48,3 +68,4 @@ select
     unioned._raw_id as _raw_id
 from unioned
 {{ dim_harmonize_joins('unioned.erp_source', raw_alias='unioned', dims=budget_dims) }}
+{% endif %}
