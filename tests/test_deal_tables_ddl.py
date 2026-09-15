@@ -56,7 +56,8 @@ DEAL_TABLES = {
         "acquisition_date Date, share_acquired_pct Float64, consideration_currency String, "
         "total_consideration Float64, net_assets_acquired Float64, "
         "fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, "
-        "nci_at_acquisition Float64, ownership_period String) "
+        "nci_at_acquisition Float64, ownership_period String, "
+        "nci_measurement String DEFAULT '', nci_fair_value Float64 DEFAULT 0) "
         "ENGINE = MergeTree ORDER BY name"
     ),
     "epm_staging.business_combination_consideration": (
