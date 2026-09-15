@@ -337,15 +337,67 @@ models:
         description: "Equity income or investment movement amount"
 
   - name: gold_acquisition_adjustments
-    description: "PRD-11: Step acquisition adjustments — P&L proration and goodwill"
+    description: >
+      PRD-11: P&L proration of an acquisition year to the post-acquisition months.
+      konsolidat#198: the goodwill and fair-value lines it used to post one-sided
+      to '1800'/'1900' moved to gold_business_combination_journal.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: adjustment_type
-        description: "pnl_proration, goodwill, or fair_value_adjustment"
+        description: "pnl_proration"
       - name: adjustment_amount
         description: "Amount of the acquisition adjustment"
+
+  - name: gold_business_combination_journal
+    description: >
+      konsolidat#198 (design §4): the balanced acquisition journal per submitted
+      Business Combination (epm_staging.business_combinations and its child tables),
+      journal_id ACQ-<group>-<entity>-<date>, group currency, posted once in the
+      acquisition period. Lines: the acquired equity eliminated account by account,
+      Dr fair-value adjustments, Dr goodwill, Cr investment (consideration); rows
+      J3/J4 add pre-acquisition history, NCI, bargain gain and costs. Accounts come
+      from the group's root row in consolidation_groups. Every journal sums to zero
+      (assert_consolidation_journals_balance).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        description: "The acquired entity"
+      - name: fiscal_year
+      - name: fiscal_period
+        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Closing periods skipped)"
+      - name: main_account
+        tests:
+          - not_null
+      - name: account_name
+      - name: adjustment_type
+        description: "'acquisition'"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['acquisition']
+      - name: adjustment_amount
+        description: "Group currency; debit positive, credit negative"
+      - name: acquisition_date
+      - name: journal_id
+        description: "ACQ-<group>-<entity>-<acquisition_date>"
+        tests:
+          - not_null
+      - name: line_no
+        description: "The child table's idx for equity lines; 101 fva, 102 goodwill, 103 investment, 104 nci, 105 bargain_gain, 110+ costs"
+      - name: account_role
+        description: "equity_eliminated, fva, goodwill, investment, nci, bargain_gain, costs, proceeds"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['equity_eliminated', 'fva', 'goodwill', 'investment', 'nci', 'bargain_gain', 'costs', 'proceeds']
+      - name: deal
+        description: "The Business Combination document name"
+      - name: measurement_basis
+        description: "How the net assets were measured (design §3): acquired_balances, header_net_assets or measured_from_tb"
 
   - name: gold_disposal_adjustments
     description: "PRD-12: Disposal gain/loss and CTA recycling"

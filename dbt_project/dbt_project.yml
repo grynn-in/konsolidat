@@ -201,6 +201,8 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_allocation_results:
         +tags: ['gold', 'domain:consolidation']
+      gold_business_combination_journal:
+        +tags: ['gold', 'domain:consolidation']
       gold_consolidated_ytd:
         +tags: ['gold', 'domain:consolidation']
       gold_consolidation_journal:

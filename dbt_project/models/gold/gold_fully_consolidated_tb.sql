@@ -143,7 +143,11 @@ equity_method as (
    #175 re-review F3: the pnl_proration rows are one per consolidated row,
    and gold_consolidated_trial_balance has a row per intercompany partner,
    so they are summed to the account grain here, like layer 1. Otherwise
-   gold_consolidated_ytd ran a separate running total per row. #}
+   gold_consolidated_ytd ran a separate running total per row.
+   konsolidat#198: the goodwill and fair-value lines come from the balanced
+   acquisition journal (gold_business_combination_journal, posted from the
+   submitted Business Combination), not from gold_acquisition_adjustments,
+   which keeps only the P&L proration. #}
 acquisition_disposal as (
     select
         consolidation_group,
@@ -160,6 +164,22 @@ acquisition_disposal as (
     from {{ ref('gold_acquisition_adjustments') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
              account_name, adjustment_type
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings() }},
+        '' as reporting_currency,
+        adjustment_amount as amount,
+        adjustment_type,
+        journal_id
+    from {{ ref('gold_business_combination_journal') }}
 
     union all
 
