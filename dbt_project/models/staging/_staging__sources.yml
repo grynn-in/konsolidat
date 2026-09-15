@@ -79,6 +79,57 @@ sources:
           bench migrate overwrote it back. Publishing a Consolidation Group
           triggers a consolidation build, which reverted the publish. The seed
           is deleted; konsol's ensure_reference_tables() owns the DDL.
+          konsolidat#198: the root row (data_area_id = '') also carries the
+          group's Consolidation Policy and declared deal accounts, which the
+          acquisition and disposal journals read; the warehouse never assumes
+          an account code. DDL pinned by tests/test_deal_tables_ddl.py.
+        columns:
+          - name: consolidation_group
+            description: "The group (root or sub-group) this row belongs to."
+          - name: data_area_id
+            description: "The member entity; '' on the group's root row, which carries the policy and accounts."
+          - name: entity_name
+            description: "Display name of the group or member."
+          - name: reporting_currency
+            description: "The group's presentation currency; journals post in it."
+          - name: ic_difference_account
+            description: "konsol#159: account the intercompany difference is posted to."
+          - name: ic_difference_tolerance
+            description: "konsol#159: intercompany difference below which no line is posted."
+          - name: nci_measurement
+            description: "'partial' (NCI = share of fair-value net assets) or 'full' (NCI at fair value; goodwill includes the NCI's share)."
+          - name: accounting_framework
+            description: "'IFRS', 'US GAAP' or 'Local'; restricts the policy choices and labels the journals."
+          - name: framework_note
+            description: "Free text a 'Local' framework must carry, describing its rules."
+          - name: goodwill_treatment
+            description: "'Impairment only' (no automatic entry) or 'Amortise' (monthly GWA journal over goodwill_amortisation_years)."
+          - name: goodwill_amortisation_years
+            description: "Years over which goodwill is amortised when goodwill_treatment is 'Amortise'; 0 otherwise."
+          - name: acquisition_costs_treatment
+            description: "'Expense' (Dr acquisition_costs_account per cost line) or 'Capitalise' (costs join consideration and raise goodwill)."
+          - name: measurement_period
+            description: "'Off' or '12 months': whether a submitted Business Combination may be amended and re-posted in the acquisition period."
+          - name: bargain_purchase
+            description: "'Recognise gain' (Cr bargain_purchase_gain_account) or 'Refuse' (the build stops and names the deal)."
+          - name: goodwill_account
+            description: "Balance-sheet account debited with goodwill at acquisition, derecognised on disposal."
+          - name: fair_value_adjustment_account
+            description: "Balance-sheet account debited with the fair-value step-up of the acquired net assets."
+          - name: investment_account
+            description: "Balance-sheet account credited with the consideration transferred (the parent's investment)."
+          - name: nci_account
+            description: "Equity account credited with the non-controlling interest when share_acquired_pct < 100."
+          - name: bargain_purchase_gain_account
+            description: "P&L account credited when consideration is below the share of fair-value net assets (IFRS 3.34)."
+          - name: disposal_gain_loss_account
+            description: "P&L account that takes the balancing line of a disposal journal."
+          - name: disposal_proceeds_account
+            description: "Account the group settles deal cash through: debited with disposal proceeds, credited with acquisition costs."
+          - name: goodwill_amortisation_expense_account
+            description: "P&L account debited by the monthly goodwill amortisation when goodwill_treatment is 'Amortise'."
+          - name: acquisition_costs_account
+            description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
 
   - name: epm_staging
     schema: epm_staging
@@ -171,6 +222,146 @@ sources:
             description: "The fiscal quarter the period falls in, as konsol labels it."
           - name: status
             description: "konsol's period status (Open, Closed, ...); the warehouse does not filter on it."
+      - name: business_combinations
+        description: >
+          konsolidat#198: one row per submitted Business Combination (konsol
+          doctype; submit = approval) — an acquisition of control. The header
+          carries the deal and konsol's Result figures in group currency.
+          gold_business_combination_journal posts the acquisition journal from
+          it and its child tables. DDL is konsol's _REFERENCE_TABLE_DDL, pinned
+          by tests/test_deal_tables_ddl.py.
+        columns:
+          - name: name
+            description: "The document name, BC-<group>-<entity>-<date>; the journal_id is derived from it."
+          - name: consolidation_group
+            description: "The acquiring group (its root row holds the policy and accounts)."
+          - name: acquired_entity
+            description: "The entity whose control was obtained (data_area_id)."
+          - name: acquisition_date
+            description: "Date control passed; mapped to the fiscal period whose start_date <= date <= end_date."
+          - name: share_acquired_pct
+            description: "Share of the entity acquired, in percent (100 = wholly owned)."
+          - name: consideration_currency
+            description: "ISO code the header's consideration is stated in (pre-filled with the group's reporting currency)."
+          - name: total_consideration
+            description: "Sum of the consideration lines translated to group currency, as konsol computed it."
+          - name: net_assets_acquired
+            description: "Sum of the acquired balance sheet's book amounts in group currency, as konsol computed it (0 when measured from the TB)."
+          - name: fair_value_adjustments
+            description: "Sum of the fair-value adjustments in group currency, as konsol computed it."
+          - name: goodwill
+            description: "konsol's goodwill figure: consideration minus the share of fair-value net assets, when positive."
+          - name: bargain_purchase_gain
+            description: "konsol's bargain-purchase gain: the excess of the share of fair-value net assets over consideration, when positive."
+          - name: nci_at_acquisition
+            description: "konsol's NCI at acquisition under the group's nci_measurement policy."
+          - name: ownership_period
+            description: "The Ownership Period konsol created or linked on submit."
+      - name: business_combination_consideration
+        description: >
+          konsolidat#198: the consideration lines of a Business Combination,
+          one per IFRS 3 component, each in its own currency; translated at
+          the acquisition period's Closing rate by the journal.
+        columns:
+          - name: parent
+            description: "The Business Combination's name."
+          - name: idx
+            description: "Line number within the document."
+          - name: component
+            description: "Cash / Deferred / Contingent / Equity instruments / Previously held interest / Other."
+          - name: amount
+            description: "Line amount in `currency`."
+          - name: currency
+            description: "ISO code of the line's amount."
+          - name: settlement_date
+            description: "When a deferred or contingent component settles (1970-01-01 when none)."
+          - name: description
+            description: "Free text."
+      - name: business_combination_acquired_balances
+        description: >
+          konsolidat#198: the acquired balance sheet of a Business Combination
+          in entity currency, Dr positive / Cr negative, with the fair-value
+          step-up per line. Empty when konsol measured the net assets from the
+          entity's trial balance instead; the journal then falls back to the
+          header's net_assets_acquired or to the TB.
+        columns:
+          - name: parent
+            description: "The Business Combination's name."
+          - name: idx
+            description: "Line number within the document."
+          - name: main_account
+            description: "A Published balance-sheet leaf of the group chart."
+          - name: book_amount
+            description: "Book value at acquisition in entity currency; Dr positive, Cr negative. The table nets to the entity's equity."
+          - name: fair_value_adjustment
+            description: "Fair-value step-up (+) or step-down (-) on this line, entity currency."
+          - name: note
+            description: "Free text."
+      - name: business_combination_costs
+        description: >
+          konsolidat#198: acquisition costs of a Business Combination, posted
+          per the group's acquisition_costs_treatment (Expense: Dr the costs
+          account / Cr the settlement account; Capitalise: they join
+          consideration).
+        columns:
+          - name: parent
+            description: "The Business Combination's name."
+          - name: idx
+            description: "Line number within the document."
+          - name: kind
+            description: "Legal / Advisory / Due diligence / Other."
+          - name: amount
+            description: "Cost amount in `currency`."
+          - name: currency
+            description: "ISO code of the cost's amount."
+          - name: description
+            description: "Free text."
+      - name: business_disposals
+        description: >
+          konsolidat#198: one row per submitted Business Disposal (konsol
+          doctype) — loss of control of an entity. gold_business_disposal_journal
+          derecognises the entity's balances, goodwill, FVA and NCI, recycles
+          CTA and books the gain or loss from it. On submit konsol closes the
+          Ownership Period at disposal_date.
+        columns:
+          - name: name
+            description: "The document name, BD-<group>-<entity>-<date>; the journal_id is derived from it."
+          - name: consolidation_group
+            description: "The disposing group."
+          - name: disposed_entity
+            description: "The entity control was lost over (data_area_id)."
+          - name: disposal_date
+            description: "Date control passed; mapped to the fiscal period whose start_date <= date <= end_date."
+          - name: share_disposed_pct
+            description: "Share disposed of, in percent."
+          - name: retained_interest_pct
+            description: "Share retained after the disposal; must be 0 in scope (a retained interest is out of scope)."
+          - name: proceeds_currency
+            description: "ISO code the header's proceeds are stated in."
+          - name: total_proceeds
+            description: "Sum of the proceeds lines translated to group currency, as konsol computed it."
+          - name: ownership_period
+            description: "The Ownership Period konsol closed on submit."
+      - name: business_disposal_proceeds
+        description: >
+          konsolidat#198: the proceeds lines of a Business Disposal, one per
+          component, each in its own currency; translated at the disposal
+          period's Closing rate by the journal.
+        columns:
+          - name: parent
+            description: "The Business Disposal's name."
+          - name: idx
+            description: "Line number within the document."
+          - name: component
+            description: "Cash / Deferred / Contingent / Other."
+          - name: amount
+            description: "Line amount in `currency`."
+          - name: currency
+            description: "ISO code of the line's amount."
+          - name: settlement_date
+            description: "When a deferred or contingent component settles (1970-01-01 when none)."
+          - name: description
+            description: "Free text."
       - name: historical_equity_rates
         description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
         loaded_at_field: updated_at
