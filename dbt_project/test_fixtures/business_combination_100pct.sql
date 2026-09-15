@@ -1,5 +1,9 @@
 -- Acquisition journal, the 100% case with an acquired-balances table (konsolidat#198 row J2):
 -- `+gold_business_combination_journal assert_consolidation_journals_balance` must BUILD and PASS on these rows.
+-- It is also the Impairment-only proof for goodwill amortisation (row J5): with
+-- `+gold_business_disposal_journal assert_consolidation_journals_balance` (the selector that builds all three
+-- journals, since the balance test unions them) the gate must PASS and gold_goodwill_amortisation_journal and
+-- gold_business_disposal_journal must both yield 0 rows, while the acquisition journal keeps the 5 lines below.
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,
 -- bargain purchase Recognise gain) with its accounts declared on the root row:
@@ -19,9 +23,12 @@
 --   Cr ZZ3500 8,300  investment
 -- which sums to 0.
 --
--- The six deal tables do not exist live yet: the fixture creates the four the journal reads (the costs table is
--- empty here: no acquisition costs on this deal) with konsol's exact DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
--- main_accounts and submission control may predate their policy/flag/basis columns: add them first.
+-- The six deal tables do not exist live yet: the fixture creates the six the three journals read (the costs,
+-- disposals and disposal-proceeds tables are empty here: no acquisition costs and no disposal on this deal) with
+-- konsol's exact DDL (clickhouse/init-db.sql, pinned by tests/test_deal_tables_ddl.py). The live consolidation_groups,
+-- main_accounts and submission control may predate their policy/flag/basis columns: add them first. The disposal
+-- journal's lineage (gold_consolidated_trial_balance, gold_fx_revaluation) reads the hierarchy, ancestry, ownership
+-- and currency rows of the group, so they are here too.
 -- The journal reads gold_trial_balance (pre-acquisition history), whose lineage reads these tables, empty on a
 -- trial-balance-only site with no upload, so they are named here to exist (empty): epm_raw.trial_balance_submissions,
 -- epm_raw.trial_balance_submission_control, epm_raw.general_journal_account_entry_bi_entities,
@@ -51,6 +58,8 @@ CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, conso
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposals (name String, consolidation_group String, disposed_entity String, disposal_date Date, share_disposed_pct Float64, retained_interest_pct Float64, proceeds_currency String, total_proceeds Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposal_proceeds (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
@@ -102,6 +111,23 @@ VALUES
    '', '', '', '', '', '',
    '', '', '', '', '',
    '', '', '', '');
+INSERT INTO epm_staging.consolidation_hierarchy
+  (consolidation_group, data_area_id, parent_group, hierarchy_level, path)
+VALUES
+  ('ZZG', 'ZZS', '', 1, 'ZZG');
+INSERT INTO epm_staging.consolidation_ancestry
+  (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path)
+VALUES
+  ('ZZG', 'ZZS', 'ZZG', 'ZZS', 1, 1, 'ZZG/ZZS');
+INSERT INTO epm_staging.ownership_periods
+  (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method)
+VALUES
+  ('ZZG', 'ZZS', '2026-03-15', 100, 'full');
+INSERT INTO epm_gold.currencies
+  (currency_code, currency_name, symbol, minor_unit)
+VALUES
+  ('EUR', 'Euro', 'E', 2),
+  ('USD', 'US Dollar', '$', 2);
 INSERT INTO epm_staging.group_exchange_rates
   (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
 VALUES
