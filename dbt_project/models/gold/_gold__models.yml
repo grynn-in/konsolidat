@@ -183,6 +183,17 @@ models:
         description: "Variance as percentage of budget"
       - name: variance_favorable
         description: "True if variance is favorable (revenue up or expense down)"
+      - name: budget_scenario_id
+        description: >
+          The budget-type scenario these rows compare the actuals with
+          (konsolidat#206). Every active scenario declared `budget` in
+          epm_gold.scenario_definitions gets its own set of rows, so the actuals
+          repeat once per budget scenario and two budgets are never summed:
+          filter or group by this column. '' when no budget scenario exists.
+          budget_amount is null where this scenario has no line for the grain.
+          assert_variance_covers_budget_scenarios checks every active budget
+          scenario with rows in gold_scenario_trial_balance is covered here, in
+          gold_variance_quarterly and in gold_variance_ytd.
 
   - name: gold_spread_budget
     description: "Canonical monthly budget fact: annual spread + manual monthly, one row per budget layer (base/challenge/management/board). The final budget is the sum of layers."
@@ -257,7 +268,13 @@ models:
       - name: ytd_actual
         description: "Year-to-date actual amount"
       - name: ytd_budget
-        description: "Year-to-date budget amount"
+        description: "Year-to-date budget amount for budget_scenario_id; null where that scenario has no line for the grain to date"
+      - name: budget_scenario_id
+        description: >
+          The budget-type scenario these running totals compare the actuals with
+          (konsolidat#206); one set of rows per active budget scenario, never two
+          budgets summed. '' when no budget scenario exists. Covered by
+          assert_variance_covers_budget_scenarios.
 
   - name: gold_variance_quarterly
     description: "Quarterly variance: actual vs budget aggregated by quarter"
@@ -265,6 +282,14 @@ models:
       - name: fiscal_quarter
         tests:
           - not_null
+      - name: budget_amount
+        description: "Quarter budget amount for budget_scenario_id; null where that scenario has no line for the grain"
+      - name: budget_scenario_id
+        description: >
+          The budget-type scenario these rows compare the actuals with
+          (konsolidat#206); one set of rows per active budget scenario, never two
+          budgets summed. '' when no budget scenario exists. Covered by
+          assert_variance_covers_budget_scenarios.
 
   - name: gold_prior_year_comparison
     description: "Current vs prior year comparison with YoY variance"
