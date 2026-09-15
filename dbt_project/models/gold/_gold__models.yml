@@ -127,6 +127,16 @@ models:
     description: "Union of actual + budget + forecast across all scenarios"
     columns:
       - name: scenario_id
+        description: >
+          'ACTUAL' on the GL branch (data_source 'gl'), 'BUDGET' on the D365
+          budget branch ('d365_budget'), and konsol's own scenario ids on the
+          gold_spread_budget branch ('budget'). The variance models keep only
+          active scenarios declared in epm_gold.scenario_definitions with the
+          matching scenario_type, so assert_scenario_rows_declared (error) names
+          every (scenario_id, data_source) here that is undeclared, inactive, or
+          of the wrong type (gl needs actual; budget and d365_budget need budget
+          or forecast), rather than letting its rows drop out of variance
+          (PR #211 review 2).
         tests:
           - not_null
       - name: data_area_id
