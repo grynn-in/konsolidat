@@ -1,5 +1,12 @@
 -- Acquisition journal, the 80% case: NCI under PARTIAL and under FULL measurement (konsolidat#198 row J3, design §4 lines 3 and 5):
--- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
+-- `+gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared`
+-- must BUILD and PASS on these rows. Since row J12 (PR #203 review 1 -> konsolidat#204) assert_acquisition_accounts_declared
+-- REFUSES every deal with share_acquired_pct < 100 by name (layer 1 of gold_fully_consolidated_tb carries a
+-- full-method subsidiary at the parent's share, so the IFRS 3 template's 100% + NCI would count the minority twice);
+-- on these rows that guard must FAIL with `Got 2 results` (both deals are 80%), and because it reads only the
+-- sources it runs before the journal and would SKIP it, so the arithmetic proof below selects it out. The
+-- journal's NCI/goodwill arithmetic is unchanged and stays proven here until #204 decides how layer 1 and the
+-- journals share the minority.
 --
 -- Two groups, each acquiring 80% of an EUR entity on 2026-03-15 (FY2026 P3) for 8,300 USD cash, with the
 -- same acquired balance sheet (EUR; Dr positive, Cr negative; closing rate EUR->USD 1.0 for FY2026 P3):

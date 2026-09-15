@@ -19,9 +19,16 @@
 -- A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal
 -- would otherwise post to a code the chart does not know.
 --
--- Not checked here: a disposal with a retained interest posts nothing (out of scope, design §5/§7);
--- assert_disposal_gain_loss_exists names it. The acquisition journal's accounts and policies are
--- assert_acquisition_accounts_declared's.
+-- Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1):
+--   share_disposed_pct < 100 or retained_interest_pct > 0
+--                                  layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the
+--                                  parent's share, while the disposal template derecognises 100% of the balance
+--                                  sheet against an NCI line, so a partial disposal (or one leaving a retained
+--                                  interest) would count the minority twice. One row per such disposal, whatever
+--                                  the root row declares; the disposal journal posts nothing for it either
+--                                  (design §5/§7), which assert_disposal_gain_loss_exists also names.
+--
+-- Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 with root as (
     select
         consolidation_group,
@@ -101,22 +108,32 @@ checks as (
         field,
         value,
         required,
-        is_account
+        is_account,
+        is_refusal
     from deals
     array join
         ['root_row', 'disposal_period',
          'disposal_gain_loss_account', 'disposal_proceeds_account',
-         'goodwill_account', 'fair_value_adjustment_account', 'nci_account'] as field,
+         'goodwill_account', 'fair_value_adjustment_account', 'nci_account',
+         'share_disposed_pct'] as field,
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          disposal_gain_loss_account, disposal_proceeds_account,
-         goodwill_account, fair_value_adjustment_account, nci_account] as value,
+         goodwill_account, fair_value_adjustment_account, nci_account,
+         concat(toString(share_disposed_pct), ' disposed, ', toString(retained_interest_pct), ' retained')] as value,
         [toUInt8(1), toUInt8(1),
          has_root, has_root,
          has_root, has_root,
-         toUInt8(has_root = 1 and (retained_interest_pct > 0.0 or share_disposed_pct < 100.0))] as required,
+         toUInt8(has_root = 1 and (retained_interest_pct > 0.0 or share_disposed_pct < 100.0)),
+         toUInt8(retained_interest_pct > 0.0 or share_disposed_pct < 100.0)] as required,
         [0, 0,
          1, 1,
-         1, 1, 1] as is_account
+         1, 1, 1,
+         0] as is_account,
+        -- the partial-share refusal (row J12): the value is present, the disposal is still refused
+        [0, 0,
+         0, 0,
+         0, 0, 0,
+         1] as is_refusal
 ),
 
 judged as (
@@ -129,6 +146,7 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
+            c.is_refusal = 1, 'partial-share deals wait for konsolidat#204: layer 1 carries the entity at its share',
             c.value = '', 'missing',
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',
             ''

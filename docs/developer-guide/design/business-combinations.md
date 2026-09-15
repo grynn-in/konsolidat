@@ -129,6 +129,21 @@ eliminated 125 / 687.5, FVA 1,162.5, goodwill 6,325, investment −8,300.
 
 The equity elimination and the FVA stay 100% in both cases.
 
+**Partial share (open: konsolidat#204).** The NCI arithmetic above is right on its own,
+but layer 1 of `gold_fully_consolidated_tb` carries a full-method subsidiary at the
+parent's *share* (an 80% entity contributes 80% of every account), while the IFRS 3
+template brings in 100% of the acquired net assets and books the minority as an NCI
+line — so on an 80% deal the group balance sheet would count the minority twice. Until
+#204 decides how layer 1 and the journals share the minority, a submitted combination
+with `share_acquired_pct < 100`, and a submitted disposal with `share_disposed_pct <
+100` or `retained_interest_pct > 0`, is **refused by name**: `assert_acquisition_
+accounts_declared` / `assert_disposal_accounts_declared` emit one row per such deal
+(`field = 'share_acquired_pct'` / `'share_disposed_pct'`, reason "partial-share deals
+wait for konsolidat#204: layer 1 carries the entity at its share") and stop the build,
+whatever the root row declares. `business_combination_80pct.sql` keeps proving the
+NCI arithmetic through the balance tests, selected with `--exclude
+assert_acquisition_accounts_declared` (its header says so).
+
 **Line 105, `bargain_gain`** (`business_combination_bargain.sql`, 100% for 1,200):
 the goodwill figure is 1,200 − 1,580 = −380. Under `bargain_purchase = 'Recognise
 gain'` the journal posts Cr ZZ4900 −380 and no goodwill line (IFRS 3.34: a gain,
