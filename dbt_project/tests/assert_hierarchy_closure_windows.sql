@@ -8,7 +8,7 @@
      - no closure row has valid_from > valid_to.
    One row per broken expectation.
 
-   A closure without the window columns is read as "every link holds always" (1900-01-01 .. 2999-12-31), so
+   A closure without the window columns is read as "every link holds always" (1900-01-01 .. 2299-12-31), so
    the checks fail on their merits rather than with a missing-column error. #}
 
 -- depends_on: {{ ref('gold_reporting_hierarchy_closure') }}
@@ -27,8 +27,8 @@ with c as (
         valid_from,
         valid_to
         {% else %}
-        toDate('1900-01-01') as valid_from,
-        toDate('2999-12-31') as valid_to
+        toDate32('1900-01-01') as valid_from,
+        toDate32('2299-12-31') as valid_to
         {% endif %}
     from {{ ref('gold_reporting_hierarchy_closure') }}
     where hierarchy_name = 'ZZ_DIV'
@@ -37,10 +37,10 @@ with c as (
 expectations as (
     -- (descendant, ancestor, label or '' for any, earliest allowed valid_from, latest allowed valid_to)
     select 'ZZ_EX' as d, 'ZZ_E' as a, '' as lbl, toDate('2017-01-01') as lo, toDate('2024-12-31') as hi
-    union all select 'ZZ_EX', 'ZZ_B', '', toDate('2025-01-01'), toDate('2999-12-31')
+    union all select 'ZZ_EX', 'ZZ_B', '', toDate('2025-01-01'), toDate32('2299-12-31')
     union all select 'ZZ_GX', 'ZZ_G', '', toDate('2013-04-01'), toDate('2020-06-03')
-    union all select 'ZZ_AX', 'ZZ_A', 'Alpha', toDate('1900-01-01'), toDate('2024-12-31')
-    union all select 'ZZ_AX', 'ZZ_A', 'Alpha New', toDate('2025-01-01'), toDate('2999-12-31')
+    union all select 'ZZ_AX', 'ZZ_A', 'Alpha', toDate32('1900-01-01'), toDate('2024-12-31')
+    union all select 'ZZ_AX', 'ZZ_A', 'Alpha New', toDate('2025-01-01'), toDate32('2299-12-31')
 )
 
 -- a link that holds outside its window

@@ -255,17 +255,18 @@ CREATE TABLE IF NOT EXISTS epm_staging.cash_flow_categories (
 
 -- konsolidat#220: one row per member TRANCHE. A renamed, moved or ended node
 -- is a second row of the same member_code with its own member_effective_from /
--- member_effective_to window (open = 2999-12-31); effective_from / effective_to
+-- member_effective_to window (open = 2299-12-31); effective_from / effective_to
 -- (String) are the hierarchy HEADER's dates. The gold hierarchy models resolve
--- the tree per period from the two Date columns. Pinned, verbatim with konsol's
+-- the tree per period from the two Date32 columns (Date32 spans 1900-01-01..2299-12-31;
+-- plain Date would clamp both ends to 1970-01-01..2149-06-06). Pinned, verbatim with konsol's
 -- _REFERENCE_TABLE_DDL, by tests/test_reporting_hierarchies_ddl.py.
 CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
     hierarchy_name String, dimension String, member_code String,
     member_label String, parent_member_code String, is_group UInt8,
     hierarchy_level UInt16, path String, effective_from String,
     effective_to String, is_default UInt8, status String,
-    member_effective_from Date DEFAULT '1900-01-01',
-    member_effective_to Date DEFAULT '2999-12-31'
+    member_effective_from Date32 DEFAULT '1900-01-01',
+    member_effective_to Date32 DEFAULT '2299-12-31'
 ) ENGINE = MergeTree ORDER BY (hierarchy_name, member_code);
 
 -- F2: the consolidation structure and its link closure.
