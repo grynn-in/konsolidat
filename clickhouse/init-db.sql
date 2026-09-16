@@ -248,9 +248,13 @@ CREATE TABLE IF NOT EXISTS epm_staging.dimension_mappings (
     canonical_value String, canonical_label String, status String
 ) ENGINE = MergeTree ORDER BY (dimension, erp_source, entity, source_value);
 
+-- konsol#197: no `sign` column. Nothing read it — gold_cash_flow_indirect and
+-- gold_consolidated_cash_flow read is_cash, cf_category and cf_line_item and
+-- negate the signed movement themselves. Pinned, verbatim with konsol's
+-- _REFERENCE_TABLE_DDL, by tests/test_cash_flow_categories_ddl.py.
 CREATE TABLE IF NOT EXISTS epm_staging.cash_flow_categories (
     main_account String, cf_category String, cf_line_item String,
-    is_cash UInt8, sign Int8, status String
+    is_cash UInt8, status String
 ) ENGINE = MergeTree ORDER BY main_account;
 
 -- konsolidat#220: one row per member TRANCHE. A renamed, moved or ended node

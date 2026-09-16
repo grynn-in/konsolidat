@@ -94,13 +94,20 @@ class TbOnlyFirstBuildRunsTheCastTest(unittest.TestCase):
 MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "models", "gold", "gold_scenario_trial_balance.sql")
 
 
-def _fixture_scenarios():
-    """(scenario_id, scenario_type, is_active) rows the --fixture data inserts
-    into <prefix>_gold.scenario_definitions, read from fixture_sql()."""
+def _load_script():
+    """scripts/tb_only_first_build.py as a module, so the fixture statements are
+    read from fixture_sql() itself rather than re-parsed out of the source."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("tb_only_first_build", SCRIPT)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)  # stdlib only at import time; main() is not run
+    return mod
+
+
+def _fixture_scenarios():
+    """(scenario_id, scenario_type, is_active) rows the --fixture data inserts
+    into <prefix>_gold.scenario_definitions, read from fixture_sql()."""
+    mod = _load_script()
     rows = []
     for stmt in mod.fixture_sql("zz"):
         m = re.match(r"\s*INSERT INTO zz_gold\.scenario_definitions\s*\(([^)]*)\)\s*VALUES\s*(.*)$", stmt, flags=re.S)
@@ -142,6 +149,81 @@ class TbOnlyFixtureDeclaresItsScenarios(unittest.TestCase):
     def test_exactly_one_active_actual(self):
         actual = [r for r in self.rows if r[1] == "actual" and r[2] == "1"]
         self.assertEqual(len(actual), 1, f"expected one active actual scenario, got {actual}")
+
+
+INIT_DB = os.path.join(PROJECT_ROOT, "clickhouse", "init-db.sql")
+
+
+def _split_values(tup):
+    """The values of one `(...)` VALUES tuple, split on the commas that are
+    outside quotes ('Share capital' must stay one value)."""
+    return [v.strip() for v in re.findall(r"(?:'[^']*'|[^,])+", tup)]
+
+
+def _cash_flow_category_rows():
+    """The value tuples the --fixture data inserts into
+    <prefix>_staging.cash_flow_categories, read from fixture_sql()."""
+    for stmt in _load_script().fixture_sql("zz"):
+        m = re.match(
+            r"\s*INSERT INTO zz_staging\.cash_flow_categories\s+VALUES\s*(.*)$",
+            stmt, flags=re.S,
+        )
+        if m:
+            return [_split_values(tup) for tup in re.findall(r"\(([^)]*)\)", m.group(1))]
+    return None
+
+
+def _cash_flow_category_ddl_columns():
+    """The column names of epm_staging.cash_flow_categories in the shipped
+    fresh-volume DDL (tests/test_cash_flow_categories_ddl.py pins its body)."""
+    with open(INIT_DB, encoding="utf-8") as f:
+        m = re.search(
+            r"CREATE TABLE IF NOT EXISTS epm_staging\.cash_flow_categories\s*\((.*?)\)\s*ENGINE",
+            f.read(), flags=re.S,
+        )
+    if m is None:
+        return None
+    return [col.split()[0] for col in m.group(1).split(",") if col.strip()]
+
+
+class TbOnlyFixtureMatchesTheCashFlowCategoriesDdl(unittest.TestCase):
+    """konsol#197 (row T1c): the cash_flow_categories INSERT is POSITIONAL — it
+    names no columns — so it only parses while its tuples are exactly as wide as
+    the table. Dropping the unused `sign` column left five columns and the
+    fixture kept writing six, and the fresh-site job died on
+    `Code: 62. DB::Exception: Cannot parse expression of type String here`.
+    Pin the width here so the next column change breaks in this job, where the
+    message names the cause, rather than inside a fresh-site build."""
+
+    def setUp(self):
+        self.rows = _cash_flow_category_rows()
+        self.assertIsNotNone(
+            self.rows,
+            "fixture_sql() has no positional "
+            "`INSERT INTO <prefix>_staging.cash_flow_categories VALUES` statement",
+        )
+
+    def test_every_row_carries_exactly_five_values(self):
+        for row in self.rows:
+            self.assertEqual(
+                len(row), 5,
+                f"cash_flow_categories fixture row ({', '.join(row)}) has "
+                f"{len(row)} values, expected 5 "
+                "(main_account, cf_category, cf_line_item, is_cash, status)",
+            )
+
+    def test_row_width_matches_the_shipped_ddl_column_count(self):
+        cols = _cash_flow_category_ddl_columns()
+        self.assertIsNotNone(
+            cols, f"epm_staging.cash_flow_categories CREATE not found in {INIT_DB}")
+        for row in self.rows:
+            self.assertEqual(
+                len(row), len(cols),
+                f"cash_flow_categories fixture row ({', '.join(row)}) has "
+                f"{len(row)} values but clickhouse/init-db.sql declares "
+                f"{len(cols)} columns ({', '.join(cols)}): a positional INSERT "
+                "of the wrong width cannot parse on a fresh site",
+            )
 
 
 if __name__ == "__main__":
