@@ -138,9 +138,9 @@ def fixture_sql(p):
         # every balance-sheet account is categorised for the cash flow
         # (the relationships test on gold_bs_movement.main_account)
         f"INSERT INTO {p}_staging.cash_flow_categories VALUES "
-        "('ZZ1000', 'Operating', 'Cash', 1, 1, 'Published'), "
-        "('ZZ3000', 'Financing', 'Share capital', 0, 1, 'Published'), "
-        "('ZZ3100', 'Financing', 'Retained earnings', 0, 1, 'Published')",
+        "('ZZ1000', 'Operating', 'Cash', 1, 'Published'), "
+        "('ZZ3000', 'Financing', 'Share capital', 0, 'Published'), "
+        "('ZZ3100', 'Financing', 'Retained earnings', 0, 'Published')",
         f"INSERT INTO {p}_staging.entities VALUES ('ZZOP', 'ZZ Operating', 'ZZGRP', 0, 'Active', 'USD', 'US', '')",
         # konsolidat#199: the fiscal calendar for the ZZ batch's year (2026 P1) with its
         # Closing period, columns named (tests/test_fiscal_periods_ddl.py)
