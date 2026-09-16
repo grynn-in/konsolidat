@@ -8,6 +8,8 @@ select
     main_account_id,
     account_type,
     fx_method,
-    is_equity
+    is_equity,
+    uses_historical_rate
 from {{ ref('silver_main_accounts') }}
 where is_equity != toUInt8(account_type = 'Equity')
+   or uses_historical_rate != toUInt8(fx_method = 'historical')
