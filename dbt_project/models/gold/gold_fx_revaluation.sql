@@ -24,7 +24,20 @@
    CTA is computed on the GROUP's share (group_amount); the NCI share of the
    translation difference rides with nci_amount and is handled by the NCI
    schedule. A same-currency entity translates at 1.0, so its residual — and
-   therefore its CTA — is zero. #}
+   therefore its CTA — is zero.
+
+   CTA is a WHOLE-ENTITY residual, never a per-account figure. This model emits
+   one plug row per entity/period carrying the literal 'CTA' in main_account —
+   no account code ever appears in that column — and the residual is
+   -sum(group_amount) over ALL accounts, historical-rate accounts included:
+   nothing excludes them, so an account declared at the historical rate does
+   contribute to it. There is therefore no per-account CTA rule to assert here.
+   konsolidat#213 retired assert_equity_historical_no_cta on that ground. It
+   filtered this model on `main_account in (select main_account_id from
+   silver_main_accounts where …)`, which the literal 'CTA' can never match, so
+   the test passed on any data and could never fail; its premise — that
+   historical-rate accounts are excluded from CTA — was false against this
+   model besides. #}
 
 with entity_residual as (
     select

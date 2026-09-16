@@ -40,7 +40,7 @@ models:
       - name: is_balance_sheet
         description: "1 when the account is in the balance sheet (statement_section = 'Balance Sheet')"
       - name: is_equity
-        description: "PRD-10: declared historical-rate translation (IAS 21), i.e. fx_method = 'historical'"
+        description: "1 when the chart types the account as Equity (account_type = 'Equity') — the same meaning konsol's deal layer uses (konsolidat#213)"
       - name: debit_credit_default
         description: "The declared normal_balance (kept for the contract). No consumer"
       - name: statement_section
@@ -79,6 +79,8 @@ models:
         description: "1 for a cash account, as declared; inert until konsol#182 PR5b"
       - name: is_retained_earnings
         description: "konsolidat#199: 1 for the one account the year-end close of a period-end-balance file posts the year's P&L to, as declared in konsol (row K7). 0 for every account while epm_staging.main_accounts predates the column; assert_year_end_close_declared then names the years that cannot close"
+      - name: uses_historical_rate
+        description: "1 when the chart declares historical-rate translation (fx_method = 'historical'); this is what decides translation, not what the account IS"
 
   - name: silver_legal_entities
     description: "Clean company master with currency"
