@@ -92,7 +92,7 @@ Add `gold_equity_transactions` and the new `remeasurement` / `goodwill_cta` line
 6. New singular test `assert_equity_transaction_no_pnl`: rows in `gold_equity_transactions` never appear in `gold_business_disposal_journal` with `account_role='gain_loss'` (`adjustment_type='disposal'`) for the same group/date (no spurious P&L). (konsolidat#198 row J6b: the former disposal-adjustments model is deleted.)
 7. New singular test `assert_remeasurement_excluded_from_cta`: entities with `is_remeasured=1` have no row in `gold_fx_revaluation` (FX gain went to P&L `RM` line instead).
 8. `assert_consolidated_bs_balances_with_cta` still passes for a foreign acquisition fixture including goodwill (group BS nets to 0 within 0.01 tolerance with goodwill CTA included).
-9. Existing tests unchanged: `assert_cta_zero_for_same_currency`, `assert_equity_historical_no_cta`, `assert_nci_movement_reconciles`, `assert_nci_plus_group_equals_translated`, `assert_goodwill_calculated`, `assert_cta_not_zero_when_rates_differ` all still pass.
+9. Existing tests unchanged: `assert_cta_zero_for_same_currency`, `assert_nci_movement_reconciles`, `assert_nci_plus_group_equals_translated`, `assert_goodwill_calculated`, `assert_cta_not_zero_when_rates_differ` all still pass. (`assert_equity_historical_no_cta` was on this list until konsolidat#213 retired it: CTA is a whole-entity residual carrying the literal `'CTA'` in `main_account`, so that test could never match a row and never fail — see the header of `gold_fx_revaluation.sql`.)
 10. `equity_transactions` registered as an `epm_staging` source in `_staging__sources.yml` and resolvable via `{{ source('epm_staging', 'equity_transactions') }}`.
 
 ## Open Questions
