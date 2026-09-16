@@ -48,11 +48,15 @@ INSERT INTO epm_staging.ownership_periods
   (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method)
 VALUES
   ('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full');
+-- usd_log10 must be set: it defaults to nan, and a currency with no reference
+-- magnitude (macros/fx_magnitude.sql: isNaN, or 0 on anything but USD) makes
+-- assert_governed_rate_sane name every rate that uses it. USD is 0 by
+-- definition; EUR carries a real non-zero value.
 INSERT INTO epm_gold.currencies
-  (currency_code, currency_name, symbol, minor_unit)
+  (currency_code, currency_name, symbol, minor_unit, usd_log10)
 VALUES
-  ('EUR', 'Euro', 'E', 2),
-  ('USD', 'US Dollar', '$', 2);
+  ('EUR', 'Euro', 'E', 2, -0.05),
+  ('USD', 'US Dollar', '$', 2, 0);
 INSERT INTO epm_staging.group_exchange_rates
   (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
 VALUES

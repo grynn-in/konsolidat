@@ -91,6 +91,8 @@ Each singular test in `dbt_project/tests/` can be checked against seeded `ZZ`-co
 | `assert_translation_follows_fx_method` | Every translated row's `translation_rate` is the rate its account's declared `fx_method` names (konsol#182): the historical equity rate for `historical` (closing before the first tranche), `average_rate` for `average`, `closing_rate` otherwise. A P&L account may be declared at closing (IAS 29) |
 | `assert_translated_amount_formula` | `translated_amount = local_amount × translation_rate` within 0.01 |
 | `assert_group_amount_formula` | `group_amount = translated_amount × ownership_pct` within 0.01 |
+| `assert_equity_rate_coverage` | warn. Answers **"this entity has no equity rates at all"**: one row per entity node of the consolidation tree with no `historical_equity_rates` row, and one per rate keyed to an entity that is not a node (`orphan_equity_rate`) — an entity-level master-data gap, which names neither an account nor a period |
+| `assert_declared_historical_has_a_rate` | warn. Answers **"this account declares historical and no rate covers this period"** (konsolidat#218): one row per entity, account and period the chart declares `fx_method = historical` for with no rate covering it, resolved exactly as the model resolves the rate — the entity's owning group, entity and account, latest `rate_date <= period_date` — so a period before the first tranche is named and the message says the balance translated at the closing rate instead |
 
 ## Out of Scope
 - Remeasurement vs translation (single functional currency assumed)
