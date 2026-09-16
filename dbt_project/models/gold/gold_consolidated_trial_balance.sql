@@ -5,6 +5,7 @@
         pre_hook=[
             "{{ governed_rate_guard() }}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
+            "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS uses_historical_rate UInt8 DEFAULT 0{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
         ],
         engine='MergeTree()',
@@ -20,11 +21,15 @@
    gold_ic_reconciliation can pair (entity, partner) with (partner, entity) on
    translated group amounts.
 
-   It is the LAST column, and the second pre_hook (after the rate guard,
-   before the DELETE) adds it to a table built before it existed. dbt-clickhouse's append inserts POSITIONALLY into the
+   A pre_hook (after the rate guard, before the DELETE) adds it to a table built
+   before it existed. dbt-clickhouse's append inserts POSITIONALLY into the
    target's columns and applies no on_schema_change on this path, so the new
    column must sit where ALTER ... ADD COLUMN puts it: at the end. Anywhere
    else every later column would land one place off, silently. #}
+{# konsolidat#213: uses_historical_rate follows the same rule, and its ALTER runs
+   after partner_data_area_id's — so the table's last two columns are
+   partner_data_area_id, then uses_historical_rate, and the final select below
+   emits them in exactly that order. Any further column goes after both. #}
 
 {# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
    the keys the new batch produced, so a key that left the SELECT (an ownership
@@ -65,11 +70,22 @@ with entity_tb as (
         tb.account_type_name as account_type_name,
         tb.is_balance_sheet as is_balance_sheet,
         tb.is_pnl as is_pnl,
-        {# konsol#182: the declared translation. is_equity keeps its meaning for
-           every reader (the historical rate applies) but comes from the
-           declaration, not from matching account-type words. #}
-        toUInt8(ma.fx_method = 'historical') as is_equity,
+        {# konsolidat#213: two facts, two columns, both taken from silver — this
+           model no longer derives either.
+             is_equity            what the account IS: the chart types it as
+                                  Equity (account_type = 'Equity'), the meaning
+                                  konsol's deal layer uses. It decides nothing
+                                  about translation.
+             uses_historical_rate what the chart DECLARES about translation
+                                  (fx_method = 'historical'), which is what the
+                                  rate below reads.
+           konsol#182 derived is_equity from fx_method right here, so an asset
+           declared at the historical rate answered "is this equity?" with yes.
+           join_use_nulls=0: a LEFT-join miss reads 0 for both, so an undeclared
+           account is neither equity nor declared at the historical rate. #}
+        ma.is_equity as is_equity,
         ma.fx_method as fx_method,
+        ma.uses_historical_rate as uses_historical_rate,
         tb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='tb.') }},
         {# Signed double-entry movement (debit − credit), so the local TB sums
@@ -126,7 +142,8 @@ with entity_tb as (
        by `rated` and never selected into it: this model appends by position,
        so no column may be added before partner_data_area_id. #}
     left join (
-        select main_account_id, fx_method from {{ ref('silver_main_accounts') }}
+        select main_account_id, fx_method, is_equity, uses_historical_rate
+        from {{ ref('silver_main_accounts') }}
     ) as ma
         on tb.main_account = ma.main_account_id
     {# konsolidat#199 (row D9): the Closing-period rule, one row per calendar
@@ -247,6 +264,10 @@ rated as (
         etb.account_type_name as account_type_name,
         etb.is_balance_sheet as is_balance_sheet,
         etb.is_pnl as is_pnl,
+        {# konsolidat#213: silver's flag, in the position it has always had so
+           every reader keeps the column it selects — but it now means
+           account_type = 'Equity'. The translation declaration is
+           uses_historical_rate, carried at the end of this select. #}
         etb.is_equity as is_equity,
         etb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='etb.') }},
@@ -280,7 +301,12 @@ rated as (
             when etb.fx_method = 'historical' and hr.historical_rate is not null then hr.historical_rate
             when etb.fx_method = 'average' then gr.gov_average
             else gr.gov_closing
-        end as translation_rate
+        end as translation_rate,
+        {# konsolidat#213: the declaration, carried to the output so a reader can
+           ask what the chart declared without re-deriving it from fx_method.
+           LAST here and last in the model, for the positional-append reason at
+           the top of this file. #}
+        etb.uses_historical_rate as uses_historical_rate
     from entity_tb as etb
     {# One row per ancestor group: the fan-out here IS the multi-level
        consolidation. Period-keyed, because ownership is dated. #}
@@ -366,5 +392,11 @@ consolidated as (
                   'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
 )
 
-{# partner_data_area_id last: see the note at the top #}
-select * except (partner_data_area_id), partner_data_area_id from consolidated
+{# partner_data_area_id, then uses_historical_rate, last: see the notes at the
+   top. Each was added to an already-built table by an ALTER in the pre_hook, in
+   that order, and ALTER ... ADD COLUMN appends at the end — so the select has to
+   emit them in the same order or the positional append lands them swapped. #}
+select * except (partner_data_area_id, uses_historical_rate),
+       partner_data_area_id,
+       uses_historical_rate
+from consolidated
