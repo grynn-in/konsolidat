@@ -1,6 +1,6 @@
 # Testing Guide
 
-Konsolidat has 26 data quality assertion tests covering trial balance integrity, consolidation math, allocation completeness, budget spreading, and variance logic.
+Konsolidat has 28 data quality assertion tests covering trial balance integrity, consolidation math, allocation completeness, budget spreading, and variance logic.
 
 ## Test Philosophy
 
@@ -41,6 +41,8 @@ Tests have two severity levels:
 | `assert_nci_plus_group_equals_translated` | error | `\|translated − (group + nci)\| ≤ 0.01` |
 | `assert_nci_zero_for_full_ownership` | error | NCI = 0 when ownership = 100% |
 | `assert_translation_follows_fx_method` | warn | Each translated account uses the rate its declared `fx_method` names (closing, average, or historical) |
+| `assert_equity_rate_coverage` | warn | This entity has no equity rates at all: an entity node of the consolidation tree with no `historical_equity_rates` row, or a rate keyed to an entity that is not a node. Entity-level master data; it names neither an account nor a period |
+| `assert_declared_historical_has_a_rate` | warn | This account declares historical and no rate covers this period: an (entity, account, period) whose chart declares `fx_method = historical` with no Historical Equity Rate dated on or before that period, resolved on the model's own keys and as-of rule, so the balance translated at the closing rate instead (konsolidat#218) |
 | `assert_cta_not_zero_when_rates_differ` | error | CTA is non-zero when at least one row of the entity-period translated at a rate other than its closing rate |
 | `assert_cta_zero_for_same_currency` | error | CTA = 0 when entity currency = reporting currency |
 | `assert_translation_rate_resolved` | error | `translation_rate` is neither 0 nor NULL on a translated row; a missing rate stops the build before this test runs |
