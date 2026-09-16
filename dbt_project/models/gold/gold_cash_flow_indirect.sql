@@ -21,7 +21,7 @@
    the same signed number gold_bs_movement carries as period_movement
    (period_net_amount is debit − credit, no longer the magnitude described in
    grynn-in/konsolidat#64; see models/staging/README.md), so the cash-flow sign
-   falls out of the data instead of a hand-coded seed `sign`.
+   falls out of the data — nothing here is hand-signed.
 
    Because the full trial balance is balanced double-entry, the signed movement
    over every account nets to zero each period:
@@ -32,8 +32,9 @@
    categorize EVERY non-cash account:
      - P&L accounts (is_pnl = 1) collapse into one Operating "Net Income" line —
        the indirect-method starting point (net income = −Σ signed P&L movement).
-     - Balance-sheet accounts in the seed use the seed's category/line (its
-       `sign` column is ignored — the natural signs already do the work).
+     - Balance-sheet accounts in the seed use the seed's category/line
+       (cf_category / cf_line_item); the seed says WHERE a movement lands, never
+       which way it points — the natural signs already do that work.
      - Any other non-cash account falls into an Operating
        "Other Non-Cash Adjustments" line so it is never dropped and the
        statement always ties.

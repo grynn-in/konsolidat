@@ -12,7 +12,7 @@
    natural debit/credit signs (revenue negative, expense positive) and the full
    set sums to ~0 per consolidation_group/period across all layers (entity + IC
    elimination + CTA + topside + equity-method + acquisition/disposal). The
-   natural signs do the work, so the seed `sign` is NOT reused here
+   natural signs do the work, so nothing here is hand-signed
    (models/staging/README.md states the sign convention).
 
    Because the TB is signed and sums to zero, the change in cash equals the
@@ -25,8 +25,9 @@
      - P&L accounts (silver is_pnl = 1) collapse into one Operating
        "Net Income (Consolidated)" line — the indirect-method starting point,
        net of topside P&L adjustments such as goodwill amortization.
-     - Balance-sheet accounts in the seed use the seed's category/line (its
-       `sign` is ignored — the natural signs already do the work).
+     - Balance-sheet accounts in the seed use the seed's category/line
+       (cf_category / cf_line_item); the seed says WHERE a movement lands, never
+       which way it points — the natural signs already do that work.
      - Everything else non-cash (goodwill, CTA, IC, reclassifications, disposal)
        falls into an Operating "Consolidation and Non-Cash Adjustments" line so
        it is never dropped and the statement always ties.
