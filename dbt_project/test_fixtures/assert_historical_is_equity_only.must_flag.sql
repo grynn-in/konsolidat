@@ -16,3 +16,17 @@ INSERT INTO epm_staging.main_accounts
 VALUES
   ('ZZ1400', 'ZZ land', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'FIXED_ASSET', 'Published', 0),
   ('ZZ3000', 'ZZ share capital', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0);
+
+-- The rates themselves. A Historical Equity Rate is keyed (consolidation_group, data_area_id,
+-- main_account), and konsol will happily have written one for either account above. Only the
+-- equity one is ever applied: gold_consolidated_trial_balance applies a historical rate where
+-- `etb.fx_method = 'historical' and hr.historical_rate is not null`, and fx_method comes from
+-- the chart — so the ZZ1400 rate is joined and then never reached, the balance falling back to
+-- the closing rate with nothing said. That silence is konsolidat#92 finding 4.
+--   ZZGRP/ZZ01/ZZ1400 -> the ignored rate, must be named
+--   ZZGRP/ZZ01/ZZ3000 -> applied as declared, must NOT be named
+INSERT INTO epm_staging.historical_equity_rates
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate)
+VALUES
+  ('ZZGRP', 'ZZ01', 'ZZ1400', '2026-01-01', 1.25),
+  ('ZZGRP', 'ZZ01', 'ZZ3000', '2026-01-01', 1.25);
