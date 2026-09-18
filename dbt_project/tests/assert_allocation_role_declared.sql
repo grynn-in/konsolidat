@@ -22,6 +22,22 @@
     catches a typo (`Cost Center`) on a site that has no rules yet.
 #}
 
+{# severity=warn, decided 18 Sep 2026 alongside konsol#264 (allocation is being
+   removed and redesigned from first principles).
+
+   As an error, this test's failure skipped the entire allocation subtree: its
+   parent is the allocation_rules SOURCE, so dbt runs it ahead of every model
+   reading that source, and a misconfigured site was left with MISSING allocation
+   tables rather than empty ones — the very outcome the row-less engine branch
+   exists to avoid. It also failed the dbt step of a consolidation-scope build
+   (konsol maps a non-zero dbt exit to a failed step), so `assertions` and
+   `signoff` never ran: a management-reporting misconfiguration blocked a
+   statutory close over a layer that close does not read.
+
+   As a warning the close completes, the allocated tables build empty, and the
+   misconfiguration is still named in the run. #}
+{{ config(severity='warn') }}
+
 -- depends_on: {{ source('epm_staging', 'allocation_rules') }}
 {% if get_allocation_cost_center_dim() == '' %}
 select

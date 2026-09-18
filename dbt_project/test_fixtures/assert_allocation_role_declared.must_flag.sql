@@ -7,8 +7,11 @@
 -- exactly what konsolidat#220 has spent five instruments learning to distrust.
 --
 -- With this row loaded:
---   dimensions: []        -> the test returns 1 row and FAILS (the misconfiguration
---                            is named: a rule exists, no dimension declares the role)
+--   dimensions: []        -> the test returns 1 row and WARNS (the misconfiguration
+--                            is named: a rule exists, no dimension declares the
+--                            role). severity='warn', not error, so the allocation
+--                            models still build — empty — and a consolidation-scope
+--                            close is not blocked by it (konsol#264).
 --   real dimensions       -> the site declares allocation_role: cost_center, the
 --                            test asserts nothing and PASSES
 --
