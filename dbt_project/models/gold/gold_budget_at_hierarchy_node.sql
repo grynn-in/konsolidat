@@ -103,7 +103,7 @@ group by
     b.fiscal_year,
     b.fiscal_period,
     b.main_account,
-    b.layer,
+    b.layer{{ ',' if get_budget_dimensions() | length > 0 }}
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}

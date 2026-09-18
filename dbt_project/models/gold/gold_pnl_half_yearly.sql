@@ -26,5 +26,4 @@ group by
     ph.fiscal_half,
     tb.main_account,
     tb.account_name,
-    tb.account_type_name,
-    {{ dim_group_by(prefix='tb.') }}
+    tb.account_type_name{{ dim_group_by(prefix='tb.', leading=true) }}

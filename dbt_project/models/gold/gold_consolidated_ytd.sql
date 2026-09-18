@@ -19,7 +19,7 @@ select
     amount,
     sum(amount) over (
         partition by consolidation_group, data_area_id, fiscal_year, main_account,
-                     adjustment_type, {{ dim_partition_by() }}
+                     adjustment_type{{ dim_partition_by(leading=true) }}
         order by fiscal_period
         rows between unbounded preceding and current row
     ) as ytd_amount
