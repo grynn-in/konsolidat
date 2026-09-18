@@ -86,8 +86,6 @@ Check consolidated trial balance for:
 | Seed | When to Update |
 |------|---------------|
 | `consolidation_groups.csv` | New entity, ownership change |
-| `allocation_rules.csv` | New allocation rule |
-| `allocation_drivers_*.csv` | Monthly driver values |
 | `budget_annual_input.csv` | Annual budget cycle |
 | `spread_profiles.csv` | New spread pattern |
 | `consolidation_adjustments.csv` | Top-side journals |

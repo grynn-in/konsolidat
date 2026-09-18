@@ -112,20 +112,18 @@ rect(Inches(0.6), Inches(1.50), Inches(1.2), Pt(2), INDIGO)
 # Elevator pitch
 rich(
     Inches(0.6), Inches(1.70), Inches(6.0), Inches(0.8),
-    [("Multi-entity consolidation, budgeting, cost allocations, and\nvariance analysis \u2014 powered by ", 14, OFF_WHITE, False, 'Calibri'),
+    [("Multi-entity consolidation, budgeting, and\nvariance analysis \u2014 powered by ", 14, OFF_WHITE, False, 'Calibri'),
      ("=EPM()", 14, INDIGO, True, 'Consolas'),
      (" in the\nspreadsheet your finance team already knows.", 14, OFF_WHITE, False, 'Calibri')],
 )
 
-# ── Five capabilities ──
+# ── Four capabilities ──
 cap_top = Inches(2.85)
 caps = [
     ("Excel-Native Reporting",
      "Five worksheet functions query the analytical warehouse directly from Excel. One keystroke refreshes the entire workbook."),
     ("IFRS Consolidation",
      "Foreign exchange translation, cumulative translation adjustments, non-controlling interest splits, and intercompany elimination \u2014 26 data quality assertions per build."),
-    ("Cost Allocations",
-     "Three-step cascading allocation engine. Distribute costs by headcount, square metres, or revenue with a complete audit trail."),
     ("Budgeting & Variance",
      "Layered budgets with seasonal spread profiles. Actual versus budget variance analysis with favorable/unfavorable logic."),
     ("Open Architecture",

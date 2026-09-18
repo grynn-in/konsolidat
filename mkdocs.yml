@@ -1,6 +1,6 @@
 site_name: KNSLDT
 site_url: https://konsolid.at/
-site_description: Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, allocations, and Excel-native reporting.
+site_description: Open-source Enterprise Performance Management for D365 F&O — consolidation, budgeting, and Excel-native reporting.
 repo_url: https://github.com/grynn-in/konsolidat
 repo_name: grynn-in/konsolidat
 
@@ -78,7 +78,6 @@ nav:
       - Initial Setup: user-guide/initial-setup-guide.md
       - Financial Processes:
           - Consolidation: user-guide/consolidation-guide.md
-          - Allocations: user-guide/allocation-guide.md
           - Budgeting: user-guide/budgeting-guide.md
           - Budget Layers: user-guide/budget-layers.md
           - Variance Analysis: user-guide/variance-analysis-guide.md
@@ -131,7 +130,6 @@ nav:
               - Topside Journals: developer-guide/design/topside-journals.md
               - Business Combinations: developer-guide/design/business-combinations.md
           - Planning:
-              - Multi-Step Allocations: developer-guide/design/multistep-allocations.md
               - Budget Spreading: developer-guide/design/budget-spreading.md
               - Variance Analysis: developer-guide/design/variance-analysis.md
           - Multi-ERP:

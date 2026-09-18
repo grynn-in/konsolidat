@@ -25,7 +25,7 @@ _State of the local `konsolidat.local` deployment, probed via **konsol-cli** (ap
 
 `konsol schema status`:
 - Dimension: **3 published** · Measure: **13 published** · Fact Table: **6 published**
-- Pending build: `PBR-00001` (scope `staging`, state `Approved`, risk `low`, trigger `Allocation Rule ALLOC_001`)
+- Pending build: `PBR-00001` (scope `staging`, state `Approved`, risk `low`)
 
 `konsol fact list` — 6 published facts; the consolidation source is **`gl_journal_entries`** (Source Type `ERP GL`, scenario `actuals`). Others: `area_sqm`, `budget_input`, `headcount`, `revenue_by_product`, `variance_analysis`.
 

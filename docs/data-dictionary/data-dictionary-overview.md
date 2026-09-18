@@ -43,7 +43,7 @@ graph TD
 
     G1["<b>Trial Balance / P&L / BS / YTD</b><br/>Core financial statements"]
     G2["<b>Consolidation Pipeline</b><br/>Consolidated TB → IC Elim → FX Reval → FCTB"]
-    G3["<b>Allocations & Budgets</b><br/>Cost allocation + spread budget"]
+    G3["<b>Budgets</b><br/>Spread budget"]
     G4["<b>Variance Analysis</b><br/>Actual vs budget with favorable logic"]
 
     G1 & G2 & G3 & G4 --> API
@@ -59,7 +59,6 @@ graph TD
 | **Consolidation** | Trial Balance + FX Rates → Consolidated TB → IC Elimination → FX Reval → Fully Consolidated TB |
 | **Budgeting** | Budget Entries → silver_budget_entries → gold_spread_budget |
 | **Variance** | Trial Balance + Spread Budget → gold_variance_analysis |
-| **Allocations** | Trial Balance + Allocation Rules (seed) → gold_allocation_results |
 
 ## Layer Descriptions
 
@@ -70,10 +69,10 @@ Raw D365 OData data, type-cast to ClickHouse types and renamed to snake_case. No
 Cleaned, deduplicated, and joined data. Key transformations: GL entries joined with journal headers, exchange rates held as true rates (scaling resolved once in the source adapter, #138), account types mapped to readable labels. See [Silver Models](silver-models.md).
 
 ### Gold
-Business-ready models consumed by the API and Excel reports. Includes trial balance, P&L, balance sheet, consolidation, allocation, budgeting, and variance analysis. See [Gold Models](gold-models.md).
+Business-ready models consumed by the API and Excel reports. Includes trial balance, P&L, balance sheet, consolidation, budgeting, and variance analysis. See [Gold Models](gold-models.md).
 
 ### Seeds
-CSV-managed reference data: allocation rules, consolidation groups, budget inputs, spread profiles, IC elimination rules, and scenario definitions. See [Seeds Reference](seeds-reference.md).
+CSV-managed reference data: consolidation groups, budget inputs, spread profiles, IC elimination rules, and scenario definitions. See [Seeds Reference](seeds-reference.md).
 
 ## ClickHouse Staging Tables
 
@@ -83,10 +82,10 @@ Write-back tables in `epm_staging` for budget submissions and other user inputs.
 
 All Gold models carry three dimension columns, controlled by `var('dimensions')` in `dbt_project.yml`:
 
-| Column | Source (D365) | In Budget | Allocation Role |
-|--------|--------------|-----------|-----------------|
-| `dim_cost_center` | `CostCenter` | Yes | `cost_center` |
-| `dim_department` | `Department` | Yes | — |
-| `dim_business_unit` | `BusinessUnit` | No | — |
+| Column | Source (D365) | In Budget |
+|--------|--------------|-----------|
+| `dim_cost_center` | `CostCenter` | Yes |
+| `dim_department` | `Department` | Yes |
+| `dim_business_unit` | `BusinessUnit` | No |
 
 Dimensions auto-propagate through models via the `dim_select()`, `dim_group_by()`, `dim_join_on()` family of macros. See [Adding Dimensions](../developer-guide/adding-dimensions.md).

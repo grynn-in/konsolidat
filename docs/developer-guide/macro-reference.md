@@ -4,7 +4,7 @@ All dbt macros in Konsolidat, organized by file.
 
 ## dimension_helpers.sql
 
-Macros driven by `var('dimensions')` in `dbt_project.yml`. Each dimension is a dict with keys: `name`, `source_column`, `label`, `cube_type`, `in_budget`, `allocation_role`.
+Macros driven by `var('dimensions')` in `dbt_project.yml`. Each dimension is a dict with keys: `name`, `source_column`, `label`, `cube_type`, `in_budget`.
 
 ### get_dimensions()
 
@@ -22,15 +22,6 @@ Returns only dimensions where `in_budget: true`.
 ```sql
 {% set budget_dims = get_budget_dimensions() %}
 {# Returns dims for dim_cost_center and dim_department (not dim_business_unit) #}
-```
-
-### get_allocation_cost_center_dim()
-
-Returns the `name` of the dimension with `allocation_role: 'cost_center'`. Falls back to `'dim_cost_center'`.
-
-```sql
-{% set cc_dim = get_allocation_cost_center_dim() %}
-{# Returns: 'dim_cost_center' #}
 ```
 
 ### dim_select(prefix='', dims=none)
@@ -170,45 +161,6 @@ ClickHouse-specific adapter macros. All wrap `assumeNotNull()` for null safety.
     )
 }}
 ```
-
-## allocation_engine.sql
-
-### allocation_engine(rule_id, driver_seed)
-
-Single-step allocation for one rule.
-
-```sql
-{{ allocation_engine('ALLOC_001', 'allocation_drivers_headcount') }}
-```
-
-**CTE chain:**
-1. `rule` — Reads rule definition from `allocation_rules` seed
-2. `source_pool` — Sums `period_net_amount` from `gold_trial_balance` matching rule's source account/cost center
-3. `drivers` — Computes `driver_weight = driver_value / SUM(driver_value) OVER (PARTITION BY entity, year, period)`
-4. `allocated` — Cross-joins pool × rule, inner joins drivers, excludes self-allocation
-
-**Output columns:** `allocation_rule_id`, `data_area_id`, `fiscal_year`, `fiscal_period`, `source_account`, `target_cost_center`, `target_account`, `driver_type`, `pool_amount`, `driver_weight`, `allocated_amount`
-
-## allocation_engine_multistep.sql
-
-### allocation_engine_multistep()
-
-Three-step cascading allocation. No parameters — reads all rules from the `allocation_rules` seed.
-
-```sql
-{{ allocation_engine_multistep() }}
-```
-
-**Steps:**
-1. **Step 1 (ALLOC_001)**: IT costs → headcount driver
-2. **Step 2 (ALLOC_002)**: Facility costs + Step 1 cascade → sqm driver
-3. **Step 3 (ALLOC_003)**: Management fees + Step 1+2 cascade → revenue driver
-
-Revenue driver filters `driver_value > 0` to avoid division issues.
-
-**Output:** `UNION ALL` of all three steps with columns: `allocation_rule_id`, `step_order`, `data_area_id`, `fiscal_year`, `fiscal_period`, `source_account`, `source_cost_center`, `target_cost_center`, `target_account`, `driver_type`, `pool_amount`, `driver_weight`, `allocated_amount`
-
-See [Allocation Guide](../user-guide/allocation-guide.md) for a worked example.
 
 ## source_adapters/d365_account_types.sql
 

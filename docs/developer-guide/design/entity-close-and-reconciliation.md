@@ -64,7 +64,6 @@ entity's TB can lock. Status is against the current platform.
 | 8 | Inventory / FA register → GL tie-out | — | *proposed* | 🔲 |
 | 9 | **IC reconciliation (operational)** | — | *proposed* `gold_ic_operational_recon` | 🔲 needs IC-flagged sub-ledger |
 | 10 | Tax provision | D365 | arrives as GL | ✅ upstream |
-| 11 | Allocations | D365 or konsol | `gold_allocation_*` | ✅ |
 | 12 | TB review & flux / variance | — | `gold_variance_*`, `gold_prior_year_comparison` | ✅ |
 | 13 | **Entity TB lock + sign-off** | — | *proposed* Entity Close gate + `Pipeline Run` | 🔲 not built |
 | → | Group consolidation | — | `gold_consolidated_trial_balance` → `gold_fully_consolidated_tb` | ✅ |

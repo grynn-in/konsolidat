@@ -42,7 +42,7 @@ import sys
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LAYERS = ("staging", "gold", "raw", "bronze", "silver", "allocated")
+LAYERS = ("staging", "gold", "raw", "bronze", "silver")
 SCHEMA_RE = re.compile(r"\bepm_(?=(?:%s)\b)" % "|".join(LAYERS))
 BARE_DB_RE = re.compile(r"\bepm(?=\s*;)")  # CREATE DATABASE IF NOT EXISTS epm;
 MUST_CREATE = ("silver_main_accounts", "gold_consolidated_trial_balance")

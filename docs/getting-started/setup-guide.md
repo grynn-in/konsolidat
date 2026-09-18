@@ -126,18 +126,14 @@ Build:
 
 ```bash
 dbt deps       # Install dbt packages
-dbt seed       # Load 11 CSV seeds into epm_gold schema
+dbt seed       # Load 7 CSV seeds into epm_gold schema
 dbt build      # Build all models + run 26 tests
 ```
 
-### Seed Files (11)
+### Seed Files (7)
 
 | Seed | Purpose |
 |------|---------|
-| `allocation_rules.csv` | 3 multi-step allocation rules |
-| `allocation_drivers_headcount.csv` | Headcount driver values |
-| `allocation_drivers_sqm.csv` | Square meter driver values |
-| `allocation_drivers_revenue.csv` | Revenue driver values |
 | `budget_annual_input.csv` | Annual budget line items |
 | `spread_profiles.csv` | Monthly spread weights (EVEN, SEASONAL_RETAIL) |
 | `consolidation_groups.csv` | Entity → group mapping with ownership % |

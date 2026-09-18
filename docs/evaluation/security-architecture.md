@@ -36,7 +36,6 @@ This document describes the security architecture for exposing Konsol to Excel O
 │  ├─ Scenario            (budget/forecast/whatif)      │
 │  ├─ Consolidation Group (entities, ownership %)       │
 │  ├─ IC Elimination Rule (debit/credit pairs)          │
-│  ├─ Allocation Rule     (step, driver, accounts)      │
 │  └─ EPM Report          (saved report definitions)    │
 │                                                       │
 │  Built-in: Auth, RBAC, Workflows, Audit, REST API     │
@@ -76,7 +75,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 |---|---|---|---|---|
 | **Reader** | View reports, dashboards | `=EPM.VALUE(...)` queries | No | No |
 | **Planner** | View + submit budgets | Full read | `=EPM.SUBMIT(...)` budget write-back | No |
-| **Controller** | Full access | Full read | Full write | Edit consolidation groups, IC rules, allocations |
+| **Controller** | Full access | Full read | Full write | Edit consolidation groups, IC rules |
 | **Admin** | Full access | Full read | Full write | All config + user management |
 
 Frappe RBAC enforces this on every DocType and API endpoint automatically.
@@ -174,8 +173,6 @@ Configuration that was previously managed as CSV seed files in dbt is now manage
 | **Scenario** | `scenario_definitions.csv` | scenario_id, name, type (budget/forecast/whatif), base_scenario, status | No |
 | **Consolidation Group** | `consolidation_groups.csv` | group_name, entity, ownership_pct, reporting_currency | No |
 | **IC Elimination Rule** | `ic_elimination_rules.csv` | debit_account, credit_account, description | No |
-| **Allocation Rule** | `allocation_rules.csv` | step_order, source_account, target_account, driver_type, source_cost_center | No |
-| **Allocation Driver** | `allocation_drivers_*.csv` | cost_center, fiscal_period, driver_value, driver_type | No |
 
 ### Config Sync Flow
 

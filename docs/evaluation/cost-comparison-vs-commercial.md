@@ -20,7 +20,6 @@ This document compares Konsolidat against the three leading commercial Corporate
 | IC elimination | Native | Native | Manual | **Yes** (3 rules, nets to zero) |
 | Minority interest / NCI | Native | Native | Manual | **Yes** (ownership %, NCI columns) |
 | Top-side adjustments | Native | Native | Yes | **Yes** (CSV-driven) |
-| Multi-step allocations | Native | Native | Best-in-class | **Yes** (3-step cascade, driver-based) |
 | Budget write-back | Native | Native | Native | **Yes** (EPMSAVE from Excel) |
 | Scenario management | Native | Native | Best-in-class | **Yes** (budget/forecast/what-if via API) |
 | Variance analysis | Native | Native | Native | **Yes** (favorable logic, actual vs budget) |
@@ -64,7 +63,7 @@ This document compares Konsolidat against the three leading commercial Corporate
 |---|---|---|
 | Bronze | 14 | Raw D365 OData extracts (GL, TB, budget, FX rates, dimensions, legal entities) |
 | Silver | 8 | Standardized GL entries, trial balance, exchange rates, fiscal periods, accounts |
-| Gold | 22 | Consolidated TB, IC elimination, CTA, allocations, variance, scenarios, P&L, BS, YTD, quarterly, prior year |
+| Gold | 22 | Consolidated TB, IC elimination, CTA, variance, scenarios, P&L, BS, YTD, quarterly, prior year |
 
 ### Consolidation Engine (Gold Layer)
 
@@ -72,7 +71,6 @@ This document compares Konsolidat against the three leading commercial Corporate
 - **`gold_ic_eliminations`** — Debit/credit matching across entities, conservative min-balance netting
 - **`gold_fx_revaluation`** — CTA equity plug: `PnL × (closing - average) × ownership%`
 - **`gold_fully_consolidated_tb`** — 4-layer union: entity balances + IC eliminations + CTA + topside
-- **`gold_allocation_results`** — 3-step cascading allocations (IT/headcount → Facility/sqm → Mgmt/revenue)
 - **`gold_variance_analysis`** — Actual vs budget with favorable/unfavorable logic
 - **`gold_spread_budget`** — Annual budgets spread across 12 periods
 - **`gold_ytd_trial_balance`** — Year-to-date running totals
@@ -105,7 +103,6 @@ This document compares Konsolidat against the three leading commercial Corporate
 - FX translation correctness (BS uses closing, P&L uses average)
 - IC elimination nets to zero
 - NCI + group = translated amount
-- Each allocation step sums to pool
 - CTA = zero for same-currency entities
 - Variance formula correctness
 - Trial balance balances
@@ -154,7 +151,6 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 | **No multi-GAAP** | Medium — one consolidation path only | Buildable: reporting_standard dimension (~1 week) |
 | **No rolling forecasts** | Medium — annual scenarios only | Buildable: rolling window logic (~2–3 days) |
 | **No web UI for end users** | Medium — Excel-only for finance users | Frappe Desk for admin; K.EPM() for finance users |
-| **Allocation rules in CSV** | Low — works but not click-to-edit | Editable in any text editor or Excel |
 | **No real-time GL sync** | Low — batch is fine for most EPM | Airbyte schedule (hourly possible) |
 
 ---

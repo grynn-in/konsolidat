@@ -22,7 +22,7 @@ Konsol is an open-source Enterprise Performance Management stack for D365 Financ
 │  Frappe (Application Layer)                               │
 │                                                           │
 │  DocTypes: Budget Entry, Scenario, Consolidation Group,   │
-│            IC Elimination Rule, Allocation Rule           │
+│            IC Elimination Rule                            │
 │                                                           │
 │  Built-in: Auth, RBAC, Workflows, Audit, REST API         │
 │  DB: MariaDB (metadata + config only)                     │
@@ -86,10 +86,6 @@ Excel connects via PostgreSQL ODBC driver to Cube's SQL API (port 15432). This a
 
 ### ADR-004: Write-back via Staging (D365 stays read-only)
 Budget/forecast input goes to ClickHouse staging tables, not back to D365. dbt unions staging data with actuals in the next run. This keeps D365 as the read-only source of truth.
-
-### ADR-005: Seed-driven Allocations (v1) → Frappe DocTypes (v2)
-v1: Allocation rules and drivers are CSV seeds editable in Streamlit.
-v2: Rules move to Frappe DocTypes — web-editable, versioned, audited, role-protected. Frappe syncs config to ClickHouse on save, triggering a dbt rebuild.
 
 ### ADR-006: Frappe over FastAPI for Application Layer
 FastAPI is minimal and fast but requires building auth, RBAC, audit, workflows, and web UI from scratch. Frappe provides all of these out of the box. Trade-off: heavier deployment (MariaDB + Redis + workers), but `docker compose` handles it. Frappe's DB (MariaDB) stores only metadata and config — all analytical data stays in ClickHouse.
