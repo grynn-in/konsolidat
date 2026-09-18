@@ -12,7 +12,7 @@ select
     tb.main_account,
     tb.account_name,
     tb.account_type_name,
-    {{ dim_select(prefix='tb.') }},
+    {{ dim_select(prefix='tb.', trailing=true) }}
     sum(tb.period_net_amount) as quarter_net_amount,
     sum(tb.period_debit) as quarter_debit,
     sum(tb.period_credit) as quarter_credit
@@ -26,5 +26,4 @@ group by
     ph.fiscal_quarter,
     tb.main_account,
     tb.account_name,
-    tb.account_type_name,
-    {{ dim_group_by(prefix='tb.') }}
+    tb.account_type_name{{ dim_group_by(prefix='tb.', leading=true) }}

@@ -15,7 +15,7 @@ select
     account_type_name,
     is_balance_sheet,
     is_pnl,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_select() }}
 from {{ ref('silver_gl_entries') }}
 group by
@@ -26,5 +26,5 @@ group by
     account_name,
     account_type_name,
     is_balance_sheet,
-    is_pnl,
-    {{ dim_group_by() }}
+    is_pnl
+    {{- dim_group_by(leading=true) }}

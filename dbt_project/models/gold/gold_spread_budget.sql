@@ -27,7 +27,7 @@ with annual_input as (
         data_area_id,
         {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
         main_account,
-        {{ dim_select(dims=get_budget_dimensions()) }},
+        {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         'base' as layer,
         annual_amount,
         spread_profile_id,
@@ -66,7 +66,7 @@ manual as (
         {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
         {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
         main_account,
-        {{ dim_select(dims=get_budget_dimensions()) }},
+        {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
         toFloat64(sum(amount) over w) as annual_amount,
         'manual' as spread_profile_id,
@@ -77,7 +77,7 @@ manual as (
     from {{ source('epm_gold', 'budget_monthly_input') }}
     window w as (
         partition by scenario_id, data_area_id, fiscal_year, main_account,
-                     {{ dim_group_by(dims=get_budget_dimensions()) }}, layer
+                     {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }} layer
     )
 ),
 
@@ -93,7 +93,7 @@ spread as (
         ai.fiscal_year as fiscal_year,
         p.fiscal_period as fiscal_period,
         toString(ai.main_account) as main_account,
-        {{ dim_select(prefix='ai.', dims=get_budget_dimensions()) }},
+        {{ dim_select(prefix='ai.', dims=get_budget_dimensions(), trailing=true) }}
         ai.layer as layer,
         toFloat64(ai.annual_amount) as annual_amount,
         ai.spread_profile_id as spread_profile_id,
@@ -105,12 +105,12 @@ spread as (
     inner join profiles as p
         on ai.spread_profile_id = p.profile_id
     where (
-        ai.scenario_id, ai.data_area_id, ai.fiscal_year, toString(ai.main_account),
-        {{ dim_group_by(prefix='ai.', dims=get_budget_dimensions()) }}
+        ai.scenario_id, ai.data_area_id, ai.fiscal_year, toString(ai.main_account)
+        {{- dim_group_by(prefix='ai.', dims=get_budget_dimensions(), leading=true) }}
     ) not in (
         select
-            scenario_id, data_area_id, fiscal_year, main_account,
-            {{ dim_group_by(dims=get_budget_dimensions()) }}
+            scenario_id, data_area_id, fiscal_year, main_account
+            {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
         from manual
         where layer = 'base'
     )

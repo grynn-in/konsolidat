@@ -26,7 +26,7 @@ select
     {{ cast_to_decimal128('b.amount', 2) }} as accounting_currency_amount,
     {{ cast_to_decimal128('b.transaction_amount', 2) }} as transaction_currency_amount,
     {{ cast_to_string("coalesce(b.transaction_currency, '')") }} as transaction_currency,
-    {{ dim_select_from_source(prefix='b.', dims=get_budget_dimensions()) }},
+    {{ dim_select_from_source(prefix='b.', dims=get_budget_dimensions(), trailing=true) }}
     {{ cast_to_int8('coalesce(d365.include_in_cash_flow, 0)' if d365_joined else '0') }} as include_in_cash_flow,
     {{ cast_to_datetime('b._loaded_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('b._raw_id') }} as _airbyte_raw_id

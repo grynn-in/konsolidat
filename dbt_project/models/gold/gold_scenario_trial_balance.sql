@@ -18,7 +18,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select(dims=get_budget_dimensions()) }},
+    {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
     period_net_amount as amount,
     'gl' as data_source
 from {{ ref('gold_trial_balance') }}
@@ -41,7 +41,7 @@ select
     main_account,
     '' as account_name,
     '' as account_type_name,
-    {{ dim_select(dims=get_budget_dimensions()) }},
+    {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
     accounting_currency_amount as amount,
     'd365_budget' as data_source
 from {{ ref('silver_budget_entries') }}
@@ -65,7 +65,7 @@ select
     main_account,
     '' as account_name,
     '' as account_type_name,
-    {{ dim_select(dims=get_budget_dimensions()) }},
+    {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
     {{ cast_to_decimal128('sum(period_amount)', 2) }} as amount,
     'budget' as data_source
 from {{ ref('gold_spread_budget') }}
@@ -74,5 +74,5 @@ group by
     data_area_id,
     fiscal_year,
     fiscal_period,
-    main_account,
-    {{ dim_group_by(dims=get_budget_dimensions()) }}
+    main_account
+    {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}

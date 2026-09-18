@@ -9,14 +9,39 @@
    fail on their merits rather than with a missing-column error.
 
    Without hierarchy ZZ_DIV (a site that did not load hierarchy_dated.sql) the test has nothing to check and
-   returns no rows. #}
+   returns no rows.
+
+   konsolidat#220 — SCOPE. This test is scoped to a fixture tree over a BUSINESS-UNIT dimension:
+   hierarchy_dated.sql builds ZZ_DIV over dim_business_unit, and the tb CTE below reads
+   gold_trial_balance.dim_business_unit by name, aliases that one dimension to `code`, and filters it to
+   that tree's member codes. The column exists only where the site declares that dimension —
+   gold_trial_balance renders its dimension columns from var('dimensions') — so a site that does not
+   declare it, including a site with no dimensions at all (the starting state of every site since
+   konsol#230), has nothing here to check. The guard below then renders a query that asserts nothing and
+   returns no rows, instead of failing on a missing column.
+
+   Why the guard tests the declared dimension list and not the built relation's columns: both answer the
+   same question, but the declared list is decided by configuration, so the same vars always render the
+   same SQL, and a site that DOES declare dim_business_unit can never have this assertion silently
+   skipped by a warehouse that is merely not built yet. It is the same compile-time membership test as
+   the has_period guard below, taken against the var that creates the column. A dimension list rendered
+   through dim_select() would not do: that emits EVERY declared dimension as its own column, which fits
+   neither the `as code` alias nor the member-code assertion. #}
 
 -- depends_on: {{ ref('gold_unassigned_hierarchy_members') }}
+-- depends_on: {{ ref('gold_trial_balance') }}
+-- depends_on: {{ ref('gold_reporting_hierarchy') }}
+{# the refs above are declared explicitly because every ref() below sits inside a guard that does not
+   render when the dimension is absent; without them the test would lose its parents on such a site and
+   stop being collected by selection. #}
+{% set has_business_unit = 'dim_business_unit' in (var('dimensions') | map(attribute='name') | list) %}
 {% set has_period = false %}
 {% if execute %}
     {% set cols = adapter.get_columns_in_relation(ref('gold_unassigned_hierarchy_members')) | map(attribute='name') | list %}
     {% set has_period = ('fiscal_year' in cols and 'fiscal_period' in cols) %}
 {% endif %}
+
+{% if has_business_unit %}
 
 with u as (
     select
@@ -89,3 +114,14 @@ where concat(e.code, '|', toString(e.fy), '|', toString(e.fp))
 
 ) as checks
 where (select n from present) > 0
+
+{% else %}
+
+{# the site declares no dim_business_unit, so the fixture's ZZ_DIV tree cannot exist and there is
+   nothing to assert: no checks, no rows, and no reference to a column that does not exist. #}
+select
+    '' as member,
+    '' as problem
+where 1 = 0
+
+{% endif %}

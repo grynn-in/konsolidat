@@ -28,7 +28,7 @@ select
     is_balance_sheet,
     is_pnl,
     partner_data_area_id,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_select() }}
 from {{ ref('silver_gl_entries') }}
 group by
@@ -40,5 +40,5 @@ group by
     account_type_name,
     is_balance_sheet,
     is_pnl,
-    partner_data_area_id,
-    {{ dim_group_by() }}
+    partner_data_area_id
+    {{- dim_group_by(leading=true) }}

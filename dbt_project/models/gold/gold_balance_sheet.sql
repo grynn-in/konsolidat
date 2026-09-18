@@ -12,11 +12,11 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_passthrough() }},
     -- Cumulative balance for BS accounts (running sum within year)
     sum(period_net_amount) over (
-        partition by data_area_id, main_account, {{ dim_partition_by() }}
+        partition by data_area_id, main_account{{ dim_partition_by(leading=true) }}
         order by fiscal_year, fiscal_period
     ) as cumulative_balance
 from {{ ref('gold_trial_balance') }}

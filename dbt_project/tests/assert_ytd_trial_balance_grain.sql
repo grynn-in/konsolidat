@@ -10,8 +10,8 @@
 #}
 
 select
-    data_area_id, fiscal_year, fiscal_period, main_account, {{ dim_select() }},
+    data_area_id, fiscal_year, fiscal_period, main_account, {{ dim_select(trailing=true) }}
     count() as rows_per_key
 from {{ ref('gold_ytd_trial_balance') }}
-group by data_area_id, fiscal_year, fiscal_period, main_account, {{ dim_group_by() }}
+group by data_area_id, fiscal_year, fiscal_period, main_account{{ dim_group_by(leading=true) }}
 having count() > 1

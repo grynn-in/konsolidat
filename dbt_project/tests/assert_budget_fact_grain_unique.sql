@@ -10,7 +10,7 @@ select
     fiscal_year,
     fiscal_period,
     main_account,
-    {{ dim_group_by(dims=get_budget_dimensions()) }},
+    {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }}
     count(*) as n_rows
 from {{ ref('gold_spread_budget') }}
 group by
@@ -18,6 +18,6 @@ group by
     data_area_id,
     fiscal_year,
     fiscal_period,
-    main_account,
-    {{ dim_group_by(dims=get_budget_dimensions()) }}
+    main_account
+    {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
 having count(*) > 1

@@ -53,7 +53,7 @@ select
     gae.description as description,
     {# konsol#159: the intercompany partner entity, '' = none #}
     gae.partner_data_area_id as partner_data_area_id,
-    {{ dim_select(prefix='gae.') }},
+    {{ dim_select(prefix='gae.', trailing=true) }}
     gje.journal_number as journal_number,
     gje.journal_category as journal_category,
     gje.document_number as document_number,
@@ -141,7 +141,7 @@ select
     tbs.description as description,
     {# positional twin of gae.partner_data_area_id above #}
     tbs.partner_data_area_id as partner_data_area_id,
-    {{ dim_empty_strings() }},
+    {{ dim_empty_strings(trailing=true) }}
     concat('TBS-', tbs.batch_id) as journal_number,
     '{{ tbs_marker }}' as journal_category,
     tbs.submission_name as document_number,

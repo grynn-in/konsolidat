@@ -24,6 +24,72 @@
     {% endif %}
 {% endif %}
 
+{% if get_allocation_cost_center_dim() == '' %}
+{# konsolidat#220: no dimension declares `allocation_role: cost_center`, so there is
+   no dimension to allocate across and no rows is the true answer — the same
+   reasoning as the hierarchy rollups, which cannot roll up a dimension a site does
+   not have. Previously the macro returned the literal 'dim_cost_center' here and
+   the engine died on a column gold_trial_balance may not carry.
+
+   Unlike the unpivot macros, this contract CANNOT be derived with `<alias>.*`:
+   it is this model's own output, not a passthrough of an upstream relation, so
+   the 13 columns of step<N>_allocated are restated by hand and must be kept in
+   step with that CTE. A site that declares the role never renders this branch.
+
+   A misconfiguration — allocation rules that exist while no dimension declares the
+   role — is NOT silent: tests/assert_allocation_role_declared.sql warns on it
+   (severity='warn', so the close completes and these models build empty rather
+   than being skipped).
+   THE `-- depends_on:` LINES BELOW ARE LOAD-BEARING. This branch renders no
+   ref() and no source(), so without them alloc_results has NO dag parents at a
+   role-less site — measured: depends_on goes from three nodes to []. It would
+   then drop out of every model-scoped selection (konsol builds with
+   `--select +tag:domain:<domain> --indirect-selection cautious`), taking
+   gold_allocation_results, gold_allocation_tb and alloc_audit_trail with it, so
+   a consumer meets "table doesn't exist" instead of zero rows. The same loss
+   would silently uncollect assert_allocation_role_declared, whose only parent is
+   the allocation_rules source — the loud half going quiet in exactly the case it
+   exists for. R8 kept its ref() inside the guard for this reason; this row
+   repeats the device because the branch has no FROM of its own.
+
+   Decision and the options weighed: konsolidat#220 (PR #222). #}
+-- depends_on: {{ ref('gold_trial_balance') }}
+-- depends_on: {{ source('epm_staging', 'allocation_rules') }}
+-- depends_on: {{ source('epm_staging', 'allocation_drivers') }}
+select
+    {{ cast_to_string("''") }} as allocation_rule_id,
+    {{ cast_to_uint8('0') }} as step_order,
+    {{ cast_to_string("''") }} as data_area_id,
+    {{ cast_to_uint16('0') }} as fiscal_year,
+    {{ cast_to_uint16('0') }} as fiscal_period,
+    {{ cast_to_string("''") }} as source_account,
+    {{ cast_to_string("''") }} as source_cost_center,
+    {{ cast_to_string("''") }} as target_cost_center,
+    {{ cast_to_string("''") }} as target_account,
+    {{ cast_to_string("''") }} as driver_type,
+    {# Types below are VERIFIED against the real branch by DESCRIBE on
+       epm_allocated.alloc_results built both ways, not by reading the SQL — an
+       earlier version of this comment claimed "types match exactly" after
+       reasoning about only three of the thirteen columns, and fiscal_period was
+       wrong: the real branch inherits it from gold_trial_balance, where an if()
+       over UInt8 operands promotes to UInt16, while this branch declared UInt8.
+       That published a different DDL for the same table depending on site
+       configuration, which is the defect this block exists to prevent.
+
+       Measured: pool_amount Float64 (cast_to_float64(sum(tb.amount)) + coalesce(...)),
+       driver_weight and allocated_amount Nullable(Float64) (driver_value /
+       nullIf(sum(...) over (...), 0), and their product), fiscal_year UInt16,
+       fiscal_period UInt16, step_order UInt8, the rest String.
+
+       If step<N>_allocated changes, NOTHING fails — there is no contract on this
+       model. Re-run DESCRIBE both ways after touching that CTE. #}
+    {{ cast_to_float64('0') }} as pool_amount,
+    toNullable({{ cast_to_float64('0') }}) as driver_weight,
+    toNullable({{ cast_to_float64('0') }}) as allocated_amount
+where 0
+
+{% else %}
+
 with all_rules as (
     {# PRD-17: the Allocation Rule doctype. konsolidat#146 removed the seed half
        of this union — it applied only when the staging table happened to be
@@ -193,5 +259,7 @@ all_allocations as (
 
 select * from all_allocations
 where allocation_rule_id != ''
+
+{% endif %}
 
 {% endmacro %}

@@ -83,7 +83,7 @@ select
     tb.is_pnl,
     {% for d in var('dimensions') %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', tb.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
-    {%- endfor %},
+    {%- endfor %}{{ ',' if var('dimensions') | length > 0 }}
     {{ hierarchy_measure_sums('tb.') }}
 from tb_dated as tb
 inner join leaf_closure as lc
@@ -108,7 +108,8 @@ group by
     tb.account_name,
     tb.account_type_name,
     tb.is_balance_sheet,
-    tb.is_pnl,
+    tb.is_pnl
+    {{- ',' if var('dimensions') | length > 0 }}
     {% for d in var('dimensions') %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', tb.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}

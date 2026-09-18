@@ -30,7 +30,7 @@ with entity_balances as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_select() }},
+        {{ dim_select(trailing=true) }}
         reporting_currency,
         sum(group_amount) as amount,
         'entity' as adjustment_type,
@@ -43,7 +43,7 @@ with entity_balances as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_group_by() }},
+        {{ dim_group_by(trailing=true) }}
         reporting_currency
 ),
 
@@ -62,7 +62,7 @@ ic_elims as (
         fiscal_period,
         debit_account as main_account,
         'IC Elimination' as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         debit_elimination as amount,
         if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
@@ -79,7 +79,7 @@ ic_elims as (
         fiscal_period,
         credit_account as main_account,
         'IC Elimination' as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         credit_elimination as amount,
         if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
@@ -97,7 +97,7 @@ cta_entries as (
         fiscal_period,
         main_account,
         'CTA' as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         cta_amount as amount,
         'cta' as adjustment_type,
@@ -114,7 +114,7 @@ topside as (
         fiscal_period,
         main_account,
         description as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         {{ cast_to_float64('net_amount') }} as amount,
         adjustment_type,
@@ -131,7 +131,7 @@ equity_method as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         amount,
         'equity_method' as adjustment_type,
@@ -179,7 +179,7 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
@@ -197,7 +197,7 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         any(account_name) as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
@@ -215,7 +215,7 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         any(account_name) as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
@@ -233,7 +233,7 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         any(account_name) as account_name,
-        {{ dim_empty_strings() }},
+        {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,

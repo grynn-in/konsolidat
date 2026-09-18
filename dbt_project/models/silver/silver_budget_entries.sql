@@ -24,7 +24,7 @@ select
     btl.accounting_currency_amount,
     btl.transaction_currency_amount,
     btl.transaction_currency,
-    {{ dim_select(prefix='btl.', dims=get_budget_dimensions()) }},
+    {{ dim_select(prefix='btl.', dims=get_budget_dimensions(), trailing=true) }}
     bre.budget_model_id,
     bre.budget_transaction_code,
     bre.budget_status,

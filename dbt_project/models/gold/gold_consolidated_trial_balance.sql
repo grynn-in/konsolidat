@@ -87,7 +87,7 @@ with entity_tb as (
         ma.fx_method as fx_method,
         ma.uses_historical_rate as uses_historical_rate,
         tb.partner_data_area_id as partner_data_area_id,
-        {{ dim_select(prefix='tb.') }},
+        {{ dim_select(prefix='tb.', trailing=true) }}
         {# Signed double-entry movement (debit − credit), so the local TB sums
            to zero and the FX/CTA plug can balance it. Amounts arrive signed at
            the ERP boundary (models/staging/README.md). Silver splits them once
@@ -270,7 +270,7 @@ rated as (
            uses_historical_rate, carried at the end of this select. #}
         etb.is_equity as is_equity,
         etb.partner_data_area_id as partner_data_area_id,
-        {{ dim_select(prefix='etb.') }},
+        {{ dim_select(prefix='etb.', trailing=true) }}
         etb.local_amount as local_amount,
         etb.accounting_currency as accounting_currency,
         eo.reporting_currency as reporting_currency,

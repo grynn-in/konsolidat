@@ -19,29 +19,69 @@
     {{ return(result) }}
 {% endmacro %}
 
+{# Returns the name of the dimension a site declares as its cost-centre dimension,
+   or '' when none does.
+
+   konsolidat#220: this used to fall back to the literal 'dim_cost_center', which
+   asserted one site's configuration as a fact. On a site that declares no
+   dimensions — the starting state of every new site (konsol#230) — or one whose
+   cost-centre dimension is spelled differently and carries no allocation_role,
+   that literal rendered into the allocation engine and the build died far from
+   its cause with `Code: 47 … Unknown expression identifier 'dim_cost_center'`.
+
+   CALLERS MUST HANDLE ''. `allocation_engine_multistep` renders a row-less result
+   in that case; `tests/assert_cascade_increases_pool` asserts nothing. The three
+   unreferenced engines (allocation_engine, _reciprocal, _tiered) have no callers
+   anywhere in models, tests or macros, so they never render — if one is ever
+   wired up, it needs the same guard. Decision recorded on konsolidat#220 (PR #222). #}
 {% macro get_allocation_cost_center_dim() %}
     {% for d in var('dimensions') %}
         {% if d.get('allocation_role', '') == 'cost_center' %}
             {{ return(d.name) }}
         {% endif %}
     {% endfor %}
-    {{ return('dim_cost_center') }}
+    {{ return('') }}
 {% endmacro %}
 
+{# konsolidat#220 — the `trailing` parameter.
+   These macros emit their own INTERNAL separators, so a list renders as
+   `a, b, c` with no trailing comma. A call site that is followed by more
+   columns therefore used to write its own literal comma — which dangles into
+   malformed SQL when the site declares NO dimensions (the starting state of
+   every new site since konsol#230). Pass `trailing=true` at those call sites
+   and drop the literal comma: the comma is then emitted only when the
+   rendered list is non-empty. It defaults to false so a call site that is
+   LAST in its list (and correctly has no comma) is unaffected by this
+   parameter existing.
+
+   konsolidat#220 — the `leading` parameter, for the OTHER shape of the same
+   defect. A call site that is LAST in its list carries no comma of its own, but
+   the column before it does — `partition by data_area_id, main_account,` then
+   the macro, then `order by`. With NO dimensions that preceding comma is left
+   ending the clause, and `trailing` cannot help: the comma belongs to the
+   previous column. Pass `leading=true` at those sites and drop the literal
+   comma from the line above; the comma is then emitted immediately BEFORE the
+   rendered list, and only when that list is non-empty. Like `trailing` it
+   defaults to false, so no existing call site changes behaviour. #}
+
 {# SELECT list of dimension columns with optional table prefix #}
-{% macro dim_select(prefix='', dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+{% macro dim_select(prefix='', dims=none, trailing=false, leading=false) %}
+    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# GROUP BY list of dimension columns with optional table prefix #}
-{% macro dim_group_by(prefix='', dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+{% macro dim_group_by(prefix='', dims=none, trailing=false, leading=false) %}
+    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# JOIN conditions for matching dimensions between two aliases #}
@@ -61,19 +101,23 @@
 {% endmacro %}
 
 {# PARTITION BY clause for window functions #}
-{% macro dim_partition_by(prefix='', dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+{% macro dim_partition_by(prefix='', dims=none, trailing=false, leading=false) %}
+    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# Empty string literals for non-entity layers (IC eliminations, CTA, etc.) #}
-{% macro dim_empty_strings(dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+{% macro dim_empty_strings(dims=none, trailing=false, leading=false) %}
+    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     '' as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# ============================================================
@@ -142,9 +186,11 @@
 {% endmacro %}
 
 {# Bronze source mapping: casts source columns to dimension names #}
-{% macro dim_select_from_source(prefix='', dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+{% macro dim_select_from_source(prefix='', dims=none, trailing=false, leading=false) %}
+    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ cast_to_string("coalesce(" ~ prefix ~ d.source_column ~ ", '')") }} as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
