@@ -38,7 +38,22 @@
 
    A misconfiguration — allocation rules that exist while no dimension declares the
    role — is NOT silent: tests/assert_allocation_role_declared.sql fails on it.
+   THE `-- depends_on:` LINES BELOW ARE LOAD-BEARING. This branch renders no
+   ref() and no source(), so without them alloc_results has NO dag parents at a
+   role-less site — measured: depends_on goes from three nodes to []. It would
+   then drop out of every model-scoped selection (konsol builds with
+   `--select +tag:domain:<domain> --indirect-selection cautious`), taking
+   gold_allocation_results, gold_allocation_tb and alloc_audit_trail with it, so
+   a consumer meets "table doesn't exist" instead of zero rows. The same loss
+   would silently uncollect assert_allocation_role_declared, whose only parent is
+   the allocation_rules source — the loud half going quiet in exactly the case it
+   exists for. R8 kept its ref() inside the guard for this reason; this row
+   repeats the device because the branch has no FROM of its own.
+
    Decision and the options weighed: konsolidat#220 (PR #222). #}
+-- depends_on: {{ ref('gold_trial_balance') }}
+-- depends_on: {{ source('epm_staging', 'allocation_rules') }}
+-- depends_on: {{ source('epm_staging', 'allocation_drivers') }}
 select
     {{ cast_to_string("''") }} as allocation_rule_id,
     {{ cast_to_uint8('0') }} as step_order,
@@ -50,9 +65,15 @@ select
     {{ cast_to_string("''") }} as target_cost_center,
     {{ cast_to_string("''") }} as target_account,
     {{ cast_to_string("''") }} as driver_type,
-    {{ cast_to_decimal128('0', 2) }} as pool_amount,
-    toFloat64(0) as driver_weight,
-    {{ cast_to_decimal128('0', 2) }} as allocated_amount
+    {# types match step<N>_allocated exactly: pool_amount is
+       cast_to_float64(sum(tb.amount)) + coalesce(...) => Float64; driver_weight is
+       driver_value / nullIf(sum(...) over (...), 0) => Nullable(Float64); and
+       allocated_amount is their product => Nullable(Float64). Declaring
+       Decimal128 here published a different DDL for epm_allocated.alloc_results
+       depending on site configuration. #}
+    {{ cast_to_float64('0') }} as pool_amount,
+    toNullable({{ cast_to_float64('0') }}) as driver_weight,
+    toNullable({{ cast_to_float64('0') }}) as allocated_amount
 where 0
 
 {% else %}

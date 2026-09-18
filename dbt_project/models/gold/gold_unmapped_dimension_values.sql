@@ -19,11 +19,19 @@
 
 {# konsolidat#220: the dimensions are SITE-DECLARED (konsol#230), so this queue
    covers whatever the site declares rather than the three one site happened to
-   have. `stg_gl_entries` generates its dimension columns from the same
-   `var('dimensions')` — through `dim_harmonize_select` when `erp_sources` is
-   non-empty and through `empty_relation` when it is not — so naming them as
+   have. `stg_gl_entries` emits its dimension columns from `var('dimensions')` —
+   `dim_harmonize_select` builds the output list, and with `erp_sources: []` the
+   `empty_relation` branch types them from `get_dimensions()` — so naming them as
    literals here meant a site declaring a different set (or none) died with
-   `UNKNOWN_IDENTIFIER`. #}
+   `UNKNOWN_IDENTIFIER`.
+
+   One limit, narrowed after the PR #222 review: that is true of what
+   `stg_gl_entries` PUBLISHES, not of what it reads. With `erp_sources` non-empty
+   its `unioned` CTE still selects `dim_cost_center, dim_department,
+   dim_business_unit` from each adapter by name, so a site that declares a fourth
+   dimension AND runs an ERP connector fails inside `stg_gl_entries` before this
+   model is reached. That branch is ERP staging, which konsolidat#221 is removing
+   wholesale — so it is not repaired here. #}
 with vals as (
     {% if var('dimensions') | length == 0 %}
     {# No declared dimensions means no values to harmonize. A typed, row-less
