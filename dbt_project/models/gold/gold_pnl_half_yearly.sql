@@ -12,7 +12,7 @@ select
     tb.main_account,
     tb.account_name,
     tb.account_type_name,
-    {{ dim_select(prefix='tb.') }},
+    {{ dim_select(prefix='tb.', trailing=true) }}
     sum(tb.period_net_amount) as half_net_amount,
     sum(tb.period_debit) as half_debit,
     sum(tb.period_credit) as half_credit

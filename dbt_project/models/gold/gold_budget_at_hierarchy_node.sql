@@ -79,7 +79,7 @@ select
     b.layer,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
-    {%- endfor %},
+    {%- endfor %}{{ ',' if get_budget_dimensions() | length > 0 }}
     sum(b.period_amount) as period_amount,
     sum(b.annual_amount) as annual_amount
 from budget_dated as b

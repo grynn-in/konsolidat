@@ -12,7 +12,7 @@ select
     fiscal_period,
     main_account,
     account_name,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     reporting_currency,
     adjustment_type,
     journal_id,

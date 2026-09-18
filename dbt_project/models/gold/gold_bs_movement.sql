@@ -12,7 +12,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     coalesce(
         lagInFrame(cumulative_balance) over (
             partition by data_area_id, main_account, {{ dim_partition_by() }}

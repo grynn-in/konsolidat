@@ -12,7 +12,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_passthrough() }},
     -- Cumulative balance for BS accounts (running sum within year)
     sum(period_net_amount) over (

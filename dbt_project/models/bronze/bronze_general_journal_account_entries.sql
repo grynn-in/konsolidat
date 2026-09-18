@@ -42,7 +42,7 @@ select
     {{ cast_to_string('gl.description') }} as description,
     {# '' = no partner (the canonical column is NULL for every ERP today) #}
     {{ cast_to_string("coalesce(gl.partner_data_area_id, '')") }} as partner_data_area_id,
-    {{ dim_select_from_source(prefix='gl.') }},
+    {{ dim_select_from_source(prefix='gl.', trailing=true) }}
     {{ cast_to_datetime('gl._loaded_at') }} as _airbyte_extracted_at,
     {{ cast_to_string('gl._raw_id') }} as _airbyte_raw_id
 from {{ ref('stg_gl_entries') }} gl

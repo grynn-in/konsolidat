@@ -12,7 +12,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_passthrough() }}
 from {{ ref('gold_trial_balance') }}
 where is_pnl = 1
