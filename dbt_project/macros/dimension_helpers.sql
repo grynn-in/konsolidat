@@ -19,13 +19,28 @@
     {{ return(result) }}
 {% endmacro %}
 
+{# Returns the name of the dimension a site declares as its cost-centre dimension,
+   or '' when none does.
+
+   konsolidat#220: this used to fall back to the literal 'dim_cost_center', which
+   asserted one site's configuration as a fact. On a site that declares no
+   dimensions — the starting state of every new site (konsol#230) — or one whose
+   cost-centre dimension is spelled differently and carries no allocation_role,
+   that literal rendered into the allocation engine and the build died far from
+   its cause with `Code: 47 … Unknown expression identifier 'dim_cost_center'`.
+
+   CALLERS MUST HANDLE ''. `allocation_engine_multistep` renders a row-less result
+   in that case; `tests/assert_cascade_increases_pool` asserts nothing. The three
+   unreferenced engines (allocation_engine, _reciprocal, _tiered) have no callers
+   anywhere in models, tests or macros, so they never render — if one is ever
+   wired up, it needs the same guard. Decision recorded on konsolidat#220 (PR #222). #}
 {% macro get_allocation_cost_center_dim() %}
     {% for d in var('dimensions') %}
         {% if d.get('allocation_role', '') == 'cost_center' %}
             {{ return(d.name) }}
         {% endif %}
     {% endfor %}
-    {{ return('dim_cost_center') }}
+    {{ return('') }}
 {% endmacro %}
 
 {# konsolidat#220 — the `trailing` parameter.

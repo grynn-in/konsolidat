@@ -24,6 +24,39 @@
     {% endif %}
 {% endif %}
 
+{% if get_allocation_cost_center_dim() == '' %}
+{# konsolidat#220: no dimension declares `allocation_role: cost_center`, so there is
+   no dimension to allocate across and no rows is the true answer — the same
+   reasoning as the hierarchy rollups, which cannot roll up a dimension a site does
+   not have. Previously the macro returned the literal 'dim_cost_center' here and
+   the engine died on a column gold_trial_balance may not carry.
+
+   Unlike the unpivot macros, this contract CANNOT be derived with `<alias>.*`:
+   it is this model's own output, not a passthrough of an upstream relation, so
+   the 13 columns of step<N>_allocated are restated by hand and must be kept in
+   step with that CTE. A site that declares the role never renders this branch.
+
+   A misconfiguration — allocation rules that exist while no dimension declares the
+   role — is NOT silent: tests/assert_allocation_role_declared.sql fails on it.
+   Decision and the options weighed: konsolidat#220 (PR #222). #}
+select
+    {{ cast_to_string("''") }} as allocation_rule_id,
+    {{ cast_to_uint8('0') }} as step_order,
+    {{ cast_to_string("''") }} as data_area_id,
+    {{ cast_to_uint16('0') }} as fiscal_year,
+    {{ cast_to_uint8('0') }} as fiscal_period,
+    {{ cast_to_string("''") }} as source_account,
+    {{ cast_to_string("''") }} as source_cost_center,
+    {{ cast_to_string("''") }} as target_cost_center,
+    {{ cast_to_string("''") }} as target_account,
+    {{ cast_to_string("''") }} as driver_type,
+    {{ cast_to_decimal128('0', 2) }} as pool_amount,
+    toFloat64(0) as driver_weight,
+    {{ cast_to_decimal128('0', 2) }} as allocated_amount
+where 0
+
+{% else %}
+
 with all_rules as (
     {# PRD-17: the Allocation Rule doctype. konsolidat#146 removed the seed half
        of this union — it applied only when the staging table happened to be
@@ -193,5 +226,7 @@ all_allocations as (
 
 select * from all_allocations
 where allocation_rule_id != ''
+
+{% endif %}
 
 {% endmacro %}
