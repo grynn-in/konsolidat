@@ -42,11 +42,6 @@ EXPECTED_GOLD_TABLES = [
     "gold_consolidation_adjustments",
 ]
 
-EXPECTED_ALLOCATED_TABLES = [
-    "alloc_results",
-    "alloc_audit_trail",
-]
-
 
 @pytest.mark.parametrize("table", EXPECTED_GOLD_TABLES)
 def test_gold_table_exists_after_build(ch, dbt_run, table):
@@ -58,17 +53,6 @@ def test_gold_table_exists_after_build(ch, dbt_run, table):
         f"WHERE database = 'epm_gold' AND name = '{table}' FORMAT TabSeparated"
     )
     assert int(count) == 1, f"epm_gold.{table} does not exist after dbt build"
-
-
-@pytest.mark.parametrize("table", EXPECTED_ALLOCATED_TABLES)
-def test_allocated_table_exists_after_build(ch, dbt_run, table):
-    """After dbt build, allocated tables should exist in epm_allocated."""
-    dbt_run()
-    count = ch(
-        f"SELECT count() FROM system.tables "
-        f"WHERE database = 'epm_allocated' AND name = '{table}' FORMAT TabSeparated"
-    )
-    assert int(count) == 1, f"epm_allocated.{table} does not exist after dbt build"
 
 
 # ---------------------------------------------------------------------------

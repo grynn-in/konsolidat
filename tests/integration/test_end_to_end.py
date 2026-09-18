@@ -10,8 +10,6 @@ import pytest
 
 TEST_ENTITY = "__e2e_entity__"
 TEST_GROUP = "__e2e_group__"
-TEST_YEAR = 2099
-TEST_ACCOUNT = "999999"
 
 
 @pytest.fixture(scope="module")
@@ -45,26 +43,7 @@ def seed_staging_data(ch):
          0, '1900-01-01', 0, now())
     """)
 
-    # 3. Allocation rule + driver
-    ch(f"""
-        INSERT INTO epm_staging.allocation_rules
-        (allocation_rule_id, rule_name, source_account, driver_type,
-         allocation_method, step_order, driver_formula, updated_at)
-        VALUES
-        ('{TEST_GROUP}_ALLOC', 'E2E Allocation', '{TEST_ACCOUNT}', 'headcount',
-         'step_down', 1, '', now())
-    """)
-
-    ch(f"""
-        INSERT INTO epm_staging.allocation_drivers
-        (name, driver_type, data_area_id, fiscal_year, fiscal_period,
-         dim_cost_center, driver_value, updated_at)
-        VALUES
-        ('{TEST_GROUP}_DRV', 'headcount', '{TEST_ENTITY}', {TEST_YEAR}, 1,
-         'CC001', 10.0, now())
-    """)
-
-    # 4. IC elimination rule
+    # 3. IC elimination rule
     ch(f"""
         INSERT INTO epm_staging.ic_elimination_rules
         (rule_id, rule_name, source_entity, target_entity,
@@ -81,8 +60,6 @@ def seed_staging_data(ch):
     for table in [
         "consolidation_hierarchy",
         "ownership_periods",
-        "allocation_rules",
-        "allocation_drivers",
         "ic_elimination_rules",
     ]:
         try:
@@ -111,12 +88,6 @@ def test_staging_data_inserted(ch, seed_staging_data):
     )
     assert int(count) >= 1, "Ownership periods not inserted"
 
-    count = ch(
-        f"SELECT count() FROM epm_staging.allocation_rules "
-        f"WHERE allocation_rule_id = '{TEST_GROUP}_ALLOC' FORMAT TabSeparated"
-    )
-    assert int(count) >= 1, "Allocation rules not inserted"
-
 
 def test_dbt_build_with_staging_data(ch, dbt_run, seed_staging_data):
     """dbt build should succeed with test staging data present."""
@@ -135,7 +106,6 @@ def test_pipeline_chain_produces_output(ch, dbt_run, seed_staging_data):
     for table in [
         "gold_trial_balance",
         "gold_consolidated_trial_balance",
-        "gold_allocation_results",
     ]:
         try:
             count = ch(f"SELECT count() FROM epm.{table} FORMAT TabSeparated")

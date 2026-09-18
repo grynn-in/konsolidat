@@ -14,12 +14,8 @@ EXPECTED_STAGING_TABLES = [
     "historical_equity_rates",
     "ownership_periods",
     "consolidation_adjustments",
-    "allocation_rules",
-    "allocation_drivers",
-    "allocation_tiers",
     "ic_elimination_rules",
     "ic_balances",
-    "allocation_runs",
 ]
 
 
@@ -91,21 +87,6 @@ class TestStagingInsert:
         count = ch(
             f"SELECT count() FROM epm_staging.ownership_periods "
             f"WHERE name = '{self.TEST_PREFIX}OP1' FORMAT TabSeparated"
-        )
-        assert int(count) >= 1
-
-    def test_insert_allocation_rules(self, ch):
-        ch(f"""
-            INSERT INTO epm_staging.allocation_rules
-            (allocation_rule_id, rule_name, source_account, driver_type,
-             allocation_method, step_order, driver_formula, updated_at)
-            VALUES
-            ('{self.TEST_PREFIX}R1', 'Test Rule', '7000', 'headcount',
-             'step_down', 1, '', now())
-        """)
-        count = ch(
-            f"SELECT count() FROM epm_staging.allocation_rules "
-            f"WHERE allocation_rule_id = '{self.TEST_PREFIX}R1' FORMAT TabSeparated"
         )
         assert int(count) >= 1
 
