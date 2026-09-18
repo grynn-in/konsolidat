@@ -14,7 +14,7 @@ select
     curr.account_type_name,
     curr.is_balance_sheet,
     curr.is_pnl,
-    {{ dim_select(prefix='curr.') }},
+    {{ dim_select(prefix='curr.', trailing=true) }}
     curr.period_net_amount as current_amount,
     coalesce(py.period_net_amount, 0) as prior_year_amount,
     curr.period_net_amount - coalesce(py.period_net_amount, 0) as yoy_variance_abs,

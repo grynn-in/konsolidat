@@ -46,7 +46,7 @@ typed as (
         main_account,
         account_name,
         account_type_name,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         amount
     from {{ ref('gold_scenario_trial_balance') }}
     where scenario_id in (select scenario_id from actual_scenarios)
@@ -94,7 +94,7 @@ paired as (
         main_account,
         account_name,
         account_type_name,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         amount,
         budget_scenario_id
     from typed
@@ -113,7 +113,7 @@ paired as (
         main_account,
         account_name,
         account_type_name,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         amount,
         scenario_id as budget_scenario_id
     from typed
@@ -126,7 +126,7 @@ grouped as (
         fiscal_year,
         fiscal_period,
         main_account,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         budget_scenario_id,
         max(account_name) as account_name,
         max(account_type_name) as account_type_name,
@@ -137,7 +137,7 @@ grouped as (
            null) as budget_amount
     from paired
     group by data_area_id, fiscal_year, fiscal_period, main_account,
-             {{ dim_group_by(dims=budget_dims) }}, budget_scenario_id
+             {{ dim_group_by(dims=budget_dims, trailing=true) }} budget_scenario_id
 ),
 
 {# Get account metadata for accounts that only appear in budget #}

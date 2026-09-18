@@ -28,7 +28,7 @@ select
     fiscal_period,
     main_account,
     adjustment_type,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     groupUniqArray(journal_id) as journal_ids,
     count() as n_rows,
     sum(amount) as net_amount
@@ -40,6 +40,6 @@ group by
     fiscal_year,
     fiscal_period,
     main_account,
-    adjustment_type,
-    {{ dim_group_by() }}
+    adjustment_type
+    {{- dim_group_by(leading=true) }}
 having count() > 1

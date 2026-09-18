@@ -98,7 +98,7 @@ paired as (
         main_account,
         account_name,
         account_type_name,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         amount,
         budget_scenario_id
     from typed
@@ -117,7 +117,7 @@ paired as (
         main_account,
         account_name,
         account_type_name,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         amount,
         scenario_id as budget_scenario_id
     from typed
@@ -130,7 +130,7 @@ grouped as (
         fiscal_year,
         fiscal_quarter,
         main_account,
-        {{ dim_select(dims=budget_dims) }},
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         budget_scenario_id,
         max(account_name) as account_name,
         max(account_type_name) as account_type_name,
@@ -141,7 +141,7 @@ grouped as (
            null) as budget_amount
     from paired
     group by data_area_id, fiscal_year, fiscal_quarter, main_account,
-             {{ dim_group_by(dims=budget_dims) }}, budget_scenario_id
+             {{ dim_group_by(dims=budget_dims, trailing=true) }} budget_scenario_id
 )
 
 select
@@ -151,7 +151,7 @@ select
     main_account,
     account_name,
     account_type_name,
-    {{ dim_select(dims=budget_dims) }},
+    {{ dim_select(dims=budget_dims, trailing=true) }}
     actual_amount,
     budget_amount,
     actual_amount - coalesce(budget_amount, 0) as variance_abs,
