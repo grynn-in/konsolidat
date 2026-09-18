@@ -37,7 +37,9 @@
    step with that CTE. A site that declares the role never renders this branch.
 
    A misconfiguration — allocation rules that exist while no dimension declares the
-   role — is NOT silent: tests/assert_allocation_role_declared.sql fails on it.
+   role — is NOT silent: tests/assert_allocation_role_declared.sql warns on it
+   (severity='warn', so the close completes and these models build empty rather
+   than being skipped).
    THE `-- depends_on:` LINES BELOW ARE LOAD-BEARING. This branch renders no
    ref() and no source(), so without them alloc_results has NO dag parents at a
    role-less site — measured: depends_on goes from three nodes to []. It would
@@ -59,18 +61,28 @@ select
     {{ cast_to_uint8('0') }} as step_order,
     {{ cast_to_string("''") }} as data_area_id,
     {{ cast_to_uint16('0') }} as fiscal_year,
-    {{ cast_to_uint8('0') }} as fiscal_period,
+    {{ cast_to_uint16('0') }} as fiscal_period,
     {{ cast_to_string("''") }} as source_account,
     {{ cast_to_string("''") }} as source_cost_center,
     {{ cast_to_string("''") }} as target_cost_center,
     {{ cast_to_string("''") }} as target_account,
     {{ cast_to_string("''") }} as driver_type,
-    {# types match step<N>_allocated exactly: pool_amount is
-       cast_to_float64(sum(tb.amount)) + coalesce(...) => Float64; driver_weight is
-       driver_value / nullIf(sum(...) over (...), 0) => Nullable(Float64); and
-       allocated_amount is their product => Nullable(Float64). Declaring
-       Decimal128 here published a different DDL for epm_allocated.alloc_results
-       depending on site configuration. #}
+    {# Types below are VERIFIED against the real branch by DESCRIBE on
+       epm_allocated.alloc_results built both ways, not by reading the SQL — an
+       earlier version of this comment claimed "types match exactly" after
+       reasoning about only three of the thirteen columns, and fiscal_period was
+       wrong: the real branch inherits it from gold_trial_balance, where an if()
+       over UInt8 operands promotes to UInt16, while this branch declared UInt8.
+       That published a different DDL for the same table depending on site
+       configuration, which is the defect this block exists to prevent.
+
+       Measured: pool_amount Float64 (cast_to_float64(sum(tb.amount)) + coalesce(...)),
+       driver_weight and allocated_amount Nullable(Float64) (driver_value /
+       nullIf(sum(...) over (...), 0), and their product), fiscal_year UInt16,
+       fiscal_period UInt16, step_order UInt8, the rest String.
+
+       If step<N>_allocated changes, NOTHING fails — there is no contract on this
+       model. Re-run DESCRIBE both ways after touching that CTE. #}
     {{ cast_to_float64('0') }} as pool_amount,
     toNullable({{ cast_to_float64('0') }}) as driver_weight,
     toNullable({{ cast_to_float64('0') }}) as allocated_amount
