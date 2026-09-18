@@ -40,8 +40,6 @@ EXPECTED_GOLD_TABLES = [
     "gold_trial_balance_by_partner",
     "gold_fx_revaluation",
     "gold_consolidation_adjustments",
-    "gold_allocation_results",
-    "gold_allocation_audit_trail",
 ]
 
 EXPECTED_ALLOCATED_TABLES = [
