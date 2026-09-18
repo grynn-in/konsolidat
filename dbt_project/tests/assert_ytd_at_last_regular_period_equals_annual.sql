@@ -22,6 +22,18 @@
 --
 -- Warns (not fails) because some dimension combos have no posting at the last
 -- Regular period, so their YTD stops at an earlier period.
+{# konsolidat#220: the dimension grain is SITE-DECLARED, not fixed. konsol ships no
+   Dimensions and each site declares its own (konsol#230), so naming three dimension
+   columns as literals here asserted one site's configuration — and a site declaring
+   none (the starting state of every new site) failed this test on a missing column,
+   which is exactly what build 5 caught. The final select renders them through
+   dim_select() and the join through dim_join_on(), so the comparison is made at
+   whatever grain the site declares: those three, a different set, or none at all.
+   The intent above is unchanged — YTD at the last Regular period is still compared
+   to the year's Regular activity per declared dimension combination. With no
+   dimensions declared, dim_join_on() renders nothing and the two sides tie on
+   (data_area_id, fiscal_year, main_account), which IS the full grain of a site
+   with no dimensions. #}
 with calendar as (
     select
         toUInt16(fiscal_year) as fiscal_year,
@@ -54,9 +66,7 @@ select
     ytd.fiscal_year,
     ytd.fiscal_period as last_regular_period,
     ytd.main_account,
-    ytd.dim_cost_center,
-    ytd.dim_department,
-    ytd.dim_business_unit,
+    {{ dim_select(prefix='ytd.', trailing=true) }}
     ytd.ytd_net_amount as ytd_at_last_regular_period,
     annual.annual_total,
     abs(ytd.ytd_net_amount - annual.annual_total) as gap
@@ -68,7 +78,5 @@ inner join annual
     on ytd.data_area_id = annual.data_area_id
     and ytd.fiscal_year = annual.fiscal_year
     and ytd.main_account = annual.main_account
-    and ytd.dim_cost_center = annual.dim_cost_center
-    and ytd.dim_department = annual.dim_department
-    and ytd.dim_business_unit = annual.dim_business_unit
+    {{ dim_join_on('ytd', 'annual') }}
 where abs(ytd.ytd_net_amount - annual.annual_total) > 0.01
