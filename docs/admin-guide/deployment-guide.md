@@ -104,7 +104,7 @@ A single server runs everything:
 │  │  ┌──────────────────────────────────────────────────┐  │  │
 │  │  │           Frappe + Konsol App                     │  │  │
 │  │  │  backend (web) + worker (jobs) + scheduler       │  │  │
-│  │  │  • Consolidation & allocation doctypes           │  │  │
+│  │  │  • Consolidation doctypes                        │  │  │
 │  │  │  • ClickHouse sync hooks                         │  │  │
 │  │  │  • Budget write-back API                         │  │  │
 │  │  │  • Pipeline runner (dbt build)                   │  │  │

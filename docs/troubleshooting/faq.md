@@ -88,9 +88,6 @@ ClickHouse is a columnar OLAP database optimized for aggregation queries. Financ
 **Q: Can I run dbt against a different database?**
 dbt-clickhouse is the only tested adapter. The SQL uses ClickHouse-specific functions (via `db_adapter.sql` macros), so other databases would require adapter changes.
 
-**Q: How do I add a new allocation rule?**
-Add a row to `allocation_rules.csv`, create driver data, and update the multi-step macro. See [Allocation Guide](../user-guide/allocation-guide.md).
-
 **Q: How are tests structured?**
 26 assertion tests in `dbt_project/tests/`. Each returns rows that violate a rule — zero rows = pass. See [Testing Guide](../developer-guide/testing-guide.md).
 

@@ -122,7 +122,7 @@ Configure Airbyte to call the sync-complete webhook so Frappe can track sync sta
 cd dbt_project
 pip install dbt-core dbt-clickhouse
 dbt deps
-dbt seed    # Load allocation rules, consolidation groups, etc.
+dbt seed    # Load consolidation groups, etc.
 dbt build   # Build all models + run tests
 ```
 

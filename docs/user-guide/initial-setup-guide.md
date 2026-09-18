@@ -9,18 +9,16 @@ graph TD
     EPM[1. EPM Settings<br/>ClickHouse + Airbyte + dbt] --> DIM[2. Dimensional Model<br/>Periods, Dimensions, Measures]
     DIM --> SCEN[3. Scenarios<br/>Actual, Budget, Forecast]
     SCEN --> CONSOL[4. Consolidation<br/>Entity hierarchy + rules]
-    SCEN --> ALLOC[5. Allocations<br/>Rules + drivers]
-    SCEN --> BUDGET[6. Budgeting<br/>Spread profiles + input]
-    CONSOL --> PIPE[7. Pipeline Run<br/>Sync + transform]
-    ALLOC --> PIPE
+    SCEN --> BUDGET[5. Budgeting<br/>Spread profiles + input]
+    CONSOL --> PIPE[6. Pipeline Run<br/>Sync + transform]
     BUDGET --> PIPE
-    PIPE --> EXCEL[8. Excel<br/>First =EPM formula]
+    PIPE --> EXCEL[7. Excel<br/>First =EPM formula]
 
     style EPM fill:#4051b5,color:#fff
     style PIPE fill:#4051b5,color:#fff
 ```
 
-Steps 4–6 are independent — configure only what you need.
+Steps 4–5 are independent — configure only what you need.
 
 ---
 
@@ -102,15 +100,14 @@ Create 14 periods for a standard fiscal year:
 
 Dimensions define the axes of your financial cube. Create one for each reporting dimension you need:
 
-| Dimension Name | Source Column | Label | In Budget | Allocation Role |
-|---------------|---------------|-------|-----------|-----------------|
-| `dim_cost_center` | `CostCenter` | Cost Center | Yes | `cost_center` |
-| `dim_department` | `Department` | Department | Yes | — |
-| `dim_business_unit` | `BusinessUnit` | Business Unit | No | — |
+| Dimension Name | Source Column | Label | In Budget |
+|---------------|---------------|-------|-----------|
+| `dim_cost_center` | `CostCenter` | Cost Center | Yes |
+| `dim_department` | `Department` | Department | Yes |
+| `dim_business_unit` | `BusinessUnit` | Business Unit | No |
 
 - **Source Column** maps to the OData field name in your ERP
 - **In Budget** includes this dimension in budget entry forms
-- **Allocation Role** links the dimension to cost allocation drivers
 
 ### Measures
 
@@ -202,39 +199,7 @@ See the [Consolidation Guide](consolidation-guide.md) for formulas, translation 
 
 ---
 
-## Step 5: Cost Allocation (optional)
-
-### Allocation Rules
-
-**Lists → Allocation → Allocation Rule**
-
-Define cost pools and how they're distributed. Rules execute in `step_order`:
-
-| Step | Rule | Source | Driver | Method |
-|------|------|--------|--------|--------|
-| 1 | IT Cost Allocation | Account 7100, CC: IT | headcount | step_down |
-| 2 | Facility Allocation | Account 7200, CC: FACILITY | sqm | step_down |
-| 3 | Management Fees | Account 7300, CC: MGMT | revenue | step_down |
-
-Driver types: `headcount`, `revenue`, `sqm`, `composite`, `conditional`, `tiered`.
-
-### Allocation Drivers
-
-**Lists → Allocation → Allocation Driver**
-
-Populate driver values for each entity, cost center, and period:
-
-| Entity | Cost Center | Driver Type | Value | Year | Period |
-|--------|------------|-------------|-------|------|--------|
-| USMF | SALES | headcount | 50 | 2024 | 5 |
-| USMF | MARKETING | headcount | 25 | 2024 | 5 |
-| USMF | SALES | sqm | 2000 | 2024 | 5 |
-
-See the [Allocation Guide](allocation-guide.md) for cascade logic, reciprocal allocation, and composite drivers.
-
----
-
-## Step 6: Budgeting (optional)
+## Step 5: Budgeting (optional)
 
 ### Spread Profiles
 
@@ -262,7 +227,7 @@ See the [Budgeting Guide](budgeting-guide.md) and [Budget Layers](budget-layers.
 
 ---
 
-## Step 7: Connect Your ERP via Airbyte {: #setting-up-airbyte }
+## Step 6: Connect Your ERP via Airbyte {: #setting-up-airbyte }
 
 Airbyte syncs live data from your ERP into ClickHouse. It runs as a separate service.
 
@@ -322,7 +287,7 @@ Open the Airbyte UI at [http://localhost:8000](http://localhost:8000).
 
 ---
 
-## Step 8: Run the Pipeline
+## Step 7: Run the Pipeline
 
 **Lists → Pipeline → Pipeline Run → New → Submit**
 
@@ -363,17 +328,14 @@ After the first successful run, your data is available in:
 | 5 | Scenarios | Lists → EPM → Scenario Definition | Yes | 2 min |
 | 6 | Consolidation Groups | Lists → Consolidation → Consolidation Group | Multi-entity only | 10 min |
 | 7 | IC Elimination Rules | Lists → Consolidation → IC Elimination Rule | Multi-entity only | 5 min |
-| 8 | Allocation Rules | Lists → Allocation → Allocation Rule | If allocating costs | 10 min |
-| 9 | Allocation Drivers | Lists → Allocation → Allocation Driver | If allocating costs | 10 min |
-| 10 | Spread Profiles | Lists → EPM → Spread Profile | If budgeting | 5 min |
-| 11 | Budget Sheets | Lists → EPM → Budget Sheet | If budgeting | varies |
-| 12 | Airbyte Connection | Airbyte UI + EPM Settings | For live ERP data | 15 min |
-| 13 | Pipeline Run | Lists → Pipeline → Pipeline Run | Yes | 5 min |
+| 8 | Spread Profiles | Lists → EPM → Spread Profile | If budgeting | 5 min |
+| 9 | Budget Sheets | Lists → EPM → Budget Sheet | If budgeting | varies |
+| 10 | Airbyte Connection | Airbyte UI + EPM Settings | For live ERP data | 15 min |
+| 11 | Pipeline Run | Lists → Pipeline → Pipeline Run | Yes | 5 min |
 
 ## Next Steps
 
 - [Excel Formulas Guide](excel-formulas-guide.md) — install the Excel add-in and write your first `=K.EPM()` formula
 - [Consolidation Guide](consolidation-guide.md) — currency translation, IC elimination, and CTA calculation
-- [Allocation Guide](allocation-guide.md) — multi-step cost allocation with driver cascading
 - [Budgeting Guide](budgeting-guide.md) — spread profiles, budget layers, and variance analysis
 - [API Reference](../api-reference/api-overview.md) — all available endpoints for programmatic access

@@ -1,6 +1,6 @@
 # Report Catalog
 
-Quick reference for all 22 gold models with sample `=K.EPM()` formulas for common reports.
+Quick reference for all 21 gold models with sample `=K.EPM()` formulas for common reports.
 
 ## Model Quick Reference
 
@@ -43,11 +43,10 @@ Quick reference for all 22 gold models with sample `=K.EPM()` formulas for commo
 | `gold_fully_consolidated_tb` | 4-layer consolidated TB | `amount` by `adjustment_type` |
 | `gold_consolidated_ytd` | YTD consolidated | `ytd_amount` |
 
-### Allocation & Scenarios
+### Scenarios
 
 | Model | Purpose | Key Measures |
 |-------|---------|-------------|
-| `gold_allocation_results` | Cost allocation outputs | `pool_amount`, `driver_weight`, `allocated_amount` |
 | `gold_scenario_trial_balance` | Cross-scenario union | `amount` by `scenario_id` |
 | `gold_scenario_versions` | Scenario metadata | `is_active` |
 

@@ -36,18 +36,6 @@ Full IFRS/GAAP consolidation pipeline, entirely in dbt SQL:
 
 See the [Consolidation Guide](user-guide/consolidation-guide.md) for details.
 
-## Driver-Based Cost Allocations
-
-Multi-step cascading allocation engine with three built-in allocation types:
-
-1. **Step 1** — IT costs allocated by headcount
-2. **Step 2** — Facility costs allocated by square meters (includes Step 1 cascade)
-3. **Step 3** — Management fees allocated by revenue (includes Step 1+2 cascade)
-
-Allocation rules, drivers, and cost center mappings are all defined in CSV seeds — no code changes needed.
-
-See the [Allocation Guide](user-guide/allocation-guide.md) for configuration.
-
 ## Budgeting & Variance Analysis
 
 - **Annual input** — Budget line items defined in CSV, one row per entity/account/year
@@ -68,7 +56,7 @@ Four-layer data pipeline from source to reporting:
 | **Staging** | `epm_staging` | Views | Field renames, joins, JSON parsing |
 | **Bronze** | `epm_bronze` | 14 tables | Type-cast, snake_case, dimension mapping |
 | **Silver** | `epm_silver` | 8 tables | Deduplicated, standardized trial balance |
-| **Gold** | `epm_gold` | 22 tables | Business logic: consolidation, allocations, variance |
+| **Gold** | `epm_gold` | 22 tables | Business logic: consolidation, budgeting, variance |
 
 See the [Data Dictionary](data-dictionary/data-dictionary-overview.md) for model-level documentation.
 
@@ -103,7 +91,6 @@ vars:
   dimensions:
     - name: dim_cost_center
       source_column: CostCenter
-      allocation_role: cost_center
     - name: dim_department
       source_column: Department
     - name: dim_business_unit

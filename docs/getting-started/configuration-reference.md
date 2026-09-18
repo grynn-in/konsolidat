@@ -43,7 +43,6 @@ vars:
       label: "Cost Center"
       cube_type: string
       in_budget: true                  # Include in budget models
-      allocation_role: cost_center     # Used by allocation engine
     - name: dim_department
       source_column: Department
       label: "Department"

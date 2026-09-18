@@ -11,7 +11,6 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Data pipeline (Bronze → Silver → Gold) | **Done** — 77 dbt models, 144 tests |
 | Consolidation (FX, IC elimination, CTA, NCI) | **Done** — IFRS/GAAP compliant |
 | Hierarchy, equity method, acquisition/disposal | **Done** |
-| Allocations (multi-step cascade, reciprocal, tiered) | **Done** — dynamic N-step engine |
 | Budget write-back (Excel → CH) | **Done** — K.EPMSAVE() from Excel + Frappe API |
 | Budget write-back (CH → ERP) | **Not started** — push approved budget to D365 BudgetRegisterEntries |
 | Scenario management | **Done** — budget/forecast/whatif via API |
@@ -31,7 +30,6 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 | Multi-GAAP | **Not started** |
 | Rolling forecasts | **Not started** |
 | Consolidation enhancements (goodwill CTA, NCI in combos, disposal recycling) | **Not started** |
-| Allocation enhancements (circular, reciprocal) | **Not started** |
 | Planning enhancements (driver-based, recurring journals) | **Not started** |
 | Reporting enhancements (waterfall, trend, commentary) | **Not started** |
 
@@ -66,8 +64,7 @@ The Frappe API, ClickHouse DDL, and Budget Input form are still hardcoded to spe
 ### 2.1 Dimension Registry ~~(1 day)~~ DONE
 
 - [x] Frappe `Dimension` doctype — on save, auto-generates `dbt_project.yml` `vars.dimensions` via `dbt_config.py`
-- [x] Fields: `dimension_name`, `source_column`, `label`, `cube_type`, `in_budget`, `allocation_role`
-- [x] Allocation engine uses `allocation_role` from dimension config
+- [x] Fields: `dimension_name`, `source_column`, `label`, `cube_type`, `in_budget`
 - [ ] ClickHouse `ALTER TABLE ADD COLUMN` on dimension save (currently requires dbt rebuild)
 - [ ] Budget Input doctype field generation (dynamic via Frappe custom fields API)
 
@@ -88,18 +85,12 @@ PRD: [Fact Registry](../prd/PRD-FACT-REGISTRY.md)
 - [ ] Core facts (pre-seeded, always present):
   - **GL Journal Entries** — debits/credits by account/period/entity (the universal financial fact)
   - **Budget Input** — budget submissions per cell
-  - **Allocation Results** — derived output from allocation engine
-- [ ] Statistical facts (customer-configurable):
-  - **Headcount** — employees per cost center per period (for allocation drivers)
-  - **Area (sqm)** — square metres per cost center (for facilities allocation)
-  - **Revenue by Product** — for revenue-based allocation
 - [ ] Sub-ledger facts (for detailed reporting):
   - **Accounts Payable** — invoice-level detail for cash flow
   - **Fixed Assets** — asset register for depreciation / investing cash flow
   - **Accounts Receivable** — aging for working capital analysis
 - [ ] Each Fact Table defines: required dimensions, required measures, ClickHouse table name, dbt model name
 - [ ] On save: generates ClickHouse staging table DDL + dbt source definition
-- [ ] Statistical facts replace the current `allocation_drivers` seed with a proper queryable fact table
 
 ### 2.4 API Generalisation (1 day)
 
@@ -320,14 +311,7 @@ PRD: [Consolidation Enhancements](../prd/PRD-CONSOLIDATION-ENHANCEMENTS.md)
 - [ ] NCI in business combinations — goodwill allocation to NCI (full vs partial goodwill methods)
 - [ ] Changes in ownership without loss of control — equity transactions between parent and NCI
 
-### 6.7 Allocation Enhancements (3–5 days)
-
-PRD: [Allocation Enhancements (Circular & Reciprocal)](../prd/PRD-ALLOCATION-ENHANCEMENTS.md)
-
-- [ ] Circular (iterative) allocations — convergence-based solving for reciprocal cost pools
-- [ ] Reciprocal allocation method — simultaneous equations approach (alternative to iteration)
-
-### 6.8 Planning Enhancements (1 week)
+### 6.7 Planning Enhancements (1 week)
 
 PRD: [Planning Enhancements (Driver-Based & Recurring)](../prd/PRD-PLANNING-ENHANCEMENTS.md)
 
@@ -336,7 +320,7 @@ PRD: [Planning Enhancements (Driver-Based & Recurring)](../prd/PRD-PLANNING-ENHA
 - [ ] Recurring journal templates — auto-generate topside journals on schedule
 - [ ] Topside journal approval workflow (separate from budget approval)
 
-### 6.9 Reporting Enhancements (3–5 days)
+### 6.8 Reporting Enhancements (3–5 days)
 
 PRD: [Reporting Enhancements (Waterfall, Trend, Commentary)](../prd/PRD-REPORTING-ENHANCEMENTS.md)
 
@@ -344,13 +328,13 @@ PRD: [Reporting Enhancements (Waterfall, Trend, Commentary)](../prd/PRD-REPORTIN
 - [ ] Trend analysis — period-over-period and rolling averages
 - [ ] Commentary / annotation on variances — attach narrative to variance cells
 
-### 6.10 Close Assertion Suite — Reconciliation Gate (3–5 days)
+### 6.9 Close Assertion Suite — Reconciliation Gate (3–5 days)
 
 PRD: [Close Assertion Suite — Reconciliation Gate](../prd/PRD-CLOSE-ASSERTION-SUITE.md)
 
 > Every close runs against an automated assertion suite. **Green** means the numbers reconcile; **red** tells you exactly which row broke, and why — before anyone signs off.
 
-- [ ] Surface the **60+ existing dbt `assert_*` tests** (BS balances, CTA, IC elimination, equity method, allocations, hierarchy ties) as a named, per-close **assertion suite**, run on a Pipeline Build Request via `dbt build` / `dbt test --store-failures`
+- [ ] Surface the **60+ existing dbt `assert_*` tests** (BS balances, CTA, IC elimination, equity method, hierarchy ties) as a named, per-close **assertion suite**, run on a Pipeline Build Request via `dbt build` / `dbt test --store-failures`
 - [ ] `Close Assertion Run` doctype — one row per assertion with pass/fail (green/red), category, and a link to its failing rows
 - [ ] Capture the **failing rows + reason** from dbt `--store-failures` (the offending entity/account/period rows — not just "a test failed")
 - [ ] Close sign-off **gate** — block close approval (ties into the budget/consolidation approval chain, §6.5) until the suite is green, with an explicit, audited override
@@ -382,7 +366,7 @@ PRD: [Production Hardening](../prd/PRD-PRODUCTION-HARDENING.md)
 | **Phase 3:** Multi-ERP (6 connectors + scale) | ~~8 weeks~~ ~6 weeks remaining | Phase 2 (dimension abstraction) |
 | **Phase 4:** Security & SSO | ~2 days | Phase 1 |
 | **Phase 5:** Excel Online Add-in | ~~3 days~~ **Done** | — |
-| **Phase 6:** Analytical gaps, consolidation/allocation/planning/reporting enhancements | ~6 weeks | Phase 2 (dimensions) |
+| **Phase 6:** Analytical gaps, consolidation/planning/reporting enhancements | ~6 weeks | Phase 2 (dimensions) |
 | **Phase 7:** Production hardening | ~3 days | Phase 1 |
 | **Total** | **~7 weeks** | |
 
