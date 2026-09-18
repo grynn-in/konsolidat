@@ -58,7 +58,7 @@ cmd_restore() {
 cmd_state() {
   echo "----- STATE -----"
   bx "cd $APP && echo HEAD=\$(git rev-parse --short HEAD 2>/dev/null) \$(git log -1 --format=%s 2>/dev/null | cut -c1-50)"
-  echo "doctypes(konsol): $(mysql_site "SELECT COUNT(*) FROM tabDocType WHERE module IN ('Pipeline','EPM','Consolidation','Allocation','Budget','Data Pipeline','EPM Registry')")"
+  echo "doctypes(konsol): $(mysql_site "SELECT COUNT(*) FROM tabDocType WHERE module IN ('Pipeline','EPM','Consolidation','Budget','Data Pipeline','EPM Registry')")"
   for dt in 'Dataset' 'Budget Cycle' 'Budget Sheet' 'Reporting Hierarchy'; do
     printf "  exists[%s]=%s\n" "$dt" "$(mysql_site "SELECT COUNT(*) FROM tabDocType WHERE name='$dt'")"
   done

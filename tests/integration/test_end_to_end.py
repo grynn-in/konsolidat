@@ -67,7 +67,6 @@ def seed_staging_data(ch):
                 f"ALTER TABLE epm_staging.{table} DELETE "
                 f"WHERE toString(consolidation_group) LIKE '{TEST_GROUP}%' "
                 f"OR toString(name) LIKE '{TEST_GROUP}%' "
-                f"OR toString(allocation_rule_id) LIKE '{TEST_GROUP}%' "
                 f"OR toString(rule_id) LIKE '{TEST_GROUP}%'"
             )
         except Exception:

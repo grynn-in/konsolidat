@@ -115,7 +115,6 @@ class TestStagingInsert:
                     f"ALTER TABLE epm_staging.{table} DELETE "
                     f"WHERE toString(consolidation_group) LIKE '{self.TEST_PREFIX}%' "
                     f"OR toString(name) LIKE '{self.TEST_PREFIX}%' "
-                    f"OR toString(allocation_rule_id) LIKE '{self.TEST_PREFIX}%' "
                     f"OR toString(rule_id) LIKE '{self.TEST_PREFIX}%'"
                 )
             except Exception:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The first dbt build on a fresh, trial-balance-only site (konsol#182).
 
-A site that takes its figures from uploaded trial balances has no ERP rows, no
-allocation rules and no ERP exchange-rate quotes. Its warehouse is exactly what
+A site that takes its figures from uploaded trial balances has no ERP rows and
+no ERP exchange-rate quotes. Its warehouse is exactly what
 a fresh ClickHouse volume gets: clickhouse/init-db.sql and
 clickhouse/raw-schema.sql, every table empty. This script builds that shape
 under a scratch prefix and runs
@@ -21,7 +21,7 @@ must not exist yet; everything it creates is dropped at the end (--keep to
 inspect it).
 
 --fixture also loads a small ZZ data set (a published chart, one entity, one
-group, one claimed TB submission, one allocation rule) and checks the same
+group, one claimed TB submission) and checks the same
 selection still builds with rows in gold_consolidated_trial_balance. It then
 plants one bad ERP quote in <prefix>_silver.silver_exchange_rates and requires
 the ERP-quote tests to flag it, so a TB-only guard cannot hide a real problem.
@@ -165,8 +165,6 @@ def fixture_sql(p):
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ4000', 0, 100, '', 'ZZ-TBS-1', now())",
         # konsolidat#199: columns named, basis declared (tests/test_raw_submission_ddl.py)
         f"INSERT INTO {p}_raw.trial_balance_submission_control (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis) VALUES ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now(), 'Period movement')",
-        f"INSERT INTO {p}_staging.allocation_rules (allocation_rule_id, rule_name, step_order, source_account, source_cost_center, driver_type, target_account) VALUES "
-        "('ZZAR1', 'ZZ rule', 1, 'ZZ4000', 'ZZCC', 'headcount', 'ZZ4000')",
     ]
 
 
