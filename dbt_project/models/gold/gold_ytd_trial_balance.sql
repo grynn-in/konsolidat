@@ -26,10 +26,10 @@ select
     account_type_name,
     is_balance_sheet,
     is_pnl,
-    {{ dim_select() }},
+    {{ dim_select(trailing=true) }}
     {{ measure_passthrough() }},
     sum(period_net_amount) over (
-        partition by data_area_id, fiscal_year, main_account, {{ dim_partition_by() }}
+        partition by data_area_id, fiscal_year, main_account{{ dim_partition_by(leading=true) }}
         order by fiscal_period
         rows between unbounded preceding and current row
     ) as ytd_net_amount

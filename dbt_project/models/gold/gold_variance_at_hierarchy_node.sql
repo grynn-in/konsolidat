@@ -80,7 +80,7 @@ select
     v.budget_scenario_id,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
-    {%- endfor %},
+    {%- endfor %}{{ ',' if get_budget_dimensions() | length > 0 }}
     {{ variance_measure_sums('v.') }}
 from variance_dated as v
 inner join leaf_closure as lc
@@ -102,7 +102,8 @@ group by
     v.fiscal_year,
     v.fiscal_period,
     v.main_account,
-    v.budget_scenario_id,
+    v.budget_scenario_id
+    {{- ',' if get_budget_dimensions() | length > 0 }}
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}

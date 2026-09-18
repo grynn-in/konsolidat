@@ -41,13 +41,13 @@ last_regular as (
 annual as (
     select
         data_area_id, fiscal_year, main_account,
-        {{ dim_select() }},
+        {{ dim_select(trailing=true) }}
         sum(period_net_amount) as annual_total
     from {{ ref('gold_trial_balance') }}
     where (toUInt16(fiscal_year), toUInt16(fiscal_period)) not in (
         select fiscal_year, fiscal_period from calendar where is_closing = 1
     )
-    group by data_area_id, fiscal_year, main_account, {{ dim_group_by() }}
+    group by data_area_id, fiscal_year, main_account{{ dim_group_by(leading=true) }}
 )
 select
     ytd.data_area_id,
