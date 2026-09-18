@@ -28,20 +28,33 @@
     {{ return('dim_cost_center') }}
 {% endmacro %}
 
+{# konsolidat#220 — the `trailing` parameter.
+   These macros emit their own INTERNAL separators, so a list renders as
+   `a, b, c` with no trailing comma. A call site that is followed by more
+   columns therefore used to write its own literal comma — which dangles into
+   malformed SQL when the site declares NO dimensions (the starting state of
+   every new site since konsol#230). Pass `trailing=true` at those call sites
+   and drop the literal comma: the comma is then emitted only when the
+   rendered list is non-empty. It defaults to false so a call site that is
+   LAST in its list (and correctly has no comma) is unaffected by this
+   parameter existing. #}
+
 {# SELECT list of dimension columns with optional table prefix #}
-{% macro dim_select(prefix='', dims=none) %}
+{% macro dim_select(prefix='', dims=none, trailing=false) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# GROUP BY list of dimension columns with optional table prefix #}
-{% macro dim_group_by(prefix='', dims=none) %}
+{% macro dim_group_by(prefix='', dims=none, trailing=false) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# JOIN conditions for matching dimensions between two aliases #}
@@ -61,19 +74,21 @@
 {% endmacro %}
 
 {# PARTITION BY clause for window functions #}
-{% macro dim_partition_by(prefix='', dims=none) %}
+{% macro dim_partition_by(prefix='', dims=none, trailing=false) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# Empty string literals for non-entity layers (IC eliminations, CTA, etc.) #}
-{% macro dim_empty_strings(dims=none) %}
+{% macro dim_empty_strings(dims=none, trailing=false) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
     '' as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
 
 {# ============================================================
@@ -142,9 +157,10 @@
 {% endmacro %}
 
 {# Bronze source mapping: casts source columns to dimension names #}
-{% macro dim_select_from_source(prefix='', dims=none) %}
+{% macro dim_select_from_source(prefix='', dims=none, trailing=false) %}
     {% set dimensions = dims if dims is not none else var('dimensions') %}
     {% for d in dimensions %}
     {{ cast_to_string("coalesce(" ~ prefix ~ d.source_column ~ ", '')") }} as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
