@@ -56,13 +56,11 @@ class TestStagingInsert:
     def test_insert_consolidation_hierarchy(self, ch):
         ch(f"""
             INSERT INTO epm_staging.consolidation_hierarchy
-            (consolidation_group, data_area_id, entity_name, parent_group,
-             ownership_pct, consolidation_method, hierarchy_level, hierarchy_path,
-             lft, rgt, updated_at)
+            (consolidation_group, data_area_id, parent_group,
+             hierarchy_level, path, updated_at)
             VALUES
-            ('{self.TEST_PREFIX}Group', '{self.TEST_PREFIX}E001', 'Test Entity', '',
-             100.0, 'full', 0, '/{self.TEST_PREFIX}Group',
-             1, 2, now())
+            ('{self.TEST_PREFIX}Group', '{self.TEST_PREFIX}E001', '',
+             0, '/{self.TEST_PREFIX}Group', now())
         """)
         count = ch(
             f"SELECT count() FROM epm_staging.consolidation_hierarchy "
@@ -73,12 +71,12 @@ class TestStagingInsert:
     def test_insert_ownership_periods(self, ch):
         ch(f"""
             INSERT INTO epm_staging.ownership_periods
-            (name, consolidation_group, data_area_id, effective_date, end_date,
+            (consolidation_group, data_area_id, effective_date, end_date,
              ownership_pct, consolidation_method,
              is_first_acquisition, acquisition_date, acquisition_price, fair_value_adjustment,
              is_disposal, disposal_date, disposal_price, updated_at)
             VALUES
-            ('{self.TEST_PREFIX}OP1', '{self.TEST_PREFIX}Group', '{self.TEST_PREFIX}E001',
+            ('{self.TEST_PREFIX}Group', '{self.TEST_PREFIX}E001',
              '2025-01-01', '2025-12-31',
              100.0, 'full',
              0, '1900-01-01', 0, 0,
@@ -86,19 +84,19 @@ class TestStagingInsert:
         """)
         count = ch(
             f"SELECT count() FROM epm_staging.ownership_periods "
-            f"WHERE name = '{self.TEST_PREFIX}OP1' FORMAT TabSeparated"
+            f"WHERE consolidation_group = '{self.TEST_PREFIX}Group' FORMAT TabSeparated"
         )
         assert int(count) >= 1
 
     def test_insert_ic_elimination_rules(self, ch):
         ch(f"""
             INSERT INTO epm_staging.ic_elimination_rules
-            (rule_id, rule_name, source_entity, target_entity,
-             ic_account, elimination_account, rule_type, margin_pct,
+            (rule_id, rule_name, debit_entity_pattern, credit_entity_pattern,
+             debit_account, credit_account, description, rule_type, margin_pct,
              asset_account, updated_at)
             VALUES
             ('{self.TEST_PREFIX}IC1', 'Test IC Rule', '{self.TEST_PREFIX}E001', '{self.TEST_PREFIX}E002',
-             '4000', '9999', 'revenue_cost', 0,
+             '4000', '9999', 'integration fixture', 'revenue_cost', 0,
              '', now())
         """)
         count = ch(

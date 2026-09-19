@@ -175,13 +175,23 @@ def main():
     load_fixture(client)
 
     problems = build(a.dbt, FULL_BUILD, "full-build", log_dir)
-    # The zero-dimension leg runs even if the first build failed: which of the
-    # two is broken is the useful signal, and hiding one behind the other is
-    # how a defect class gets attributed to the wrong change.
-    problems += build(a.dbt, ZERO_DIM_BUILD, "full-build-zero-dimensions", log_dir)
 
+    # konsolidat#227: the integration suite runs BEFORE the zero-dimension leg,
+    # and that order is load-bearing. The zero-dimension build leaves every
+    # incremental gold table materialised without its dimension columns; a
+    # later build at the site's real dimension count then fails
+    # `Code: 20 NUMBER_OF_COLUMNS_DOESNT_MATCH (source: 16 and result: 13)` —
+    # a 3-column difference, the three declared dimensions — because those
+    # models append with a pre_hook DELETE and only --full-refresh rebuilds the
+    # shape (konsol#261). Run the other way round, the integration suite fails
+    # for a reason that has nothing to do with the integration suite.
     if a.with_integration:
         problems += integration(log_dir)
+
+    # Last, and it runs even if something above failed: which leg is broken is
+    # the useful signal, and hiding one behind the other is how a defect class
+    # gets attributed to the wrong change.
+    problems += build(a.dbt, ZERO_DIM_BUILD, "full-build-zero-dimensions", log_dir)
 
     print()
     if problems:
