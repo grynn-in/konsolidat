@@ -427,16 +427,6 @@ code,
   color: #66bb6a;
 }
 
-.ic-badge--allocation {
-  border-color: #e65100;
-  color: #e65100;
-}
-
-[data-md-color-scheme="slate"] .ic-badge--allocation {
-  border-color: #ffa726;
-  color: #ffa726;
-}
-
 .ic-scenario .md-typeset pre,
 .ic-scenario pre {
   margin: 0;

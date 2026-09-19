@@ -284,6 +284,5 @@ For consolidated reports, query the fully consolidated models directly via SQL o
 
 ## Next Steps
 
-- [Allocation Guide](allocation-guide.md) — Cost allocation after consolidation
 - [Budgeting Guide](budgeting-guide.md) — Budget input and spreading
 - [Data Dictionary: Gold Models](../data-dictionary/gold-models.md) — Full column reference

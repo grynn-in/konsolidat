@@ -113,7 +113,7 @@ jobs:
     name: first build on a fresh TB-only site
     runs-on: ubuntu-latest
     # konsol#182: the canonical path is trial balances uploaded via CSV, so a
-    # fresh site has no ERP rows, no allocation rules and no ERP FX quotes.
+    # fresh site has no ERP rows and no ERP FX quotes.
     # `dbt parse` does not validate SQL; this builds the selection for real on
     # the empty init-db.sql + raw-schema.sql shape, then with a ZZ fixture.
     services:

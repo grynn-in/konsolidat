@@ -60,30 +60,6 @@ def build_trial_balance_cube(dimensions: list, measures: list) -> dict:
     }
 
 
-def build_allocation_results_cube() -> dict:
-    return {
-        "cubes": [{
-            "name": "allocation_results",
-            "sql_table": "epm_gold.gold_allocation_results",
-            "data_source": "default",
-            "dimensions": [
-                {"name": "allocation_rule_id", "sql": "allocation_rule_id", "type": "string", "title": "Rule"},
-                {"name": "data_area_id", "sql": "data_area_id", "type": "string", "title": "Legal Entity"},
-                {"name": "fiscal_year", "sql": "fiscal_year", "type": "number", "title": "Fiscal Year"},
-                {"name": "fiscal_period", "sql": "fiscal_period", "type": "number", "title": "Period"},
-                {"name": "source_account", "sql": "source_account", "type": "string", "title": "Source Account"},
-                {"name": "target_cost_center", "sql": "target_cost_center", "type": "string", "title": "Target Cost Center"},
-                {"name": "driver_type", "sql": "driver_type", "type": "string", "title": "Driver"},
-            ],
-            "measures": [
-                {"name": "pool_amount", "sql": "pool_amount", "type": "sum", "title": "Pool Amount"},
-                {"name": "allocated_amount", "sql": "allocated_amount", "type": "sum", "title": "Allocated Amount"},
-                {"name": "driver_weight", "sql": "driver_weight", "type": "avg", "title": "Weight"},
-            ],
-        }]
-    }
-
-
 def build_consolidated_trial_balance_cube() -> dict:
     return {
         "cubes": [{
@@ -280,7 +256,6 @@ def main():
 
     # Schema files (cubes)
     write_yaml(build_trial_balance_cube(dimensions, measures), output / "schema" / "trial_balance.yml")
-    write_yaml(build_allocation_results_cube(), output / "schema" / "allocation_results.yml")
     write_yaml(build_consolidated_trial_balance_cube(), output / "schema" / "consolidated_trial_balance.yml")
     write_yaml(build_scenario_trial_balance_cube(dimensions), output / "schema" / "scenario_trial_balance.yml")
 
@@ -290,7 +265,7 @@ def main():
     write_yaml(build_budget_vs_actual_view(dimensions), output / "views" / "v_budget_vs_actual.yml")
     write_yaml(build_consolidated_report_view(), output / "views" / "v_consolidated_report.yml")
 
-    print("Done! Generated 4 schema files + 4 view files.")
+    print("Done! Generated 3 schema files + 4 view files.")
 
 
 if __name__ == "__main__":

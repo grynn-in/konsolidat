@@ -5,7 +5,6 @@ CREATE DATABASE IF NOT EXISTS epm;
 CREATE DATABASE IF NOT EXISTS epm_bronze;
 CREATE DATABASE IF NOT EXISTS epm_silver;
 CREATE DATABASE IF NOT EXISTS epm_gold;
-CREATE DATABASE IF NOT EXISTS epm_allocated;
 CREATE DATABASE IF NOT EXISTS epm_staging;
 
 -- Staging table for planning assumptions
@@ -113,52 +112,6 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_adjustments (
 ORDER BY (consolidation_group, journal_id, fiscal_year, fiscal_period, main_account);
 
 -- ============================================================
--- PRD-17: Allocation rules & drivers (dynamic N-step engine)
--- ============================================================
-CREATE TABLE IF NOT EXISTS epm_staging.allocation_rules (
-    allocation_rule_id String,
-    rule_name String,
-    step_order UInt8,
-    source_account String,
-    source_cost_center String,
-    driver_type String,
-    target_account String,
-    description String DEFAULT '',
-    -- PRD-18: Reciprocal method field
-    allocation_method String DEFAULT 'step_down',
-    -- PRD-19: Composite driver formula
-    driver_formula String DEFAULT '',
-    updated_at DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (allocation_rule_id);
-
-CREATE TABLE IF NOT EXISTS epm_staging.allocation_drivers (
-    driver_type String,
-    data_area_id String,
-    cost_center String,
-    fiscal_year UInt16,
-    fiscal_period UInt8,
-    driver_value Decimal(18,4) DEFAULT 0,
-    updated_at DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (driver_type, data_area_id, cost_center, fiscal_year, fiscal_period);
-
--- ============================================================
--- PRD-20: Allocation tiers (tiered & threshold rules)
--- ============================================================
-CREATE TABLE IF NOT EXISTS epm_staging.allocation_tiers (
-    allocation_rule_id String,
-    tier_order UInt8,
-    lower_bound Decimal(18,2) DEFAULT 0,
-    upper_bound Decimal(18,2) DEFAULT 999999999.99,
-    rate Decimal(8,4) DEFAULT 1.0000,
-    cap Decimal(18,2) DEFAULT 999999999.99,
-    floor Decimal(18,2) DEFAULT 0,
-    updated_at DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (allocation_rule_id, tier_order);
-
--- ============================================================
 -- PRD-15: IC elimination rules (extended) & IC balances
 -- ============================================================
 CREATE TABLE IF NOT EXISTS epm_staging.ic_elimination_rules (
@@ -187,21 +140,6 @@ CREATE TABLE IF NOT EXISTS epm_staging.ic_balances (
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
 ORDER BY (selling_entity, buying_entity, fiscal_year, fiscal_period);
-
--- ============================================================
--- PRD-21: Allocation runs (traceability & reversibility)
--- ============================================================
-CREATE TABLE IF NOT EXISTS epm_staging.allocation_runs (
-    allocation_run_id String,
-    fiscal_year UInt16,
-    fiscal_period UInt8,
-    status String DEFAULT 'Active',
-    run_by String DEFAULT '',
-    run_at DateTime DEFAULT now(),
-    reversal_of String DEFAULT '',
-    updated_at DateTime DEFAULT now()
-) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (allocation_run_id);
 
 -- F8: trial-balance submission landing + control tables. Two owners, two jobs:
 -- this file bootstraps a fresh install; konsol's Trial Balance Submission

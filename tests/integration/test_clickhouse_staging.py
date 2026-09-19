@@ -14,12 +14,8 @@ EXPECTED_STAGING_TABLES = [
     "historical_equity_rates",
     "ownership_periods",
     "consolidation_adjustments",
-    "allocation_rules",
-    "allocation_drivers",
-    "allocation_tiers",
     "ic_elimination_rules",
     "ic_balances",
-    "allocation_runs",
 ]
 
 
@@ -94,21 +90,6 @@ class TestStagingInsert:
         )
         assert int(count) >= 1
 
-    def test_insert_allocation_rules(self, ch):
-        ch(f"""
-            INSERT INTO epm_staging.allocation_rules
-            (allocation_rule_id, rule_name, source_account, driver_type,
-             allocation_method, step_order, driver_formula, updated_at)
-            VALUES
-            ('{self.TEST_PREFIX}R1', 'Test Rule', '7000', 'headcount',
-             'step_down', 1, '', now())
-        """)
-        count = ch(
-            f"SELECT count() FROM epm_staging.allocation_rules "
-            f"WHERE allocation_rule_id = '{self.TEST_PREFIX}R1' FORMAT TabSeparated"
-        )
-        assert int(count) >= 1
-
     def test_insert_ic_elimination_rules(self, ch):
         ch(f"""
             INSERT INTO epm_staging.ic_elimination_rules
@@ -134,7 +115,6 @@ class TestStagingInsert:
                     f"ALTER TABLE epm_staging.{table} DELETE "
                     f"WHERE toString(consolidation_group) LIKE '{self.TEST_PREFIX}%' "
                     f"OR toString(name) LIKE '{self.TEST_PREFIX}%' "
-                    f"OR toString(allocation_rule_id) LIKE '{self.TEST_PREFIX}%' "
                     f"OR toString(rule_id) LIKE '{self.TEST_PREFIX}%'"
                 )
             except Exception:

@@ -17,7 +17,6 @@
 | **Fully Consolidated Trial Balance (FCTB)** | The final 4-layer union: entity amounts + IC eliminations + CTA + topside adjustments |
 | **Chart of Accounts** | The master list of all general ledger account codes and their types (Revenue, Expense, Asset, Liability, Equity) |
 | **Cost Center** | An organizational unit used to track where costs are incurred (e.g., IT, Sales, Facility) |
-| **Driver-Based Allocation** | Distributing a cost pool across recipients based on a measurable driver (headcount, square meters, revenue) |
 | **Spread Profile** | A set of 12 monthly weights that determine how an annual budget amount is distributed across fiscal periods |
 | **Variance** | The difference between actual and budget amounts; can be expressed as absolute, percentage, or favorable/unfavorable |
 | **Favorable Variance** | Revenue: actual > budget. Expense: actual < budget. |
@@ -35,7 +34,7 @@
 | **Gold Layer** | Business-ready models consumed by reports and APIs. Schema: `epm_gold` |
 | **Staging Layer** | Intermediate views for field renames and joins. Schema: `epm_staging` |
 | **dbt (data build tool)** | An open-source SQL transformation framework that compiles Jinja-SQL into executable queries |
-| **Seed** | A CSV file managed by dbt, loaded into the warehouse as a table (used for reference data like allocation rules) |
+| **Seed** | A CSV file managed by dbt, loaded into the warehouse as a table (used for reference data like consolidation groups) |
 | **Macro** | A reusable Jinja template in dbt that generates SQL fragments |
 | **Materialization** | How dbt persists a model: `table` (full rebuild), `view` (virtual), or `incremental` (append/merge) |
 | **ClickHouse** | A columnar OLAP database optimized for analytical queries; used as the data warehouse |

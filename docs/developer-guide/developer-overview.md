@@ -147,7 +147,7 @@ toString(column)
 
 ### Seed-Driven Configuration
 
-Reference data (allocation rules, consolidation groups, etc.) lives in CSV seeds, not in SQL. This makes it editable by non-developers and version-controlled in Git.
+Reference data (consolidation groups, etc.) lives in CSV seeds, not in SQL. This makes it editable by non-developers and version-controlled in Git.
 
 ## Next Steps
 

@@ -43,15 +43,6 @@ models:
       - name: cumulative_balance
         description: "Running sum of period_net_amount within the year"
 
-  - name: gold_allocation_results
-    description: "Deprecated view over epm_allocated.alloc_results (scenario_id=ACTUAL)"
-    columns:
-      - name: allocation_rule_id
-        tests:
-          - not_null
-      - name: allocated_amount
-        description: "Amount allocated to each target cost center"
-
   - name: gold_consolidated_trial_balance
     description: "Multi-company consolidated trial balance with currency translation"
     columns:
@@ -217,18 +208,6 @@ models:
         description: "Budget layer: base / challenge / management / board"
       - name: period_amount
         description: "annual_amount * period_weight"
-
-  - name: gold_allocation_tb
-    description: "Allocation movements re-grained to trial-balance shape (scenario_key 'allocated'), so K.EPM can read the allocation layer separately from actuals. Each allocation posts two signed legs: target (+) and source (-)."
-    columns:
-      - name: scenario_id
-        tests:
-          - not_null
-      - name: main_account
-        tests:
-          - not_null
-      - name: period_net_amount
-        description: "Signed allocated amount: + on the target leg, - on the source leg"
 
   # --- New models (Phase 3) ---
 
@@ -663,14 +642,6 @@ models:
           - not_null
       - name: unmatched_amount
         description: "In group currency (unmatched_local_amount: the entity's own)"
-
-  - name: gold_allocation_audit_trail
-    description: "Deprecated view over epm_allocated.alloc_audit_trail (scenario_id=ACTUAL)"
-    columns:
-      - name: allocation_run_id
-        description: "Run identifier for traceability"
-      - name: run_status
-        description: "Active or Reversed"
 
   - name: gold_consolidation_waterfall
     description: "PRD-22: Consolidation waterfall — step-by-step build-up from entity to final"

@@ -1,6 +1,6 @@
 # Seeds Reference
 
-12 CSV seed files loaded into the `epm_gold` schema via `dbt seed`.
+8 CSV seed files loaded into the `epm_gold` schema via `dbt seed`.
 
 ## cash_flow_categories.csv
 
@@ -24,43 +24,6 @@ converts a BS movement into its cash effect. Consumed by
 receivables/inventory/IC receivable, payables/accrued, accumulated depreciation,
 and retained earnings → Operating; fixed assets → Investing; long-term debt,
 share capital, and dividends declared → Financing.
-
-## allocation_rules.csv
-
-Defines multi-step allocation rules.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `allocation_rule_id` | String | Unique rule ID (e.g., `ALLOC_001`) |
-| `rule_name` | String | Human-readable name |
-| `step_order` | Int | Execution order (1, 2, 3) |
-| `source_account` | String | GL account to allocate from |
-| `source_cost_center` | String | Cost center holding the pool |
-| `driver_type` | String | Driver name: `headcount`, `sqm`, `revenue` |
-| `target_account` | String | GL account to allocate to |
-| `description` | String | Rule description |
-
-**Default data**: 3 rules (IT → headcount, Facility → sqm, Management → revenue).
-
-## allocation_drivers_headcount.csv
-
-Headcount driver values per cost center.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `data_area_id` | String | Legal entity |
-| `cost_center` | String | Cost center |
-| `driver_value` | Decimal | Headcount number |
-| `fiscal_year` | UInt16 | Year |
-| `fiscal_period` | UInt8 | Period |
-
-## allocation_drivers_sqm.csv
-
-Square meter driver values per cost center. Same schema as headcount.
-
-## allocation_drivers_revenue.csv
-
-Revenue driver values per cost center. Same schema as headcount. Values ≤ 0 are excluded during allocation.
 
 ## budget_annual_input.csv
 

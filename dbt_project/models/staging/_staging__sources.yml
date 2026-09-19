@@ -395,21 +395,9 @@ sources:
       - name: consolidation_adjustments
         description: "PRD-16: Top-side adjustments with workflow status and auto-reversal"
         loaded_at_field: updated_at
-      - name: allocation_rules
-        description: "PRD-17/18/19: Allocation rules with method, driver formula fields"
-        loaded_at_field: updated_at
-      - name: allocation_drivers
-        description: "PRD-17: Unified allocation driver values by type, cost center, period"
-        loaded_at_field: updated_at
-      - name: allocation_tiers
-        description: "PRD-20: Tiered allocation rate bands with cap/floor"
-        loaded_at_field: updated_at
       - name: ic_elimination_rules
         description: "PRD-15: IC elimination rules with unrealized profit support"
         loaded_at_field: updated_at
       - name: ic_balances
         description: "PRD-15: IC sales and inventory balances between entity pairs"
-        loaded_at_field: updated_at
-      - name: allocation_runs
-        description: "PRD-21: Allocation run metadata for traceability and reversal"
         loaded_at_field: updated_at

@@ -79,14 +79,6 @@ sequenceDiagram
 | POST | [`approve_adjustment`](api-approve-adjustment.md) | Session | Approve topside journal |
 | POST | [`reverse_adjustment`](api-reverse-adjustment.md) | Session | Reverse approved journal |
 
-### Allocation
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | [`run_allocation`](api-run-allocation.md) | Session | Create and execute allocation run |
-| POST | [`reverse_allocation`](api-reverse-allocation.md) | Session | Reverse active allocation run |
-| GET | [`allocation_history`](api-allocation-history.md) | Session | List runs with filters |
-
 ## Error Handling
 
 All errors return a JSON object with `exc_type` and `message`:
@@ -150,9 +142,3 @@ The batch endpoint groups requests by `(scenario, measure, period_tuple, has_cos
 - [GET get_hierarchy_tree](api-hierarchy.md) — Hierarchy as nested JSON
 - [POST approve_adjustment](api-approve-adjustment.md) — Approve topside journal
 - [POST reverse_adjustment](api-reverse-adjustment.md) — Reverse approved journal
-
-**Allocation:**
-
-- [POST run_allocation](api-run-allocation.md) — Create and execute run
-- [POST reverse_allocation](api-reverse-allocation.md) — Reverse active run
-- [GET allocation_history](api-allocation-history.md) — Run history

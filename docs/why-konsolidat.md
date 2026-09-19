@@ -44,17 +44,7 @@ Not a toy. Not a demo. A production consolidation engine with:
 - **Top-side adjustments** — manual consolidation journals (goodwill, fair value, reclassifications)
 - **4-layer fully consolidated trial balance** — entity + IC elimination + CTA + topside, unified
 
-Every calculation is tested. 26 data quality assertions run on every build — not "trust us, it works," but `assert_nci_plus_group_equals_translated` with a 0.01 tolerance. The math is in the SQL. You can read it.
-
-### Driver-Based Cost Allocations
-
-Three-step cascading allocation engine:
-
-1. IT costs distributed by **headcount**
-2. Facility costs distributed by **square meters** (including IT costs that landed there)
-3. Management fees distributed by **revenue** (including all prior cascaded amounts)
-
-Each step sees amounts from prior steps. The allocation pool is verified: `assert_each_step_sums_to_pool`. No rounding black holes.
+Every calculation is tested. 24 data quality assertions run on every build — not "trust us, it works," but `assert_nci_plus_group_equals_translated` with a 0.01 tolerance. The math is in the SQL. You can read it.
 
 ### Budgeting with Configurable Spread
 
@@ -173,14 +163,13 @@ Every component is replaceable. Don't like Frappe? The API is 200 lines of Pytho
 
 ## What's Tested
 
-This isn't a prototype. 26 assertions validate every build:
+This isn't a prototype. 24 assertions validate every build:
 
 | Category | Tests | What They Prove |
 |----------|-------|----------------|
 | **Consolidation math** | 8 | translated = local x rate, group + NCI = translated, BS uses closing rate, P&L uses average |
 | **CTA integrity** | 2 | CTA non-zero when rates differ, CTA zero for same-currency entities |
 | **IC elimination** | 1 | Eliminations net to zero per group per period |
-| **Allocation completeness** | 2 | Each step sums to pool, no self-allocation |
 | **Budget spreading** | 2 | 12 periods per line, spread sums to annual total |
 | **Variance logic** | 3 | Formula correct, revenue favorable when up, expense favorable when down |
 | **Trial balance** | 3 | Debits = credits, GL ties to TB, all accounts in chart |
@@ -203,7 +192,7 @@ Run `dbt test` after any change. Green means the math is right. Red tells you ex
 - Multi-GAAP dual reporting (reporting_standard dimension — ~1 week)
 - Rolling forecasts (12-month sliding window — ~3 days)
 
-These are on the [roadmap](reference/roadmap.md). The core consolidation, allocation, and variance engine is done.
+These are on the [roadmap](reference/roadmap.md). The core consolidation and variance engine is done.
 
 ---
 

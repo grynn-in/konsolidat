@@ -45,12 +45,11 @@ hide:
 
 For 27 years, EPM/CPM vendors have tried to move financial analysis out of Excel and into web browsers. We think they're wrong. Excellent analysis thrives on Excel — not on the web. Konsolidat keeps it there.
 
-Multi-entity consolidation, budgeting, allocations, and variance analysis — powered by `=K.EPM()` in the spreadsheet your finance team already knows.
+Multi-entity consolidation, budgeting, and variance analysis — powered by `=K.EPM()` in the spreadsheet your finance team already knows.
 
 <div class="ic-pills">
   <span class="ic-pill">Consolidation</span>
   <span class="ic-pill">FX Translation</span>
-  <span class="ic-pill">Allocations</span>
   <span class="ic-pill">Budgeting</span>
   <span class="ic-pill">Variance</span>
   <span class="ic-pill">Excel Native</span>
@@ -124,20 +123,6 @@ Entity trial balances
   → NCI split (ownership %)
   → IC elimination
   → Consolidated TB
-```
-
-</div>
-
-<div class="ic-scenario" markdown>
-<div class="ic-scenario-header">
-  <span class="ic-badge ic-badge--allocation">ALLOCATION</span>
-  <h3>Driver-Based Cost Allocation</h3>
-</div>
-
-```
-Step 1: IT costs   → by headcount
-Step 2: Facilities → by sqm (+cascade)
-Step 3: Management → by revenue (+cascade)
 ```
 
 </div>
@@ -220,7 +205,7 @@ Admin      → full config + users
 
 <div class="ic-scenario" markdown>
 <div class="ic-scenario-header">
-  <span class="ic-badge ic-badge--allocation">NETWORK</span>
+  <span class="ic-badge ic-badge--finance">NETWORK</span>
   <h3>Transport & Isolation</h3>
 </div>
 
@@ -260,7 +245,7 @@ Encryption at rest + in transit
 
 <a class="ic-nav-card" href="features/">
   <strong>Features</strong>
-  <span>Everything Konsolidat does — consolidation, allocations, budgeting, reporting</span>
+  <span>Everything Konsolidat does — consolidation, budgeting, reporting</span>
 </a>
 
 <a class="ic-nav-card" href="getting-started/quickstart/">

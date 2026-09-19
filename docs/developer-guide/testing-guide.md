@@ -1,6 +1,6 @@
 # Testing Guide
 
-Konsolidat has 28 data quality assertion tests covering trial balance integrity, consolidation math, allocation completeness, budget spreading, and variance logic.
+Konsolidat has 26 data quality assertion tests covering trial balance integrity, consolidation math, budget spreading, and variance logic.
 
 ## Test Philosophy
 
@@ -50,13 +50,6 @@ Tests have two severity levels:
 | `assert_topside_journal_balanced` | error | Each top-side journal balances (debits = credits) |
 | `assert_adjustment_type_populated` | error | `adjustment_type` is never null in FCTB |
 | `assert_fctb_entity_layer_ties` | error | Entity layer in FCTB ties to consolidated TB group_amount |
-
-### Allocation
-
-| Test | Severity | Assertion |
-|------|----------|-----------|
-| `assert_each_step_sums_to_pool` | error | `\|pool_amount − SUM(allocated)\| ≤ 0.01` per step |
-| `assert_no_self_allocation` | error | Source cost center never appears as target |
 
 ### Budget & Variance
 

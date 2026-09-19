@@ -1,6 +1,6 @@
 # Konsol — DocType Map
 
-All **42 konsol doctypes** (excluding core Frappe), organized into 5 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; publishes regenerate dbt vars + ClickHouse DDL). Stacks 3–5 are *financial logic* (budgeting, cost allocation, group consolidation) that dbt computes in ClickHouse off that registry.
+All **38 konsol doctypes** (excluding core Frappe), organized into 4 functional stacks along the EPM data flow. Stacks 1–2 are *configuration/governance* (Frappe is the source of truth; publishes regenerate dbt vars + ClickHouse DDL). Stacks 3–4 are *financial logic* (budgeting, group consolidation) that dbt computes in ClickHouse off that registry.
 
 > **Naming updated 2026-07** (doctype-naming cleanup): Pipeline Step → **Run Step**, Step Definition → **Pipeline Step**, Pipeline Definition → **Pipeline**, Build Domain → **Build Scope**, Gold Model → **Build Model**, Close Run → **Period Close**, Pipeline Build Request → **Build Approval**, Fact Table (+ children) → **Dataset** (+ Dataset Measure / Dataset Dimension). **Budget Input** and **Budget Input Child** were retired — the live budget chain is Budget Cycle → Budget Sheet → Budget Line.
 
@@ -8,9 +8,8 @@ All **42 konsol doctypes** (excluding core Frappe), organized into 5 functional 
 ERP SOURCES (D365 F&O / ERPNext)
    │ Airbyte → epm_raw
    ▼
-1. DATA PIPELINE ──► 2. EPM MODEL/REGISTRY ──► 3. BUDGET ──┐
-                                            └► 4. ALLOCATION ┴► 5. CONSOLIDATION ──► OUTPUTS
-                                                                                     (Excel add-in / API / Cube.js)
+1. DATA PIPELINE ──► 2. EPM MODEL/REGISTRY ──► 3. BUDGET ──► 4. CONSOLIDATION ──► OUTPUTS
+                                                                                  (Excel add-in / API / Cube.js)
 ```
 
 ## Stacks + key sections
@@ -67,14 +66,7 @@ ERP SOURCES (D365 F&O / ERPNext)
 👻 Budget Cost Center
 👻 Main Account Category
 
-═══════════════ 4. ALLOCATION ════════════════════════ module: allocation ══
-● Allocation Rule
-    ├ Allocation Method (PRD-17/18)  ├ Allocation Tiers (PRD-20)  └ Details
-    ◦ Allocation Tier
-● Allocation Driver
-● Allocation Run            └ Reversal
-
-═══════════════ 5. CONSOLIDATION ══════════════════ module: consolidation ══
+═══════════════ 4. CONSOLIDATION ══════════════════ module: consolidation ══
 ● Consolidation Group       └ Settings
 ● Ownership Period
     ├ Acquisition (PRD-11)  └ Disposal (PRD-12)
@@ -125,10 +117,6 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Spread Profile | epm | DOC | Allocation weights for top-down budget entry |
 | Budget Cost Center | epm | Virtual | Read-only budget permission-target proxy |
 | Main Account Category | epm | Virtual | Read-only budget permission-target proxy |
-| Allocation Rule | allocation | DOC | Cost allocation rules → ClickHouse (N-step engine) |
-| Allocation Tier | allocation | child | Tiered allocation rate bands |
-| Allocation Driver | allocation | DOC | Driver values → ClickHouse |
-| Allocation Run | allocation | DOC | Run metadata for traceability / reversibility; on submit requests a scoped governed build (links its Build Approval) |
 | Consolidation Group | consolidation | DOC | Entity groupings, multi-level hierarchy |
 | Ownership Period | consolidation | DOC | Temporal ownership (acquisition / disposal) |
 | Historical Equity Rate | consolidation | DOC | IAS 21 historical FX rates for equity accounts |
@@ -138,4 +126,4 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Period Close | consolidation | DOC | Runs the dbt close-assertion suite for a fiscal period, records each result + sign-off |
 | Assertion Result | consolidation | child | One close-assertion outcome |
 
-_Counts: Pipeline 13 · EPM Model 11 · Budget 6 · Allocation 4 · Consolidation 8 = 42. Generated from konsol @ b10702a._
+_Counts: Pipeline 13 · EPM Model 11 · Budget 6 · Consolidation 8 = 38. Generated from konsol @ b10702a._

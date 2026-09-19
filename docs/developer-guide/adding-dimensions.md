@@ -14,7 +14,6 @@ vars:
       label: "Cost Center"         # Display name
       cube_type: string            # Analytical type
       in_budget: true              # Include in budget models
-      allocation_role: cost_center # Used by allocation engine
     - name: dim_department
       source_column: Department
       label: "Department"
@@ -95,7 +94,6 @@ If you want the new dimension to be filterable via `=K.EPM()`:
 | `label` | Yes | Human-readable display name |
 | `cube_type` | Yes | Analytical type (currently: `string`) |
 | `in_budget` | Yes | `true` to include in budget models (`get_budget_dimensions()`) |
-| `allocation_role` | No | Special role: `cost_center` is used by the allocation engine |
 
 ## Which Macros Use Dimensions
 
@@ -118,10 +116,6 @@ If you want the new dimension to be filterable via `=K.EPM()`:
 - `dim_business_unit` (in_budget: false — excluded from budget)
 
 Set `in_budget: true` on your new dimension if budget data should be tracked at that level.
-
-## Allocation Cost Center Dimension
-
-`get_allocation_cost_center_dim()` returns the dimension with `allocation_role: 'cost_center'`. The allocation engine uses this to match source/target cost centers. Only one dimension should have this role.
 
 ## Next Steps
 

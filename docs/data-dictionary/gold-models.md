@@ -357,30 +357,6 @@ Year-to-date running totals on fully consolidated trial balance.
 | `main_account` | String | Account | — |
 | `ytd_amount` | Decimal | Cumulative sum of amount through period | — |
 
-## Allocation Model
-
-### gold_allocation_results
-
-Results of driver-based cost allocations (multi-step cascade).
-
-| Column | Type | Description | Test |
-|--------|------|-------------|------|
-| `allocation_rule_id` | String | Rule identifier | not_null |
-| `step_order` | UInt8 | Step number in cascade (1, 2, 3) | — |
-| `data_area_id` | String | Entity | — |
-| `fiscal_year` | UInt16 | Fiscal year | — |
-| `fiscal_period` | UInt8 | Fiscal period | — |
-| `source_account` | String | Account being allocated from | — |
-| `source_cost_center` | String | Cost center being allocated from | — |
-| `target_cost_center` | String | Cost center receiving allocation | — |
-| `target_account` | String | Account receiving allocation | — |
-| `driver_type` | String | Driver used (`headcount`, `sqm`, `revenue`) | — |
-| `pool_amount` | Decimal | Total amount in the allocation pool | — |
-| `driver_weight` | Decimal | Recipient's share (0–1) | — |
-| `allocated_amount` | Decimal | Amount allocated to this target | — |
-
-**Tests**: `assert_each_step_sums_to_pool`, `assert_no_self_allocation`.
-
 ## Budget & Variance Models
 
 ### gold_spread_budget
