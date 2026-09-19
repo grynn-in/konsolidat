@@ -19,24 +19,22 @@ def seed_staging_data(ch):
     # 1. Consolidation hierarchy — a parent group with one child entity
     ch(f"""
         INSERT INTO epm_staging.consolidation_hierarchy
-        (consolidation_group, data_area_id, entity_name, parent_group,
-         ownership_pct, consolidation_method, hierarchy_level, hierarchy_path,
-         lft, rgt, updated_at)
+        (consolidation_group, data_area_id, parent_group,
+         hierarchy_level, path, updated_at)
         VALUES
-        ('{TEST_GROUP}', '{TEST_ENTITY}', 'E2E Test Entity', '',
-         100.0, 'full', 0, '/{TEST_GROUP}',
-         1, 2, now())
+        ('{TEST_GROUP}', '{TEST_ENTITY}', '',
+         0, '/{TEST_GROUP}', now())
     """)
 
     # 2. Ownership period
     ch(f"""
         INSERT INTO epm_staging.ownership_periods
-        (name, consolidation_group, data_area_id, effective_date, end_date,
+        (consolidation_group, data_area_id, effective_date, end_date,
          ownership_pct, consolidation_method,
          is_first_acquisition, acquisition_date, acquisition_price, fair_value_adjustment,
          is_disposal, disposal_date, disposal_price, updated_at)
         VALUES
-        ('{TEST_GROUP}_OP', '{TEST_GROUP}', '{TEST_ENTITY}',
+        ('{TEST_GROUP}', '{TEST_ENTITY}',
          '2099-01-01', '2099-12-31',
          100.0, 'full',
          0, '1900-01-01', 0, 0,
@@ -46,12 +44,12 @@ def seed_staging_data(ch):
     # 3. IC elimination rule
     ch(f"""
         INSERT INTO epm_staging.ic_elimination_rules
-        (rule_id, rule_name, source_entity, target_entity,
-         ic_account, elimination_account, rule_type, margin_pct,
+        (rule_id, rule_name, debit_entity_pattern, credit_entity_pattern,
+         debit_account, credit_account, description, rule_type, margin_pct,
          asset_account, updated_at)
         VALUES
         ('{TEST_GROUP}_IC', 'E2E IC Rule', '{TEST_ENTITY}', '{TEST_ENTITY}_B',
-         '4000', '9999', 'revenue_cost', 0, '', now())
+         '4000', '9999', 'e2e fixture', 'revenue_cost', 0, '', now())
     """)
 
     yield  # Run tests

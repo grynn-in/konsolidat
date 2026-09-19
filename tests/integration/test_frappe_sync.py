@@ -27,13 +27,29 @@ KONSOL_PATH = os.environ.get(
 def clickhouse_module():
     """Import konsol.clickhouse with mocked frappe module."""
     # Create a mock frappe module
+    # konsolidat#227: the settings stub must be a real object, not a bare
+    # MagicMock. get_connection() reads `clickhouse_secure` and
+    # `clickhouse_verify_tls` via getattr and the password via
+    # settings.get_password() — on a MagicMock every one of those is a truthy
+    # Mock, so the module built an HTTPS URL with a Mock password, every
+    # request raised ConnectionError, and five tests skipped themselves
+    # reporting "ClickHouse not available" while ClickHouse was up. A skip that
+    # names the wrong reason is worse than a failure.
+    password = os.environ.get("CLICKHOUSE_PASSWORD", "open_epm_dev")
+
+    class _Settings:
+        clickhouse_host = os.environ.get("CLICKHOUSE_HOST", "localhost")
+        clickhouse_port = os.environ.get("CLICKHOUSE_PORT", "8123")
+        clickhouse_user = os.environ.get("CLICKHOUSE_USER", "default")
+        clickhouse_password = password
+        clickhouse_secure = 0
+        clickhouse_verify_tls = 0
+
+        def get_password(self, fieldname, raise_exception=True):
+            return password
+
     mock_frappe = MagicMock()
-    mock_frappe.get_single.return_value = MagicMock(
-        clickhouse_host=os.environ.get("CLICKHOUSE_HOST", "localhost"),
-        clickhouse_port=os.environ.get("CLICKHOUSE_PORT", "8123"),
-        clickhouse_user=os.environ.get("CLICKHOUSE_USER", "default"),
-        clickhouse_password=os.environ.get("CLICKHOUSE_PASSWORD", "open_epm_dev"),
-    )
+    mock_frappe.get_single.return_value = _Settings()
 
     # Inject mock frappe into sys.modules
     sys.modules["frappe"] = mock_frappe
