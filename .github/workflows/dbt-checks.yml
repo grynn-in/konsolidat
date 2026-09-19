@@ -20,6 +20,9 @@ on:
       - 'scripts/ci_full_build.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
+      - 'scripts/report_subsections.py'
+      - 'scripts/build_consolidation_report.py'
+      - 'tests/test_report_subsections.py'
   pull_request:
     paths:
       - 'dbt_project/**'
@@ -38,6 +41,9 @@ on:
       - 'scripts/ci_full_build.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
+      - 'scripts/report_subsections.py'
+      - 'scripts/build_consolidation_report.py'
+      - 'tests/test_report_subsections.py'
   workflow_dispatch:
 
 permissions:
@@ -118,6 +124,11 @@ jobs:
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
         run: python -m unittest -v tests.test_ci_full_build
+      # konsolidat#185: the consolidation report takes its sub-sections from
+      # the chart's declared sub_section, and names every account it had to
+      # place by account-number prefix instead.
+      - name: report sub-sections come from the chart, not the account number
+        run: python -m unittest -v tests.test_report_subsections
 
   full-build:
     name: full build + assertions on a throwaway ClickHouse
