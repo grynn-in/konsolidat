@@ -17,6 +17,9 @@ on:
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
+      - 'scripts/ci_full_build.py'
+      - 'tests/test_ci_full_build.py'
+      - 'tests/integration/**'
   pull_request:
     paths:
       - 'dbt_project/**'
@@ -32,6 +35,9 @@ on:
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
+      - 'scripts/ci_full_build.py'
+      - 'tests/test_ci_full_build.py'
+      - 'tests/integration/**'
   workflow_dispatch:
 
 permissions:
@@ -108,6 +114,58 @@ jobs:
       # `sign` column that nothing read.
       - name: cash flow categories DDL without the retired sign
         run: python -m unittest -v tests.test_cash_flow_categories_ddl
+      # konsolidat#181: the full-build job builds everything, guards the
+      # zero-dimension case (konsolidat#220) and fails on a skipped test.
+      - name: full-build job builds everything and fails on a skip
+        run: python -m unittest -v tests.test_ci_full_build
+
+  full-build:
+    name: full build + assertions on a throwaway ClickHouse
+    runs-on: ubuntu-latest
+    # konsolidat#181. `dbt parse` does not validate SQL, and the scoped build
+    # below is not the project: 375 nodes, 310 reachable from
+    # @silver_main_accounts, 65 not — including eight singular assertions that
+    # ran in no job at all, three of them the FX rate guards. tests/integration
+    # never ran either: it skips itself when ClickHouse is unreachable, and no
+    # job gave it one — and run for the first time it gave 7 failed, 30 passed,
+    # 5 skipped, 3 errors, so repairing it is konsolidat#227 and it stays off
+    # here until then.
+    services:
+      clickhouse:
+        # Pinned to the running stack's major version (24.8).
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_PASSWORD: ci
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8123/ping"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: '8123'
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # pytest and requests are what tests/integration/conftest.py imports.
+      # Installed now, though --with-integration stays off until konsolidat#227
+      # repairs that suite: run against a throwaway for the first time it gave
+      # 7 failed, 30 passed, 5 skipped, 3 errors. When #227 lands, add
+      # --with-integration here and nothing else changes.
+      - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3" pytest requests
+      - name: full dbt build, at real and at zero dimensions
+        run: python scripts/ci_full_build.py
+      - name: upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-build-logs
+          path: ci-logs/
+          if-no-files-found: ignore
 
   tb-only-first-build:
     name: first build on a fresh TB-only site
