@@ -16,11 +16,16 @@ Three of those are the FX rate guards, and `tests/integration` never ran in CI
 at all — it skips itself when ClickHouse is unreachable, which on a runner
 with no service container is always.
 
-So a new job builds the FULL project against a throwaway ClickHouse and then
-runs the integration tests, failing on an error *or a skip*. It also builds a
-second time with `dimensions: []`, which is the standing guard for
-konsolidat#220 — a site that declares no dimensions could not build at all,
-53 call sites across five macros, and nothing stopped that class returning.
+So a new job builds the FULL project against a throwaway ClickHouse, twice: once
+normally, and once with `dimensions: []` — the standing guard for konsolidat#220,
+where a site declaring no dimensions could not build at all, 53 call sites across
+five macros, with nothing stopping that class returning.
+
+Running the integration suite is the other half of konsolidat#181, and it does
+not ship here: run for the first time against a throwaway on 19 Sep 2026 it gave
+7 failed, 30 passed, 5 skipped, 3 errors. Repairing it is konsolidat#227. The
+script carries the `--with-integration` switch and the skip detection already, so
+turning it on is a one-line change to the workflow when #227 lands.
 
 Plain unittest, static-source, no third-party imports: this asserts what the
 script and the workflow say, it does not run dbt (that is the job's own work).
@@ -64,10 +69,13 @@ class BuildsEverything(unittest.TestCase):
     """The point of the job: no --select, so nothing is quietly left out."""
 
     def test_the_build_is_not_scoped(self):
+        """The property that matters is that no selector is ever passed — not
+        that the string `@silver_main_accounts` is absent, which the script
+        legitimately names when explaining what the other job covers."""
         src = _read(SCRIPT)
         self.assertIn("FULL_BUILD", src)
-        # The scoped build has its own job; this one must not narrow the graph.
-        self.assertNotIn("@silver_main_accounts", src)
+        self.assertNotIn('"--select"', src)
+        self.assertNotIn("'--select'", src)
 
     def test_an_error_fails_the_job(self):
         src = _read(SCRIPT)
@@ -95,19 +103,41 @@ class ZeroDimensionGuard(unittest.TestCase):
 
 
 class IntegrationTests(unittest.TestCase):
-    """They existed and never ran: no service container, so `ch` skipped them."""
+    """They existed and never ran: no service container, so `ch` skipped them.
 
-    def test_the_integration_suite_is_run(self):
-        self.assertIn("tests/integration", _read(SCRIPT))
+    Run for the first time against a throwaway on 19 Sep 2026, the suite gave
+    7 failed, 30 passed, 5 skipped, 3 errors — it had rotted unobserved. The
+    repair is konsolidat#227; this job carries the switch and the detection so
+    that turning it on is a one-line change when #227 lands.
+    """
 
-    def test_a_skip_fails_the_job(self):
+    def test_the_integration_suite_can_be_run(self):
+        src = _read(SCRIPT)
+        self.assertIn("tests/integration", src)
+        self.assertIn("with-integration", src)
+
+    def test_it_is_off_until_the_suite_is_repaired(self):
+        self.assertIn("227", _read(SCRIPT),
+                      "nothing says why the suite is not run yet")
+        wf = _read(WORKFLOW)
+        # Asserted on the invocation, not on the file: the workflow's comment
+        # legitimately names the flag when saying what turns it on later.
+        invocations = [ln for ln in wf.splitlines()
+                       if "run:" in ln and "ci_full_build.py" in ln]
+        self.assertTrue(invocations, "the workflow never runs the script")
+        for ln in invocations:
+            self.assertNotIn("--with-integration", ln,
+                             "the workflow turns on a suite that does not pass")
+        self.assertIn("227", wf, "the workflow does not say what it is waiting for")
+
+    def test_a_skip_would_fail_the_job(self):
         """The issue is explicit: fail on any error OR skip. A suite that skips
         itself reports success having checked nothing."""
-        src = _read(SCRIPT)
-        self.assertTrue(
-            "-p no:randomly" in src or "skipped" in src or "--strict" in src,
-            "nothing detects a skipped integration test")
-        self.assertIn("skip", src.lower())
+        seg = _read(SCRIPT)
+        seg = seg[seg.index("def integration("):seg.index("def main(")]
+        self.assertIn("skipped", seg, "nothing detects a skipped integration test")
+        self.assertIn("returncode", seg, "a failing suite would not fail the job")
+        self.assertIn("collected 0 items", seg, "an empty run would read as a pass")
 
 
 class Workflow(unittest.TestCase):
