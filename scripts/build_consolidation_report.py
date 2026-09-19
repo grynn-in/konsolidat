@@ -155,44 +155,38 @@ def discover_config(group, year):
     )
 
 
-# ── P&L sub-section classification ──────────────────────────
+# ── P&L / BS sub-section classification ─────────────────────
+# konsolidat#185: the sub-section comes from the chart's declared `sub_section`
+# (konsol#182), not from D365 account-number prefixes. The prefix table lives
+# in scripts/report_subsections.py as a NAMED fallback — an ERPNext account id
+# like "Cost of Goods Sold - XX" matched no prefix and fell outside every
+# subtotal, so gross profit and operating profit were wrong and nothing failed.
+from report_subsections import (  # noqa: E402
+    BS_SECTION_ORDER, PNL_SECTION_ORDER, classify, classify_bs)
 
-# Map account_type_name → fine-grained sub-sections based on account ranges
-PNL_SUBSECTIONS = [
-    ("Revenue", "Revenue", lambda a: True),
-    ("Expense", "Cost of Goods Sold", lambda a: a[:1] == "5" or a.startswith("6112")),
-    ("Expense", "Operating Expenses", lambda a: a[:1] == "6" and not a.startswith("6112")),
-    ("Profit and loss", "Other Income / Expense", lambda a: a[:1] in ("7", "8") and not a.startswith("802")),
-    ("Profit and loss", "Income Tax", lambda a: a.startswith("802")),
-    ("Expense", "Other Income / Expense", lambda a: a[:1] in ("7", "8")),
-]
-
-BS_SUBSECTIONS = [
-    ("Asset", "Current Assets", lambda a: a[:2] in ("11", "12", "13", "14") and a[:3] not in ("120", "134")),
-    ("Asset", "Non-Current Assets", lambda a: a[:2] in ("15", "16", "17", "18") or a[:3] in ("120", "134")),
-    ("Balance sheet", "Current Assets", lambda a: a[:1] == "1"),
-    ("Balance sheet", "Non-Current Assets", lambda a: a[:1] != "1"),
-    ("Liability", "Current Liabilities", lambda a: a[:2] in ("20", "21", "22", "23")),
-    ("Liability", "Non-Current Liabilities", lambda a: a[:2] in ("24", "25", "26", "27", "28", "29")),
-    ("Equity", "Shareholders' Equity", lambda a: True),
-]
+#: Accounts the chart did not place, filled in by _discover_sections and shown
+#: in the diagnostics sheet. An account placed by prefix is an undeclared chart.
+UNDECLARED_ACCOUNTS = []
 
 
-def _classify_pnl_subsection(account_type_name, main_account):
-    """Classify a P&L account into a fine-grained sub-section."""
-    for atype, subsection, predicate in PNL_SUBSECTIONS:
-        if account_type_name == atype and predicate(main_account):
-            return subsection
-    # Fallback: use account_type_name directly
-    return account_type_name
+def _declared_sub_sections():
+    """{main_account: sub_section} from the governed chart (konsol#182).
 
-
-def _classify_bs_subsection(account_type_name, main_account):
-    """Classify a BS account into a fine-grained sub-section."""
-    for atype, subsection, predicate in BS_SUBSECTIONS:
-        if account_type_name == atype and predicate(main_account):
-            return subsection
-    return account_type_name
+    gold_trial_balance carries account_type_name but neither section column, so
+    the declaration is read from the chart itself — as this script already does
+    for silver_entity_currencies.
+    """
+    try:
+        rows = ch_query("""
+            SELECT main_account, sub_section
+            FROM epm_silver.silver_main_accounts
+            FORMAT JSON
+        """)
+    except Exception as e:  # noqa: BLE001
+        print(f"  WARNING: could not read the governed chart ({e}); "
+              f"every account will be placed by account-number prefix")
+        return {}
+    return {r["main_account"]: (r.get("sub_section") or "") for r in rows}
 
 
 def _discover_sections(entity_list_sql, year, is_pnl=True):
@@ -209,12 +203,18 @@ def _discover_sections(entity_list_sql, year, is_pnl=True):
         FORMAT JSON
     """)
 
-    # Group into sub-sections
-    classify = _classify_pnl_subsection if is_pnl else _classify_bs_subsection
+    # Group into sub-sections. konsolidat#185: the chart's declaration first,
+    # the account-number prefixes only as a named fallback.
+    declared = _declared_sub_sections()
+    classifier = classify if is_pnl else classify_bs
     subsection_map = defaultdict(list)  # subsection_name → [(main_account, account_name)]
     for r in rows:
-        sub = classify(r["account_type_name"], r["main_account"])
-        subsection_map[sub].append((r["main_account"], r["account_name"]))
+        account = r["main_account"]
+        sub, fell_back = classifier(r["account_type_name"], account,
+                                    declared.get(account, ""))
+        if fell_back:
+            UNDECLARED_ACCOUNTS.append((account, r["account_name"], sub))
+        subsection_map[sub].append((account, r["account_name"]))
 
     # Sort accounts within each sub-section
     for sub in subsection_map:
@@ -222,8 +222,7 @@ def _discover_sections(entity_list_sql, year, is_pnl=True):
 
     # Define ordering
     if is_pnl:
-        section_order = ["Revenue", "Cost of Goods Sold", "Operating Expenses",
-                         "Other Income / Expense", "Income Tax"]
+        section_order = list(PNL_SECTION_ORDER)
         formulas = [
             (2, "Gross Profit", "SUM_AFTER", ["Revenue", "Cost of Goods Sold"]),
             (4, "Operating Income", "DIFF", ["Gross Profit", "Operating Expenses"]),
@@ -231,9 +230,7 @@ def _discover_sections(entity_list_sql, year, is_pnl=True):
             (6, "Net Income", "DIFF", ["Net Income Before Tax", "Income Tax"]),
         ]
     else:
-        section_order = ["Current Assets", "Non-Current Assets",
-                         "Current Liabilities", "Non-Current Liabilities",
-                         "Shareholders' Equity"]
+        section_order = list(BS_SECTION_ORDER)
         formulas = [
             (2, "Total Assets", "SUM", ["Current Assets", "Non-Current Assets"]),
             (4, "Total Liabilities", "SUM", ["Current Liabilities", "Non-Current Liabilities"]),
@@ -1187,6 +1184,26 @@ def build_diagnostics_sheet(ws, cfg, entity_pnl, entity_bs, consol_pnl, consol_b
                   ", ".join(all_with_data) if all_with_data else "NONE",
                   "PASS" if set(entity_ids) == set(all_with_data) else "WARN",
                   "" if set(entity_ids) == set(all_with_data) else "Some entities have no GL data"))
+
+    # konsolidat#185: every account the chart did not place. They were put in a
+    # subtotal by account-number prefix, which is a guess — and the guess that
+    # silently misplaced ERPNext accounts outside every subtotal is what this
+    # issue is. Naming them is the difference between a fallback and a silent one.
+    undeclared = sorted(set(UNDECLARED_ACCOUNTS))
+    if undeclared:
+        shown = ", ".join(f"{acct} -> {sub}" for acct, _name, sub in undeclared[:12])
+        if len(undeclared) > 12:
+            shown += f", … and {len(undeclared) - 12} more"
+        tests.append((
+            "Chart", "Accounts placed by account-number prefix", "0",
+            str(len(undeclared)), "WARN",
+            f"These accounts declare no sub_section in the group chart, so the "
+            f"report guessed from the account number: {shown}. Declare their "
+            f"sub_section in konsol so the subtotals stop depending on the "
+            f"account numbering."))
+    else:
+        tests.append(("Chart", "Accounts placed by account-number prefix", "0", "0",
+                      "PASS", "Every account's sub-section is declared in the chart"))
 
     # P&L / BS account counts
     pnl_accts = set()

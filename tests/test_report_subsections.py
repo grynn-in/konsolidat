@@ -102,23 +102,40 @@ class TheReportUsesIt(unittest.TestCase):
             self.src = f.read()
 
     def test_the_report_imports_the_shared_classifier(self):
-        self.assertIn("report_subsections", self.src)
+        self.assertTrue("report_subsections" in self.src,
+                        "the report still carries its own copy of the rule")
 
     def test_the_report_reads_the_declared_sub_section(self):
-        self.assertIn("sub_section", self.src)
-        self.assertIn("silver_main_accounts", self.src,
-                      "nothing queries the governed chart")
+        self.assertTrue("sub_section" in self.src, "sub_section is never read")
+        self.assertTrue("silver_main_accounts" in self.src,
+                        "nothing queries the governed chart")
 
     def test_the_old_prefix_tables_are_gone_from_the_report(self):
         """Two copies of the rule is how they drift apart."""
         for dead in ("PNL_SUBSECTIONS = [", "BS_SUBSECTIONS = ["):
-            self.assertNotIn(dead, self.src,
-                             f"{dead.strip(' =[')} still lives in the report")
+            self.assertTrue(dead not in self.src,
+                            f"{dead.strip(' =[')} still lives in the report")
 
     def test_undeclared_accounts_reach_the_diagnostics_sheet(self):
         """The issue asks for this explicitly: an account placed by prefix is a
-        chart that has not been declared, and the reader must be told."""
-        self.assertIn("undeclared", self.src.lower())
+        chart that has not been declared, and the reader must be told.
+
+        Asserted on the diagnostics builder's own body, not on the file: the
+        collector's NAME appears the moment it is declared, so a whole-file
+        search would pass while nothing displayed it."""
+        seg = self.src[self.src.index("def build_diagnostics_sheet"):]
+        seg = seg[:seg.index("\ndef ")] if "\ndef " in seg else seg
+        self.assertIn("UNDECLARED_ACCOUNTS", seg,
+                      "the diagnostics sheet never reads the collector")
+        self.assertIn("WARN", seg)
+
+    def test_the_collector_is_actually_filled(self):
+        """And the other end: _discover_sections must append to it."""
+        seg = self.src[self.src.index("def _discover_sections"):]
+        seg = seg[:seg.index("\ndef ")]
+        self.assertIn("UNDECLARED_ACCOUNTS.append", seg,
+                      "nothing records an account placed by prefix")
+        self.assertIn("fell_back", seg, "the fallback flag is ignored")
 
 
 if __name__ == "__main__":
