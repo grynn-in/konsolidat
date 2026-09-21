@@ -169,6 +169,8 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_bs_movement:
         +tags: ['gold', 'domain:actuals']
+      gold_cash_flow_indirect:
+        +tags: ['gold', 'domain:actuals']
       gold_consolidated_trial_balance:
         +tags: ['gold', 'domain:actuals']
       gold_fx_revaluation:
@@ -194,7 +196,11 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_business_disposal_journal:
         +tags: ['gold', 'domain:consolidation']
-      gold_goodwill_amortisation_journal:
+      gold_cashflow_fact:
+        +tags: ['gold', 'domain:consolidation']
+      gold_consolidated_cash_flow:
+        +tags: ['gold', 'domain:consolidation']
+      gold_consolidated_fact:
         +tags: ['gold', 'domain:consolidation']
       gold_consolidated_ytd:
         +tags: ['gold', 'domain:consolidation']
@@ -207,6 +213,8 @@ models:
       gold_equity_method_associates:
         +tags: ['gold', 'domain:consolidation']
       gold_fully_consolidated_tb:
+        +tags: ['gold', 'domain:consolidation']
+      gold_goodwill_amortisation_journal:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_eliminations:
         +tags: ['gold', 'domain:consolidation']
@@ -248,6 +256,8 @@ models:
       gold_scenario_versions:
         +tags: ['gold', 'domain:staging']
       gold_spread_budget:
+        +tags: ['gold', 'domain:staging']
+      gold_unmapped_dimension_values:
         +tags: ['gold', 'domain:staging']
       # --- END konsol-managed model domains ---
 
