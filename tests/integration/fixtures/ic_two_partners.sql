@@ -19,7 +19,7 @@ VALUES
     ('zzfix-ic2p-2097', 'ZZF', 2097, 1, '1010', 150, 0, 'cash', 'ZZFIX-2097', now(), '');
 
 INSERT INTO epm_raw.trial_balance_submission_control
-    (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at)
+    (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
-    ('zzfix-ic2p-2096', 'ZZFIX-2096', 'ZZF', 2096, 1, 3, now()),
-    ('zzfix-ic2p-2097', 'ZZFIX-2097', 'ZZF', 2097, 1, 3, now());
+    ('zzfix-ic2p-2096', 'ZZFIX-2096', 'ZZF', 2096, 1, 3, now(), 'Period movement'),
+    ('zzfix-ic2p-2097', 'ZZFIX-2097', 'ZZF', 2097, 1, 3, now(), 'Period movement');
