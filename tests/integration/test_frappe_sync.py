@@ -50,6 +50,13 @@ def clickhouse_module():
 
     mock_frappe = MagicMock()
     mock_frappe.get_single.return_value = _Settings()
+    # konsolidat#227: flags must be REAL booleans. sync_table returns early when
+    # frappe.flags.in_install / in_import / in_migrate / in_patch is set, and on a
+    # bare MagicMock every one of those is a truthy Mock — so sync_table wrote
+    # nothing and the three TestSyncTable cases failed with 0 rows. That read as
+    # a sync regression; it was the stub.
+    mock_frappe.flags = types.SimpleNamespace(
+        in_install=False, in_import=False, in_migrate=False, in_patch=False)
 
     # Inject mock frappe into sys.modules
     sys.modules["frappe"] = mock_frappe
