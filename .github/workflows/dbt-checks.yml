@@ -23,6 +23,7 @@ on:
       - 'scripts/report_subsections.py'
       - 'scripts/build_consolidation_report.py'
       - 'tests/test_report_subsections.py'
+      - 'tests/test_gold_domain_coverage.py'
   pull_request:
     paths:
       - 'dbt_project/**'
@@ -44,6 +45,7 @@ on:
       - 'scripts/report_subsections.py'
       - 'scripts/build_consolidation_report.py'
       - 'tests/test_report_subsections.py'
+      - 'tests/test_gold_domain_coverage.py'
   workflow_dispatch:
 
 permissions:
@@ -60,6 +62,10 @@ jobs:
       - run: pip install pyyaml
       - name: Every gold model has a known Build Governance domain
         run: python scripts/check_gold_domains.py dbt_project/dbt_project.yml
+      # The guard itself: it used to enumerate the YAML, so a model never
+      # registered as a Build Model was invisible to it. Five had accumulated.
+      - name: the gold-domain guard reads the directory, not only the YAML
+        run: python -m unittest -v tests.test_gold_domain_coverage
 
   dbt-parse:
     name: dbt project parses
