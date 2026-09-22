@@ -5,7 +5,7 @@ ARG FRAPPE_BRANCH=version-15
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl wget cron \
-    mariadb-client \
+    mariadb-client file \
     xfonts-75dpi xfonts-base \
     libfontconfig1 libxrender1 libxext6 \
     build-essential python3-dev \
