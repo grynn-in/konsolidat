@@ -12,8 +12,23 @@ ZZD's 925 EUR is 925 * R in USD. Everything else is USD.
 G = "consolidation_group = 'ZZGRP' AND fiscal_year = 2095"
 
 # The fixture's rows, for loading and removing it.
+#
+# konsolidat#227: every entry names this fixture's OWN rows explicitly. The
+# entities line used to be data_area_id LIKE 'ZZ%', which also deleted ZZOP --
+# the one company the first-build fixture creates, loaded into the same
+# warehouse by ci_full_build.py:85 before this suite runs. The chart lines
+# below must stay explicit for the same reason: ZZCOA also holds ZZ1000,
+# ZZ3000, ZZ3100 and ZZ4000, which are not ours to remove.
+FIXTURE_ENTITIES = ("ZZ7", "ZZA", "ZZB", "ZZC", "ZZD", "ZZE", "ZZH", "ZZQ", "ZZS")
+FIXTURE_ACCOUNTS = ("ZZ1010", "ZZ1100", "ZZ2010", "ZZ2100", "ZZ3010", "ZZ4030", "ZZ5030")
+
+_ENTITY_LIST = ", ".join(f"'{e}'" for e in FIXTURE_ENTITIES)
+_ACCOUNT_LIST = ", ".join(f"'{a}'" for a in FIXTURE_ACCOUNTS)
+
 FIXTURE_ROWS = [
-    ("epm_staging.entities", "data_area_id LIKE 'ZZ%'"),
+    ("epm_staging.main_accounts", f"main_account IN ({_ACCOUNT_LIST})"),
+    ("epm_staging.cash_flow_categories", f"main_account IN ({_ACCOUNT_LIST})"),
+    ("epm_staging.entities", f"data_area_id IN ({_ENTITY_LIST})"),
     ("epm_gold.consolidation_groups", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
     ("epm_staging.consolidation_ancestry", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
     ("epm_staging.ownership_periods", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
@@ -141,7 +156,7 @@ def _close(a, b):
 def check(ch):
     problems = []
     rate = _rows(ch, "SELECT any(translation_rate) FROM epm_gold.gold_consolidated_trial_balance "
-                     f"WHERE {G} AND data_area_id = 'ZZD' AND main_account = '5030'")
+                     f"WHERE {G} AND data_area_id = 'ZZD' AND main_account = 'ZZ5030'")
     r = float(rate[0][0]) if rate and rate[0][0] not in ("", "\\N") else 1.0
 
     got = {(int(p), pair): rest for p, pair, *rest in _rows(
@@ -176,7 +191,7 @@ def check(ch):
             f" UNION ALL SELECT main_account, ifNull(nci_amount, 0) FROM epm_gold.gold_consolidated_trial_balance WHERE {G}"
             f" UNION ALL SELECT debit_account, debit_elimination FROM epm_gold.gold_ic_eliminations WHERE {G} AND elimination_view = 'nci'"
             f" UNION ALL SELECT credit_account, credit_elimination FROM epm_gold.gold_ic_eliminations WHERE {G} AND elimination_view = 'nci'"
-            ") WHERE main_account IN ('1100', '2010', '4030', '5030', '2100', 'NCI') GROUP BY main_account"))
+            ") WHERE main_account IN ('ZZ1100', 'ZZ2010', 'ZZ4030', 'ZZ5030', 'ZZ2100', 'NCI') GROUP BY main_account"))
     for account, amount in full_view_to_date(r).items():
         if not _close(full.get(account, 0), amount):
             problems.append(f"100% view {account}: got {full.get(account)}, want {amount}")
