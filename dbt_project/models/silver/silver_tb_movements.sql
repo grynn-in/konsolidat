@@ -14,26 +14,34 @@
    shape once, here, so nothing downstream changes.
 
    Grain: (data_area_id, fiscal_year, fiscal_period, main_account,
-   partner_data_area_id) — one row per key and period, whatever the batch held.
+   partner_data_area_id, <the declared dimensions>) — one row per key and
+   period, whatever the batch held. Which dimensions those are is the
+   `dimensions` var; a site that declares none has the pre-#255 grain exactly.
 
-   konsol#255, KNOWINGLY INCOMPLETE: the declared dimensions now TRAVEL on the
-   row (source groups by them, and they are carried through the spine to the
-   output), but the GRAIN ABOVE HAS NOT WIDENED. The key of the differencing —
-   both lagInFrame partitions below, the `keys` CTE, and every join onto
-   `source` — is still (entity, account, partner) without dimensions. Two
-   dimension values for one entity/account/period therefore produce two rows
-   that the differencing treats as one series: a 'Year-to-date movement' or
-   'Period-end balance' file differences one dimension's figure against the
-   other's. That is wrong, and it is wrong ON PURPOSE at this commit —
-   konsol#255 row 7a-2 adds the assertion that proves it, and row 7b is what
-   widens the grain, the partitions and `keys` to include the dimensions. A
-   'Period movement' file is unaffected (movement = the row's own net), which
-   is why assert_tb_movements_balance and
-   assert_tb_movements_cumulate_to_source still pass here.
+   konsol#255 row 7b: the differencing is keyed on THAT FULL KEY. Both
+   lagInFrame partitions below and the `keys` CTE carry the declared dimensions
+   (dim_partition_by / dim_select over the var — never a literal column name),
+   so an account split across two dimension values is two series and each
+   period's figure is differenced against its own slice's previous figure. Row
+   7a-1 (2d8ad1e) made the values travel and deliberately left this un-widened;
+   row 7a-2 (0ca2b59) asserted it broken; this is where it is fixed, and
+   assert_tb_movements_difference_within_dimension is what holds it fixed.
 
-   The synthesised year-end close likewise carries blank dimensions (see
-   close_spine): it is the pre-#255 shape, and row 7b decides what a close per
-   dimension value means.
+   The synthesised year-end close still carries blank dimensions (see
+   close_spine) and is still computed on the un-widened key. Under the decision
+   of 22 Sep 2026 (option #255-3,
+   https://github.com/grynn-in/konsol/issues/255#issuecomment-5781879795)
+   whether a dimension survives the close is DECLARED PER DIMENSION on
+   `Dimension.survives_close`; that field is not yet exposed to dbt, so this
+   model cannot read the policy and does not guess it. A later row wires
+   `survives_close` through and decides how the close's rows join the widened
+   series. Consequence to be aware of until then: on a site that declares
+   dimensions AND synthesises a close, the close row sits in the blank-dimension
+   partition of the widened windows, so it neither closes nor is differenced
+   against the dimensioned slices. No live site is in that state — every
+   dim_* value in this warehouse is '' — and
+   assert_tb_movements_difference_within_dimension excludes the close rows and
+   their successors for the same reason.
 
    The three rules, per key, periods ordered by (fiscal_year, fiscal_period)
    among the periods the ENTITY has a claimed batch for:
@@ -97,8 +105,8 @@ with source as (
         partner_data_area_id,
         {# konsol#255: the dimensions are part of the SUMMED key here, so a
            file that splits an account across dimension values keeps them
-           apart. The joins onto this CTE below are NOT keyed on them yet
-           (row 7b) — see the grain note at the top. #}
+           apart — and claimed_spine joins onto this CTE on that same full key
+           (row 7b). #}
         {{ dim_select(trailing=true) }}
         sum(debit_amount - credit_amount) as source_net_amount,
         if(uniqExact(description) = 1, any(description), '') as description,
@@ -215,21 +223,62 @@ pnl_totals as (
 
 keys as (
 
+    {# konsol#255 row 7b: the key of the differencing carries the declared
+       dimensions. NOT a cross join — `select distinct` over the submitted rows
+       enumerates only the (account, partner, dimension) combinations that
+       ACTUALLY occur in the entity's files, so the spine below grows by the
+       number of real combinations, not by the product of each dimension's
+       cardinality. A site that declares no dimensions renders exactly the
+       pre-#255 list. #}
     select distinct
         data_area_id,
         main_account,
-        partner_data_area_id
+        partner_data_area_id{{ dim_select(leading=true) }}
     from {{ ref('bronze_trial_balance_submissions') }}
 
     union distinct
 
     {# the retained-earnings key of every entity that gets a close, whether or
-       not a file ever listed it #}
+       not a file ever listed it. Blank dimensions, matching the close itself —
+       see close_spine and the grain note at the top #}
     select distinct
         data_area_id,
         retained_account as main_account,
-        '' as partner_data_area_id
+        '' as partner_data_area_id{{ dim_empty_strings(leading=true) }}
     from years_to_close
+
+),
+
+close_keys as (
+
+    {# the UN-WIDENED key list, for the synthesised close only. The close is
+       computed on (entity, account, partner) and carries blank dimensions
+       (grain note at the top: `Dimension.survives_close` is not yet exposed to
+       dbt), so it must enumerate that key ONCE — taking the widened `keys`
+       here would emit one close row per dimension combination, all of them
+       blank-dimensioned, i.e. duplicates of one another. #}
+    select distinct
+        data_area_id,
+        main_account,
+        partner_data_area_id
+    from keys
+
+),
+
+close_source as (
+
+    {# and the figures it closes, summed back to that un-widened key, so the
+       close of a split account is the account's whole balance exactly as it
+       was before #255 — not one arbitrary slice of it #}
+    select
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        partner_data_area_id,
+        sum(source_net_amount) as source_net_amount
+    from source
+    group by data_area_id, fiscal_year, fiscal_period, main_account, partner_data_area_id
 
 ),
 
@@ -243,12 +292,21 @@ claimed_spine as (
         p.fiscal_period as fiscal_period,
         k.main_account as main_account,
         k.partner_data_area_id as partner_data_area_id,
-        {# konsol#255: the matched source row's dimension values ride along.
-           `keys` is not widened, so a key with two dimension values matches
-           this join twice and yields two spine rows — deliberate at this
-           commit (row 7b). POSITIONAL TWIN: close_spine below must emit its
-           dimension block in this same position, the union binds by position #}
-        {{ dim_select(prefix='s.', trailing=true) }}
+        {# konsol#255 row 7b: the dimension values come from the KEY, not from
+           the matched source row — a key with no source row in this period
+           still has to be the same series in the windows below, and s.* would
+           read '' there (ClickHouse fills an unmatched LEFT JOIN side with the
+           column default). POSITIONAL TWIN: close_spine below must emit its
+           dimension block in this same position, the union binds by position.
+
+           Written out rather than dim_select(prefix='k.'): that macro emits no
+           alias, so the column would be NAMED `k.dim_…` and the widened
+           partition by below cannot see it (measured — ClickHouse
+           UNKNOWN_IDENTIFIER in scope `differenced`). Still driven by the
+           `dimensions` var, no literal dimension name anywhere #}
+        {% for d in get_dimensions() -%}
+        k.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
         p.amount_basis as amount_basis,
         p.batch_id as batch_id,
         p.submission_name as submission_name,
@@ -265,6 +323,7 @@ claimed_spine as (
         and s.fiscal_period = p.fiscal_period
         and s.main_account = k.main_account
         and s.partner_data_area_id = k.partner_data_area_id
+        {{ dim_join_on('s', 'k') }}
 
 ),
 
@@ -282,9 +341,16 @@ close_spine as (
         k.main_account as main_account,
         k.partner_data_area_id as partner_data_area_id,
         {# konsol#255: positional twin of claimed_spine's dimension block. The
-           synthesised close carries BLANK dimensions: the close is computed on
-           the un-widened key, so there is no dimension value to attribute it
-           to. Row 7b decides what a per-dimension close is #}
+           synthesised close still carries BLANK dimensions. Whether a dimension
+           survives the close is declared per dimension on
+           `Dimension.survives_close` (decision of 22 Sep 2026, option #255-3,
+           https://github.com/grynn-in/konsol/issues/255#issuecomment-5781879795)
+           and that field is NOT yet exposed to dbt — row 7b widened the
+           differencing and deliberately did not invent a way to read the
+           policy. A later row wires `survives_close` through and replaces this
+           block; until then the close is the pre-#255 shape, computed on
+           close_keys / close_source, and the grain note at the top says what
+           that costs a dimensioned site #}
         {{ dim_empty_strings(trailing=true) }}
         y.amount_basis as amount_basis,
         '' as batch_id,
@@ -299,12 +365,12 @@ close_spine as (
         toUInt8(k.main_account = y.retained_account and k.partner_data_area_id = '' and t.pnl_total != 0) as has_source,
         'year_end_close' as movement_kind
     from years_to_close as y
-    inner join keys as k
+    inner join close_keys as k
         on k.data_area_id = y.data_area_id
     left join pnl_totals as t
         on t.data_area_id = y.data_area_id
         and t.fiscal_year = y.fiscal_year
-    left join source as s
+    left join close_source as s
         on s.data_area_id = y.data_area_id
         and s.fiscal_year = y.fiscal_year
         and s.fiscal_period = y.last_period
@@ -327,15 +393,17 @@ differenced as (
 
     select
         *,
-        {# previous claimed period of the key, any year: the 'Period-end balance' rule #}
+        {# previous claimed period of the key, any year: the 'Period-end balance' rule.
+           konsol#255 row 7b: the declared dimensions are part of the partition,
+           so a slice is only ever differenced against its own previous figure #}
         lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
-            partition by data_area_id, main_account, partner_data_area_id
+            partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and current row
         ) as previous_net_any_year,
         {# previous claimed period of the key within the fiscal year: the 'Year-to-date movement' rule #}
         lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
-            partition by data_area_id, main_account, partner_data_area_id, fiscal_year
+            partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
             order by fiscal_period
             rows between unbounded preceding and current row
         ) as previous_net_same_year
@@ -374,8 +442,8 @@ select
     fiscal_period,
     main_account,
     partner_data_area_id,
-    {# konsol#255: the dimensions reach the output; the grain note at the top
-       says what has NOT yet widened to match #}
+    {# konsol#255: the dimensions reach the output and are part of the grain —
+       see the grain note at the top #}
     {{ dim_select(trailing=true) }}
     amount_basis,
     batch_id,
