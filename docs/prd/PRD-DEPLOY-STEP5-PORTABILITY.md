@@ -77,9 +77,16 @@ DBT_LOG="$(mktemp "${TMPDIR:-/tmp}/konsolidat-dbt.XXXXXX")"
 ## Acceptance criteria
 
 1. On a GNU-coreutils host, every `mktemp` call in `deploy.sh` exits 0 and
-   creates a file — run, not read — with `TMPDIR` set and with it unset.
+   creates a file **in the temporary directory** — run, not read — with
+   `TMPDIR` set and with it unset. Where the file landed, not merely that it
+   exists: as root, `mktemp "${TMPDIR}/x.XXXXXX"` with `TMPDIR` unset creates
+   `/x.XXXXXX` quite happily, so an existence check passes the very bug this
+   guards. (`mktemp -u` prints a name and creates nothing, which is fair for a
+   path `tee` will create; that call is checked but not failed for absence.)
 2. A `mktemp` call in a shape the guard cannot run fails the guard by name,
-   rather than being skipped.
+   rather than being skipped. That includes a capture carrying a second command
+   (`$(mktemp -d && chmod …)`) and a nested `$( )`: the guard refuses them and
+   says why, rather than splitting shell it cannot parse.
 3. `deploy.sh` still sets `set -e` and still does **not** set `pipefail`.
 4. Step 5 still reads `${PIPESTATUS[0]}`.
 5. The test runs in CI by name, in the `deploy guards` workflow. It is not in

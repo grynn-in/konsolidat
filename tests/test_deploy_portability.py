@@ -48,17 +48,34 @@ def _deploy_sh():
 
 
 # The one shape this guard understands: VAR=$(mktemp ...) or VAR="$(mktemp ...)",
-# which is what deploy.sh:395 is. The mktemp command is captured on its own so it
-# can be run alone — never the whole line. An earlier version ran the line
-# verbatim, which would have executed `rm -rf "$SCRATCH"/*  # made with mktemp -d`
-# with SCRATCH unset. A line that mentions mktemp in any other shape is refused
-# loudly below rather than skipped.
+# which is what deploy.sh:395 is, optionally with an `export`/`local`/`readonly`
+# keyword in front and a `# comment` after the closing paren — both ordinary
+# shell, and both refused by the first version of this line. The mktemp command
+# is captured on its own so it can be run alone — never the whole line. An
+# earlier version ran the line verbatim, which would have executed
+# `rm -rf "$SCRATCH"/*  # made with mktemp -d` with SCRATCH unset. A line that
+# mentions mktemp in any other shape is refused loudly below rather than skipped.
+#
+# The trailing comment is matched here rather than stripped beforehand, so that
+# a `#` inside the template cannot be mistaken for the start of a comment: it
+# only counts after the `)` that closes the capture.
 _ASSIGNED_MKTEMP = re.compile(
-    r"""^[A-Za-z_][A-Za-z0-9_]*=      # VAR=
-        "?\$\(\s*(mktemp\b[^()]*?)\s*\)"?$   # $(mktemp ...) or "$(mktemp ...)"
+    r"""^(?:(?:export|local|readonly)\s+)?   # optional declaration keyword
+        [A-Za-z_][A-Za-z0-9_]*=              # VAR=
+        ("?)\$\(\s*(mktemp\b[^()]*?)\s*\)\1   # $(mktemp ...) or "$(mktemp ...)",
+                                             # the backreference keeping the
+                                             # quotes balanced
+        \s*(?:\#.*)?$                        # optional trailing comment
     """,
     re.VERBOSE,
 )
+
+# Shell operators that chain another command onto the capture. The capture is
+# RUN, so `LOG=$(mktemp -d; echo hi)` would run `echo hi` and
+# `LOG="$(mktemp -d && chmod 777 /tmp/x)"` would run the chmod — the hazard the
+# capture was introduced to remove. Deciding which part of such a line is the
+# mktemp call means parsing shell again, so the whole line is refused instead.
+_CHAINING = (";", "&", "|", "`")
 
 
 def _mktemp_lines():
@@ -79,8 +96,24 @@ def _mktemp_command(line):
     """
     match = _ASSIGNED_MKTEMP.match(line)
     if match is None:
+        if line.count("$(") > 1:
+            return None, (
+                "more than one `$( )` on the line. A nested command "
+                "substitution is not supported: finding the `)` that closes it "
+                "means parsing shell, which is the parser this guard deleted "
+                "after nine defects were found in it. Assign the inner value on "
+                "a line of its own first."
+            )
         return None, "not `VAR=$(mktemp ...)`, the only shape this guard runs"
-    return match.group(1), None
+    command = match.group(2)
+    chained = [character for character in _CHAINING if character in command]
+    if chained:
+        return None, (
+            "the capture contains %s, so it is more than one command and this "
+            "guard would run all of it. Refused rather than split."
+            % ", ".join("`%s`" % character for character in chained)
+        )
+    return command, None
 
 
 def _remove(path):
@@ -113,20 +146,41 @@ def _default_temp_directory(env):
     return result.stdout.strip()
 
 
+def _is_dry_run(command):
+    """True for `mktemp -u` / `--dry-run`, which prints a name and creates nothing.
+
+    That is a fair way to name a file something else will create — step 5's own
+    log is written by `tee` — so such a call is not failed for the file's
+    absence. Everything else about it is still checked.
+    """
+    return bool(re.search(r"(?:^|\s)(?:--dry-run\b|-[a-zA-Z]*u\b)", command))
+
+
 def _check_mktemp_call(command, set_tmpdir):
     """Run one mktemp command; return the reasons it fails, or [] when it passes.
 
     With `set_tmpdir` the command runs with TMPDIR pointing at a scratch
-    directory; without it, TMPDIR is removed from the environment. Whatever the
-    command creates is deleted before returning.
+    directory; without it, TMPDIR is removed from the environment. Either way
+    the path printed must be inside the directory temporary files belong in:
+    existence alone is not enough, because as root
+    `mktemp "${TMPDIR}/x.XXXXXX"` with TMPDIR unset happily creates /x.XXXXXX.
+    Whatever the command creates is deleted before returning.
+
+    Declared, not hidden: "the directory temporary files belong in" is the one
+    TMPDIR names, or the system default when it names none. A call that writes
+    somewhere else on purpose — /var/tmp, a directory in the repo — fails here.
+    Widen this deliberately if step 5 ever needs that; do not widen it to make a
+    red go away.
     """
     with tempfile.TemporaryDirectory() as scratch:
         env = dict(os.environ)
         if set_tmpdir:
             env["TMPDIR"] = scratch
+            expected_directory = scratch
         else:
             for name in ("TMPDIR", "TEMP", "TMP"):
                 env.pop(name, None)
+            expected_directory = _default_temp_directory(env)
         result = subprocess.run(
             ["bash", "-c", command],
             capture_output=True,
@@ -140,15 +194,25 @@ def _check_mktemp_call(command, set_tmpdir):
                 "exited %d: %s"
                 % (result.returncode, result.stderr.strip() or "(no stderr)")
             ]
-        path = result.stdout.strip()
-        if not path:
+        printed = result.stdout.strip().splitlines()
+        if not printed:
             return ["printed no path"]
+        # The LAST line is the name. Using the whole of stdout made a
+        # multi-line string and then treated it as a filesystem path, so
+        # anything mktemp printed first turned the check into nonsense.
+        path = printed[-1].strip()
         reasons = []
         try:
+            if os.path.normpath(os.path.dirname(path)) != os.path.normpath(
+                expected_directory
+            ):
+                reasons.append(
+                    "created %r, which is not in %s" % (path, expected_directory)
+                )
             # `mktemp -d` is a directory and equally legitimate; assert only
             # that the path exists, and clean up either kind. Asserting
             # isfile() failed a correct `-d` line and then raised in cleanup.
-            if not os.path.exists(path):
+            if not _is_dry_run(command) and not os.path.exists(path):
                 reasons.append("created nothing at %r" % path)
         finally:
             _remove(path)
@@ -166,16 +230,27 @@ def _is_gnu_mktemp():
     return result.returncode == 0 and "GNU coreutils" in result.stdout
 
 
+# `set` in command position, not the word "set" anywhere in the line: the
+# earlier `^[^#]*\bset\b` matched `echo "never set -o pipefail here"`, so a help
+# string or an error message naming the option reddened the guard. `pipefail`
+# after ANY `-o`, not only the first option group: `set -o errexit -o pipefail`
+# enables it just as `set -eo pipefail` does.
+#
+# Not covered, deliberately: `bash -o pipefail script.sh` and
+# `SHELLOPTS=pipefail`. Both turn the option on without the word `set`, and
+# matching them means reading the whole invocation. deploy.sh does neither; if
+# one appears, extend this with the same care.
+_SETS_PIPEFAIL = re.compile(
+    r"(?:^|;|&&|\|\||\bthen\b|\bdo\b)\s*"  # start of a command
+    r"set\s+(?:-[a-zA-Z]*\s+|-o\s+\w+\s+)*-[a-zA-Z]*o\s+pipefail\b"
+)
+
+
 def _sets_pipefail(line):
     """True when this line of shell turns pipefail on."""
-    # The option as the shell spells it, before any `#`, so an explanatory
-    # comment ("deliberately not pipefail, see #139") is not a failure.
-    # `pipefail` after ANY `-o`, not only the first option group:
-    # `set -o errexit -o pipefail` enables it just as `set -eo pipefail` does.
-    setting = re.compile(
-        r"^[^#\n]*\bset\s+(?:-[a-zA-Z]*\s+|-o\s+\w+\s+)*-[a-zA-Z]*o\s+pipefail\b"
-    )
-    return bool(setting.match(line))
+    # Everything from the first `#` is dropped, so an explanatory comment
+    # ("deliberately not pipefail, see #139") is not a failure.
+    return bool(_SETS_PIPEFAIL.search(line.split("#", 1)[0]))
 
 
 def _pipefail_lines(text):
@@ -302,8 +377,11 @@ class TheGuardItself(unittest.TestCase):
     def test_the_path_is_the_last_line_of_stdout(self):
         """Anything printed before the name is not part of the name.
 
-        Defence in depth: the shape guard refuses a chained capture, so this can
-        now only arise from an mktemp that prints a warning of its own first.
+        Defence in depth. The shape guard refuses a chained capture read from
+        deploy.sh, so from there this can now only arise from an mktemp that
+        prints a warning of its own first; the runner is called directly here,
+        with a harmless `echo`, because that is the only way to produce the
+        extra line the runner has to survive.
         """
         self.assertEqual(
             [],
