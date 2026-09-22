@@ -24,6 +24,12 @@ on:
       - 'scripts/build_consolidation_report.py'
       - 'tests/test_report_subsections.py'
       - 'tests/test_gold_domain_coverage.py'
+      # konsolidat#239 / #240: the guarded files themselves, so a later edit to
+      # the deploy script or the image re-runs the test that guards it.
+      - 'deploy.sh'
+      - 'docker/frappe/Dockerfile'
+      - 'tests/test_deploy_portability.py'
+      - 'tests/test_restore_in_image.py'
   pull_request:
     paths:
       - 'dbt_project/**'
@@ -46,6 +52,12 @@ on:
       - 'scripts/build_consolidation_report.py'
       - 'tests/test_report_subsections.py'
       - 'tests/test_gold_domain_coverage.py'
+      # konsolidat#239 / #240: the guarded files themselves, so a later edit to
+      # the deploy script or the image re-runs the test that guards it.
+      - 'deploy.sh'
+      - 'docker/frappe/Dockerfile'
+      - 'tests/test_deploy_portability.py'
+      - 'tests/test_restore_in_image.py'
   workflow_dispatch:
 
 permissions:
@@ -135,6 +147,15 @@ jobs:
       # place by account-number prefix instead.
       - name: report sub-sections come from the chart, not the account number
         run: python -m unittest -v tests.test_report_subsections
+      # konsolidat#239: `mktemp -t` needs three X's on GNU coreutils, so step 5
+      # of deploy.sh — the dbt build — had never run on a Linux host. CI is
+      # ubuntu, so the behavioural half of this test is real here.
+      - name: deploy.sh creates its temp files portably
+        run: python -m unittest -v tests.test_deploy_portability
+      # konsolidat#240: frappe shells out to file(1) to detect a gzipped dump,
+      # and the image did not install it, so bench restore could not run.
+      - name: the image installs what bench restore shells out to
+        run: python -m unittest -v tests.test_restore_in_image
 
   full-build:
     name: full build + assertions on a throwaway ClickHouse
