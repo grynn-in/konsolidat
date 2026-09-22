@@ -106,9 +106,9 @@ class IntegrationTests(unittest.TestCase):
     """They existed and never ran: no service container, so `ch` skipped them.
 
     Run for the first time against a throwaway on 19 Sep 2026, the suite gave
-    7 failed, 30 passed, 5 skipped, 3 errors — it had rotted unobserved. The
-    repair is konsolidat#227; this job carries the switch and the detection so
-    that turning it on is a one-line change when #227 lands.
+    7 failed, 30 passed, 5 skipped, 3 errors — it had rotted unobserved.
+    konsolidat#227 settled it: 20 of the 30 tests deleted, the 10 that cover
+    what nothing else reaches made to pass, and the switch turned on here.
     """
 
     def test_the_integration_suite_can_be_run(self):
@@ -116,19 +116,26 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn("tests/integration", src)
         self.assertIn("with-integration", src)
 
-    def test_it_is_off_until_the_suite_is_repaired(self):
-        self.assertIn("227", _read(SCRIPT),
-                      "nothing says why the suite is not run yet")
+    def test_the_workflow_runs_the_suite(self):
+        """The inverse of the guard this replaces.
+
+        Until konsolidat#227 this asserted --with-integration was ABSENT, so
+        that a suite which could not pass could not be switched on. The suite
+        passes now (10 passed, 0 skipped, from a clean warehouse), so the guard
+        flips rather than goes: if someone quietly drops the flag, the whole
+        reason #227 was done disappears with it and nothing else would notice.
+        Asserted on the invocation line, not on the file, because the comments
+        legitimately name the flag when explaining it.
+        """
         wf = _read(WORKFLOW)
-        # Asserted on the invocation, not on the file: the workflow's comment
-        # legitimately names the flag when saying what turns it on later.
         invocations = [ln for ln in wf.splitlines()
                        if "run:" in ln and "ci_full_build.py" in ln]
         self.assertTrue(invocations, "the workflow never runs the script")
-        for ln in invocations:
-            self.assertNotIn("--with-integration", ln,
-                             "the workflow turns on a suite that does not pass")
-        self.assertIn("227", wf, "the workflow does not say what it is waiting for")
+        self.assertTrue(
+            any("--with-integration" in ln for ln in invocations),
+            "the workflow runs the build but not the integration suite; "
+            "konsolidat#227 exists to have it run")
+        self.assertIn("227", wf, "the workflow does not cite why the suite runs")
 
     def test_a_skip_would_fail_the_job(self):
         """The issue is explicit: fail on any error OR skip. A suite that skips
