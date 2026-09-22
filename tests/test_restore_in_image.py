@@ -26,7 +26,7 @@ a whole token counts.
 
 Two properties of that parse are pinned by their own tests below, because both
 were wrong once (konsolidat#242): a `#` line is dropped wherever it appears,
-including inside a `\`-continued instruction — otherwise a Dockerfile that
+including inside a `\\`-continued instruction — otherwise a Dockerfile that
 merely *mentions* `file` in a comment passes as one that installs it — and the
 install command is recognised in its ordinary spellings (`apt` or `apt-get`,
 flags either side of the verb, leading `VAR=value`), so an edit to the
