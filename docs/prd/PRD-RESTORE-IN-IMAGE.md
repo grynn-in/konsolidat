@@ -56,8 +56,8 @@ Add `file` to the apt list in `docker/frappe/Dockerfile`.
 - The CI restore smoke test the issue suggests (back up a seeded site, restore
   it into a second site, assert a row count). It is the right test and it is a
   separate piece of work: this repo has no Frappe site in CI, and konsol's
-  `CLAUDE.md` forbids a second site against the shared ClickHouse. Filed as a
-  follow-up rather than smuggled in here.
+  `CLAUDE.md` forbids a second site against the shared ClickHouse. Filed as
+  konsolidat#241 rather than smuggled in here.
 - `deploy.sh restore`'s own mechanism, which bypasses bench entirely. Worth a
   look; not this change.
 
