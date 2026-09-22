@@ -1,112 +1,32 @@
 """
-Test 2: Verify dbt build succeeds and produces gold models.
-Exercises: staging sources → bronze → silver → gold pipeline.
+Test 2: the consolidation arithmetic that no other test can reach.
+
+Both tests here stage data that exists nowhere else in the system: an
+intercompany partner, ownership below 100%, a second functional currency, a
+mid-year acquisition, a disposal, a sub-group sale and an equity-method stake.
+partner_data_area_id is cast(null as Nullable(String)) in all four ERP adapters
+and the ZZ first-build fixture stages no partner at all, so the thirteen
+assertions over the gold_ic_* models otherwise run on an empty table and report
+green. Live data cannot substitute: all 329 ownership rows are 100%, nci_amount
+is 0 on all 45,928 rows, and there are no deal journals.
+
+What this file used to assert and no longer does (konsolidat#227 row 3): that
+the build succeeds, that its output has no ERROR lines, that nine gold tables
+exist afterwards, and two row-count checks. scripts/ci_full_build.py:97-115
+asserts the same build with stricter conditions -- it also fails on SKIP>0 and
+PASS=0, and reads dbt's own Done. line rather than string-matching "ERROR" --
+and tb_only_first_build.py:273-281 asserts non-zero rows in gold_trial_balance
+and gold_consolidated_trial_balance in a job that does run in CI.
 """
 import os
 
 import pytest
 
 
-def test_dbt_build_succeeds(dbt_run):
-    """Full dbt build should pass (data-quality warnings are OK)."""
-    result = dbt_run()
-    assert result.returncode == 0, (
-        f"dbt build failed (exit {result.returncode}):\n"
-        f"STDOUT: {result.stdout[-2000:]}\n"
-        f"STDERR: {result.stderr[-2000:]}"
-    )
-
-
-def test_dbt_build_no_errors_in_output(dbt_run):
-    """dbt output should contain no ERROR lines (warnings are acceptable)."""
-    result = dbt_run()
-    error_lines = [
-        line for line in result.stdout.splitlines()
-        if "ERROR" in line and "0 error" not in line.lower()
-    ]
-    assert not error_lines, f"dbt build had errors:\n" + "\n".join(error_lines)
-
-
-# ---------------------------------------------------------------------------
-# Verify gold tables were created by dbt
-# ---------------------------------------------------------------------------
-EXPECTED_GOLD_TABLES = [
-    "gold_trial_balance",
-    "gold_consolidated_trial_balance",
-    "gold_balance_sheet",
-    "gold_pnl_by_period",
-    "gold_ic_eliminations",
-    "gold_ic_unmatched",
-    "gold_trial_balance_by_partner",
-    "gold_fx_revaluation",
-    "gold_consolidation_adjustments",
-]
-
-
-@pytest.mark.parametrize("table", EXPECTED_GOLD_TABLES)
-def test_gold_table_exists_after_build(ch, dbt_run, table):
-    """After dbt build, gold tables should exist in epm_gold."""
-    # Ensure dbt has run
-    dbt_run()
-    count = ch(
-        f"SELECT count() FROM system.tables "
-        f"WHERE database = 'epm_gold' AND name = '{table}' FORMAT TabSeparated"
-    )
-    assert int(count) == 1, f"epm_gold.{table} does not exist after dbt build"
-
-
-# ---------------------------------------------------------------------------
-# Verify source data lands in gold tables
-# ---------------------------------------------------------------------------
-# gold_trial_balance is built from these epm_raw tables. There is no demo data,
-# so on a fresh stack they are all empty (or not created yet).
-GL_CONNECTOR_TABLES = [
-    "general_journal_account_entry_bi_entities",  # D365 F&O connector
-    "gl_entry",                                   # ERPNext connector
-]
-
-
-def _source_gl_rows(ch):
-    """Rows in epm_raw that can reach gold_trial_balance. Missing tables count as empty.
-
-    Trial balance submissions only count once their batch is claimed in the
-    control table, the same inner join bronze_trial_balance_submissions uses.
-    """
-    existing = set(ch(
-        "SELECT name FROM system.tables WHERE database = 'epm_raw' FORMAT TabSeparated"
-    ).split())
-    total = 0
-    for table in GL_CONNECTOR_TABLES:
-        if table in existing:
-            total += int(ch(f"SELECT count() FROM epm_raw.{table} FORMAT TabSeparated"))
-    if {"trial_balance_submissions", "trial_balance_submission_control"} <= existing:
-        total += int(ch(
-            "SELECT count() FROM epm_raw.trial_balance_submissions "
-            "WHERE batch_id IN (SELECT batch_id FROM epm_raw.trial_balance_submission_control) "
-            "FORMAT TabSeparated"
-        ))
-    return total
-
-
-def test_gold_trial_balance_has_rows(ch, dbt_run):
-    """gold_trial_balance should have rows once a connector or trial balance upload has landed data."""
-    if _source_gl_rows(ch) == 0:
-        pytest.skip(
-            "No source data: the epm_raw GL tables are empty and no trial balance "
-            "submission is claimed. There is no demo data; load data through a "
-            "connector or a trial balance upload first."
-        )
-    dbt_run()
-    count = ch("SELECT count() FROM epm_gold.gold_trial_balance FORMAT TabSeparated")
-    assert int(count) > 0, "gold_trial_balance is empty after dbt build"
-
-
-def test_gold_consolidated_trial_balance_has_rows(ch, dbt_run):
-    """gold_consolidated_trial_balance should have rows (requires consolidation groups seed)."""
-    dbt_run()
-    count = ch("SELECT count() FROM epm_gold.gold_consolidated_trial_balance FORMAT TabSeparated")
-    # May be 0 if no consolidation groups are seeded — that's OK, just check it doesn't error
-    assert int(count) >= 0
+def _sql_statements(path):
+    with open(path) as f:
+        text = "\n".join(line for line in f if not line.lstrip().startswith("--"))
+    return [s.strip() for s in text.split(";") if s.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -114,12 +34,6 @@ def test_gold_consolidated_trial_balance_has_rows(ch, dbt_run):
 # ---------------------------------------------------------------------------
 TWO_PARTNER_FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "ic_two_partners.sql")
 TWO_PARTNER_BATCHES = ("zzfix-ic2p-2096", "zzfix-ic2p-2097")
-
-
-def _sql_statements(path):
-    with open(path) as f:
-        text = "\n".join(line for line in f if not line.lstrip().startswith("--"))
-    return [s.strip() for s in text.split(";") if s.strip()]
 
 
 def _drop_two_partner_fixture(ch):
