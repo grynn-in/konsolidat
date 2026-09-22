@@ -1,7 +1,12 @@
 name: deploy guards
 
-# konsolidat#239 and #240. Both tests are pure Python over files in the repo:
-# no ClickHouse, no dbt, no services, about two seconds. They live here rather
+# konsolidat#239. Pure Python over files in the repo: no ClickHouse, no dbt, no
+# services, about two seconds.
+#
+# konsolidat#240's fix (the image installing file(1)) ships in this PR with no
+# test here. Three guards were written for it and all three were parsers that
+# read the Dockerfile; all three were wrong. Building the image and looking is
+# the only honest check, and nothing in CI builds it — konsolidat#244. They live here rather
 # than in `dbt checks` because that workflow's `paths` is workflow-level, so
 # listing deploy.sh there dragged a full warehouse build and the TB-only first
 # build onto every edit of the deploy script.
@@ -35,7 +40,7 @@ permissions:
 
 jobs:
   guards:
-    name: deploy script and image guards
+    name: deploy script guards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
