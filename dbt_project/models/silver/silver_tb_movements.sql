@@ -16,6 +16,25 @@
    Grain: (data_area_id, fiscal_year, fiscal_period, main_account,
    partner_data_area_id) — one row per key and period, whatever the batch held.
 
+   konsol#255, KNOWINGLY INCOMPLETE: the declared dimensions now TRAVEL on the
+   row (source groups by them, and they are carried through the spine to the
+   output), but the GRAIN ABOVE HAS NOT WIDENED. The key of the differencing —
+   both lagInFrame partitions below, the `keys` CTE, and every join onto
+   `source` — is still (entity, account, partner) without dimensions. Two
+   dimension values for one entity/account/period therefore produce two rows
+   that the differencing treats as one series: a 'Year-to-date movement' or
+   'Period-end balance' file differences one dimension's figure against the
+   other's. That is wrong, and it is wrong ON PURPOSE at this commit —
+   konsol#255 row 7a-2 adds the assertion that proves it, and row 7b is what
+   widens the grain, the partitions and `keys` to include the dimensions. A
+   'Period movement' file is unaffected (movement = the row's own net), which
+   is why assert_tb_movements_balance and
+   assert_tb_movements_cumulate_to_source still pass here.
+
+   The synthesised year-end close likewise carries blank dimensions (see
+   close_spine): it is the pre-#255 shape, and row 7b decides what a close per
+   dimension value means.
+
    The three rules, per key, periods ordered by (fiscal_year, fiscal_period)
    among the periods the ENTITY has a claimed batch for:
      'Period movement'        movement = net(p)                    (net = debit - credit)
@@ -76,11 +95,16 @@ with source as (
         fiscal_period,
         main_account,
         partner_data_area_id,
+        {# konsol#255: the dimensions are part of the SUMMED key here, so a
+           file that splits an account across dimension values keeps them
+           apart. The joins onto this CTE below are NOT keyed on them yet
+           (row 7b) — see the grain note at the top. #}
+        {{ dim_select(trailing=true) }}
         sum(debit_amount - credit_amount) as source_net_amount,
         if(uniqExact(description) = 1, any(description), '') as description,
         toUInt8(1) as has_source
     from {{ ref('bronze_trial_balance_submissions') }}
-    group by data_area_id, fiscal_year, fiscal_period, main_account, partner_data_area_id
+    group by data_area_id, fiscal_year, fiscal_period, main_account, partner_data_area_id{{ dim_group_by(leading=true) }}
 
 ),
 
@@ -219,6 +243,12 @@ claimed_spine as (
         p.fiscal_period as fiscal_period,
         k.main_account as main_account,
         k.partner_data_area_id as partner_data_area_id,
+        {# konsol#255: the matched source row's dimension values ride along.
+           `keys` is not widened, so a key with two dimension values matches
+           this join twice and yields two spine rows — deliberate at this
+           commit (row 7b). POSITIONAL TWIN: close_spine below must emit its
+           dimension block in this same position, the union binds by position #}
+        {{ dim_select(prefix='s.', trailing=true) }}
         p.amount_basis as amount_basis,
         p.batch_id as batch_id,
         p.submission_name as submission_name,
@@ -251,6 +281,11 @@ close_spine as (
         y.closing_period as fiscal_period,
         k.main_account as main_account,
         k.partner_data_area_id as partner_data_area_id,
+        {# konsol#255: positional twin of claimed_spine's dimension block. The
+           synthesised close carries BLANK dimensions: the close is computed on
+           the un-widened key, so there is no dimension value to attribute it
+           to. Row 7b decides what a per-dimension close is #}
+        {{ dim_empty_strings(trailing=true) }}
         y.amount_basis as amount_basis,
         '' as batch_id,
         'Year-end close' as submission_name,
@@ -316,6 +351,7 @@ movements as (
         fiscal_period,
         main_account,
         partner_data_area_id,
+        {{ dim_select(trailing=true) }}
         amount_basis,
         batch_id,
         submission_name,
@@ -338,6 +374,9 @@ select
     fiscal_period,
     main_account,
     partner_data_area_id,
+    {# konsol#255: the dimensions reach the output; the grain note at the top
+       says what has NOT yet widened to match #}
+    {{ dim_select(trailing=true) }}
     amount_basis,
     batch_id,
     submission_name,

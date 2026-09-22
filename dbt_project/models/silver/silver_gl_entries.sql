@@ -92,9 +92,11 @@ left join fiscal_dates as fp
    POSITIONAL TWIN: UNION ALL binds by position and ignores aliases — this
    column list MUST mirror the select above exactly, in order and type. Any
    column added there needs its twin here, or TBS values land in the wrong
-   columns silently. Dimensions come from dim_empty_strings(), the same macro
-   family dim_select() belongs to, so the dimension block stays width-aligned
-   from one source of truth.
+   columns silently. konsol#255: dimensions come from dim_select() on the
+   submission row, the same macro the branch above uses on the ERP row, so the
+   dimension block stays width-aligned and in the same position from one source
+   of truth. (It was dim_empty_strings() until #255: a submitted trial balance
+   carried no dimensions at all.)
 
    accounting_date comes from the entity's OWN fiscal calendar
    (entity_fiscal_calendars -> silver_fiscal_periods.period_start_date), the
@@ -141,7 +143,9 @@ select
     tbs.description as description,
     {# positional twin of gae.partner_data_area_id above #}
     tbs.partner_data_area_id as partner_data_area_id,
-    {{ dim_empty_strings(trailing=true) }}
+    {# positional twin of gae.<dimensions> above — the submitted file's own
+       declared dimension values (konsol#255) #}
+    {{ dim_select(prefix='tbs.', trailing=true) }}
     concat('TBS-', tbs.batch_id) as journal_number,
     '{{ tbs_marker }}' as journal_category,
     tbs.submission_name as document_number,
@@ -167,6 +171,7 @@ from (
         m.credit_amount as credit_amount,
         m.description as description,
         m.partner_data_area_id as partner_data_area_id,
+        {{ dim_select(prefix='m.', trailing=true) }}
         m.submission_name as submission_name,
         m.movement_amount as net_amount,
         {# ClickHouse LEFT JOIN fills an unmatched sfp row with the column
