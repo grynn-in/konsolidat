@@ -23,13 +23,26 @@ The package list is tokenised rather than searched as a substring: the string
 "file" occurs in the Dockerfile in `Dockerfile` itself, in `/tmp/wkhtmltox.deb
 -o`, and would occur in any future package whose name merely contains it. Only
 a whole token counts.
+
+Two properties of that parse are pinned by their own tests below, because both
+were wrong once (konsolidat#242): a `#` line is dropped wherever it appears,
+including inside a `\`-continued instruction — otherwise a Dockerfile that
+merely *mentions* `file` in a comment passes as one that installs it — and the
+install command is recognised in its ordinary spellings (`apt` or `apt-get`,
+flags either side of the verb, leading `VAR=value`), so an edit to the
+Dockerfile cannot turn the acceptance test into a false red.
 """
 import os
+import re
 import shlex
+import shutil
+import tempfile
+import textwrap
 import unittest
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCKERFILE = os.path.join(PROJECT_ROOT, "docker", "frappe", "Dockerfile")
+_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
 def _logical_lines(path):
@@ -40,7 +53,13 @@ def _logical_lines(path):
     buffer = ""
     for line in raw.splitlines():
         stripped = line.strip()
-        if stripped.startswith("#") and not buffer:
+        if stripped.startswith("#"):
+            # Docker strips a comment line wherever it appears, including
+            # inside a `\\`-continued instruction, and the continuation
+            # carries on past it. Folding such a line into the instruction
+            # turned its words into "packages" (konsolidat#242 F1), which let
+            # `test_file_is_installed_alongside_mariadb_client` pass on a
+            # Dockerfile that does not install `file` at all.
             continue
         if stripped.endswith("\\"):
             buffer += stripped[:-1].strip() + " "
@@ -54,14 +73,15 @@ def _logical_lines(path):
     return joined
 
 
-def _apt_install_packages(package):
+def _apt_install_packages(package, path=DOCKERFILE):
     """Packages named by the `apt-get install` command that installs `package`.
 
     Returns the whole token list of that one `&&`-separated command, with the
     `apt-get install` words and every flag dropped, so callers compare whole
-    tokens. Returns None when no such command exists.
+    tokens. Returns None when no such command exists. `path` defaults to the
+    repo's Dockerfile; the regression tests below point it at a fixture.
     """
-    for instruction in _logical_lines(DOCKERFILE):
+    for instruction in _logical_lines(path):
         if not instruction.startswith("RUN "):
             continue
         body = instruction[len("RUN "):]
@@ -70,12 +90,35 @@ def _apt_install_packages(package):
                 tokens = shlex.split(command)
             except ValueError:  # unbalanced quoting: not a package list
                 continue
-            if tokens[:2] != ["apt-get", "install"]:
-                continue
-            packages = [t for t in tokens[2:] if not t.startswith("-")]
-            if package in packages:
+            packages = _installed_packages(tokens)
+            if packages is not None and package in packages:
                 return packages
     return None
+
+
+def _installed_packages(tokens):
+    """The packages of one `apt`/`apt-get install` command, or None.
+
+    Matching only the exact prefix `apt-get install` (konsolidat#242 F9) made
+    `apt-get -y install …`, `apt install …` and
+    `DEBIAN_FRONTEND=noninteractive apt-get install …` parse as nothing, so a
+    legitimate Dockerfile edit failed the tests with "the parse, not the
+    Dockerfile, is probably what changed" — a false red. Leading `VAR=value`
+    assignments are skipped, `apt` and `apt-get` both count, and flags may sit
+    on either side of the `install` verb.
+    """
+    rest = list(tokens)
+    while rest and _ENV_ASSIGNMENT.match(rest[0]):
+        rest.pop(0)
+    if not rest or rest[0] not in ("apt", "apt-get"):
+        return None
+    rest = rest[1:]
+    if "install" not in rest:
+        return None
+    # Everything before the verb is a flag or a flag's value, never a package:
+    # `apt-get` takes its verb as the first non-option word.
+    after = rest[rest.index("install") + 1:]
+    return [t for t in after if not t.startswith("-")]
 
 
 class DockerfileInstallsFile(unittest.TestCase):
@@ -102,6 +145,113 @@ class DockerfileInstallsFile(unittest.TestCase):
             "(frappe/commands/site.py:234, :375) and fails with "
             "`file: command not found`. Packages found: %r" % (packages,),
         )
+
+
+class _FixtureDockerfile(unittest.TestCase):
+    """Base class: write a throwaway Dockerfile and hand the parser its path."""
+
+    def fixture(self, text):
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        path = os.path.join(directory, "Dockerfile")
+        with open(path, "w") as f:
+            f.write(textwrap.dedent(text).lstrip())
+        return path
+
+
+# konsolidat#242 finding F1: a `#` line inside a `\`-continued RUN was folded
+# into the instruction, so its words became "packages". Docker strips such a
+# line; the parser must too, or the acceptance test passes on a Dockerfile that
+# does not install the package it claims to check.
+DROPS_FILE_BUT_MENTIONS_IT_IN_A_COMMENT = r"""
+    FROM python:3.11-slim-bookworm
+
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+        git curl wget cron \
+    # file is provided by the base image \
+        mariadb-client \
+        build-essential python3-dev \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*
+"""
+
+
+class ContinuationCommentsAreNotPackages(_FixtureDockerfile):
+    """konsolidat#242 F1 — the false pass."""
+
+    def test_a_comment_inside_a_continued_run_does_not_supply_file(self):
+        path = self.fixture(DROPS_FILE_BUT_MENTIONS_IT_IN_A_COMMENT)
+        packages = _apt_install_packages("mariadb-client", path=path)
+        self.assertIsNotNone(packages, "fixture's apt-get install was not found at all")
+        self.assertNotIn(
+            "file",
+            packages,
+            "this Dockerfile does NOT install `file` — it only names it in a "
+            "continuation comment, which Docker strips. Reporting it as "
+            "installed is the false pass of konsolidat#242 F1. Packages: %r"
+            % (packages,),
+        )
+
+    def test_no_comment_word_is_reported_as_a_package(self):
+        path = self.fixture(DROPS_FILE_BUT_MENTIONS_IT_IN_A_COMMENT)
+        packages = _apt_install_packages("mariadb-client", path=path)
+        for word in ("#", "is", "provided", "by", "the", "base", "image"):
+            self.assertNotIn(word, packages, "comment word leaked into %r" % (packages,))
+
+    def test_the_real_packages_still_survive_the_comment(self):
+        """Dropping the comment must not drop the instruction around it."""
+        path = self.fixture(DROPS_FILE_BUT_MENTIONS_IT_IN_A_COMMENT)
+        packages = _apt_install_packages("mariadb-client", path=path)
+        for word in ("git", "curl", "mariadb-client", "build-essential"):
+            self.assertIn(word, packages, "real package lost: %r" % (packages,))
+
+
+# konsolidat#242 finding F9: only the exact prefix `apt-get install` parsed, so
+# every other legitimate spelling returned None and failed the tests with "the
+# parse, not the Dockerfile, is probably what changed" — a false red.
+APT_INSTALL_SPELLINGS = {
+    "flag before the verb": "apt-get -y install mariadb-client file curl",
+    "apt rather than apt-get": "apt install -y mariadb-client file curl",
+    "leading environment assignment": (
+        "DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-client file curl"
+    ),
+    "assignment and a flag before the verb": (
+        "DEBIAN_FRONTEND=noninteractive apt-get -qq -y install mariadb-client file curl"
+    ),
+    "flags on both sides of the verb": (
+        "apt-get -y install --no-install-recommends mariadb-client file curl"
+    ),
+}
+
+
+class AptInstallSpellingsAreRecognised(_FixtureDockerfile):
+    """konsolidat#242 F9 — the too-strict prefix match."""
+
+    def test_every_legitimate_spelling_yields_its_package_list(self):
+        for name, command in sorted(APT_INSTALL_SPELLINGS.items()):
+            with self.subTest(spelling=name):
+                path = self.fixture(
+                    "FROM python:3.11-slim-bookworm\n\nRUN apt-get update \\\n    && %s\n"
+                    % command
+                )
+                packages = _apt_install_packages("mariadb-client", path=path)
+                self.assertIsNotNone(
+                    packages, "`%s` was not recognised as an apt install" % command
+                )
+                self.assertIn("file", packages)
+                self.assertIn("curl", packages)
+                self.assertNotIn("-y", packages)
+
+    def test_a_command_that_is_not_an_apt_install_is_still_refused(self):
+        """The prefix match may loosen, but not to the point of matching
+        anything: `dpkg -i … || apt-get install -fy` names no packages."""
+        path = self.fixture(
+            """
+            FROM python:3.11-slim-bookworm
+
+            RUN dpkg -i /tmp/wkhtmltox.deb || apt-get install -fy
+            """
+        )
+        self.assertIsNone(_apt_install_packages("mariadb-client", path=path))
 
 
 if __name__ == "__main__":
