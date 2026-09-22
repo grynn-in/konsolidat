@@ -58,7 +58,11 @@ def _install_instructions(path=DOCKERFILE):
         buffer = ""
     if buffer.strip():
         instructions.append(" ".join(buffer.split()))
-    return [i for i in instructions if re.search(r"\bapt(?:-get)?\b.*\binstall\b", i)]
+    # The install verb, not merely the words "apt" and "install": otherwise
+    # `RUN npm install -g x && rm -rf /var/lib/apt/lists/*` reads as an apt
+    # install, and anything it happens to name counts as a package.
+    verb = re.compile(r"\bapt(?:-get)?\s+(?:-\S+\s+)*install\b")
+    return [i for i in instructions if verb.search(i)]
 
 
 def _installs(package, path=DOCKERFILE):

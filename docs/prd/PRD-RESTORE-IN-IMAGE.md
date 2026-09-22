@@ -63,11 +63,15 @@ Add `file` to the apt list in `docker/frappe/Dockerfile`.
 
 ## Acceptance criteria
 
-1. `docker/frappe/Dockerfile` installs `file` in the same `apt-get install`
-   that already installs `mariadb-client`.
+1. `docker/frappe/Dockerfile` names `file` as a package in an instruction that
+   installs packages. Deliberately not "the same `apt-get install` as
+   `mariadb-client`": a Dockerfile that installs `file` in a `RUN` of its own
+   satisfies konsolidat#240, and an acceptance criterion stricter than the
+   requirement fails a legitimate refactor.
 2. On `python:3.11-slim-bookworm` — the image's own base — installing that
-   package list yields a working `/usr/bin/file`.
-3. The test runs in CI, in the `contract-tests` job, by name.
+   package yields a working `/usr/bin/file`.
+3. The test runs in CI by name, in the `deploy guards` workflow (not
+   `contract-tests`; see the sibling PRD for why).
 
 ## Residual, stated plainly
 

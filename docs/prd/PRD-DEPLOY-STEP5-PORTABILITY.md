@@ -65,15 +65,23 @@ DBT_LOG="$(mktemp "${TMPDIR:-/tmp}/konsolidat-dbt.XXXXXX")"
 ## Out of scope
 
 - `set -o pipefail` anywhere in `deploy.sh` (see above).
-- Auditing the other four steps for portability. Nothing else in the file calls
-  `mktemp`; the test added here covers any future caller.
+- Auditing the other four steps for portability.
+- **The other nine shell scripts in the repo.** The first attempt at this PRD
+  guarded all ten by parsing shell in a unit test to find `mktemp` templates.
+  Two review rounds found nine defects in that parser and none in the one-line
+  fix it guarded, so it was deleted (Deepak, 22 Sep 2026) and the guard narrowed
+  to the call site with a proven bug. The other nine are konsolidat#243, to be
+  done with a real shell parser (shellcheck) rather than another hand-written
+  one.
 
 ## Acceptance criteria
 
-1. Every `mktemp` template in every shell script in the repo ends in at least
-   three `X`s.
-2. On a GNU-coreutils host, the template `deploy.sh` actually uses creates a
-   file and exits 0.
+1. On a GNU-coreutils host, every `mktemp` call in `deploy.sh` exits 0 and
+   creates a file — run, not read — with `TMPDIR` set and with it unset.
+2. A `mktemp` call in a shape the guard cannot run fails the guard by name,
+   rather than being skipped.
 3. `deploy.sh` still sets `set -e` and still does **not** set `pipefail`.
 4. Step 5 still reads `${PIPESTATUS[0]}`.
-5. The test runs in CI, in the `contract-tests` job, by name.
+5. The test runs in CI by name, in the `deploy guards` workflow. It is not in
+   `dbt-checks.yml`: that workflow's `paths` is workflow-level, so listing
+   `deploy.sh` there dragged a full warehouse build onto every deploy edit.

@@ -6,24 +6,28 @@ name: deploy guards
 # listing deploy.sh there dragged a full warehouse build and the TB-only first
 # build onto every edit of the deploy script.
 #
-# The path list is what makes these guards real. test_deploy_portability scans
-# EVERY shell script in the repo, not just deploy.sh, so every *.sh has to be a
-# trigger; otherwise a bad `mktemp` in scripts/healthcheck.sh or
-# docker/backup/backup.sh runs no job at all. The list is written out twice
-# because GitHub Actions does not support YAML anchors — keep the two copies
-# in step, as dbt-checks.yml also has to.
+# The trigger is deploy.sh, not every *.sh. An earlier version of
+# test_deploy_portability parsed shell and scanned every tracked script; that
+# parser was deleted (two review rounds, nine defects, all in it), and the test
+# now reads deploy.sh alone. A `**.sh` trigger would fire this job on an edit to
+# docker/backup/backup.sh and go green having checked nothing — so the trigger
+# says what the test actually covers. The other shell scripts are unguarded,
+# deliberately: konsolidat#243.
+#
+# The list is written out twice because GitHub Actions does not support YAML
+# anchors — keep the two copies in step, as dbt-checks.yml also has to.
 on:
   push:
     branches: [main]
     paths:
-      - '**.sh'
+      - 'deploy.sh'
       - 'docker/frappe/Dockerfile'
       - 'tests/test_deploy_portability.py'
       - 'tests/test_restore_in_image.py'
       - '.github/workflows/deploy-guards.yml'
   pull_request:
     paths:
-      - '**.sh'
+      - 'deploy.sh'
       - 'docker/frappe/Dockerfile'
       - 'tests/test_deploy_portability.py'
       - 'tests/test_restore_in_image.py'

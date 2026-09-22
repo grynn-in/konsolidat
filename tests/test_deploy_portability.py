@@ -39,6 +39,20 @@ def _deploy_sh():
         return f.read()
 
 
+# The one shape this guard understands: VAR=$(mktemp ...) or VAR="$(mktemp ...)",
+# which is what deploy.sh:395 is. The mktemp command is captured on its own so it
+# can be run alone — never the whole line. An earlier version ran the line
+# verbatim, which would have executed `rm -rf "$SCRATCH"/*  # made with mktemp -d`
+# with SCRATCH unset. A line that mentions mktemp in any other shape is refused
+# loudly below rather than skipped.
+_ASSIGNED_MKTEMP = re.compile(
+    r"""^[A-Za-z_][A-Za-z0-9_]*=      # VAR=
+        "?\$\(\s*(mktemp\b[^()]*?)\s*\)"?$   # $(mktemp ...) or "$(mktemp ...)"
+    """,
+    re.VERBOSE,
+)
+
+
 def _mktemp_lines():
     """(line number, line) for each non-comment line of deploy.sh calling mktemp."""
     for n, line in enumerate(_deploy_sh().splitlines(), 1):
@@ -47,6 +61,12 @@ def _mktemp_lines():
             continue
         if re.search(r"\bmktemp\b", stripped):
             yield n, stripped
+
+
+def _mktemp_command(line):
+    """The bare `mktemp ...` command in an assignment, or None."""
+    match = _ASSIGNED_MKTEMP.match(line)
+    return match.group(1) if match else None
 
 
 def _is_gnu_mktemp():
@@ -69,6 +89,20 @@ class Step5CreatesItsLogFile(unittest.TestCase):
             % DEPLOY_SH,
         )
 
+    def test_every_mktemp_line_is_a_shape_this_guard_understands(self):
+        """No silent pass: a call this guard cannot run must fail, not vanish."""
+        unknown = [
+            "deploy.sh:%d: %s" % (n, line)
+            for n, line in _mktemp_lines()
+            if _mktemp_command(line) is None
+        ]
+        self.assertEqual(
+            [],
+            unknown,
+            "this guard runs `VAR=$(mktemp ...)` and nothing else. Extend it "
+            "for these, or keep the call in that shape:\n" + "\n".join(unknown),
+        )
+
     @unittest.skipUnless(
         _is_gnu_mktemp(),
         "host mktemp is not GNU coreutils; a too-short template cannot fail here",
@@ -76,26 +110,48 @@ class Step5CreatesItsLogFile(unittest.TestCase):
     def test_every_mktemp_call_succeeds_on_gnu_coreutils(self):
         """konsolidat#239: the bug was a non-zero exit, so run it and look.
 
+        Each call is run twice: once with TMPDIR set, once with it removed. A
+        template written `"${TMPDIR}/x.XXXXXX"` without the `:-` default would
+        pass the first and fail the second as `mktemp /x.XXXXXX`, which is #239
+        again on a host that does not set TMPDIR.
+
         Skipped on a Mac, where BSD mktemp accepts a template with no X's and
         the check cannot fail. It runs in CI, which is ubuntu.
         """
         for n, line in _mktemp_lines():
-            with self.subTest(line=n, source=line):
-                with tempfile.TemporaryDirectory() as tmp:
-                    result = subprocess.run(
-                        ["bash", "-c", "set -e\n" + line],
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                        cwd=tmp,
-                        env=dict(os.environ, TMPDIR=tmp),
-                    )
-                    self.assertEqual(
-                        0,
-                        result.returncode,
-                        "deploy.sh:%d failed on GNU coreutils: %s"
-                        % (n, result.stderr.strip() or "(no stderr)"),
-                    )
+            command = _mktemp_command(line)
+            if command is None:
+                continue  # reported by the test above
+            for label in ("TMPDIR set", "TMPDIR unset"):
+                with self.subTest(line=n, command=command, environment=label):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        env = dict(os.environ)
+                        if label == "TMPDIR set":
+                            env["TMPDIR"] = tmp
+                        else:
+                            env.pop("TMPDIR", None)
+                        result = subprocess.run(
+                            ["bash", "-c", command],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                            cwd=tmp,
+                            env=env,
+                        )
+                        self.assertEqual(
+                            0,
+                            result.returncode,
+                            "deploy.sh:%d (%s) failed on GNU coreutils: %s"
+                            % (n, label, result.stderr.strip() or "(no stderr)"),
+                        )
+                        path = result.stdout.strip()
+                        self.assertTrue(path, "mktemp printed no path")
+                        self.addCleanup(
+                            lambda p=path: os.path.exists(p) and os.remove(p)
+                        )
+                        self.assertTrue(
+                            os.path.isfile(path), "mktemp created no file at %r" % path
+                        )
 
 
 class ExitHandlingIsUnchanged(unittest.TestCase):
@@ -113,10 +169,13 @@ class ExitHandlingIsUnchanged(unittest.TestCase):
         self.assertRegex(_deploy_sh(), r"(?m)^set -e\b")
 
     def test_deploy_sh_does_not_set_pipefail(self):
+        # The option as the shell spells it, before any `#`, so an explanatory
+        # comment ("deliberately not pipefail, see #139") is not a failure.
+        setting = re.compile(r"^[^#\n]*\bset\s+-[a-zA-Z]*o\s+pipefail\b")
         hits = [
             "%d: %s" % (n, line.strip())
             for n, line in enumerate(_deploy_sh().splitlines(), 1)
-            if "pipefail" in line and not line.lstrip().startswith("#")
+            if setting.match(line)
         ]
         self.assertEqual([], hits, "pipefail would skip the failure classification:\n" + "\n".join(hits))
 
