@@ -28,6 +28,7 @@ _ACCOUNT_LIST = ", ".join(f"'{a}'" for a in FIXTURE_ACCOUNTS)
 FIXTURE_ROWS = [
     ("epm_staging.main_accounts", f"main_account IN ({_ACCOUNT_LIST})"),
     ("epm_staging.cash_flow_categories", f"main_account IN ({_ACCOUNT_LIST})"),
+    ("epm_staging.fiscal_periods", "fiscal_year = 2095"),
     ("epm_staging.entities", f"data_area_id IN ({_ENTITY_LIST})"),
     ("epm_gold.consolidation_groups", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
     ("epm_staging.consolidation_ancestry", "consolidation_group IN ('ZZGRP', 'ZZSUB')"),
@@ -48,35 +49,35 @@ def _fx(r):
 def reconciliation(r):
     return [
         # decision 12: 100%-owned ZZA against 80%-owned ZZB, matched at 100%
-        (1, "ZZA/1100 <> ZZB/2010", "joined", 1000, -1000, 1000, 0, "none", "matched"),
+        (1, "ZZA/ZZ1100 <> ZZB/ZZ2010", "joined", 1000, -1000, 1000, 0, "none", "matched"),
         # third review M2: ZZA submits nothing in P3 but is still a member, so
         # ZZB's -50 shows as a booking difference; ZZA catches up in P4
-        (3, "ZZA/1100 <> ZZB/2010", "", 1000, -1050, 1000, -50, "booking", "over_tolerance"),
-        (4, "ZZA/1100 <> ZZB/2010", "", 1050, -1050, 1050, 0, "none", "matched"),
+        (3, "ZZA/ZZ1100 <> ZZB/ZZ2010", "", 1000, -1050, 1000, -50, "booking", "over_tolerance"),
+        (4, "ZZA/ZZ1100 <> ZZB/ZZ2010", "", 1050, -1050, 1050, 0, "none", "matched"),
         # third review L2: 70% against 80%, balance sheet and P&L
-        (1, "ZZ7/1100 <> ZZB/2010", "joined", 600, -600, 600, 0, "none", "matched"),
-        (1, "ZZ7/4030 <> ZZB/5030", "", -200, 200, 200, 0, "none", "matched"),
+        (1, "ZZ7/ZZ1100 <> ZZB/ZZ2010", "joined", 600, -600, 600, 0, "none", "matched"),
+        (1, "ZZ7/ZZ4030 <> ZZB/ZZ5030", "", -200, 200, 200, 0, "none", "matched"),
         # decision 14: a balance-sheet timing pair, open at P1, matched at P2
-        (1, "ZZA/1100 <> ZZC/2010", "joined", 500, 0, 0, 500, "booking", "over_tolerance"),
-        (2, "ZZA/1100 <> ZZC/2010", "", 500, -500, 500, 0, "none", "matched"),
+        (1, "ZZA/ZZ1100 <> ZZC/ZZ2010", "joined", 500, 0, 0, 500, "booking", "over_tolerance"),
+        (2, "ZZA/ZZ1100 <> ZZC/ZZ2010", "", 500, -500, 500, 0, "none", "matched"),
         # ZZE joins in P3 (with ZZA quiet); ZZA's receivable booked before then
         # counts, ZZE's own pre-acquisition payable is not in the warehouse
-        (3, "ZZA/1100 <> ZZE/2010", "joined", 200, 0, 0, 200, "booking", "over_tolerance"),
-        (4, "ZZA/1100 <> ZZE/2010", "", 0, 200, 0, 200, "booking", "over_tolerance"),
+        (3, "ZZA/ZZ1100 <> ZZE/ZZ2010", "joined", 200, 0, 0, 200, "booking", "over_tolerance"),
+        (4, "ZZA/ZZ1100 <> ZZE/ZZ2010", "", 0, 200, 0, 200, "booking", "over_tolerance"),
         # leaving after P2, each reversed in P3: ZZH disposed of; third review
         # M1: ZZQ's stake moved to equity, and ZZSUB (holding ZZS, whose own
         # ownership period stays open) sold
-        (1, "ZZA/1100 <> ZZH/2010", "joined", 400, -400, 400, 0, "none", "matched"),
-        (3, "ZZA/1100 <> ZZH/2010", "left", 0, 0, 0, 0, "none", "matched"),
-        (1, "ZZA/1100 <> ZZQ/2010", "joined", 150, -150, 150, 0, "none", "matched"),
-        (3, "ZZA/1100 <> ZZQ/2010", "left", 0, 0, 0, 0, "none", "matched"),
-        (1, "ZZA/1100 <> ZZS/2010", "joined", 300, -300, 300, 0, "none", "matched"),
-        (3, "ZZA/1100 <> ZZS/2010", "left", 0, 0, 0, 0, "none", "matched"),
+        (1, "ZZA/ZZ1100 <> ZZH/ZZ2010", "joined", 400, -400, 400, 0, "none", "matched"),
+        (3, "ZZA/ZZ1100 <> ZZH/ZZ2010", "left", 0, 0, 0, 0, "none", "matched"),
+        (1, "ZZA/ZZ1100 <> ZZQ/ZZ2010", "joined", 150, -150, 150, 0, "none", "matched"),
+        (3, "ZZA/ZZ1100 <> ZZQ/ZZ2010", "left", 0, 0, 0, 0, "none", "matched"),
+        (1, "ZZA/ZZ1100 <> ZZS/ZZ2010", "joined", 300, -300, 300, 0, "none", "matched"),
+        (3, "ZZA/ZZ1100 <> ZZS/ZZ2010", "left", 0, 0, 0, 0, "none", "matched"),
         # decisions 13 and 14: a P&L booking difference, then matched on the movement
-        (1, "ZZA/4030 <> ZZB/5030", "", -300, 312, 300, 12, "booking", "over_tolerance"),
-        (2, "ZZA/4030 <> ZZB/5030", "", -100, 100, 100, 0, "none", "matched"),
+        (1, "ZZA/ZZ4030 <> ZZB/ZZ5030", "", -300, 312, 300, 12, "booking", "over_tolerance"),
+        (2, "ZZA/ZZ4030 <> ZZB/ZZ5030", "", -100, 100, 100, 0, "none", "matched"),
         # decision 13: across currencies, fx; never over tolerance
-        (1, "ZZA/4030 <> ZZD/5030", "", -1000, _fx(r), _fx(r), _fx(r) - 1000, "fx", "fx_difference"),
+        (1, "ZZA/ZZ4030 <> ZZD/ZZ5030", "", -1000, _fx(r), _fx(r), _fx(r) - 1000, "fx", "fx_difference"),
     ]
 
 
@@ -85,63 +86,63 @@ def reconciliation(r):
 def eliminations(r):
     return {
         # P1. ZZA 100% / ZZB 80%, 1000: 800 matched, 200 to NCI (ZZB's minority), 200 in the NCI view
-        (1, "group", "matched", "1100", "ZZA", "2010", "ZZB"): 800,
-        (1, "group", "nci", "1100", "ZZA", "NCI", "ZZB"): 200,
+        (1, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZB"): 800,
+        (1, "group", "nci", "ZZ1100", "ZZA", "NCI", "ZZB"): 200,
         # ZZ7 70% / ZZB 80%, 600: 420 matched; ZZB's extra 10% (60) to NCI as ZZ7's
         # minority's (the n_b branch); the NCI view takes 30% of ZZ7 (180) and 20% of ZZB (120)
-        (1, "group", "matched", "1100", "ZZ7", "2010", "ZZB"): 420,
-        (1, "group", "nci", "NCI", "ZZ7", "2010", "ZZB"): 60,
-        (1, "nci", "matched", "1100", "ZZ7", "NCI", "ZZ7"): 180,
+        (1, "group", "matched", "ZZ1100", "ZZ7", "ZZ2010", "ZZB"): 420,
+        (1, "group", "nci", "NCI", "ZZ7", "ZZ2010", "ZZB"): 60,
+        (1, "nci", "matched", "ZZ1100", "ZZ7", "NCI", "ZZ7"): 180,
         # ... 200 of it is the ZZA pair's, 120 the ZZ7 pair's
-        (1, "nci", "matched", "NCI", "ZZB", "2010", "ZZB"): 320,
+        (1, "nci", "matched", "NCI", "ZZB", "ZZ2010", "ZZB"): 320,
         # the same on P&L, 200: 140 matched, 20 to NCI, 60 and 40 in the NCI view
-        (1, "group", "matched", "5030", "ZZB", "4030", "ZZ7"): 140,
-        (1, "group", "nci", "5030", "ZZB", "NCI", "ZZ7"): 20,
-        (1, "nci", "matched", "NCI", "ZZ7", "4030", "ZZ7"): 60,
+        (1, "group", "matched", "ZZ5030", "ZZB", "ZZ4030", "ZZ7"): 140,
+        (1, "group", "nci", "ZZ5030", "ZZB", "NCI", "ZZ7"): 20,
+        (1, "nci", "matched", "NCI", "ZZ7", "ZZ4030", "ZZ7"): 60,
         # ... 60 of it is the ZZA P&L pair's (below), 40 the ZZ7 one's
-        (1, "nci", "matched", "5030", "ZZB", "NCI", "ZZB"): 100,
-        (1, "group", "difference", "1100", "ZZA", "2100", "ZZC"): 500,
-        (1, "group", "matched", "1100", "ZZA", "2010", "ZZH"): 400,
-        (1, "group", "matched", "1100", "ZZA", "2010", "ZZQ"): 150,
-        (1, "group", "matched", "1100", "ZZA", "2010", "ZZS"): 300,
-        (1, "group", "matched", "5030", "ZZB", "4030", "ZZA"): 240,
-        (1, "group", "nci", "NCI", "ZZB", "4030", "ZZA"): 60,
-        (1, "group", "difference", "5030", "ZZB", "2100", "ZZA"): 9.6,
-        (1, "nci", "difference", "5030", "ZZB", "2100", "ZZB"): 2.4,
-        (1, "group", "matched", "5030", "ZZD", "4030", "ZZA"): _fx(r),
-        (1, "group", "difference", "2100", "ZZD", "4030", "ZZA"): 1000 - _fx(r),
+        (1, "nci", "matched", "ZZ5030", "ZZB", "NCI", "ZZB"): 100,
+        (1, "group", "difference", "ZZ1100", "ZZA", "ZZ2100", "ZZC"): 500,
+        (1, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZH"): 400,
+        (1, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZQ"): 150,
+        (1, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZS"): 300,
+        (1, "group", "matched", "ZZ5030", "ZZB", "ZZ4030", "ZZA"): 240,
+        (1, "group", "nci", "NCI", "ZZB", "ZZ4030", "ZZA"): 60,
+        (1, "group", "difference", "ZZ5030", "ZZB", "ZZ2100", "ZZA"): 9.6,
+        (1, "nci", "difference", "ZZ5030", "ZZB", "ZZ2100", "ZZB"): 2.4,
+        (1, "group", "matched", "ZZ5030", "ZZD", "ZZ4030", "ZZA"): _fx(r),
+        (1, "group", "difference", "ZZ2100", "ZZD", "ZZ4030", "ZZA"): 1000 - _fx(r),
         # P2
-        (2, "group", "matched", "1100", "ZZA", "2010", "ZZC"): 500,
-        (2, "group", "difference", "2100", "ZZC", "1100", "ZZA"): 500,
-        (2, "group", "matched", "5030", "ZZB", "4030", "ZZA"): 80,
-        (2, "group", "nci", "NCI", "ZZB", "4030", "ZZA"): 20,
-        (2, "nci", "matched", "5030", "ZZB", "NCI", "ZZB"): 20,
+        (2, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZC"): 500,
+        (2, "group", "difference", "ZZ2100", "ZZC", "ZZ1100", "ZZA"): 500,
+        (2, "group", "matched", "ZZ5030", "ZZB", "ZZ4030", "ZZA"): 80,
+        (2, "group", "nci", "NCI", "ZZB", "ZZ4030", "ZZA"): 20,
+        (2, "nci", "matched", "ZZ5030", "ZZB", "NCI", "ZZB"): 20,
         # P3. ZZB's 50 booking difference on the 80% side: 40 group view, 10 NCI view
-        (3, "group", "difference", "2100", "ZZA", "2010", "ZZB"): 40,
-        (3, "nci", "difference", "2100", "ZZB", "2010", "ZZB"): 10,
-        (3, "group", "difference", "1100", "ZZA", "2100", "ZZE"): 200,
+        (3, "group", "difference", "ZZ2100", "ZZA", "ZZ2010", "ZZB"): 40,
+        (3, "nci", "difference", "ZZ2100", "ZZB", "ZZ2010", "ZZB"): 10,
+        (3, "group", "difference", "ZZ1100", "ZZA", "ZZ2100", "ZZE"): 200,
         # the three pairs that left, reversed
-        (3, "group", "matched", "2010", "ZZH", "1100", "ZZA"): 400,
-        (3, "group", "matched", "2010", "ZZQ", "1100", "ZZA"): 150,
-        (3, "group", "matched", "2010", "ZZS", "1100", "ZZA"): 300,
+        (3, "group", "matched", "ZZ2010", "ZZH", "ZZ1100", "ZZA"): 400,
+        (3, "group", "matched", "ZZ2010", "ZZQ", "ZZ1100", "ZZA"): 150,
+        (3, "group", "matched", "ZZ2010", "ZZS", "ZZ1100", "ZZA"): 300,
         # P4. ZZA catches up: the difference reversed, 50 more matched (40, 10 to NCI, 10 NCI view)
-        (4, "group", "difference", "2010", "ZZB", "2100", "ZZA"): 40,
-        (4, "nci", "difference", "2010", "ZZB", "2100", "ZZB"): 10,
-        (4, "group", "matched", "1100", "ZZA", "2010", "ZZB"): 40,
-        (4, "group", "nci", "1100", "ZZA", "NCI", "ZZB"): 10,
-        (4, "nci", "matched", "NCI", "ZZB", "2010", "ZZB"): 10,
-        (4, "group", "difference", "2010", "ZZE", "2100", "ZZA"): 200,
-        (4, "group", "difference", "2100", "ZZE", "1100", "ZZA"): 200,
+        (4, "group", "difference", "ZZ2010", "ZZB", "ZZ2100", "ZZA"): 40,
+        (4, "nci", "difference", "ZZ2010", "ZZB", "ZZ2100", "ZZB"): 10,
+        (4, "group", "matched", "ZZ1100", "ZZA", "ZZ2010", "ZZB"): 40,
+        (4, "group", "nci", "ZZ1100", "ZZA", "NCI", "ZZB"): 10,
+        (4, "nci", "matched", "NCI", "ZZB", "ZZ2010", "ZZB"): 10,
+        (4, "group", "difference", "ZZ2010", "ZZE", "ZZ2100", "ZZA"): 200,
+        (4, "group", "difference", "ZZ2100", "ZZE", "ZZ1100", "ZZA"): 200,
     }
 
 
 # The report's 100% view (group view + nci_amount + the NCI view's
 # eliminations), to date at P4. The P&L pairs and the NCI line are clear;
-# 1100/2010 hold the balances with ZZH, ZZQ and ZZS after they left (ZZA's now
+# ZZ1100/ZZ2010 hold the balances with ZZH, ZZQ and ZZS after they left (ZZA's now
 # external receivables, and their own history, which the disposal gap leaves
 # in the warehouse).
 def full_view_to_date(r):
-    return {"1100": 850, "2010": -850, "4030": 0, "5030": 0, "NCI": 0, "2100": 212 - (1000 - _fx(r))}
+    return {"ZZ1100": 850, "ZZ2010": -850, "ZZ4030": 0, "ZZ5030": 0, "NCI": 0, "ZZ2100": 212 - (1000 - _fx(r))}
 
 
 def _rows(ch, sql):

@@ -41,6 +41,11 @@ VALUES
 INSERT INTO epm_staging.cash_flow_categories VALUES
     ('ZZ1011', 'Operating', 'Cash', 1, 'Published');
 
+-- the calendar for the two years it books. Not optional for the same reason as
+-- in ic_decisions.sql: without it these rows never reach the balance-sheet or
+-- P&L views, and this fixture cannot rely on the other one declaring anything.
+INSERT INTO epm_staging.fiscal_periods (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status) VALUES (2096,1,'FY2096-P01','P01 2096','Regular','2096-01-01','2096-01-31','Q1','Open'),(2096,13,'FY2096-P13','FY2096 closing','Closing','2096-12-31','2096-12-31','Q4','Open'),(2097,1,'FY2097-P01','P01 2097','Regular','2097-01-01','2097-01-31','Q1','Open'),(2097,13,'FY2097-P13','FY2097 closing','Closing','2097-12-31','2097-12-31','Q4','Open');
+
 INSERT INTO epm_raw.trial_balance_submissions
     (batch_id, data_area_id, fiscal_year, fiscal_period, main_account,
      debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)

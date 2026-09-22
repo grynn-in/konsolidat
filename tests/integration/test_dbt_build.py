@@ -55,6 +55,8 @@ def _drop_two_partner_fixture(ch):
     ch(f"ALTER TABLE epm_staging.entities DELETE WHERE data_area_id IN ({entities}) SETTINGS mutations_sync = 1")
     for table in ("main_accounts", "cash_flow_categories"):
         ch(f"ALTER TABLE epm_staging.{table} DELETE WHERE main_account IN ({accounts}) SETTINGS mutations_sync = 1")
+    ch("ALTER TABLE epm_staging.fiscal_periods DELETE WHERE fiscal_year IN (2096, 2097) "
+       "SETTINGS mutations_sync = 1")
 
 
 @pytest.fixture
@@ -118,7 +120,8 @@ def test_ic_decisions_12_to_14_on_data(dbt_run, ch, ic_decisions_data):
     and P2, a second functional currency, a mid-year acquisition, a disposal,
     a sub-group sale, a stake moved to equity and a quiet partner: the exact
     reconciliation rows and entries, and the 100% view clear."""
-    result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched")
+    result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched",
+                     indirect_selection="cautious")
     assert result.returncode == 0, result.stdout[-3000:]
     problems = ic_decisions_data.check(ch)
     assert not problems, "\n".join(problems)
