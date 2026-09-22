@@ -1,72 +1,52 @@
 """
-Test 1: Verify ClickHouse staging tables exist and accept data.
-Exercises the same INSERT pattern that Frappe sync hooks use.
+Test 1: the staging tables konsol writes accept the rows konsol writes.
+
+Two tables only -- epm_staging.ownership_periods and
+epm_staging.ic_elimination_rules -- because their column lists are asserted
+nowhere else. Neither is in konsol's _REFERENCE_TABLE_DDL
+(test_write_through_contract.py:190-224), neither is in the six DDL contract
+tests, and konsol's own coverage is a mocked execute or a string grep. A real
+INSERT is the only thing that catches a column drift in them, as it did in
+81b468c (source_entity -> debit_entity_pattern).
+
+What this file used to assert and no longer does (konsolidat#227 row 2): that
+the databases and the seven staging tables exist, which clickhouse/init-db.sql
+creates, konsol's bootstrap contract asserts and the tb-only-first-build job
+proves on every run; and that a bare `epm` database exists, which nothing in
+the system ever writes to.
 """
 import pytest
 
 
-# ---------------------------------------------------------------------------
-# Staging table existence
-# ---------------------------------------------------------------------------
-EXPECTED_STAGING_TABLES = [
-    "scenario_definitions",
-    "consolidation_hierarchy",
-    "historical_equity_rates",
-    "ownership_periods",
-    "consolidation_adjustments",
-    "ic_elimination_rules",
-    "ic_balances",
-]
-
-
-def test_staging_database_exists(ch):
-    result = ch("SELECT name FROM system.databases WHERE name = 'epm_staging' FORMAT TabSeparated")
-    assert result == "epm_staging", "epm_staging database does not exist"
-
-
-@pytest.mark.parametrize("table", EXPECTED_STAGING_TABLES)
-def test_staging_table_exists(ch, table):
-    result = ch(
-        f"SELECT count() FROM system.tables "
-        f"WHERE database = 'epm_staging' AND name = '{table}' FORMAT TabSeparated"
-    )
-    assert result == "1", f"epm_staging.{table} does not exist"
-
-
-# ---------------------------------------------------------------------------
-# Gold database/tables existence
-# ---------------------------------------------------------------------------
-EXPECTED_GOLD_DATABASES = ["epm", "epm_staging"]
-
-
-@pytest.mark.parametrize("db", EXPECTED_GOLD_DATABASES)
-def test_database_exists(ch, db):
-    result = ch(f"SELECT name FROM system.databases WHERE name = '{db}' FORMAT TabSeparated")
-    assert result == db
-
-
-# ---------------------------------------------------------------------------
-# Insert + read-back (simulates Frappe sync_table pattern)
-# ---------------------------------------------------------------------------
 class TestStagingInsert:
-    """Insert test rows into staging tables and verify they arrive."""
+    """Insert into the staging tables konsol writes, and read the rows back."""
 
     TEST_PREFIX = "__test_integ__"
 
-    def test_insert_consolidation_hierarchy(self, ch):
-        ch(f"""
-            INSERT INTO epm_staging.consolidation_hierarchy
-            (consolidation_group, data_area_id, parent_group,
-             hierarchy_level, path, updated_at)
-            VALUES
-            ('{self.TEST_PREFIX}Group', '{self.TEST_PREFIX}E001', '',
-             0, '/{self.TEST_PREFIX}Group', now())
-        """)
-        count = ch(
-            f"SELECT count() FROM epm_staging.consolidation_hierarchy "
-            f"WHERE consolidation_group = '{self.TEST_PREFIX}Group' FORMAT TabSeparated"
-        )
-        assert int(count) >= 1
+    # the column each kept insert can be found and removed by
+    CLEANUP = {
+        "ownership_periods": "consolidation_group",
+        "ic_elimination_rules": "rule_id",
+    }
+
+    @pytest.fixture(autouse=True)
+    def _drop_test_rows(self, ch):
+        """Teardown belongs here, not in a test.
+
+        It used to live in test_cleanup_test_data, which had no assert and
+        swallowed every exception -- it could not fail, and it only ran because
+        pytest happened to collect it last. The rows these tests insert carry a
+        100% ownership period and an elimination rule for entities that exist in
+        no chart; left behind, they reach the consolidation models and the close
+        assertions later in the same run.
+        """
+        yield
+        for table, column in self.CLEANUP.items():
+            ch(
+                f"ALTER TABLE epm_staging.{table} DELETE "
+                f"WHERE toString({column}) LIKE '{self.TEST_PREFIX}%' "
+                f"SETTINGS mutations_sync = 1"
+            )
 
     def test_insert_ownership_periods(self, ch):
         ch(f"""
@@ -104,16 +84,3 @@ class TestStagingInsert:
             f"WHERE rule_id = '{self.TEST_PREFIX}IC1' FORMAT TabSeparated"
         )
         assert int(count) >= 1
-
-    def test_cleanup_test_data(self, ch):
-        """Clean up test data inserted by this test class."""
-        for table in EXPECTED_STAGING_TABLES:
-            try:
-                ch(
-                    f"ALTER TABLE epm_staging.{table} DELETE "
-                    f"WHERE toString(consolidation_group) LIKE '{self.TEST_PREFIX}%' "
-                    f"OR toString(name) LIKE '{self.TEST_PREFIX}%' "
-                    f"OR toString(rule_id) LIKE '{self.TEST_PREFIX}%'"
-                )
-            except Exception:
-                pass  # Some tables may not have these columns

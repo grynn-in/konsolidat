@@ -145,8 +145,17 @@ jobs:
     # ran in no job at all, three of them the FX rate guards. tests/integration
     # never ran either: it skips itself when ClickHouse is unreachable, and no
     # job gave it one — and run for the first time it gave 7 failed, 30 passed,
-    # 5 skipped, 3 errors, so repairing it is konsolidat#227 and it stays off
-    # here until then.
+    # 5 skipped, 3 errors.
+    #
+    # konsolidat#227 is now done and the suite is ON here. It is 10 tests, not
+    # 30: 20 were deleted because they could not fail, duplicated this job, or
+    # only asserted that the warehouse exists. What remains is the consolidation
+    # arithmetic no other test can reach — an intercompany partner, ownership
+    # below 100%, minority interest, equity method, a mid-year acquisition, a
+    # disposal — none of which exists in live data or in the ZZ fixture, which
+    # is why the thirteen assertions over gold_ic_* otherwise run on an empty
+    # table. Measured green from a clean warehouse: full build PASS=320
+    # ERROR=0 SKIP=0, suite 10 passed 0 skipped, zero-dimension build PASS=321.
     services:
       clickhouse:
         # Pinned to the running stack's major version (24.8).
@@ -169,13 +178,15 @@ jobs:
         with:
           python-version: '3.11'
       # pytest and requests are what tests/integration/conftest.py imports.
-      # Installed now, though --with-integration stays off until konsolidat#227
-      # repairs that suite: run against a throwaway for the first time it gave
-      # 7 failed, 30 passed, 5 skipped, 3 errors. When #227 lands, add
-      # --with-integration here and nothing else changes.
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3" pytest requests
-      - name: full dbt build, at real and at zero dimensions
-        run: python scripts/ci_full_build.py
+      - name: full dbt build at real and zero dimensions, then the integration suite
+        # A skip is a failure here (ci_full_build.py:135-139). That is why
+        # tests/integration/test_frappe_sync.py had to go rather than be
+        # repaired: it resolved konsol through KONSOL_APP_PATH, which was set
+        # nowhere, and skipped all 7 of its tests on any machine without
+        # ~/frappe-bench — so this runner could never have gone green with it in
+        # place, whatever else was fixed.
+        run: python scripts/ci_full_build.py --with-integration
       - name: upload logs
         if: always()
         uses: actions/upload-artifact@v4

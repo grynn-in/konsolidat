@@ -29,11 +29,15 @@ This script therefore, against a warehouse it is allowed to destroy:
      chance to reintroduce it, and the build is green at real dimensions while
      broken at zero;
   5. with --with-integration, runs `tests/integration`, failing on an error
-     **or a skip**. Off by default: run for the first time against a throwaway
-     on 19 Sep 2026 that suite gave **7 failed, 30 passed, 5 skipped, 3
-     errors** — it has rotted while never running, and repairing it is
-     konsolidat#227. The flag and the skip detection are here so that when #227
-     lands the workflow turns it on and nothing else changes.
+     **or a skip**. Run for the first time against a throwaway on 19 Sep 2026
+     that suite gave **7 failed, 30 passed, 5 skipped, 3 errors** — it had
+     rotted while never running. konsolidat#227 settled it: 20 of the 30 tests
+     were deleted (11 could not fail or skipped by construction, 5 duplicated
+     this job, 4 only asserted the warehouse exists) and the 10 that cover what
+     no other test reaches were made to pass. **The workflow now passes this
+     flag.** Measured green from a clean warehouse on 22 Sep 2026: full build
+     PASS=320 ERROR=0 SKIP=0, suite 10 passed 0 skipped, zero-dimension build
+     PASS=321.
 
 A skip is treated as a failure throughout. A suite that skips itself, and a
 dbt node that is SKIPped because its parent failed, both report success having
@@ -147,8 +151,8 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dbt", default="dbt", help="dbt executable")
     ap.add_argument("--with-integration", action="store_true",
-                    help="also run tests/integration (konsolidat#227: it does "
-                         "not pass yet)")
+                    help="also run tests/integration; a skip counts as a "
+                         "failure (konsolidat#227)")
     ap.add_argument("--yes-destroy-this-warehouse", action="store_true",
                     help="confirm the target ClickHouse is disposable")
     ap.add_argument("--log-dir", default=None, help="where to write the dbt logs")
