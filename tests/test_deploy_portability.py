@@ -69,6 +69,14 @@ def _mktemp_command(line):
     return match.group(1) if match else None
 
 
+def _remove(path):
+    """Delete a file or directory mktemp made, whichever it is."""
+    if os.path.isdir(path):
+        os.rmdir(path)
+    elif os.path.exists(path):
+        os.remove(path)
+
+
 def _is_gnu_mktemp():
     """True when the host's mktemp is GNU coreutils. BSD mktemp has no --version."""
     try:
@@ -146,12 +154,14 @@ class Step5CreatesItsLogFile(unittest.TestCase):
                         )
                         path = result.stdout.strip()
                         self.assertTrue(path, "mktemp printed no path")
-                        self.addCleanup(
-                            lambda p=path: os.path.exists(p) and os.remove(p)
-                        )
+                        # `mktemp -d` is a directory and equally legitimate;
+                        # assert only that the path exists, and clean up either
+                        # kind. Asserting isfile() failed a correct `-d` line
+                        # and then raised in cleanup.
                         self.assertTrue(
-                            os.path.isfile(path), "mktemp created no file at %r" % path
+                            os.path.exists(path), "mktemp created nothing at %r" % path
                         )
+                        self.addCleanup(_remove, path)
 
 
 class ExitHandlingIsUnchanged(unittest.TestCase):
@@ -171,7 +181,9 @@ class ExitHandlingIsUnchanged(unittest.TestCase):
     def test_deploy_sh_does_not_set_pipefail(self):
         # The option as the shell spells it, before any `#`, so an explanatory
         # comment ("deliberately not pipefail, see #139") is not a failure.
-        setting = re.compile(r"^[^#\n]*\bset\s+-[a-zA-Z]*o\s+pipefail\b")
+        # `pipefail` after ANY `-o`, not only the first option group:
+        # `set -o errexit -o pipefail` enables it just as `set -eo pipefail` does.
+        setting = re.compile(r"^[^#\n]*\bset\s+(?:-[a-zA-Z]*\s+|-o\s+\w+\s+)*-[a-zA-Z]*o\s+pipefail\b")
         hits = [
             "%d: %s" % (n, line.strip())
             for n, line in enumerate(_deploy_sh().splitlines(), 1)

@@ -21,16 +21,12 @@ on:
     branches: [main]
     paths:
       - 'deploy.sh'
-      - 'docker/frappe/Dockerfile'
       - 'tests/test_deploy_portability.py'
-      - 'tests/test_restore_in_image.py'
       - '.github/workflows/deploy-guards.yml'
   pull_request:
     paths:
       - 'deploy.sh'
-      - 'docker/frappe/Dockerfile'
       - 'tests/test_deploy_portability.py'
-      - 'tests/test_restore_in_image.py'
       - '.github/workflows/deploy-guards.yml'
   workflow_dispatch:
 
@@ -52,7 +48,3 @@ jobs:
       # than declaring the skip it must declare on a Mac.
       - name: deploy.sh creates its temp files portably
         run: python -m unittest -v tests.test_deploy_portability
-      # konsolidat#240: frappe shells out to file(1) to detect a gzipped dump,
-      # and the image did not install it, so bench restore could not run.
-      - name: the image installs what bench restore shells out to
-        run: python -m unittest -v tests.test_restore_in_image

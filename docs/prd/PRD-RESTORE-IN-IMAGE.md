@@ -63,19 +63,33 @@ Add `file` to the apt list in `docker/frappe/Dockerfile`.
 
 ## Acceptance criteria
 
-1. `docker/frappe/Dockerfile` names `file` as a package in an instruction that
-   installs packages. Deliberately not "the same `apt-get install` as
-   `mariadb-client`": a Dockerfile that installs `file` in a `RUN` of its own
-   satisfies konsolidat#240, and an acceptance criterion stricter than the
-   requirement fails a legitimate refactor.
+1. `docker/frappe/Dockerfile` installs `file`.
 2. On `python:3.11-slim-bookworm` — the image's own base — installing that
-   package yields a working `/usr/bin/file`.
-3. The test runs in CI by name, in the `deploy guards` workflow (not
-   `contract-tests`; see the sibling PRD for why).
+   package yields a working `/usr/bin/file`. Measured by hand, 22 Sep 2026:
+   `file-5.44`.
+
+**There is deliberately no automated test.** Three were written and all three
+were wrong. Each read the Dockerfile to decide whether it installed a package,
+and each was a parser: the first passed a Dockerfile that named `file` only in
+a comment inside a `\`-continued `RUN`; the second gave false reds on
+`;`-separated commands, `apt install` and version pins; the third passed
+`RUN apt-get install -y curl && echo 'writing file' > /tmp/x` with the package
+absent, and failed a correct Dockerfile with a blank line inside a
+continuation.
+
+A guard that can pass while the bug is present is worse than no guard — it is
+the shape konsol#248 and konsolidat#227 were filed for, and konsolidat#240 is
+itself an instance of it. So the guard was deleted rather than patched a fourth
+time (Deepak, 22 Sep 2026).
+
+The only honest answer to "does the image contain `file`?" is to build the
+image and look, which nothing in CI does today. That is **konsolidat#244**, and
+it guards something larger as well: that the image builds at all.
 
 ## Residual, stated plainly
 
-The full image is **not** rebuilt by this change or by its test: rebuilding it
-is `deploy.sh`'s job and takes minutes. What is proven is that the package list
-contains `file` and that the package provides the binary on this base. The
-first real rebuild closes the loop.
+The full image is **not** rebuilt by this change, and nothing automatic guards
+the package list. What is proven is that the list asks for `file` and that the
+package provides the binary on this base. The first real rebuild closes the
+loop — and until it happens, the demo's `file(1)` remains a hand-install that
+that rebuild will discard and then restore.
