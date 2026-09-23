@@ -27,21 +27,29 @@
    row 7a-2 (0ca2b59) asserted it broken; this is where it is fixed, and
    assert_tb_movements_difference_within_dimension is what holds it fixed.
 
-   The synthesised year-end close still carries blank dimensions (see
-   close_spine) and is still computed on the un-widened key. Under the decision
-   of 22 Sep 2026 (option #255-3,
-   https://github.com/grynn-in/konsol/issues/255#issuecomment-5781879795)
-   whether a dimension survives the close is DECLARED PER DIMENSION on
-   `Dimension.survives_close`; that field is not yet exposed to dbt, so this
-   model cannot read the policy and does not guess it. A later row wires
-   `survives_close` through and decides how the close's rows join the widened
-   series. Consequence to be aware of until then: on a site that declares
-   dimensions AND synthesises a close, the close row sits in the blank-dimension
-   partition of the widened windows, so it neither closes nor is differenced
-   against the dimensioned slices. No live site is in that state — every
-   dim_* value in this warehouse is '' — and
-   assert_tb_movements_difference_within_dimension excludes the close rows and
-   their successors for the same reason.
+   konsol#255 row 17 — THE YEAR-END CLOSE IS ON THAT SAME FULL KEY. Row 7b
+   widened the differencing but left the close computed on the un-widened key
+   and carrying blank dimension values, and the two halves contradicted: the
+   close row of an account a file splits across dimension values was the
+   account's WHOLE balance differenced against the blank slice's previous
+   figure — which does not exist — so the close emitted the sum of the non-blank
+   slices as a movement no file ever stated (measured: an unchanged account came
+   out at 200 against a stated 100), while a split P&L account was never
+   reversed at all and the next year's first period read last year's result as
+   activity. close_spine now enumerates the same widened `keys` and joins
+   `source` on the same full key, so every close row is differenced against its
+   own slice's previous figure, exactly as an activity row is.
+
+   The one thing that does NOT carry dimension values is the retained-earnings
+   line: the year's result moves into it as ONE undimensioned lump, on the blank
+   key (`retained_lump_key` above, close_spine below). Decision of 23 September
+   2026, Deepak Pai, in his words "one lump, no dimensions" (konsol#255) — the
+   OFF default of `Dimension.survives_close`, which is what the live year-end
+   entries already do: a single entity-level account with no dimension values on
+   it. The ON branch — retained earnings credited per dimension value, so the
+   profit keeps the values it was earned in — is NOT BUILT: there is no hook for
+   it here and no half-wired field. It is a separate job, and when it lands
+   `retained_lump_key` is the only thing in this model it changes.
 
    The three rules, per key, periods ordered by (fiscal_year, fiscal_period)
    among the periods the ENTITY has a claimed batch for:
@@ -92,6 +100,18 @@
    pre-#199 reading, and assert_tb_submission_has_basis stops the build before
    that reading reaches anyone: it is an error-severity test on bronze, and
    `dbt build` skips the children of a failed error test, this model included. #}
+
+{# konsol#255 row 17: THE key the year-end result is moved onto — the chart's
+   retained-earnings account, no partner, and every declared dimension blank.
+   Written once and used twice in close_spine (the figure and its has_source
+   flag) so the two can never drift apart. The blank-dimension test is what
+   makes the close's credit ONE LUMP: a file that split retained earnings
+   across dimension values would otherwise take the year's result once per
+   slice. Driven by the `dimensions` var, never a literal dimension name; on a
+   site that declares none it renders exactly the pre-#255 condition. #}
+{%- set retained_lump_key -%}
+k.main_account = y.retained_account and k.partner_data_area_id = ''{% for d in get_dimensions() %} and k.{{ d.name }} = ''{% endfor %}
+{%- endset -%}
 
 with source as (
 
@@ -239,46 +259,14 @@ keys as (
     union distinct
 
     {# the retained-earnings key of every entity that gets a close, whether or
-       not a file ever listed it. Blank dimensions, matching the close itself —
-       see close_spine and the grain note at the top #}
+       not a file ever listed it. Blank dimensions: this is the key the year's
+       result is moved onto as one lump (`retained_lump_key` at the top), so it
+       has to exist even on an entity whose files never mention the account #}
     select distinct
         data_area_id,
         retained_account as main_account,
         '' as partner_data_area_id{{ dim_empty_strings(leading=true) }}
     from years_to_close
-
-),
-
-close_keys as (
-
-    {# the UN-WIDENED key list, for the synthesised close only. The close is
-       computed on (entity, account, partner) and carries blank dimensions
-       (grain note at the top: `Dimension.survives_close` is not yet exposed to
-       dbt), so it must enumerate that key ONCE — taking the widened `keys`
-       here would emit one close row per dimension combination, all of them
-       blank-dimensioned, i.e. duplicates of one another. #}
-    select distinct
-        data_area_id,
-        main_account,
-        partner_data_area_id
-    from keys
-
-),
-
-close_source as (
-
-    {# and the figures it closes, summed back to that un-widened key, so the
-       close of a split account is the account's whole balance exactly as it
-       was before #255 — not one arbitrary slice of it #}
-    select
-        data_area_id,
-        fiscal_year,
-        fiscal_period,
-        main_account,
-        partner_data_area_id,
-        sum(source_net_amount) as source_net_amount
-    from source
-    group by data_area_id, fiscal_year, fiscal_period, main_account, partner_data_area_id
 
 ),
 
@@ -340,42 +328,54 @@ close_spine as (
         y.closing_period as fiscal_period,
         k.main_account as main_account,
         k.partner_data_area_id as partner_data_area_id,
-        {# konsol#255: positional twin of claimed_spine's dimension block. The
-           synthesised close still carries BLANK dimensions. Whether a dimension
-           survives the close is declared per dimension on
-           `Dimension.survives_close` (decision of 22 Sep 2026, option #255-3,
-           https://github.com/grynn-in/konsol/issues/255#issuecomment-5781879795)
-           and that field is NOT yet exposed to dbt — row 7b widened the
-           differencing and deliberately did not invent a way to read the
-           policy. A later row wires `survives_close` through and replaces this
-           block; until then the close is the pre-#255 shape, computed on
-           close_keys / close_source, and the grain note at the top says what
-           that costs a dimensioned site #}
-        {{ dim_empty_strings(trailing=true) }}
+        {# konsol#255 row 17: positional twin of claimed_spine's dimension
+           block, and — the fix — over the SAME key. The close is one more
+           period in the same series as every other: a key's post-close figure
+           is differenced against THAT KEY's own previous figure by the widened
+           windows below, so the two halves of the close can no longer
+           contradict each other. A P&L key is zeroed in the dimension value it
+           was stated in, which is the only way its balance can reach zero and
+           the only way the next year's first period can start from zero.
+
+           What does NOT carry dimension values is the retained-earnings line:
+           the year's result moves into it as ONE undimensioned lump, on the
+           blank key, whatever dimension values it was earned in. Decision of
+           23 September 2026, Deepak Pai, in his words "one lump, no
+           dimensions" (konsol#255) — the OFF default of
+           `Dimension.survives_close`, and what the live year-end entries
+           already do: a single entity-level account with no dimension values
+           on it. The ON branch (retained earnings credited per dimension
+           value, keeping where the profit came from) is NOT built and has no
+           hook here; it is a separate job, and `survives_close` is the only
+           thing that will change this line. #}
+        {% for d in get_dimensions() -%}
+        k.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
         y.amount_basis as amount_basis,
         '' as batch_id,
         'Year-end close' as submission_name,
         '' as description,
         multiIf(
             ma.is_pnl = 1, toDecimal128(0, 2),
-            k.main_account = y.retained_account and k.partner_data_area_id = '',
+            {{ retained_lump_key }},
                 s.source_net_amount + t.pnl_total,
             s.source_net_amount
         ) as source_net_amount,
-        toUInt8(k.main_account = y.retained_account and k.partner_data_area_id = '' and t.pnl_total != 0) as has_source,
+        toUInt8(({{ retained_lump_key }}) and t.pnl_total != 0) as has_source,
         'year_end_close' as movement_kind
     from years_to_close as y
-    inner join close_keys as k
+    inner join keys as k
         on k.data_area_id = y.data_area_id
     left join pnl_totals as t
         on t.data_area_id = y.data_area_id
         and t.fiscal_year = y.fiscal_year
-    left join close_source as s
+    left join source as s
         on s.data_area_id = y.data_area_id
         and s.fiscal_year = y.fiscal_year
         and s.fiscal_period = y.last_period
         and s.main_account = k.main_account
         and s.partner_data_area_id = k.partner_data_area_id
+        {{ dim_join_on('s', 'k') }}
     left join {{ ref('silver_main_accounts') }} as ma
         on ma.main_account_id = k.main_account
 

@@ -17,27 +17,28 @@
     no file ever claimed it, and it is added to the account's cumulative balance
     for every period that follows.
 
-    KNOWN RED at konsol#255 row 14. Row 7b widened the differencing windows with
-    the declared dimensions, but the close is still computed on the un-widened
-    key and still carries BLANK dimension values (close_keys / close_source /
-    close_spine, and the grain note says so). The two halves contradict on an
-    account that a file splits across dimension values: close_source sums that
-    account back to its WHOLE balance, while the widened lagInFrame differences
-    the blank-dimensioned close row against the blank SLICE's previous figure —
-    zero, because the account has no blank slice. The close then emits the whole
-    balance as a movement out of nothing. Measured on
-    assert_year_end_close_invents_no_movement.must_flag.sql (the dimensioned
-    twin of silver_tb_movements.year_end_close.sql): account ZZ1000, split 60/40
-    across two cost centres and unchanged between FY2024 P12 and FY2025 P1, gets
-    a close row of source 100 / movement +100, and cumulates to 200 against a
-    stated balance of 100.
+    RED at konsol#255 row 14, GREEN at row 17. Row 7b widened the differencing
+    windows with the declared dimensions but left the close computed on the
+    un-widened key and carrying BLANK dimension values, and the two halves
+    contradicted on an account that a file splits across dimension values:
+    close_source summed that account back to its WHOLE balance, while the
+    widened lagInFrame differenced the blank-dimensioned close row against the
+    blank SLICE's previous figure — zero, because a split account has no blank
+    slice. The close emitted the whole balance as a movement out of nothing.
+    Measured on assert_year_end_close_invents_no_movement.must_flag.sql (the
+    dimensioned twin of silver_tb_movements.year_end_close.sql): account ZZ1000,
+    split 60/40 across two declared dimension values and unchanged between
+    FY2024 P12 and FY2025 P1, got a close row of source 100 / movement +100 and
+    cumulated to 200 against a stated balance of 100. Row 17 put close_spine on
+    the same widened key as every other row; the same fixture now emits no close
+    row for ZZ1000 at all and it cumulates to 60 + 40 = 100.
 
-    Deciding what a close SHOULD do per dimension value is
-    `Dimension.survives_close` (decision of 22 Sep 2026, option #255-3,
-    https://github.com/grynn-in/konsol/issues/255#issuecomment-5781879795),
-    which is not yet exposed to dbt. This test does not presume that answer: it
-    only says that whatever the close does, it may not create a balance the
-    source never stated.
+    What a close does per dimension value is settled: the year's result moves
+    into retained earnings as ONE undimensioned lump (decision of 23 September
+    2026, Deepak Pai, konsol#255 — the OFF default of
+    `Dimension.survives_close`). This test does not rest on that answer: it only
+    says that whatever the close does, it may not create a balance the source
+    never stated, and it would hold just as well if the lump were dimensioned.
 
     Why the existing suite cannot see it. The invented rows come in pairs that
     net to zero whenever the split assets have split liabilities behind them
@@ -47,15 +48,17 @@
     key, and the invented row is the only row of the blank slice, so its running
     sum equals its own source figure — exact, and green.
     assert_tb_movements_difference_within_dimension excludes 'year_end_close'
-    rows and their successors, deliberately and in writing. All three are
-    measured green on this test's fixture.
+    rows and their successors, deliberately and in writing. All three were
+    measured green on this test's fixture while it was red.
 
-    NOT judged here, and a separate symptom of the same contradiction: a P&L
-    account that a file SPLITS across dimension values is never reversed at all
-    (its blank close row is 0 against a blank predecessor of 0 and is dropped),
-    so the next year's first period reads last year's expense as activity.
-    That is an under-close, not an invention, and it is
-    assert_year_end_close_carried's neighbourhood.
+    NOT judged here, and the other symptom of the same contradiction: a P&L
+    account that a file SPLITS across dimension values was never reversed at all
+    (its blank close row was 0 against a blank predecessor of 0 and was
+    dropped), so the next year's first period read last year's result as
+    activity. That is an under-close, not an invention, and it is caught by
+    assert_tb_movements_balance — the close period was short by the result and
+    the next first period long by it. Its fixture is
+    assert_tb_movements_balance.split_pnl_close.must_flag.sql, added at row 17.
 
     Quiet where it must be quiet, by construction rather than by a guard:
       - a site that declares no dimensions: every key has one series, so the

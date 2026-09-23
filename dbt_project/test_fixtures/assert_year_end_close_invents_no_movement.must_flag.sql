@@ -27,26 +27,33 @@
 -- difference to 0 and are dropped. ZZ1000's cumulative movement through FY2025 P1
 -- is then 100, the balance both files state.
 --
--- MEASURED at this commit, and the finding: the close row is computed on the
--- UN-WIDENED key (close_source sums ZZ1000 back to its whole 100 across both
--- cost centres) but carries BLANK dimensions, so row 7b's widened lagInFrame
--- differences it against the blank SLICE of ZZ1000 — which does not exist, so 0.
--- The close emits
+-- MEASURED at row 14, and the finding: the close row was computed on the
+-- UN-WIDENED key (its whole 100 summed back across both dimension values) but
+-- carried BLANK dimension values, so row 7b's widened lagInFrame differenced it
+-- against the blank SLICE of ZZ1000 — which does not exist, so 0. The close
+-- emitted
 --     2024 13  ZZ1000  ''  source 100  movement +100  year_end_close
 --     2024 13  ZZ2000  ''  source -100 movement -100  year_end_close
--- out of nothing, and ZZ1000 cumulates to 200 against a stated balance of 100.
--- ZZ1010 (blank-dimensioned, same shape otherwise) differences to 0 and is
--- dropped, exactly as it should — the split is the whole trigger.
+-- out of nothing, and ZZ1000 cumulated to 200 against a stated balance of 100.
+-- ZZ1010 (blank-dimensioned, same shape otherwise) differenced to 0 and was
+-- dropped, exactly as it should — the split was the whole trigger.
 --
--- The two invented rows are equal and opposite BY CONSTRUCTION of the source
--- file (every split asset slice has a matching split liability slice), so the
--- entity-period still sums to zero and assert_tb_movements_balance cannot see
--- it. assert_tb_movements_cumulate_to_source runs its running sums on the full
--- key and each invented row is the only row of its blank slice, so its running
--- sum equals its own source figure — green.
+-- MEASURED at row 17, after the close was put on the same widened key: FY2024
+-- P13 carries ZZ3100 -50, ZZ4000 +80, ZZ5000 -30 and NOTHING ELSE; ZZ1000
+-- cumulates to 60 + 40 = 100 and ZZ2000 to -100, the balances both files state;
+-- FY2025 P1 has no movement on any key. All 28 nodes pass.
+--
+-- Why this fixture needed a test of its own. The two invented rows were equal
+-- and opposite BY CONSTRUCTION of the source file (every split asset slice has
+-- a matching split liability slice), so the entity-period still summed to zero
+-- and assert_tb_movements_balance could not see it.
+-- assert_tb_movements_cumulate_to_source runs its running sums on the full key
+-- and each invented row was the only row of its blank slice, so its running sum
+-- equalled its own source figure — green.
 -- assert_tb_movements_difference_within_dimension excludes 'year_end_close' rows
--- by design. All three are measured PASS on this fixture;
--- assert_year_end_close_invents_no_movement is the one that flags, with 2 rows.
+-- by design. All three were measured PASS on this fixture while it was red, and
+-- assert_year_end_close_invents_no_movement was the only one that flagged, with
+-- 2 rows. That is why it exists, and why it is the one to keep watching.
 --
 -- The live tables may predate these columns: add them to the scratch clone first
 -- (same guard the other fixtures use for amount_basis).
