@@ -92,9 +92,11 @@ left join fiscal_dates as fp
    POSITIONAL TWIN: UNION ALL binds by position and ignores aliases — this
    column list MUST mirror the select above exactly, in order and type. Any
    column added there needs its twin here, or TBS values land in the wrong
-   columns silently. Dimensions come from dim_empty_strings(), the same macro
-   family dim_select() belongs to, so the dimension block stays width-aligned
-   from one source of truth.
+   columns silently. konsol#255: dimensions come from dim_select() on the
+   submission row, the same macro the branch above uses on the ERP row, so the
+   dimension block stays width-aligned and in the same position from one source
+   of truth. (It was dim_empty_strings() until #255: a submitted trial balance
+   carried no dimensions at all.)
 
    accounting_date comes from the entity's OWN fiscal calendar
    (entity_fiscal_calendars -> silver_fiscal_periods.period_start_date), the
@@ -110,12 +112,18 @@ union all
 select
     -- strictly negative synthetic id: no collision with real (positive) ERP
     -- recids. silver_tb_movements is one row per (entity, period, account,
-    -- partner) whatever the batch held, so that key IS the identity: batch_id
-    -- left the hash because a spine row (an account that vanished from a
-    -- balance file) belongs to the period, not to a row of the batch, and
-    -- description left because the key already sums a batch's two rows for one
-    -- account into one movement.
-    -toInt64(bitShiftRight(cityHash64(tbs.data_area_id, tbs.fiscal_year, tbs.fiscal_period, tbs.main_account, tbs.partner_data_area_id), 1)) as recid,
+    -- partner, <declared dimensions>) whatever the batch held, so that key IS
+    -- the identity: batch_id left the hash because a spine row (an account that
+    -- vanished from a balance file) belongs to the period, not to a row of the
+    -- batch, and description left because the key already sums a batch's two
+    -- rows for one account into one movement.
+    -- konsol#255 row 7b: the DIMENSIONS ARE IN THE HASH. Since row 7a-1 a file
+    -- may split an account across dimension values, and silver_tb_movements
+    -- (row 7b) now emits one row per slice — hashing the un-widened key gave
+    -- every slice of one account the SAME recid. Driven by the `dimensions`
+    -- var, never a literal column name; a site that declares none hashes
+    -- exactly the pre-#255 key, so no existing recid changes.
+    -toInt64(bitShiftRight(cityHash64(tbs.data_area_id, tbs.fiscal_year, tbs.fiscal_period, tbs.main_account, tbs.partner_data_area_id{{ dim_select(prefix='tbs.', leading=true) }}), 1)) as recid,
     tbs.data_area_id as data_area_id,
     tbs.period_start as accounting_date,
     tbs.fiscal_year as fiscal_year,
@@ -141,7 +149,9 @@ select
     tbs.description as description,
     {# positional twin of gae.partner_data_area_id above #}
     tbs.partner_data_area_id as partner_data_area_id,
-    {{ dim_empty_strings(trailing=true) }}
+    {# positional twin of gae.<dimensions> above — the submitted file's own
+       declared dimension values (konsol#255) #}
+    {{ dim_select(prefix='tbs.', trailing=true) }}
     concat('TBS-', tbs.batch_id) as journal_number,
     '{{ tbs_marker }}' as journal_category,
     tbs.submission_name as document_number,
@@ -167,6 +177,7 @@ from (
         m.credit_amount as credit_amount,
         m.description as description,
         m.partner_data_area_id as partner_data_area_id,
+        {{ dim_select(prefix='m.', trailing=true) }}
         m.submission_name as submission_name,
         m.movement_amount as net_amount,
         {# ClickHouse LEFT JOIN fills an unmatched sfp row with the column
