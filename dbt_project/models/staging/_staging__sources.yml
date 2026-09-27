@@ -393,7 +393,12 @@ sources:
         description: "PRD-9/11/12: Temporal ownership periods with acquisition and disposal fields"
         loaded_at_field: updated_at
       - name: consolidation_adjustments
-        description: "PRD-16: Top-side adjustments with workflow status and auto-reversal"
+        description: >
+          PRD-16: Top-side adjustments with workflow status and auto-reversal.
+          `reverse_fiscal_year`/`reverse_fiscal_period` name the journal's
+          reversal period, declared and checked at approval (konsol J04a);
+          assert_auto_reversal_period_declared (konsol#305-D2-11) catches a
+          calendar edited after approval.
         loaded_at_field: updated_at
       - name: ic_elimination_rules
         description: "PRD-15: IC elimination rules with unrealized profit support"
