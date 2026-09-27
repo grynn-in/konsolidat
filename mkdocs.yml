@@ -102,8 +102,6 @@ nav:
               - POST budget_save_batch: api-reference/api-budget-save-batch.md
           - Consolidation:
               - GET get_hierarchy_tree: api-reference/api-hierarchy.md
-              - POST approve_adjustment: api-reference/api-approve-adjustment.md
-              - POST reverse_adjustment: api-reference/api-reverse-adjustment.md
       - Data Dictionary:
           - Overview: data-dictionary/data-dictionary-overview.md
           - Gold Models: data-dictionary/gold-models.md

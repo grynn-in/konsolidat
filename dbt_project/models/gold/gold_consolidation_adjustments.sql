@@ -7,7 +7,14 @@
 
 {# PRD-5: Top-side journal adjustments from the Consolidation Adjustment doctype
    PRD-16: Workflow status filter — only Approved/Reversed flow through
-           Auto-reversal generation for journals with auto_reverse_period > 0 #}
+   konsol#305-D2-11: an Approved journal names its reversal period
+           (reverse_fiscal_year / reverse_fiscal_period; 0/0 = none). Each of
+           its lines gets one auto_reversal row in exactly that period, debit
+           and credit swapped, journal_id kept (P26). The old `+N periods`
+           arithmetic is gone. Every input column is qualified: an unqualified
+           name bound to the output alias (analyzer on,
+           prefer_column_name_to_alias=0), so the old filter read toUInt8(0)
+           and generated no reversal at all (#304 fault 1). #}
 
 {# konsolidat#146: the seed half is gone.
 
@@ -24,66 +31,55 @@
    configuration to ship. #}
 with staging_adjustments as (
     select
-        consolidation_group,
-        adjustment_type,
-        journal_id,
-        data_area_id,
-        fiscal_year,
-        fiscal_period,
-        main_account,
-        debit_amount,
-        credit_amount,
-        debit_amount - credit_amount as net_amount,
-        description,
-        posted_by,
-        status,
-        approved_by,
-        reversal_journal_id,
-        auto_reverse_period
-    from {{ source('epm_staging', 'consolidation_adjustments') }}
-    where status in ('Approved', 'Reversed')
+        sa.consolidation_group as consolidation_group,
+        sa.adjustment_type as adjustment_type,
+        sa.journal_id as journal_id,
+        sa.data_area_id as data_area_id,
+        sa.fiscal_year as fiscal_year,
+        sa.fiscal_period as fiscal_period,
+        sa.main_account as main_account,
+        sa.debit_amount as debit_amount,
+        sa.credit_amount as credit_amount,
+        sa.debit_amount - sa.credit_amount as net_amount,
+        sa.description as description,
+        sa.posted_by as posted_by,
+        sa.status as status,
+        sa.approved_by as approved_by,
+        sa.reversal_journal_id as reversal_journal_id,
+        sa.reverse_fiscal_year as reverse_fiscal_year,
+        sa.reverse_fiscal_period as reverse_fiscal_period
+    from {{ source('epm_staging', 'consolidation_adjustments') }} as sa
+    where sa.status in ('Approved', 'Reversed')
 ),
 
-{# PRD-16: Auto-reversal — generate reversing entries for Approved journals
-   with auto_reverse_period > 0. Reversal posts in period + auto_reverse_period. #}
 auto_reversals as (
     select
-        consolidation_group,
+        s.consolidation_group as consolidation_group,
         'auto_reversal' as adjustment_type,
-        concat(journal_id, '_REV') as journal_id,
-        data_area_id,
-        case
-            when fiscal_period + auto_reverse_period > 12
-            then fiscal_year + 1
-            else fiscal_year
-        end as fiscal_year,
-        case
-            when fiscal_period + auto_reverse_period > 12
-            then toUInt8(fiscal_period + auto_reverse_period - 12)
-            else toUInt8(fiscal_period + auto_reverse_period)
-        end as fiscal_period,
-        main_account,
-        staging_adjustments.credit_amount as debit_amount,
-        staging_adjustments.debit_amount as credit_amount,
-        staging_adjustments.credit_amount - staging_adjustments.debit_amount as net_amount,
-        concat('Auto-reversal of ', journal_id) as description,
+        s.journal_id as journal_id,
+        s.data_area_id as data_area_id,
+        s.reverse_fiscal_year as fiscal_year,
+        s.reverse_fiscal_period as fiscal_period,
+        s.main_account as main_account,
+        s.credit_amount as debit_amount,
+        s.debit_amount as credit_amount,
+        s.credit_amount - s.debit_amount as net_amount,
+        concat('Auto-reversal of ', s.journal_id) as description,
         'system' as posted_by,
         'Approved' as status,
         '' as approved_by,
-        journal_id as reversal_journal_id,
-        toUInt8(0) as auto_reverse_period
-    from staging_adjustments
-    where auto_reverse_period > 0
-      and status = 'Approved'
-      and reversal_journal_id = ''
+        s.journal_id as reversal_journal_id,
+        toUInt16(0) as reverse_fiscal_year,
+        toUInt8(0) as reverse_fiscal_period
+    from staging_adjustments as s
+    where s.reverse_fiscal_year > 0
+      and s.status = 'Approved'
+      and s.reversal_journal_id = ''
 ),
 
-{# Use staging if populated, otherwise seed #}
 all_adjustments as (
     select * from staging_adjustments
-
     union all
-
     select * from auto_reversals
 )
 

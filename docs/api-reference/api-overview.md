@@ -76,8 +76,6 @@ sequenceDiagram
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | [`get_hierarchy_tree`](api-hierarchy.md) | Session | Consolidation hierarchy as nested JSON |
-| POST | [`approve_adjustment`](api-approve-adjustment.md) | Session | Approve topside journal |
-| POST | [`reverse_adjustment`](api-reverse-adjustment.md) | Session | Reverse approved journal |
 
 ## Error Handling
 
@@ -140,5 +138,3 @@ The batch endpoint groups requests by `(scenario, measure, period_tuple, has_cos
 **Consolidation:**
 
 - [GET get_hierarchy_tree](api-hierarchy.md) — Hierarchy as nested JSON
-- [POST approve_adjustment](api-approve-adjustment.md) — Approve topside journal
-- [POST reverse_adjustment](api-reverse-adjustment.md) — Reverse approved journal
