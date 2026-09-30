@@ -32,6 +32,36 @@
     {% endif %}
 {% endif %}
 
+{# konsol#255: the declared dimension values on each submitted row. Which
+   dimensions exist is the `dimensions` var, never a constant, so the whole
+   block is one dim_select_from_source() call over the declared list.
+
+   Same deploy-in-either-order guard as partner_expr, for the same reason:
+   konsol owns epm_raw.trial_balance_submissions and adds a dimension's column
+   when the dimension is declared (ensure_raw_tables, init-db.sql). MEASURED
+   22 Sep: konsol's _RAW_TABLE_DDL carries no dim_* column at all today, so
+   without this guard every existing stack's bronze build would fail on an
+   unknown identifier the moment a dimension is declared in dbt_project.yml.
+   A dimension whose raw column konsol has not created yet reads '' — the same
+   value the column's own DEFAULT gives once it is created, so the guard
+   changes no row's value, only whether the SELECT can resolve.
+
+   The declared ORDER is preserved (present and absent dimensions are not
+   sorted into two blocks): each dimension's source expression is substituted
+   on a copy of its entry and the one macro renders them all in var order. #}
+{% set tb_dims = [] %}
+{% if execute %}
+    {% for d in get_dimensions() %}
+        {% set g = d.copy() %}
+        {% if d.source_column in raw_columns %}
+            {% do g.update({'source_column': 'raw.' ~ d.source_column}) %}
+        {% else %}
+            {% do g.update({'source_column': "''"}) %}
+        {% endif %}
+        {% do tb_dims.append(g) %}
+    {% endfor %}
+{% endif %}
+
 {# konsolidat#199: what the batch's amounts ARE — 'Period movement',
    'Year-to-date movement' or 'Period-end balance' — declared by konsol on the
    claim row at submit. silver_tb_movements normalises every batch to period
@@ -71,6 +101,8 @@ select
     {{ cast_to_decimal128('raw.credit_amount', 2) }}      as credit_amount,
     {{ cast_to_string('raw.description') }}               as description,
     {{ cast_to_string(partner_expr) }}                    as partner_data_area_id,
+    {# konsol#255: the declared dimensions, in var order (see tb_dims above) #}
+    {{ dim_select_from_source(dims=tb_dims, trailing=true) }}
     {{ cast_to_string('raw.submission_name') }}           as submission_name,
     raw.submitted_at                                      as submitted_at,
     claims.last_claimed_at                                as claimed_at,
