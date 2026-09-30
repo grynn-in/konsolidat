@@ -392,7 +392,7 @@ info "Step 5/5: Running dbt build (gold models)..."
 # meant dbt parsed nothing and built no models at all — while the deploy still
 # printed "Konsolidat is ready!". Data-quality test failures on demo data are
 # genuinely tolerable; a build that produced nothing is not. Tell them apart.
-DBT_LOG="$(mktemp -t konsolidat-dbt)"
+DBT_LOG="$(mktemp "${TMPDIR:-/tmp}/konsolidat-dbt.XXXXXX")"
 docker compose --profile setup run --rm dbt_init 2>&1 | tee "$DBT_LOG"
 DBT_STATUS=${PIPESTATUS[0]}   # exit status of dbt, not of tee
 if [ "$DBT_STATUS" -eq 0 ]; then

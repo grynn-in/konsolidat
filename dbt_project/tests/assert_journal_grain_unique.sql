@@ -4,6 +4,13 @@
 -- (consolidation_group, data_area_id, fiscal_year, main_account, adjustment_type, the dimension
 -- columns) for adjustment_type 'acquisition', 'goodwill_amortisation' and 'disposal'.
 --
+-- konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — it passed
+-- gold_consolidation_adjustments lines through unsummed, so two topside lines on one account,
+-- entity and period (or an auto_reversal line next to its original, konsol#305-D2-11) gave two
+-- running totals instead of one. Layer 4 now SUMs to this grain like layer 6, so this check
+-- also covers 'topside', 'reclassification' and 'auto_reversal'.
+-- Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql.
+--
 -- The journals themselves post several lines to one account in one period when the roles
 -- differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on
 -- the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's
@@ -33,7 +40,7 @@ select
     count() as n_rows,
     sum(amount) as net_amount
 from {{ ref('gold_fully_consolidated_tb') }}
-where adjustment_type in ('acquisition', 'goodwill_amortisation', 'disposal')
+where adjustment_type in ('acquisition', 'goodwill_amortisation', 'disposal', 'topside', 'reclassification', 'auto_reversal')
 group by
     consolidation_group,
     data_area_id,

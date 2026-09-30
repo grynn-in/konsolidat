@@ -1,0 +1,55 @@
+name: deploy guards
+
+# konsolidat#239. Pure Python over files in the repo: no ClickHouse, no dbt, no
+# services, about two seconds.
+#
+# konsolidat#240's fix (the image installing file(1)) ships in this PR with no
+# test here. Three guards were written for it and all three were parsers that
+# read the Dockerfile; all three were wrong. Building the image and looking is
+# the only honest check, and nothing in CI builds it — konsolidat#244. They live here rather
+# than in `dbt checks` because that workflow's `paths` is workflow-level, so
+# listing deploy.sh there dragged a full warehouse build and the TB-only first
+# build onto every edit of the deploy script.
+#
+# The trigger is deploy.sh, not every *.sh. An earlier version of
+# test_deploy_portability parsed shell and scanned every tracked script; that
+# parser was deleted (two review rounds, nine defects, all in it), and the test
+# now reads deploy.sh alone. A `**.sh` trigger would fire this job on an edit to
+# docker/backup/backup.sh and go green having checked nothing — so the trigger
+# says what the test actually covers. The other shell scripts are unguarded,
+# deliberately: konsolidat#243.
+#
+# The list is written out twice because GitHub Actions does not support YAML
+# anchors — keep the two copies in step, as dbt-checks.yml also has to.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy.sh'
+      - 'tests/test_deploy_portability.py'
+      - '.github/workflows/deploy-guards.yml'
+  pull_request:
+    paths:
+      - 'deploy.sh'
+      - 'tests/test_deploy_portability.py'
+      - '.github/workflows/deploy-guards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    name: deploy script guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # konsolidat#239: `mktemp -t` needs three X's on GNU coreutils, so step 5
+      # of deploy.sh — the dbt build — had never run on a Linux host. The runner
+      # is ubuntu, so the behavioural half of this test executes here rather
+      # than declaring the skip it must declare on a Mac.
+      - name: deploy.sh creates its temp files portably
+        run: python -m unittest -v tests.test_deploy_portability

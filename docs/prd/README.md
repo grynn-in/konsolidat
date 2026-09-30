@@ -52,6 +52,8 @@ Per-feature Product Requirement Documents for the Konsolidat roadmap, grouped by
 | PRD | Summary | Status |
 |---|---|---|
 | [Production Hardening](PRD-PRODUCTION-HARDENING.md) | Backup automation, monitoring/alerting, load testing, close runbook, disaster recovery. | Not Started |
+| [deploy.sh Step 5 Runs on Linux](PRD-DEPLOY-STEP5-PORTABILITY.md) | `mktemp -t konsolidat-dbt` is rejected by GNU coreutils, so the dbt build has never run on a server; use a template both coreutils accept, guarded by running the call rather than reading it. | Proposed (konsolidat #239) |
+| [A Backup Can Be Restored in the Image](PRD-RESTORE-IN-IMAGE.md) | `bench restore` shells out to `file(1)`, which the Frappe image does not install, so every restore fails; install `file` in the image. | Proposed (konsolidat #240) |
 
 ## Governance
 

@@ -105,7 +105,13 @@ cta_entries as (
     from {{ ref('gold_fx_revaluation') }}
 ),
 
-{# Layer 4: Top-side adjustments #}
+{# Layer 4: Top-side adjustments.
+   konsol#305 V03 (P6): summed to the grain assert_journal_grain_unique checks, like layer 6
+   (konsolidat#198 J11/J13). Passed through unsummed, two topside lines on one account, entity
+   and period (two journals, or a journal next to its konsol#305-D2-11 auto_reversal line) gave
+   two rows here — and, downstream, two running totals in gold_consolidated_ytd instead of one.
+   journal_id is not part of the grain (a second journal on the same account in the same period
+   is one row), so it is reported with any(journal_id), mirroring layer 6. #}
 topside as (
     select
         consolidation_group,
@@ -113,13 +119,15 @@ topside as (
         fiscal_year,
         fiscal_period,
         main_account,
-        description as account_name,
+        any(description) as account_name,
         {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
-        {{ cast_to_float64('net_amount') }} as amount,
+        sum({{ cast_to_float64('net_amount') }}) as amount,
         adjustment_type,
-        journal_id
+        any(journal_id) as journal_id
     from {{ ref('gold_consolidation_adjustments') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type
 ),
 
 {# Layer 5: Equity method entries (PRD-14) #}

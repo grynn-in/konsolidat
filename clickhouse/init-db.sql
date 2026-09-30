@@ -106,8 +106,11 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_adjustments (
     approved_by String DEFAULT '',
     approved_at DateTime DEFAULT '1970-01-01 00:00:00',
     reversal_journal_id String DEFAULT '',
-    auto_reverse_period UInt8 DEFAULT 0,
-    created_at DateTime DEFAULT now()
+    created_at DateTime DEFAULT now(),
+    -- konsol#305-D2-11: the journal names its reversal period; 0/0 = no reversal.
+    -- Identical to konsol's DDL (J05a), which owns this table.
+    reverse_fiscal_year UInt16 DEFAULT 0,
+    reverse_fiscal_period UInt8 DEFAULT 0
 ) ENGINE = MergeTree()
 ORDER BY (consolidation_group, journal_id, fiscal_year, fiscal_period, main_account);
 
