@@ -10,9 +10,12 @@
        (translation only). The local amounts are recomputed from
        gold_consolidated_trial_balance (ic_expected_pair_values), not taken
        from the model's own columns (#175 re-review L4).
-    3. status: an fx difference is 'fx_difference' and never counts against
-       the tolerance. A booking difference is within_tolerance or
-       over_tolerance against the group's tolerance.
+    3. status: a booking difference is within_tolerance or over_tolerance
+       against the group's tolerance. An fx difference on a balance-sheet pair
+       across currencies is judged the same way, since both sides are at the
+       closing rate (konsol#305-W3-5). Any other fx difference (a movement pair
+       across currencies, or translation only in one currency) is
+       'fx_difference' and does not count against the tolerance.
     4. label: each 'difference' elimination row carries its pair's cause, so
        splitting the difference account in two later needs no data change.
 #}
@@ -70,17 +73,18 @@ status_check as (
         concat(entity_a, '/', account_a, ' <> ', entity_b, '/', account_b, ': ', match_status) as detail,
         multiIf(
             expected_cause = 'none', 'matched',
-            expected_cause = 'fx', 'fx_difference',
+            expected_cause = 'fx' and not (basis = 'balance' and currency_a != currency_b), 'fx_difference',
             abs(difference) <= tolerance, 'within_tolerance',
             'over_tolerance'
         ) as expected
     from rec
     where match_status != multiIf(
             expected_cause = 'none', 'matched',
-            expected_cause = 'fx', 'fx_difference',
+            expected_cause = 'fx' and not (basis = 'balance' and currency_a != currency_b), 'fx_difference',
             abs(difference) <= tolerance, 'within_tolerance',
             'over_tolerance')
-       or (difference_cause = 'fx' and match_status = 'over_tolerance')
+       or (difference_cause = 'fx' and match_status = 'over_tolerance'
+           and not (basis = 'balance' and currency_a != currency_b))
 ),
 
 label_check as (
