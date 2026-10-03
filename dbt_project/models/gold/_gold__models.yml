@@ -612,7 +612,7 @@ models:
               arguments:
                 values: ['none', 'booking', 'fx']
       - name: match_status
-        description: "matched, within_tolerance or over_tolerance (booking differences against the group's tolerance), or fx_difference (never counts)"
+        description: "matched; within_tolerance or over_tolerance (a booking difference, or a balance-sheet pair across currencies, against the group's tolerance, konsol#305-W3-5); or fx_difference (a P&L pair across currencies, or translation alone; never judged)"
         tests:
           - accepted_values:
               arguments:

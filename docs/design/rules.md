@@ -13,29 +13,30 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **126** |
-| carrying their reasoning | 108 |
-| citing the issue that caused them | 83 |
+| assertions | **132** |
+| carrying their reasoning | 114 |
+| citing the issue that caused them | 90 |
 | severity `warn` (reports, does not stop a build) | 20 |
-| severity `error` (stops the build, and its children) | 106 |
+| severity `error` (stops the build, and its children) | 112 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
 
 ## Contents
 
-- [Trial balance intake](#trial-balance-intake) — 16
+- [Trial balance intake](#trial-balance-intake) — 18
 - [Currency and translation](#currency-and-translation) — 22
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 10
+- [Intercompany](#intercompany) — 11
 - [Equity method](#equity-method) — 2
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 7
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 3
-- [Platform and data integrity](#platform-and-data-integrity) — 13
+- [Calendar and periods](#calendar-and-periods) — 4
+- [Platform and data integrity](#platform-and-data-integrity) — 14
+- [Other](#other) — 1
 
 ---
 
@@ -89,9 +90,17 @@ Every claimed batch balances (assert_tb_submission_batches_balance), and silver_
 
 **Normalised movements add back up to what the batch declared (konsolidat#199).**
 
-silver_tb_movements rewrites every batch as period movements from its declared amount_basis. Undoing that rewrite must give the source figure back, per key (entity, account, partner) and period: 'Period movement'        movement                              = source net 'Year-to-date movement'  running sum within the fiscal year    = source net 'Period-end balance'     running sum over every period         = source net A key that vanished from a later batch has a row here only because the model's spine put one there (source net 0, movement minus the previous figure), and that row's running sum comes back to 0 as any other. This test judges the rows that exist; a spine that MISSED the vanished key would leave no row to judge, and it is assert_tb_movements_balance that catches that (the period no longer sums to 0). The synthetic year-end close of a period-end-balance file (PR 200 finding 1) passes for the same reason: its rows carry the post-close balance as source_net_amount (0 for a P&L key, the year's result added to retained earnings), so the running sum over every period still equals the source figure at each row. Rows whose basis is not one of the three strings are not judged here: assert_tb_submission_has_basis names them at the bronze layer and stops the build. Tolerance 0.01, as for the other balance tests.
+silver_tb_movements rewrites every batch as period movements from its declared amount_basis. Undoing that rewrite must give the source figure back, per key (entity, account, partner, <the declared dimensions>) and period: 'Period movement'        movement                              = source net 'Year-to-date movement'  running sum within the fiscal year    = source net 'Period-end balance'     running sum over every period         = source net A key that vanished from a later batch has a row here only because the model's spine put one there (source net 0, movement minus the previous figure), and that row's running sum comes back to 0 as any other. This test judges the rows that exist; a spine that MISSED the vanished key would leave no row to judge, and it is assert_tb_movements_balance that catches that (the period no longer sums to 0). The synthetic year-end close of a period-end-balance file (PR 200 finding 1) passes for the same reason: its rows carry the post-close balance as source_net_amount (0 for a P&L key, the year's result added to retained earnings), so the running sum over every period still equals the source figure at each row. Rows whose basis is not one of the three strings are not judged here: assert_tb_submission_has_basis names them at the bronze layer and stops the build. konsol#255 row 7b — WHY THE RUNNING SUMS CARRY THE DIMENSIONS. Until 7b the two partitions below were (entity, account, partner) with no dimensions, which matched the model's own un-widened differencing. Once a file may split an account across declared dimension values (row 7a-1) and the differencing is keyed on the full key (row 7b), this test's row-level source_net_amount is ONE SLICE's figure while an un-widened running sum adds EVERY slice's movement — it compares 600 against 300 and calls a correct model wrong. Measured on 7a-2's fixture: the only movements that satisfy the un-widened cumulation there are the broken ones (slice A = its full figure, slice B = 0), i.e. the exact defect assert_tb_movements_difference_within_dimension exists to catch. So the partitions are widened with dim_partition_by over the `dimensions` var — never a literal column name. This makes the test STRICTER (it judges each slice on its own), and on a site that declares no dimensions it renders character-for-character what it rendered before. Tolerance 0.01, as for the other balance tests.
 
-<sub>`error` · `tests/assert_tb_movements_cumulate_to_source.sql` · konsolidat#199</sub>
+<sub>`error` · `tests/assert_tb_movements_cumulate_to_source.sql` · konsol#255 konsolidat#199</sub>
+
+### `tb_movements_difference_within_dimension`
+
+**A movement is differenced against the SAME dimension combination (konsol#255).**
+
+silver_tb_movements turns a 'Year-to-date movement' or 'Period-end balance' file into period movements by subtracting the previous period's figure for the key. Once a file carries declared dimension values, the key includes them: an account split across two cost centres is TWO series, and each period's figure belongs to one of them. KNOWN RED at konsol#255 row 7a-2. Both lagInFrame partitions in silver_tb_movements (previous_net_any_year, previous_net_same_year), its `keys` CTE and every join onto `source` are still keyed on (data_area_id, main_account, partner_data_area_id) with no dimensions — deliberately, see the grain note at the top of that model. So the two series are walked as one: a slice's figure is differenced against the OTHER slice's figure and every amount on the split account is wrong. Row 7b widens the partitions and this test turns green. Why the existing suite cannot see it. The differencing telescopes, so the error cancels within the (entity, account, partner) key: assert_tb_movements_cumulate_to_source runs its running sums on that same un-widened key and comes back exact, and a file whose slices net out across accounts still sums to zero per period, so assert_tb_movements_balance passes too. Both are measured to pass on this test's must_flag fixture. What is flagged. Per row, the previous figure the model used is exactly source_net_amount - movement_amount; the previous figure the FULL key implies is recomputed here with dim_partition_by over the declared dimensions. A row whose movement disagrees with the full-key figure by more than 0.01 is returned, with both previous figures and both movements side by side. predecessor_dimension_key is the un-widened window reconstructed over this model's output rather than its spine: it names the slice the row was differenced against, but two slices of one period are tied in that ordering, so treat it as an explanation and the two previous_net columns as the evidence. Quiet where it must be quiet. It is konsol's close-time suite that runs this (`dbt test --select test_type:singular`), on sites that declare no dimensions at all and on CI's fresh site: - no declared dimensions: the presence guard below returns the row-less branch, so nothing is computed and nothing can be flagged; - 'Period movement' files: not differenced at all, filtered out here; - an account that is not split: the full key and the un-widened key walk the same single series and agree. Out of scope, declared rather than silent: the synthesised year-end close. A 'year_end_close' row is computed on the un-widened key and carries BLANK dimensions at this commit, so it — and the first period differenced against it — would disagree with a full-key recomputation for a reason this test is not about. What a close per dimension value means is konsol#255 row 7b's decision; assert_year_end_close_declared / assert_year_end_close_carried judge the close itself. So exactly two things are left unjudged: the close rows, and the row whose predecessor IS a close row. They stay in both windows, so every other row's chain is the model's own. That exclusion is deliberately narrow because the alternative is not: measured on this warehouse's live silver_tb_movements, every one of its 36,665 activity rows is 'Period-end balance' and 41 of its 44 entities carry a close, so excluding a whole entity that has one would leave this test judging three entities and calling itself green. Tolerance 0.01, as for the other movement tests.
+
+<sub>`error` · `tests/assert_tb_movements_difference_within_dimension.sql` · konsol#255</sub>
 
 ### `tb_submission_batches_balance`
 
@@ -163,6 +172,14 @@ re-review findings 1 and 3). A 'Period-end balance' file carries the year's P&L 
 
 <sub>`error` · `tests/assert_year_end_close_declared.sql` · konsolidat#199</sub>
 
+### `year_end_close_invents_no_movement`
+
+**The synthesised year-end close moves only what a close moves (konsol#255).**
+
+silver_tb_movements synthesises a post-close period for a 'Period-end balance' entity-year (PR 200 finding 1). By its own design — the grain note at the top of that model — the close period carries the last claimed period's balances with the P&L keys set to 0 and the year's result added to retained earnings. So exactly THREE kinds of movement may come out of it: - a P&L key, reversed             (silver_main_accounts.is_pnl = 1) - the retained-earnings key, partner '' (is_retained_earnings = 1) - every other key: the SAME figure it already had, which differences to 0 and is dropped again This test judges the third kind. A 'year_end_close' row on a non-P&L, non-retained key that carries a movement is a balance the close INVENTED: no file ever claimed it, and it is added to the account's cumulative balance for every period that follows. RED at konsol#255 row 14, GREEN at row 17. Row 7b widened the differencing windows with the declared dimensions but left the close computed on the un-widened key and carrying BLANK dimension values, and the two halves contradicted on an account that a file splits across dimension values: close_source summed that account back to its WHOLE balance, while the widened lagInFrame differenced the blank-dimensioned close row against the blank SLICE's previous figure — zero, because a split account has no blank slice. The close emitted the whole balance as a movement out of nothing. Measured on assert_year_end_close_invents_no_movement.must_flag.sql (the dimensioned twin of silver_tb_movements.year_end_close.sql): account ZZ1000, split 60/40 across two declared dimension values and unchanged between FY2024 P12 and FY2025 P1, got a close row of source 100 / movement +100 and cumulated to 200 against a stated balance of 100. Row 17 put close_spine on the same widened key as every other row; the same fixture now emits no close row for ZZ1000 at all and it cumulates to 60 + 40 = 100. What a close does per dimension value is settled: the year's result moves into retained earnings as ONE undimensioned lump (decision of 23 September 2026, Deepak Pai, konsol#255 — the OFF default of `Dimension.survives_close`). This test does not rest on that answer: it only says that whatever the close does, it may not create a balance the source never stated, and it would hold just as well if the lump were dimensioned. Why the existing suite cannot see it. The invented rows come in pairs that net to zero whenever the split assets have split liabilities behind them (they are the same balances, differenced the same wrong way), so the entity-period still sums to zero and assert_tb_movements_balance passes. assert_tb_movements_cumulate_to_source runs its running sums on the FULL key, and the invented row is the only row of the blank slice, so its running sum equals its own source figure — exact, and green. assert_tb_movements_difference_within_dimension excludes 'year_end_close' rows and their successors, deliberately and in writing. All three were measured green on this test's fixture while it was red. NOT judged here, and the other symptom of the same contradiction: a P&L account that a file SPLITS across dimension values was never reversed at all (its blank close row was 0 against a blank predecessor of 0 and was dropped), so the next year's first period read last year's result as activity. That is an under-close, not an invention, and it is caught by assert_tb_movements_balance — the close period was short by the result and the next first period long by it. Its fixture is assert_tb_movements_balance.split_pnl_close.must_flag.sql, added at row 17. Quiet where it must be quiet, by construction rather than by a guard: - a site that declares no dimensions: every key has one series, so the close row and the balance it carries sit in the same window partition and difference to 0 — there is nothing to return. No `dimensions` guard and no dimension column is referenced, so this test renders identically whatever the var holds; - a 'Period movement' or 'Year-to-date movement' entity: no close is synthesised for it at all; - an entity whose accounts are not split: same single series as above. Tolerance 0.01, as for the other movement tests.
+
+<sub>`error` · `tests/assert_year_end_close_invents_no_movement.sql` · konsol#255</sub>
+
 ---
 
 ## Currency and translation
@@ -227,7 +244,7 @@ The previous row_number()/rn=1 join ignored period_date, so an early period coul
 
 ### `equity_rate_coverage`
 
-<sub>`warn` · `tests/assert_equity_rate_coverage.sql` · konsolidat#104 konsolidat#120 konsolidat#121 konsolidat#176</sub>
+<sub>`warn` · `tests/assert_equity_rate_coverage.sql` · konsolidat#104 konsolidat#120 konsolidat#176 konsolidat#232</sub>
 
 ### `equity_uses_historical_rate`
 
@@ -581,9 +598,9 @@ An account paired with two counterparts would have one side matched twice, which
 
 **Decision 13 (13 Sep 2026): each intercompany difference is labelled by its cause, and only a booking difference counts against the tolerance.**
 
-1. currency: each side's currency is its entity's functional currency (silver_entity_currencies), the input the rule reads. 2. cause: difference_cause follows the rule (see gold_ic_reconciliation): none below materiality_floor(); fx across currencies; booking in one currency when the local amounts do not net to zero; fx in one currency when they do (translation only). The local amounts are recomputed from gold_consolidated_trial_balance (ic_expected_pair_values), not taken from the model's own columns (#175 re-review L4). 3. status: an fx difference is 'fx_difference' and never counts against the tolerance. A booking difference is within_tolerance or over_tolerance against the group's tolerance. 4. label: each 'difference' elimination row carries its pair's cause, so splitting the difference account in two later needs no data change.
+1. currency: each side's currency is its entity's functional currency (silver_entity_currencies), the input the rule reads. 2. cause: difference_cause follows the rule (see gold_ic_reconciliation): none below materiality_floor(); fx across currencies; booking in one currency when the local amounts do not net to zero; fx in one currency when they do (translation only). The local amounts are recomputed from gold_consolidated_trial_balance (ic_expected_pair_values), not taken from the model's own columns (#175 re-review L4). 3. status: a booking difference is within_tolerance or over_tolerance against the group's tolerance. An fx difference on a balance-sheet pair across currencies is judged the same way, since both sides are at the closing rate (konsol#305-W3-5). Any other fx difference (a movement pair across currencies, or translation only in one currency) is 'fx_difference' and does not count against the tolerance. 4. label: each 'difference' elimination row carries its pair's cause, so splitting the difference account in two later needs no data change.
 
-<sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsolidat#175</sub>
+<sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsol#305 konsolidat#175</sub>
 
 ### `ic_elimination_nets_zero`
 
@@ -608,6 +625,14 @@ The engine this replaced joined every ordered entity pair and eliminated 2.61M a
 The consolidation report's Consolidated column is the group view (gold_fully_consolidated_tb) plus the NCI view (nci_amount per account, plus the NCI view's eliminations). With A 100% and B 80% on 1000/-1000, the group view eliminated -1000 and +800 and put +200 on the NCI line, but nothing eliminated B's minority share (-200) of the payable, so the payable showed -200 at 100%. Per pair and row, on the pair's basis (decision 14): what both sides hold at 100% (balance_a + balance_b = group_amount + nci_amount) plus every elimination on the pair's own sides, group and NCI view, nets to zero when the group has an intercompany-difference account, and to the 100% residuals when it has none. The NCI line and the difference account are destinations, not the pair's sides. The group view on its own is assert_ic_elimination_nets_zero.
 
 <sub>`error (default)` · `tests/assert_ic_full_view_nets_zero.sql` · konsolidat#175</sub>
+
+### `ic_match_status_cases`
+
+**konsol#305-W3-5 (Deepak Pai, 3 Oct 2026, option C): a balance-sheet pair compares both sides translated at the closing rate, so a cross-currency balance difference is judged against the group's tolerance: over it 'over_tolerance', within it 'within_tolerance'.**
+
+Its difference_cause stays 'fx'. A P&L (movement) pair compares the period at average rates and stays 'fx_difference'. A same-currency booking difference is judged as before. On the fixture test_fixtures/assert_ic_match_status_cases.sql (group ZZIC, tolerance 10, FY2026 P1): - ZZE ZZ2100 <-> ZZP ZZ1100: EUR/USD, balance, difference 40   -> over_tolerance, cause fx; - ZZF ZZ2100 <-> ZZS ZZ1100: EUR/USD, balance, difference 4    -> within_tolerance, cause fx; - ZZE ZZ5100 <-> ZZP ZZ4100: EUR/USD, movement, difference -80 -> fx_difference, cause fx; - ZZP ZZ1100 <-> ZZS ZZ2100: USD/USD, balance, difference 50   -> over_tolerance, cause booking. One row per expectation not met; an expected pair that is missing is a row too. Without group ZZIC (a site that did not load the fixture) the test has nothing to check and returns no rows.
+
+<sub>`error (default)` · `tests/assert_ic_match_status_cases.sql` · konsol#305</sub>
 
 ### `ic_pair_basis`
 
@@ -849,6 +874,14 @@ appear
 
 ## Calendar and periods
 
+### `auto_reversal_period_declared`
+
+**konsol#305-D2-11: every auto_reversal lands on a declared Regular period strictly after its journal's own period.**
+
+konsol checks this when the journal is approved; this catches a calendar changed afterwards.
+
+<sub>`error (default)` · `tests/assert_auto_reversal_period_declared.sql` · konsol#305</sub>
+
 ### `fiscal_calendar_is_loaded`
 
 **#77 — Guard against the silent fiscal-calendar fallback (FY0/P0 regression).**
@@ -881,9 +914,19 @@ e row. Fails on pre-fix gold until a full refresh rebuilds gold_trial_balance wi
 
 ### `auto_reversal_generated`
 
-**PRD-16 Test: Approved adjustments with auto_reverse_period > 0 must have a corresponding auto-reversal row in gold_consolidation_adjustments**
+**konsol#305-D2-11: every line of an Approved journal that names a reversal period has an auto_reversal row in exactly that period, and no auto_reversal row exists without one.**
 
-<sub>`error (default)` · `tests/assert_auto_reversal_generated.sql`</sub>
+NOT IN, never LEFT JOIN ... is null: under join_use_nulls=0 a miss reads '' and the old guard could never fail.
+
+<sub>`error (default)` · `tests/assert_auto_reversal_generated.sql` · konsol#305</sub>
+
+### `auto_reversal_negates_original`
+
+**konsol#305-D2-2 / D2-11 (batch review 27 Sep finding 1): an auto_reversal row must net to exactly minus its original line, not merely exist in the right period (assert_auto_reversal_generated only checks presence).**
+
+Key a line by (consolidation_group, journal_id, data_area_id, main_account); sum net_amount per key, split between the auto_reversal rows and the rest. Only journals that have a reversal are compared (inner join): a journal with no reversal has no row in `reversals` and is silently skipped, never a LEFT JOIN ... IS NULL (konsolidat#249).
+
+<sub>`error (default)` · `tests/assert_auto_reversal_negates_original.sql` · konsol#305 konsolidat#249</sub>
 
 ### `cast_to_decimal128_is_exact`
 
@@ -921,9 +964,9 @@ Since konsolidat#112 silver derives debit/credit purely from the SIGN of the (al
 
 **konsolidat#198 row J11 (PR #203 review 7) + row J13 (second review 2): layer 6 of gold_fully_consolidated_tb must carry the deal journals at the grain gold_consolidated_ytd windows over — exactly one row per period within the YTD window's PARTITION BY (consolidation_group, data_area_id, fiscal_year, main_account, adjustment_type, the dimension columns) for adjustment_type 'acquisition', 'goodwill_amortisation' and 'disposal'.**
 
-The journals themselves post several lines to one account in one period when the roles differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's derecognised and proceeds lines on the same cash account. gold_consolidated_ytd runs a `rows between unbounded preceding and current row` window ordered by fiscal_period, so two rows in one period give two running totals (-687.5, then 0) instead of one (0). Layer 6 SUMs each journal branch to this grain, like the proration branch and layer 1 already do; a row here means a branch passes journal lines through unsummed. Row J13: journal_id is NOT part of the key. The YTD window does not partition by it, so two journals of one entity posting to one account in one period (a second deal, or an amortisation instalment next to a disposal in the same period) would again be two rows under one running total; layer 6 therefore groups without journal_id (emitting any(journal_id)) and this test keys on exactly the window's partition columns plus fiscal_period. The journals seen so far are reported as journal_ids for the reader. Fixtures: dbt_project/test_fixtures/business_combination_history.sql and business_disposal.sql (`+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`).
+konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — it passed gold_consolidation_adjustments lines through unsummed, so two topside lines on one account, entity and period (or an auto_reversal line next to its original, konsol#305-D2-11) gave two running totals instead of one. Layer 4 now SUMs to this grain like layer 6, so this check also covers 'topside', 'reclassification' and 'auto_reversal'. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql. The journals themselves post several lines to one account in one period when the roles differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's derecognised and proceeds lines on the same cash account. gold_consolidated_ytd runs a `rows between unbounded preceding and current row` window ordered by fiscal_period, so two rows in one period give two running totals (-687.5, then 0) instead of one (0). Layer 6 SUMs each journal branch to this grain, like the proration branch and layer 1 already do; a row here means a branch passes journal lines through unsummed. Row J13: journal_id is NOT part of the key. The YTD window does not partition by it, so two journals of one entity posting to one account in one period (a second deal, or an amortisation instalment next to a disposal in the same period) would again be two rows under one running total; layer 6 therefore groups without journal_id (emitting any(journal_id)) and this test keys on exactly the window's partition columns plus fiscal_period. The journals seen so far are reported as journal_ids for the reader. Fixtures: dbt_project/test_fixtures/business_combination_history.sql and business_disposal.sql (`+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`).
 
-<sub>`error (default)` · `tests/assert_journal_grain_unique.sql` · konsolidat#198 konsolidat#203</sub>
+<sub>`error (default)` · `tests/assert_journal_grain_unique.sql` · konsol#305 konsolidat#198 konsolidat#203</sub>
 
 ### `partner_grain_not_fanned_out`
 
@@ -970,4 +1013,16 @@ Background: D11 wanted ClickHouse to read Frappe's MariaDB directly so metadata 
 With a row per intercompany partner, each got a partial running total (250 instead of 150). Refs this model only, so a build picks the test exactly when it builds the model: the consolidation scope does not rebuild it, and a test comparing it with a model that scope does rebuild failed every trial balance submission's build against a stale table.
 
 <sub>`error (default)` · `tests/assert_ytd_trial_balance_grain.sql` · konsol#159 konsolidat#175</sub>
+
+---
+
+## Other
+
+### `consolidation_journal_names_every_journal`
+
+**konsol#305 V05 (batch review finding 2): gold_consolidation_journal is the audit trail the 8.2 drill reads (E10), and it must name every journal it reports on.**
+
+Before the fix, layer 4 of gold_fully_consolidated_tb sums topside/reclassification/auto_reversal lines to the account grain and reports any(journal_id) for the group — one journal name survives when two journals post to the same account in the same period (batch review 27 Sep finding 2: ZZJ-00001 and ZZJ-00002 on one key became one row labelled with only one of them). This test returns every journal_id present in gold_consolidation_adjustments (the topside/reclassification/ auto_reversal rows, none of them 'entity') that is absent from gold_consolidation_journal. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql (reused from V03, not copied): ZZJ-00001 and ZZJ-00002, both Dr ZZ1100 / Cr ZZ2100, ZZG/ZZS FY2026 P3.
+
+<sub>`error (default)` · `tests/assert_consolidation_journal_names_every_journal.sql` · konsol#305</sub>
 
