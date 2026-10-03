@@ -37,8 +37,12 @@
        * 'fx'      when they share a currency and the local amounts DO net
                    to zero. The difference is then translation alone: the
                    same amount translated at different periods' rates.
-     Only a booking difference counts against the tolerance. An fx difference
-     is reported (match_status 'fx_difference') and never over_tolerance.
+     A booking difference counts against the tolerance. So does an fx
+     difference on a balance-sheet pair across currencies: both sides are
+     translated at the closing rate, so they are directly comparable
+     (konsol#305-W3-5). Any other fx difference (a P&L pair across
+     currencies, or translation only in one currency) is reported as
+     match_status 'fx_difference' and does not count against the tolerance.
    - Decision 14: a balance-sheet pair (receivable, payable, loan) compares
      the balance to date; a P&L pair compares the period's movement.
 
@@ -419,7 +423,9 @@ select
     tolerance,
     multiIf(
         difference_cause = 'none', 'matched',
-        difference_cause = 'fx', 'fx_difference',
+        {# konsol#305-W3-5: a balance pair is translated at the closing rate on both sides, so a
+           cross-currency balance difference is judged against the tolerance; a movement pair is not #}
+        difference_cause = 'fx' and not (basis = 'balance' and currency_a != currency_b), 'fx_difference',
         abs(translated_a + translated_b) <= tolerance, 'within_tolerance',
         'over_tolerance'
     ) as match_status
