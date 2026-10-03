@@ -95,7 +95,7 @@ sources:
           - name: ic_difference_account
             description: "konsol#159: account the intercompany difference is posted to."
           - name: ic_difference_tolerance
-            description: "konsol#159: intercompany difference below which no line is posted."
+            description: "konsol#159, #305-W3-5/W3-6: the group's intercompany tolerance. It sets match_status only; no posting reads it. 0 is undeclared in konsol (a setup gap), and dbt then reads every difference as over tolerance."
           - name: nci_measurement
             description: "'partial' (NCI = share of fair-value net assets) or 'full' (NCI at fair value; goodwill includes the NCI's share)."
           - name: accounting_framework
