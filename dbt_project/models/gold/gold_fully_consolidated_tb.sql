@@ -120,14 +120,19 @@ topside as (
         fiscal_period,
         main_account,
         any(description) as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {# konsolidat#245 option D: a top-side carries the slice its line
+           declared, so the dimensions are part of this grain — two lines on one
+           account and period with different values are two rows, not one. The
+           amount is still a sum, so a finer partition cannot change the total,
+           only split it. That is the invariant the A/B asserts. #}
+        {{ dim_select(trailing=true) }}
         '' as reporting_currency,
         sum({{ cast_to_float64('net_amount') }}) as amount,
         adjustment_type,
         any(journal_id) as journal_id
     from {{ ref('gold_consolidation_adjustments') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
-             adjustment_type
+             adjustment_type{{ dim_group_by(leading=true) }}
 ),
 
 {# Layer 5: Equity method entries (PRD-14) #}
