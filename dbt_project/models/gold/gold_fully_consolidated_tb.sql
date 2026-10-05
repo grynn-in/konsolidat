@@ -97,6 +97,14 @@ cta_entries as (
         fiscal_period,
         main_account,
         'CTA' as account_name,
+        {# konsolidat#245 option D: BLANK BY ARITHMETIC, not by omission. The CTA
+           is one plug per entity and period — gold_fx_revaluation computes
+           -sum(group_amount) across EVERY account and posts it to a synthetic
+           'CTA' account — so it is the residual that makes the entity's
+           translated balance sheet balance. It has no slice: a per-dimension
+           plug would not be a translation difference, it would be an arbitrary
+           allocation of one. assert_deal_journal_layers_carry_no_dimension
+           asserts this layer stays blank. #}
         {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         cta_amount as amount,
