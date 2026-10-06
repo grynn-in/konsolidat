@@ -204,6 +204,22 @@ equity_method as (
         fiscal_period,
         main_account,
         account_name,
+        {# konsolidat#245 option D: BLANK BY DECISION. Settled by Claude on
+           6 Oct 2026 under Deepak Pai's instruction to settle it — NOT a
+           decision he made, and open to reversal on his word.
+
+           It COULD inherit: gold_equity_method_associates sums the associate's
+           P&L out of gold_trial_balance, which carries real dimension values,
+           and sum(per-slice net income) x ownership_pct is arithmetically
+           sound. It is left blank because equity income is a ONE-LINE PICKUP
+           in the investor's books — "share of profit of associates" — and
+           splitting it by the associate's cost centres attributes the
+           investor's line to a DIFFERENT entity's management structure,
+           importing that entity's dimension vocabulary into the group's.
+
+           Reverse this by replacing the macro with dim_select over the
+           associate's slices and removing 'equity_method' from
+           assert_sliceless_layers_carry_no_dimension. #}
         {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         amount,

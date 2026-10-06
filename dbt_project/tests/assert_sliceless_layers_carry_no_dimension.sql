@@ -33,8 +33,12 @@ from {{ ref('gold_fully_consolidated_tb') }}
 -- gold_business_disposal_journal 'disposal'.
 where adjustment_type in (
         'pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
-        -- and the CTA, blank by arithmetic: an entity-level residual has no slice
-        'cta')
+        -- the CTA, blank by arithmetic: an entity-level residual has no slice
+        'cta',
+        -- and equity method, blank by decision (Claude, 6 Oct 2026, under
+        -- Deepak Pai's instruction to settle it): the investor's one-line
+        -- pickup does not carry the associate's management dimensions
+        'equity_method')
   and (
     {%- for d in dims %}
     {{ d.name }} != ''{{ ' or' if not loop.last }}
