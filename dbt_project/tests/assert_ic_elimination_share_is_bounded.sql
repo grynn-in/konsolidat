@@ -38,25 +38,36 @@ with legs as (
              credit_entity, debit_entity, credit_account
 ),
 
-{# the biggest leg on each (period, account): the most any slice of that
-   account may legitimately be moved. Using the SMALLEST would be stricter but
-   would false-fire where one account carries several legs that are summed into
-   one emitted row, which layer 2 does. #}
+{# PER LEG, keyed on journal_id — which the emitted rows already carry
+   (gold_fully_consolidated_tb emits e.rule_id as journal_id on both layer-2
+   legs). Round 4 found the previous version INERT: it grouped `legs` finely
+   and then summed straight back up to (group, period, account), and a sum of
+   sums over a finer partition IS the sum over the coarser one, so `allowed`
+   was every leg on the account added together. A 100,000x violation on a leg
+   of 1 passed because the same account carried a leg of 5,000,000 — verbatim
+   the case the previous commit claimed to fix. With more than ~100 legs on an
+   account that bound was looser than the 100x-of-max it replaced.
+
+   The reason given for the loose bound was also false: it claimed layer 2 sums
+   several legs into one emitted row. It does not — `ic_elims` has no GROUP BY,
+   so each gold_ic_eliminations row produces its own output rows. There is
+   nothing to false-fire, so the strict per-leg bound is the right one. #}
 leg_bound as (
     select
-        consolidation_group, fiscal_year, fiscal_period, account,
+        consolidation_group, fiscal_year, fiscal_period, account, rule_id,
         sum(leg_size) as allowed
     from legs
-    group by consolidation_group, fiscal_year, fiscal_period, account
+    group by consolidation_group, fiscal_year, fiscal_period, account, rule_id
 ),
 
 emitted as (
     select
         consolidation_group, fiscal_year, fiscal_period, main_account as account,
+        journal_id as rule_id,
         max(abs(amount)) as biggest_slice
     from {{ ref('gold_fully_consolidated_tb') }}
     where adjustment_type in ('ic_elimination', 'ic_elimination_nci')
-    group by consolidation_group, fiscal_year, fiscal_period, main_account
+    group by consolidation_group, fiscal_year, fiscal_period, main_account, journal_id
 )
 
 select
@@ -64,6 +75,7 @@ select
     e.fiscal_year,
     e.fiscal_period,
     e.account,
+    e.rule_id,
     b.allowed,
     e.biggest_slice,
     e.biggest_slice / nullIf(b.allowed, 0) as times_the_leg
@@ -73,5 +85,6 @@ inner join leg_bound as b
     and b.fiscal_year = e.fiscal_year
     and b.fiscal_period = e.fiscal_period
     and b.account = e.account
+    and b.rule_id = e.rule_id
 {# a cent of slack for Float64 summation, not a tolerance on the bound #}
 where e.biggest_slice > b.allowed + {{ materiality_floor() }}

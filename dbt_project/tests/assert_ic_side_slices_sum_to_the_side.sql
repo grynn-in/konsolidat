@@ -4,8 +4,10 @@
 -- declared dimensions and NOTHING ELSE: same source, same filters, same join.
 -- Every slice of a side must therefore sum to exactly that side's movement.
 --
--- That identity is the whole reason the elimination split is exact rather than
--- an allocation. If it breaks — a different filter, a join that fans out, a
+-- Round 4, F7: this identity is NOT what makes the split exact — layer 2
+-- weights by magnitude, which is an allocation, and is bounded regardless.
+-- What the identity buys is that the apportionment base is the same movement
+-- gold_ic_reconciliation reconciles, so the two cannot drift apart. If it breaks — a different filter, a join that fans out, a
 -- dimension column that is NULL rather than '' — the split silently
 -- redistributes an elimination across slices whose amounts no longer add up to
 -- what was eliminated, and every row still balances. This test is the guard

@@ -24,9 +24,15 @@
 
    The grain is gold_ic_reconciliation's `sides` CTE PLUS the declared
    dimensions — same source, same filters, same join — so a side's slices sum
-   to exactly the movement that CTE reports for it. That identity is what makes
-   the split in gold_ic_eliminations exact rather than an allocation, and
-   assert_ic_side_slices_sum_to_the_side asserts it.
+   to exactly the movement that CTE reports for it, which
+   assert_ic_side_slices_sum_to_the_side asserts.
+
+   Round 4, F7: that identity USED to be described as what makes the split
+   "exact rather than an allocation". It is not, and the split IS an
+   allocation — layer 2 weights by each slice's magnitude, which is bounded
+   whatever this identity says. What the identity actually buys is that the
+   apportionment BASE is the same movement gold_ic_reconciliation reconciles,
+   so the two cannot drift apart.
 
    A dimension a site has not declared contributes no column (var('dimensions')
    is the declared set), so on a site with none this model is one row per side

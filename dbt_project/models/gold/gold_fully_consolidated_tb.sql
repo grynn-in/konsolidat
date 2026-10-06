@@ -102,7 +102,7 @@ side_slices_by_pair as (
              {{ dim_group_by(leading=true) }}
 ),
 
-{# A side whose movement is divisible: one row per slice, shares summing to 1. #}
+{# A side that booked magnitudes to weight by: one row per slice, shares in [0,1] summing to 1. #}
 side_shares_apportionable as (
     select
         consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
@@ -189,13 +189,16 @@ ic_elims as (
            defensible (a side's NCI residual split over that side's own
            slices), but it is not what the note claimed.
 
-           The fallback is still SILENT, and it now has TWO causes that the
-           output cannot tell apart (re-review round 3, F4): a join miss, and a
-           side whose gross is below materiality so there are no magnitudes to
-           weight by. Naming them needs a reason column on the layer, which is
-           not in this change. (The third cause the round-3 review listed — a
-           side that booked a lot but was "not divisible" — no longer exists:
-           magnitude weighting apportions every side that booked anything.) #}
+           The fallback is still SILENT, and it has THREE causes the output
+           cannot tell apart (round 4, F6 — the previous note said two):
+             1. a join miss, this branch;
+             2. a side whose gross is below materiality, the flat branch;
+             3. a GENUINE slice whose declared dimension value is blank —
+                gold_ic_side_slices takes dim_select straight from the
+                consolidated TB, where an unset dimension is '' and not NULL.
+           Cause 3 is the only one live produces, because every dimension
+           column on this site is blank. Naming them needs a reason column on
+           the layer, which is not in this change. #}
         e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
         if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         e.rule_id as journal_id

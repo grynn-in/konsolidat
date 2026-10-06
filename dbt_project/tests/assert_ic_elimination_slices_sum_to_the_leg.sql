@@ -32,7 +32,12 @@
 -- counterpart_account is blank both legs of a pair land on one account, so a
 -- symmetric error on both sides nets to zero on both sides of the comparison.
 --
--- assert_ic_elimination_share_is_bounded is the test here that CAN fail.
+-- assert_ic_elimination_share_is_bounded is the REGRESSION GUARD for the
+-- magnification defects. Round 4 is explicit that it, too, cannot fail on
+-- correct code: shares are in [0,1] and sum to 1, so no slice can exceed its
+-- leg. It goes red on the round-2 and round-3 code (and on its committed
+-- .must_flag fixture), which is what it is for. No test in this layer proves
+-- today's attribution is RIGHT; they prove it has not regressed.
 --
 -- Error severity: a leg that does not reconcile is a wrong consolidated number.
 -- One row per offending leg.
