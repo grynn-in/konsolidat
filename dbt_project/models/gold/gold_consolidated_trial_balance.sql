@@ -2,6 +2,7 @@
     config(
         materialized='incremental',
         incremental_strategy='append',
+        query_settings={'query_plan_enable_multithreading_after_window_functions': 0},
         pre_hook=[
             "{{ governed_rate_guard() }}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
@@ -14,6 +15,18 @@
     )
 }}
 
+{# The query_settings line (konsolidat PR "Fix the TB-only first build after
+   #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
+   one over the other. With ClickHouse's default
+   query_plan_enable_multithreading_after_window_functions = 1, every window
+   step fans its input out again by max_threads x the partitions, so the
+   pipeline grew 8 -> 40 -> 1,600 -> 64,000 processors before reading a row
+   (EXPLAIN PIPELINE, clickhouse-server 24.8, max_threads 4). Building it took
+   the server's memory on the empty TB-only site: the CI job "first
+   build on a fresh TB-only site" ran 48 minutes and never finished. With the
+   setting at 0, each window step keeps its input's streams (40 at most). It
+   does not change any result: it only decides how many threads run the rows
+   after a window. #}
 {# konsolidat#93: the first pre_hook (macros/governed_rates.sql) raises when a
    currency this run translates has no approved governed rate, BEFORE the
    DELETE below, so a missing rate leaves the table as it was. The throwIf in
