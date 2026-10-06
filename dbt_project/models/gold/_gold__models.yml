@@ -53,11 +53,19 @@ models:
         tests:
           - not_null
       - name: translated_amount
-        description: "local_amount * translation_rate"
+        description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
         description: "translated_amount * ownership_pct"
       - name: nci_amount
         description: "translated_amount * (1 - ownership_pct)"
+      - name: retranslation_amount
+        description: >
+          konsolidat#257: the retranslation of the key's balance brought forward,
+          cum_local(previous row) * (closing_rate - previous row's closing_rate),
+          for a non-equity balance sheet account declared closing or undeclared;
+          0 on every other row (equity is never revalued). A key with a balance
+          but no movement in a period of the entity's spine gets a row with
+          local_amount 0 to carry it. Last column, added by the pre_hook ALTER.
 
   - name: gold_ic_eliminations
     description: >
