@@ -1,6 +1,6 @@
--- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG cta (konsolidat#238-4).
--- gold_fx_revaluation has a row for ZZG (it emits one per entity-period, whatever the currency);
--- the fully consolidated TB has no cta row.
+-- assert_all_layers_present: must PASS (konsolidat#238-4). An unrealized_profit elimination (from
+-- ic_elimination_rules) lands in the fully consolidated TB as ic_elimination, not under its own type.
+-- An NCI-view row never enters the consolidated TB, so it expects nothing there.
 INSERT INTO epm_gold.gold_consolidated_trial_balance
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name,
    is_balance_sheet, is_pnl, is_equity, dim_business_unit, dim_cost_center, dim_department, local_amount,
@@ -9,7 +9,20 @@ INSERT INTO epm_gold.gold_consolidated_trial_balance
 VALUES
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'cash', 'Asset', 1, 0, 0, '', '', '', 100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, 100, 100, 0, ''),
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1500', 'ic receivable', 'Asset', 1, 0, 0, '', '', '', -100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, -100, -100, 0, 'ZZE2');
-ALTER TABLE epm_gold.gold_ic_eliminations ADD COLUMN IF NOT EXISTS rule_id String;
+INSERT INTO epm_gold.gold_ic_eliminations
+  (rule_id, rule_name, rule_type, consolidation_group, fiscal_year, fiscal_period, debit_account, credit_account,
+   debit_entity, credit_entity, elimination_amount, debit_elimination, credit_elimination, elimination_kind,
+   difference_cause, basis, elimination_view, entity_a, account_a, entity_b, account_b)
+VALUES
+  ('IC:ZZ1500/ZZ2500', 'Intercompany: unrealized_profit', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
+   'unrealized_profit', '', 'balance', 'group', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
+INSERT INTO epm_gold.gold_ic_eliminations
+  (rule_id, rule_name, rule_type, consolidation_group, fiscal_year, fiscal_period, debit_account, credit_account,
+   debit_entity, credit_entity, elimination_amount, debit_elimination, credit_elimination, elimination_kind,
+   difference_cause, basis, elimination_view, entity_a, account_a, entity_b, account_b)
+VALUES
+  ('IC:ZZ1500/ZZ2500', 'Intercompany: matched', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
+   'matched', '', 'balance', 'nci', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
 INSERT INTO epm_gold.gold_consolidation_adjustments
   (consolidation_group, adjustment_type, journal_id, data_area_id, fiscal_year, fiscal_period, main_account,
    debit_amount, credit_amount, net_amount, description, status)
@@ -22,4 +35,6 @@ INSERT INTO epm_gold.gold_fully_consolidated_tb
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name,
    dim_business_unit, dim_cost_center, dim_department, reporting_currency, amount, adjustment_type, journal_id)
 VALUES
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', '');
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'cta', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'ic_elimination', '');

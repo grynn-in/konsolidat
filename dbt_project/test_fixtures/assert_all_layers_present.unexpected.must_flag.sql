@@ -1,6 +1,6 @@
--- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG cta (konsolidat#238-4).
--- gold_fx_revaluation has a row for ZZG (it emits one per entity-period, whatever the currency);
--- the fully consolidated TB has no cta row.
+-- assert_all_layers_present: must FAIL with exactly 1 result: unexpected_layer ZZG topside (konsolidat#238-4).
+-- The fully consolidated TB carries a topside layer for ZZG, but gold_consolidation_adjustments
+-- holds only a reclassification line: a topside layer with no source.
 INSERT INTO epm_gold.gold_consolidated_trial_balance
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name,
    is_balance_sheet, is_pnl, is_equity, dim_business_unit, dim_cost_center, dim_department, local_amount,
@@ -22,4 +22,6 @@ INSERT INTO epm_gold.gold_fully_consolidated_tb
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name,
    dim_business_unit, dim_cost_center, dim_department, reporting_currency, amount, adjustment_type, journal_id)
 VALUES
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', '');
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'cta', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'topside', '');
