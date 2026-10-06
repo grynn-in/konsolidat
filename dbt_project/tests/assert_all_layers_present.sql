@@ -16,10 +16,15 @@
       - ic_elimination: the group has a gold_consolidated_trial_balance row
         on a declared intercompany account (ic_account_map(), the Published
         rows of epm_staging.intercompany_accounts) whose partner is another
-        entity. That is the `sides` CTE of gold_ic_reconciliation, which feeds
-        gold_ic_eliminations. Accepted trade-off: a group that never declares
-        its intercompany accounts passes; partner rows on undeclared accounts
-        are konsol#317's to report.
+        entity, as in the `sides` CTE of gold_ic_reconciliation, which feeds
+        gold_ic_eliminations. The partner must also be line-consolidated in
+        the same group in the same period: gold_ic_reconciliation eliminates
+        a pair only while both sides are members (equity and none excluded).
+        A sub-group whose entity books against a partner outside it has
+        nothing to eliminate (measured on tests/integration's ic_decisions
+        fixture: ZZSUB/ZZS against ZZA). Accepted trade-off: a group that
+        never declares its intercompany accounts passes; partner rows on
+        undeclared accounts are konsol#317's to report.
       - topside: gold_consolidation_adjustments, the model layer 4 reads, has
         an adjustment_type 'topside' line for the group. The model keeps only
         Approved and Reversed journals.
@@ -47,6 +52,12 @@ with applies as (
         on ctb.main_account = ica.account
     where ctb.partner_data_area_id != ''
       and ctb.partner_data_area_id != ctb.data_area_id
+      and ctb.consolidation_method not in ('equity', 'none')
+      and (ctb.consolidation_group, ctb.partner_data_area_id, ctb.fiscal_year, ctb.fiscal_period) in (
+          select consolidation_group, data_area_id, fiscal_year, fiscal_period
+          from {{ ref('gold_consolidated_trial_balance') }}
+          where consolidation_method not in ('equity', 'none')
+      )
 
     union all
 
