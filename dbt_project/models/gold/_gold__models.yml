@@ -53,11 +53,23 @@ models:
         tests:
           - not_null
       - name: translated_amount
-        description: "local_amount * translation_rate"
+        description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
         description: "translated_amount * ownership_pct"
       - name: nci_amount
         description: "translated_amount * (1 - ownership_pct)"
+      - name: retranslation_amount
+        description: >
+          konsolidat#257: the retranslation of the key's balance brought forward,
+          cum_local(previous row) * (closing_rate - previous row's closing_rate),
+          for a non-equity balance sheet account declared closing or undeclared;
+          0 on every other row (equity is never revalued). A key with a balance
+          but no movement in a period of the entity's spine gets a row with
+          local_amount 0 to carry it. konsolidat#259: on the year-end close rows
+          it also carries the close's adjustment, so a P&L key's translated
+          year returns to 0 and retained earnings is credited with the year's
+          translated result (whatever its fx_method); the close period's CTA is
+          then 0. Last column, added by the pre_hook ALTER.
 
   - name: gold_ic_eliminations
     description: >
@@ -629,6 +641,11 @@ models:
       - name: data_area_id
         tests:
           - not_null
+      - name: is_year_end_close
+        description: >
+          konsolidat#259: 1 on the rows of the year-end close silver_tb_movements
+          synthesizes (silver_gl_entries posting_layer 'Year-end close'), which
+          gold_consolidated_trial_balance translates as a close.
 
   - name: gold_ic_unmatched
     description: >

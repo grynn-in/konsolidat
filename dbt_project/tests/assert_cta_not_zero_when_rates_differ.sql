@@ -19,6 +19,11 @@
 -- closing rate, which makes balance-sheet-only entities with CTA 0 a normal case.
 -- Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0`
 -- condition below (a row that put nothing into the group translated nothing, whatever its rate).
+--
+-- konsolidat#259 (option #259-1, 6 Oct 2026): an entity-period that carries the year-end close
+-- silver_tb_movements synthesizes is not checked. Its P&L reversal translates at the average
+-- rate, but retained earnings takes exactly the translated result, so its CTA is 0 by
+-- construction; assert_year_end_close_carries_no_cta requires that 0.
 with rate_check as (
     select
         consolidation_group,
@@ -29,6 +34,11 @@ with rate_check as (
         max(average_rate) as max_average_rate
     from {{ ref('gold_consolidated_trial_balance') }}
     where accounting_currency != reporting_currency
+      and (data_area_id, fiscal_year, fiscal_period) not in (
+          select data_area_id, fiscal_year, fiscal_period
+          from {{ ref('gold_trial_balance_by_partner') }}
+          where is_year_end_close = 1
+      )
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
     -- Not `closing_rate != average_rate`: with equal closing and average rates an
     -- equity row at a historical rate still produces a residual, and that CTA

@@ -2,10 +2,12 @@
     config(
         materialized='incremental',
         incremental_strategy='append',
+        query_settings={'query_plan_enable_multithreading_after_window_functions': 0},
         pre_hook=[
             "{{ governed_rate_guard() }}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS uses_historical_rate UInt8 DEFAULT 0{% endif %}",
+            "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS retranslation_amount Float64 DEFAULT 0{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
         ],
         engine='MergeTree()',
@@ -13,6 +15,18 @@
     )
 }}
 
+{# The query_settings line (konsolidat PR "Fix the TB-only first build after
+   #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
+   one over the other. With ClickHouse's default
+   query_plan_enable_multithreading_after_window_functions = 1, every window
+   step fans its input out again by max_threads x the partitions, so the
+   pipeline grew 8 -> 40 -> 1,600 -> 64,000 processors before reading a row
+   (EXPLAIN PIPELINE, clickhouse-server 24.8, max_threads 4). Building it took
+   the server's memory on the empty TB-only site: the CI job "first
+   build on a fresh TB-only site" ran 48 minutes and never finished. With the
+   setting at 0, each window step keeps its input's streams (40 at most). It
+   does not change any result: it only decides how many threads run the rows
+   after a window. #}
 {# konsolidat#93: the first pre_hook (macros/governed_rates.sql) raises when a
    currency this run translates has no approved governed rate, BEFORE the
    DELETE below, so a missing rate leaves the table as it was. The throwIf in
@@ -30,6 +44,9 @@
    after partner_data_area_id's — so the table's last two columns are
    partner_data_area_id, then uses_historical_rate, and the final select below
    emits them in exactly that order. Any further column goes after both. #}
+{# konsolidat#257: retranslation_amount is that further column. Its ALTER runs
+   third, so the table ends partner_data_area_id, uses_historical_rate,
+   retranslation_amount, and the final select emits them in that order. #}
 
 {# #154: delete the run's WHOLE scope, then append. delete+insert deleted only
    the keys the new batch produced, so a key that left the SELECT (an ownership
@@ -86,6 +103,12 @@ with entity_tb as (
         ma.is_equity as is_equity,
         ma.fx_method as fx_method,
         ma.uses_historical_rate as uses_historical_rate,
+        {# konsolidat#259: the two facts the year-end close translation keys on,
+           both declared upstream: the chart's retained-earnings flag and the
+           close mark silver_tb_movements puts on the rows it synthesizes. Read
+           by `closed` below and never selected into this model. #}
+        toUInt8(ma.is_retained_earnings) as is_retained_earnings,
+        toUInt8(tb.is_year_end_close) as is_year_end_close,
         tb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='tb.', trailing=true) }}
         {# Signed double-entry movement (debit − credit), so the local TB sums
@@ -142,7 +165,7 @@ with entity_tb as (
        by `rated` and never selected into it: this model appends by position,
        so no column may be added before partner_data_area_id. #}
     left join (
-        select main_account_id, fx_method, is_equity, uses_historical_rate
+        select main_account_id, fx_method, is_equity, uses_historical_rate, is_retained_earnings
         from {{ ref('silver_main_accounts') }}
     ) as ma
         on tb.main_account = ma.main_account_id
@@ -153,11 +176,14 @@ with entity_tb as (
         and rpm.fiscal_period = tb.fiscal_period
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
-       Applied here at the consolidation chokepoint so every downstream
+       Applied at the consolidation chokepoint so every downstream
        consolidation model (fully-consolidated TB, cash flow, YTD, NCI) inherits
-       the slice, while foundational gold_trial_balance stays complete. #}
+       the slice, while foundational gold_trial_balance stays complete.
+       konsolidat#257: only scope_filter is applied here. period_filter moved to
+       the final select: the retranslation windows below need the entity's
+       history, so a scoped close of one period still sees every earlier one.
+       scope_filter can stay, because the windows partition by entity. #}
     where 1 = 1
-        {{ period_filter('tb.fiscal_year', 'tb.fiscal_period') }}
         {{ scope_filter('tb.data_area_id') }}
 ),
 
@@ -306,7 +332,13 @@ rated as (
            ask what the chart declared without re-deriving it from fx_method.
            LAST here and last in the model, for the positional-append reason at
            the top of this file. #}
-        etb.uses_historical_rate as uses_historical_rate
+        etb.uses_historical_rate as uses_historical_rate,
+        {# konsolidat#257: the declaration the retranslation keys on. Never
+           selected into the model (the final select excludes it). #}
+        etb.fx_method as fx_method,
+        {# konsolidat#259: never selected into the model either. #}
+        etb.is_retained_earnings as is_retained_earnings,
+        etb.is_year_end_close as is_year_end_close
     from entity_tb as etb
     {# One row per ancestor group: the fan-out here IS the multi-level
        consolidation. Period-keyed, because ownership is dated. #}
@@ -373,30 +405,298 @@ rated as (
       and eo.has_complete_chain = 1
 ),
 
+{# konsolidat#257: a balance sheet balance is translated at the CLOSING rate of
+   each reporting date (IAS 21.39(a)), not as the sum of each period's movement
+   at its own period's closing rate.
+
+   The model keeps the movement grain, so no reader changes its contract. The
+   translated movement of a retranslated key telescopes instead:
+
+       translated(p)        = cum_local(p) x C(p) - cum_local(prev) x C(prev)
+                            = local(p) x C(p) + retranslation_amount(p)
+       retranslation_amount = cum_local(prev) x (C(p) - C(prev))
+
+   so the translated movements summed to p are cum_local(p) x C(p).
+
+   Which keys (declared chart facts only, never an account code): a balance
+   sheet account that is not equity and is declared 'closing' or undeclared.
+   Equity is never revalued (decided on #257 Q2, 6 Oct 2026): it keeps movement
+   x declared rate whatever its fx_method, so `closing` on an equity account
+   means the closing rate of the period the amount was posted. Retranslating it
+   would bury the exchange difference in equity lines and leave no separate
+   component to recycle on disposal (IAS 21.39(c), .48).
+
+   The key is (group, entity, account, partner, dimensions). prev is the key's
+   previous row in this group, over the rows that survived the ownership join,
+   so an acquired entity's group balance is its in-scope movements at today's
+   closing rate.
+
+   Densify: a key whose balance did not move in a period of the entity's spine
+   (a period in which the entity has any row for the group) gets a filler row
+   there with local_amount = 0, so the retranslation has a row to sit on. A
+   filler whose retranslation is exactly 0 carries nothing and is dropped:
+   no balance yet, or a rate that did not change (a Closing period translates
+   at its year's last Regular period's rates, rate_period_map(), so its
+   retranslation is always 0). #}
+retranslated_keys as (
+    select
+        consolidation_group,
+        data_area_id,
+        main_account,
+        partner_data_area_id,
+        {{ dim_select(trailing=true) }}
+        any(account_name) as account_name,
+        any(account_type_name) as account_type_name,
+        any(is_balance_sheet) as is_balance_sheet,
+        any(is_pnl) as is_pnl,
+        any(is_equity) as is_equity,
+        any(uses_historical_rate) as uses_historical_rate,
+        any(fx_method) as fx_method,
+        min(toUInt32(fiscal_year) * 1000 + fiscal_period) as first_period_ord
+    {# Aliased: ClickHouse would read the bare names in WHERE as the any()
+       aliases above (ILLEGAL_AGGREGATION). #}
+    from rated as r
+    where r.is_balance_sheet = 1
+      and r.is_equity = 0
+      and r.fx_method not in ('average', 'historical')
+    group by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_group_by(leading=true) }}
+),
+
+{# The entity's spine per group: one row per period it has rows in, with the
+   per-(group, entity, period) facts every row there shares: the currency pair,
+   the ownership, the rates. #}
+entity_spine as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        any(accounting_currency) as accounting_currency,
+        any(reporting_currency) as reporting_currency,
+        any(ownership_pct) as ownership_pct,
+        any(consolidation_method) as consolidation_method,
+        any(closing_rate) as closing_rate,
+        any(average_rate) as average_rate
+    from rated
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period
+),
+
+filler_candidates as (
+    select
+        k.consolidation_group as consolidation_group,
+        k.data_area_id as data_area_id,
+        s.fiscal_year as fiscal_year,
+        s.fiscal_period as fiscal_period,
+        k.main_account as main_account,
+        k.account_name as account_name,
+        k.account_type_name as account_type_name,
+        k.is_balance_sheet as is_balance_sheet,
+        k.is_pnl as is_pnl,
+        k.is_equity as is_equity,
+        k.partner_data_area_id as partner_data_area_id,
+        {{ dim_select(prefix='k.', trailing=true) }}
+        s.accounting_currency as accounting_currency,
+        s.reporting_currency as reporting_currency,
+        s.ownership_pct as ownership_pct,
+        s.consolidation_method as consolidation_method,
+        s.closing_rate as closing_rate,
+        s.average_rate as average_rate,
+        k.uses_historical_rate as uses_historical_rate,
+        k.fx_method as fx_method
+    from retranslated_keys as k
+    inner join entity_spine as s
+        on k.consolidation_group = s.consolidation_group
+        and k.data_area_id = s.data_area_id
+    where toUInt32(s.fiscal_year) * 1000 + s.fiscal_period > k.first_period_ord
+),
+
+{# Only the spine periods the key has no row in. #}
+fillers as (
+    select fc.*
+    from filler_candidates as fc
+    left anti join rated as r
+        on fc.consolidation_group = r.consolidation_group
+        and fc.data_area_id = r.data_area_id
+        and fc.fiscal_year = r.fiscal_year
+        and fc.fiscal_period = r.fiscal_period
+        and fc.main_account = r.main_account
+        and fc.partner_data_area_id = r.partner_data_area_id
+        {{ dim_join_on('fc', 'r') }}
+),
+
+densified as (
+    select
+        consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+        account_name, account_type_name, is_balance_sheet, is_pnl, is_equity,
+        partner_data_area_id,
+        {{ dim_select(trailing=true) }}
+        local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
+        closing_rate, average_rate, historical_equity_rate, translation_rate,
+        uses_historical_rate, fx_method, is_retained_earnings, is_year_end_close,
+        toUInt8(0) as is_filler
+    from rated
+    union all
+    select
+        consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+        account_name, account_type_name, is_balance_sheet, is_pnl, is_equity,
+        partner_data_area_id,
+        {{ dim_select(trailing=true) }}
+        toDecimal128(0, 2) as local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
+        closing_rate, average_rate,
+        cast(null as Nullable(Float64)) as historical_equity_rate,
+        cast(closing_rate as Nullable(Float64)) as translation_rate,
+        uses_historical_rate, fx_method,
+        {# a filler is a balance sheet key that did not move: never the close #}
+        toUInt8(0) as is_retained_earnings, toUInt8(0) as is_year_end_close,
+        toUInt8(1) as is_filler
+    from fillers
+),
+
+{# The windows run over every row of every period (period_filter is applied
+   only in the final select), so a scoped build sees the key's history. #}
+retranslated as (
+    select
+        *,
+        if(
+            is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
+            toFloat64(sum(local_amount) over key_before)
+                * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
+            0
+        ) as retranslation_amount
+    from densified
+    window
+        key_before as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and 1 preceding
+        ),
+        key_all as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and unbounded following
+        )
+),
+
+{# konsolidat#259 (option #259-1, decided by Deepak Pai, 6 Oct 2026): the
+   year-end close moves amounts that are already translated, so it creates no
+   exchange difference.
+
+   silver_tb_movements closes a period-end-balance year in the year's Closing
+   period: each P&L key is reversed and the year's result moves into the
+   retained-earnings account, as one lump on the blank key
+   (is_year_end_close = 1). Translated as activity, the reversal goes at the
+   period's average rate and retained earnings at its own declared rate, so
+   the close left -(the year's P&L) x (average - closing) in that period's
+   CTA, cancelling the year's CTA into retained earnings every year.
+
+   P&L key, on its close row: the reversal returns the key's translated year
+   to zero over its in-scope rows of the year,
+       translated = (local + ytd_local_prior) x rate - ytd_translated_prior
+   With a full reversal (local = -ytd_local_prior) that is exactly
+   -ytd_translated_prior. For a part-year in scope (an acquisition) only the
+   out-of-scope remainder translates at the row's rate.
+
+   Retained earnings, on its close row (the lump key only): credited with the
+   year's TRANSLATED result, whatever the account's fx_method declares
+       translated = -sum(translated P&L close rows) + (local + sum(local P&L close rows)) x rate
+   so the close period's translated rows net to zero and its CTA is 0 by
+   construction. 3100's fx_method still governs every other movement of the
+   account (opening balance, dividends, adjustments).
+
+   Both adjustments ride in the row's retranslation_amount, so translated =
+   local x translation_rate + retranslation_amount stays true on every row
+   (assert_translated_amount_formula). A close an ERP posts itself carries no
+   close mark and is translated as activity; assert_year_end_close_carries_no_cta
+   names it. #}
+close_pnl as (
+    select
+        *,
+        if(
+            is_year_end_close = 1 and is_pnl = 1,
+            ifNull(
+                toFloat64(sum(local_amount) over key_year_before) * translation_rate
+                    - sum(toFloat64(local_amount) * translation_rate + retranslation_amount) over key_year_before,
+                0),
+            0
+        ) as pnl_close_adjustment
+    from retranslated
+    window
+        key_year_before as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
+            order by fiscal_period
+            rows between unbounded preceding and 1 preceding
+        )
+),
+
+closed as (
+    select
+        *,
+        if(
+            is_year_end_close = 1 and is_retained_earnings = 1 and partner_data_area_id = ''
+            {%- for d in get_dimensions() %} and {{ d.name }} = ''{% endfor %},
+            ifNull(
+                sum(if(is_year_end_close = 1 and is_pnl = 1, toFloat64(local_amount), 0)) over close_period * translation_rate
+                    - sum(if(is_year_end_close = 1 and is_pnl = 1,
+                             ifNull(toFloat64(local_amount) * translation_rate, 0) + pnl_close_adjustment,
+                             0)) over close_period,
+                0),
+            0
+        ) as re_close_adjustment
+    from close_pnl
+    window
+        close_period as (
+            partition by consolidation_group, data_area_id, fiscal_year, fiscal_period
+        )
+),
+
+adjusted as (
+    select
+        * except (retranslation_amount, pnl_close_adjustment, re_close_adjustment),
+        {# the balance sheet retranslation (#257) and the close (#259) never
+           fall on the same row: one is a non-equity balance sheet key, the
+           other a P&L key or retained earnings #}
+        retranslation_amount + pnl_close_adjustment + re_close_adjustment as translation_adjustment
+    from closed
+),
+
 consolidated as (
     select
         *,
-        {# Translated amount = local x translation_rate #}
-        local_amount * translation_rate as translated_amount,
+        {# Translated amount = local x translation_rate, plus the key's
+           retranslation (konsolidat#257; 0 on every row that is not
+           retranslated) #}
+        local_amount * translation_rate + translation_adjustment as translated_amount,
         {# PRD-4: Group amount = translated x ownership_pct #}
-        local_amount * translation_rate * ownership_pct as group_amount,
+        (local_amount * translation_rate + translation_adjustment) * ownership_pct as group_amount,
         {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
-        local_amount * translation_rate * (1.0 - ownership_pct) as nci_amount
-    from rated
+        (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct) as nci_amount
+    from adjusted
     {# konsolidat#93: a missing governed rate fails the build loudly, never a
        0 or a 1.0 translation. throwIf takes a per-row condition (a constant
        would be folded and raise on every build). A failed run leaves its
        scope's slice empty until the next run (#162, accepted); the dbt test
-       names the missing keys. #}
+       names the missing keys. Since konsolidat#257 this sees every period of
+       the scope, not only the run's: a retranslation needs the earlier
+       periods' closing rates too. #}
     where throwIf(translation_rate is null,
                   'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
+      {# A filler that carries no retranslation carries nothing. #}
+      and (is_filler = 0 or translation_adjustment != 0)
 )
 
-{# partner_data_area_id, then uses_historical_rate, last: see the notes at the
-   top. Each was added to an already-built table by an ALTER in the pre_hook, in
-   that order, and ALTER ... ADD COLUMN appends at the end — so the select has to
-   emit them in the same order or the positional append lands them swapped. #}
-select * except (partner_data_area_id, uses_historical_rate),
+{# partner_data_area_id, then uses_historical_rate, then retranslation_amount,
+   last: see the notes at the top. Each was added to an already-built table by
+   an ALTER in the pre_hook, in that order, and ALTER ... ADD COLUMN appends at
+   the end — so the select has to emit them in the same order or the
+   positional append lands them swapped.
+   konsolidat#257: the run's period filter applies here, after the windows. #}
+select * except (partner_data_area_id, uses_historical_rate, translation_adjustment, fx_method,
+                 is_retained_earnings, is_year_end_close, is_filler),
        partner_data_area_id,
-       uses_historical_rate
+       uses_historical_rate,
+       {# konsolidat#259: the column also carries the year-end close's
+          adjustment on P&L and retained-earnings close rows #}
+       translation_adjustment as retranslation_amount
 from consolidated
+where 1 = 1
+    {{ period_filter() }}

@@ -29,7 +29,17 @@ select
     is_pnl,
     partner_data_area_id,
     {{ dim_select(trailing=true) }}
-    {{ measure_select() }}
+    {{ measure_select() }},
+    {# konsolidat#259: 1 on the rows of the year-end close silver_tb_movements
+       synthesizes in a Closing period (silver_gl_entries marks them
+       posting_layer 'Year-end close'). gold_consolidated_trial_balance
+       translates those rows as a close: retained earnings takes the year's
+       translated result, not its local result at a rate. A close an ERP posts
+       itself carries no such mark and is translated as activity;
+       assert_year_end_close_carries_no_cta names it. A key's close rows are
+       never mixed with activity in one period (the close is synthesized only
+       in a Closing period the entity did not claim), so max() is exact. #}
+    toUInt8(max(posting_layer = 'Year-end close')) as is_year_end_close
 from {{ ref('silver_gl_entries') }}
 group by
     data_area_id,
