@@ -65,7 +65,11 @@ models:
           for a non-equity balance sheet account declared closing or undeclared;
           0 on every other row (equity is never revalued). A key with a balance
           but no movement in a period of the entity's spine gets a row with
-          local_amount 0 to carry it. Last column, added by the pre_hook ALTER.
+          local_amount 0 to carry it. konsolidat#259: on the year-end close rows
+          it also carries the close's adjustment, so a P&L key's translated
+          year returns to 0 and retained earnings is credited with the year's
+          translated result (whatever its fx_method); the close period's CTA is
+          then 0. Last column, added by the pre_hook ALTER.
 
   - name: gold_ic_eliminations
     description: >
@@ -637,6 +641,11 @@ models:
       - name: data_area_id
         tests:
           - not_null
+      - name: is_year_end_close
+        description: >
+          konsolidat#259: 1 on the rows of the year-end close silver_tb_movements
+          synthesizes (silver_gl_entries posting_layer 'Year-end close'), which
+          gold_consolidated_trial_balance translates as a close.
 
   - name: gold_ic_unmatched
     description: >

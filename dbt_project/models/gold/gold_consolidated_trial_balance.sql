@@ -90,6 +90,12 @@ with entity_tb as (
         ma.is_equity as is_equity,
         ma.fx_method as fx_method,
         ma.uses_historical_rate as uses_historical_rate,
+        {# konsolidat#259: the two facts the year-end close translation keys on,
+           both declared upstream: the chart's retained-earnings flag and the
+           close mark silver_tb_movements puts on the rows it synthesizes. Read
+           by `closed` below and never selected into this model. #}
+        toUInt8(ma.is_retained_earnings) as is_retained_earnings,
+        toUInt8(tb.is_year_end_close) as is_year_end_close,
         tb.partner_data_area_id as partner_data_area_id,
         {{ dim_select(prefix='tb.', trailing=true) }}
         {# Signed double-entry movement (debit − credit), so the local TB sums
@@ -146,7 +152,7 @@ with entity_tb as (
        by `rated` and never selected into it: this model appends by position,
        so no column may be added before partner_data_area_id. #}
     left join (
-        select main_account_id, fx_method, is_equity, uses_historical_rate
+        select main_account_id, fx_method, is_equity, uses_historical_rate, is_retained_earnings
         from {{ ref('silver_main_accounts') }}
     ) as ma
         on tb.main_account = ma.main_account_id
@@ -316,7 +322,10 @@ rated as (
         etb.uses_historical_rate as uses_historical_rate,
         {# konsolidat#257: the declaration the retranslation keys on. Never
            selected into the model (the final select excludes it). #}
-        etb.fx_method as fx_method
+        etb.fx_method as fx_method,
+        {# konsolidat#259: never selected into the model either. #}
+        etb.is_retained_earnings as is_retained_earnings,
+        etb.is_year_end_close as is_year_end_close
     from entity_tb as etb
     {# One row per ancestor group: the fan-out here IS the multi-level
        consolidation. Period-keyed, because ownership is dated. #}
@@ -510,7 +519,7 @@ densified as (
         {{ dim_select(trailing=true) }}
         local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
         closing_rate, average_rate, historical_equity_rate, translation_rate,
-        uses_historical_rate, fx_method,
+        uses_historical_rate, fx_method, is_retained_earnings, is_year_end_close,
         toUInt8(0) as is_filler
     from rated
     union all
@@ -524,6 +533,8 @@ densified as (
         cast(null as Nullable(Float64)) as historical_equity_rate,
         cast(closing_rate as Nullable(Float64)) as translation_rate,
         uses_historical_rate, fx_method,
+        {# a filler is a balance sheet key that did not move: never the close #}
+        toUInt8(0) as is_retained_earnings, toUInt8(0) as is_year_end_close,
         toUInt8(1) as is_filler
     from fillers
 ),
@@ -553,18 +564,100 @@ retranslated as (
         )
 ),
 
+{# konsolidat#259 (option #259-1, decided by Deepak Pai, 6 Oct 2026): the
+   year-end close moves amounts that are already translated, so it creates no
+   exchange difference.
+
+   silver_tb_movements closes a period-end-balance year in the year's Closing
+   period: each P&L key is reversed and the year's result moves into the
+   retained-earnings account, as one lump on the blank key
+   (is_year_end_close = 1). Translated as activity, the reversal goes at the
+   period's average rate and retained earnings at its own declared rate, so
+   the close left -(the year's P&L) x (average - closing) in that period's
+   CTA, cancelling the year's CTA into retained earnings every year.
+
+   P&L key, on its close row: the reversal returns the key's translated year
+   to zero over its in-scope rows of the year,
+       translated = (local + ytd_local_prior) x rate - ytd_translated_prior
+   With a full reversal (local = -ytd_local_prior) that is exactly
+   -ytd_translated_prior. For a part-year in scope (an acquisition) only the
+   out-of-scope remainder translates at the row's rate.
+
+   Retained earnings, on its close row (the lump key only): credited with the
+   year's TRANSLATED result, whatever the account's fx_method declares
+       translated = -sum(translated P&L close rows) + (local + sum(local P&L close rows)) x rate
+   so the close period's translated rows net to zero and its CTA is 0 by
+   construction. 3100's fx_method still governs every other movement of the
+   account (opening balance, dividends, adjustments).
+
+   Both adjustments ride in the row's retranslation_amount, so translated =
+   local x translation_rate + retranslation_amount stays true on every row
+   (assert_translated_amount_formula). A close an ERP posts itself carries no
+   close mark and is translated as activity; assert_year_end_close_carries_no_cta
+   names it. #}
+close_pnl as (
+    select
+        *,
+        if(
+            is_year_end_close = 1 and is_pnl = 1,
+            ifNull(
+                toFloat64(sum(local_amount) over key_year_before) * translation_rate
+                    - sum(toFloat64(local_amount) * translation_rate + retranslation_amount) over key_year_before,
+                0),
+            0
+        ) as pnl_close_adjustment
+    from retranslated
+    window
+        key_year_before as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
+            order by fiscal_period
+            rows between unbounded preceding and 1 preceding
+        )
+),
+
+closed as (
+    select
+        *,
+        if(
+            is_year_end_close = 1 and is_retained_earnings = 1 and partner_data_area_id = ''
+            {%- for d in get_dimensions() %} and {{ d.name }} = ''{% endfor %},
+            ifNull(
+                sum(if(is_year_end_close = 1 and is_pnl = 1, toFloat64(local_amount), 0)) over close_period * translation_rate
+                    - sum(if(is_year_end_close = 1 and is_pnl = 1,
+                             ifNull(toFloat64(local_amount) * translation_rate, 0) + pnl_close_adjustment,
+                             0)) over close_period,
+                0),
+            0
+        ) as re_close_adjustment
+    from close_pnl
+    window
+        close_period as (
+            partition by consolidation_group, data_area_id, fiscal_year, fiscal_period
+        )
+),
+
+adjusted as (
+    select
+        * except (retranslation_amount, pnl_close_adjustment, re_close_adjustment),
+        {# the balance sheet retranslation (#257) and the close (#259) never
+           fall on the same row: one is a non-equity balance sheet key, the
+           other a P&L key or retained earnings #}
+        retranslation_amount + pnl_close_adjustment + re_close_adjustment as translation_adjustment
+    from closed
+),
+
 consolidated as (
     select
         *,
         {# Translated amount = local x translation_rate, plus the key's
            retranslation (konsolidat#257; 0 on every row that is not
            retranslated) #}
-        local_amount * translation_rate + retranslation_amount as translated_amount,
+        local_amount * translation_rate + translation_adjustment as translated_amount,
         {# PRD-4: Group amount = translated x ownership_pct #}
-        (local_amount * translation_rate + retranslation_amount) * ownership_pct as group_amount,
+        (local_amount * translation_rate + translation_adjustment) * ownership_pct as group_amount,
         {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
-        (local_amount * translation_rate + retranslation_amount) * (1.0 - ownership_pct) as nci_amount
-    from retranslated
+        (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct) as nci_amount
+    from adjusted
     {# konsolidat#93: a missing governed rate fails the build loudly, never a
        0 or a 1.0 translation. throwIf takes a per-row condition (a constant
        would be folded and raise on every build). A failed run leaves its
@@ -575,7 +668,7 @@ consolidated as (
     where throwIf(translation_rate is null,
                   'konsolidat#93: a translated currency has no usable governed rate for its period: a Closing or Average rate is missing, duplicated, or zero, negative or not a finite number (konsol Group Exchange Rate). See assert_every_translated_currency_has_a_governed_rate.') = 0
       {# A filler that carries no retranslation carries nothing. #}
-      and (is_filler = 0 or retranslation_amount != 0)
+      and (is_filler = 0 or translation_adjustment != 0)
 )
 
 {# partner_data_area_id, then uses_historical_rate, then retranslation_amount,
@@ -584,10 +677,13 @@ consolidated as (
    the end — so the select has to emit them in the same order or the
    positional append lands them swapped.
    konsolidat#257: the run's period filter applies here, after the windows. #}
-select * except (partner_data_area_id, uses_historical_rate, retranslation_amount, fx_method, is_filler),
+select * except (partner_data_area_id, uses_historical_rate, translation_adjustment, fx_method,
+                 is_retained_earnings, is_year_end_close, is_filler),
        partner_data_area_id,
        uses_historical_rate,
-       retranslation_amount
+       {# konsolidat#259: the column also carries the year-end close's
+          adjustment on P&L and retained-earnings close rows #}
+       translation_adjustment as retranslation_amount
 from consolidated
 where 1 = 1
     {{ period_filter() }}

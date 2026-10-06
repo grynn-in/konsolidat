@@ -54,6 +54,8 @@ VALUES
   ('USD', 'EUR', 2026, 1, 'Average', 1.05, 'ZZ-GER-2026-01'),
   ('USD', 'EUR', 2026, 2, 'Closing', 1.20, 'ZZ-GER-2026-02'),
   ('USD', 'EUR', 2026, 2, 'Average', 1.15, 'ZZ-GER-2026-02');
+-- The live table may predate konsolidat#259's close flag: add it to the scratch clone first.
+ALTER TABLE epm_gold.gold_trial_balance_by_partner ADD COLUMN IF NOT EXISTS is_year_end_close UInt8 DEFAULT 0;
 INSERT INTO epm_gold.gold_trial_balance_by_partner
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES
