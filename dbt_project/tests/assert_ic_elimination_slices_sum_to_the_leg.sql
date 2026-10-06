@@ -10,10 +10,29 @@
 --
 -- Totals and "nets to zero" cannot see F2 at all. This asserts the thing that
 -- can: for each elimination leg, layer 2's per-slice amounts must sum to the
--- leg amount gold_ic_eliminations published, within materiality. F1 makes the
--- sum N times the leg; F2 leaves the sum right, so this test is paired with
--- the per-pair grain below — a leg is keyed on its PAIR, and a row whose slices
--- do not belong to that pair cannot reconcile once the join carries partner.
+-- leg amount gold_ic_eliminations published, within materiality.
+--
+-- WHAT THIS TEST IS AND IS NOT, corrected after the re-review said so.
+--
+-- It CANNOT FAIL on the current code. Shares are normalised in all three
+-- branches (apportionable sums to 1, flat is one row at 1.0, a join miss is
+-- one row at 1.0), so sum(emitted) = leg for every possible input. It is a
+-- REGRESSION GUARD — it would have caught the original defect, where a side
+-- whose slices cancelled emitted the leg N times at full amount — and it is
+-- NOT evidence that layer 2 is right today.
+--
+-- It is also BLIND TO MISATTRIBUTION. An earlier version of this header
+-- claimed it was "paired with the per-pair grain below"; there is no pair
+-- grain below. legs_by_account groups on (group, year, period, account) only:
+-- entity is dropped and partner was never carried, so a leg split across the
+-- wrong partner's slices reconciles here perfectly. That defect is prevented
+-- by the join carrying partner, not detected here.
+--
+-- And legs_by_account's netting hides one case by construction: when
+-- counterpart_account is blank both legs of a pair land on one account, so a
+-- symmetric error on both sides nets to zero on both sides of the comparison.
+--
+-- assert_ic_elimination_share_is_bounded is the test here that CAN fail.
 --
 -- Error severity: a leg that does not reconcile is a wrong consolidated number.
 -- One row per offending leg.

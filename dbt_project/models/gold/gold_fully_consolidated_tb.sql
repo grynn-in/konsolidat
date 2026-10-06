@@ -89,7 +89,13 @@ side_slices_by_pair as (
         sum(sum(mov_group)) over (
             partition by consolidation_group, fiscal_year, fiscal_period,
                          entity, partner, account
-        ) as side_mov
+        ) as side_mov,
+        {# the side's GROSS. Divisibility is a ratio, so the net alone cannot
+           decide it — see divisible_share() and re-review finding 1. #}
+        sum(abs(sum(mov_group))) over (
+            partition by consolidation_group, fiscal_year, fiscal_period,
+                         entity, partner, account
+        ) as side_gross
     from {{ ref('gold_ic_side_slices') }}
     group by consolidation_group, fiscal_year, fiscal_period, entity, partner, account
              {{ dim_group_by(leading=true) }}
@@ -103,7 +109,12 @@ side_shares_apportionable as (
         slice_mov / side_mov as share,
         toUInt8(1) as matched
     from side_slices_by_pair
-    where abs(side_mov) >= {{ materiality_floor() }}
+    {# RELATIVE, not absolute. materiality_floor() is an amount (0.005) and was
+       the wrong instrument: a side of +1000.00/-999.99 nets to 0.01, cleared
+       that floor, and produced shares of 100000/-99999 (re-review finding 1).
+       A side is divisible only when its net is a real fraction of its gross. #}
+    where abs(side_mov) >= {{ divisible_share() }} * side_gross
+      and abs(side_mov) >= {{ materiality_floor() }}
 ),
 
 {# A side whose slices cancel (or round to nothing): not divisible, so ONE row,
@@ -115,7 +126,8 @@ side_shares_flat as (
         toFloat64(1) as share,
         toUInt8(1) as matched
     from side_slices_by_pair
-    where abs(side_mov) < {{ materiality_floor() }}
+    where abs(side_mov) < {{ divisible_share() }} * side_gross
+       or abs(side_mov) < {{ materiality_floor() }}
 ),
 
 side_slice_shares as (
@@ -152,8 +164,21 @@ ic_elims as (
         {# the leg, apportioned to this slice; the whole leg when the side
            booked nothing to apportion over #}
         {# matched = 0 is a join miss (join_use_nulls=0 gives defaults, never
-           NULL), and then the whole leg lands on a blank slice. An NCI or
-           IC-difference leg posts to a non-IC account and always misses. #}
+           NULL), and then the whole leg lands on a blank slice.
+
+           CORRECTION (re-review finding 4): an earlier note here said an NCI
+           or IC-difference leg "posts to a non-IC account and always misses".
+           That is wrong. gold_ic_eliminations pairs (account_a, entity_a) with
+           (nci_account, entity_b) — only the SECOND leg is on a non-IC
+           account. The first is on the real IC account at the real entity
+           against the real partner, so it matches and IS apportioned, and
+           ic_elimination_nci rows do carry dimension values. That is
+           defensible (a side's NCI residual split over that side's own
+           slices), but it is not what the note claimed.
+
+           The fallback is still SILENT: a blank row from a join miss cannot be
+           told from a blank row from a side that booked no value. Naming it
+           needs a reason column on the layer, which is not in this change. #}
         e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
         if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         e.rule_id as journal_id
@@ -207,7 +232,7 @@ cta_entries as (
            'CTA' account — so it is the residual that makes the entity's
            translated balance sheet balance. It has no slice: a per-dimension
            plug would not be a translation difference, it would be an arbitrary
-           allocation of one. assert_deal_journal_layers_carry_no_dimension
+           allocation of one. assert_sliceless_layers_carry_no_dimension
            asserts this layer stays blank. #}
         {{ dim_empty_strings(trailing=true) }}
         reporting_currency,

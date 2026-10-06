@@ -68,7 +68,14 @@ select
    MISSING ENTIRELY from gold_ic_side_slices produced no row and the test
    passed — and a filter that drops whole sides is exactly what sends layer 2
    down its join-miss path. s.entity = '' now means "no slice rows at all",
-   which under join_use_nulls=0 is how an unmatched side reads. #}
+   which under join_use_nulls=0 is how an unmatched side reads.
+
+   KNOWN LIMITATION (re-review finding 3): reconciliation_side below is a hand
+   copy of gold_ic_side_slices' own query — same source, same ic_account_map()
+   join, same two partner filters — so on today's code neither side of this
+   join can hold a key the other lacks, and no branch here can fire. It guards
+   against the model DRIFTING from the reconciliation later, which is worth
+   having, and it is not evidence about layer 2's output. #}
 from reconciliation_side as r
 full outer join per_side as s
     on r.consolidation_group = s.consolidation_group
