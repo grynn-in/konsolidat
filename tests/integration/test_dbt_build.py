@@ -120,7 +120,14 @@ def test_ic_decisions_12_to_14_on_data(dbt_run, ch, ic_decisions_data):
     and P2, a second functional currency, a mid-year acquisition, a disposal,
     a sub-group sale, a stake moved to equity and a quiet partner: the exact
     reconciliation rows and entries, and the 100% view clear."""
-    result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched",
+    # konsolidat#238-4: `@`, not `+…+`. `+gold_ic_eliminations+` rebuilds the
+    # descendants (gold_fully_consolidated_tb among them) but not their other
+    # parents, so gold_fx_revaluation and gold_consolidation_adjustments kept
+    # whatever an earlier build left. Measured: 1 stale gold_fx_revaluation row
+    # (the ZZ CI fixture's entity) against 18 entity-periods here, and
+    # assert_all_layers_present judged that leftover. `@` adds every ancestor
+    # of every descendant: 18 rows, 0 stale.
+    result = dbt_run("@gold_ic_eliminations gold_ic_unmatched",
                      indirect_selection="cautious")
     assert result.returncode == 0, result.stdout[-3000:]
     problems = ic_decisions_data.check(ch)
