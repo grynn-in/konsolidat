@@ -54,38 +54,90 @@ with entity_balances as (
    entity whose minority holds that share (#175 re-review L2). The cash flow
    statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
    (third review L1). #}
-ic_elims as (
+{# konsolidat#245 option C: each side's slice and that side's total, so a leg
+   can be apportioned. The window total is over the side (entity, account,
+   group, period) — the same grain gold_ic_eliminations keys a leg on — so
+   slice_mov / side_mov sums to 1 across a side and the apportioned leg sums
+   to the leg. mov_group is the group-share movement, which is what the
+   consolidated TB's amounts are in. #}
+side_slice_shares as (
     select
         consolidation_group,
-        if(elimination_kind = 'nci', debit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
-        debit_account as main_account,
+        entity,
+        account,
+        {{ dim_select(trailing=true) }}
+        sum(mov_group) as slice_mov,
+        sum(sum(mov_group)) over (
+            partition by consolidation_group, fiscal_year, fiscal_period, entity, account
+        ) as side_mov
+    from {{ ref('gold_ic_side_slices') }}
+    group by consolidation_group, fiscal_year, fiscal_period, entity, account
+             {{ dim_group_by(leading=true) }}
+),
+
+ic_elims as (
+
+{# konsolidat#245 layer 2, option C (Deepak Pai, 6 Oct 2026): each leg carries
+   ITS OWN side's slice. The leg's amount is split across that side's dimension
+   values in proportion to what the side booked (gold_ic_side_slices), so the
+   per-slice amounts sum to exactly the leg's elimination — Sum(slice_mov)/side_mov
+   is 1 by construction, and assert_ic_side_slices_sum_to_the_side guards that
+   identity. A side with no slice information (nothing booked, so the ratio is
+   undefined) keeps the whole leg on a blank slice rather than inventing one.
+
+   The split is HERE and not in gold_ic_eliminations because that model carries
+   both legs on one row: splitting there would need a cross product of the two
+   sides' slices, which is not what either leg eliminates. Layer 2 has already
+   separated the legs, so each can be split against its own side. That also
+   leaves gold_ic_eliminations, its ten singular tests and its documented
+   "every row nets to zero" invariant completely untouched. #}
+    select
+        e.consolidation_group as consolidation_group,
+        if(e.elimination_kind = 'nci', e.debit_entity, '') as data_area_id,
+        e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        e.debit_account as main_account,
         'IC Elimination' as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
-        debit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
-        rule_id as journal_id
-    from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+        {# the leg, apportioned to this slice; the whole leg when the side
+           booked nothing to apportion over #}
+        e.debit_elimination * if(sl.side_mov = 0, 1.0, sl.slice_mov / sl.side_mov) as amount,
+        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        e.rule_id as journal_id
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join side_slice_shares as sl
+        on sl.consolidation_group = e.consolidation_group
+        and sl.fiscal_year = e.fiscal_year
+        and sl.fiscal_period = e.fiscal_period
+        and sl.entity = e.debit_entity
+        and sl.account = e.debit_account
+    where e.elimination_view = 'group'
 
     union all
 
     select
-        consolidation_group,
-        if(elimination_kind = 'nci', credit_entity, '') as data_area_id,
-        fiscal_year,
-        fiscal_period,
-        credit_account as main_account,
+        e.consolidation_group as consolidation_group,
+        if(e.elimination_kind = 'nci', e.credit_entity, '') as data_area_id,
+        e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        e.credit_account as main_account,
         'IC Elimination' as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
-        credit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
-        rule_id as journal_id
-    from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+        e.credit_elimination * if(sl.side_mov = 0, 1.0, sl.slice_mov / sl.side_mov) as amount,
+        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        e.rule_id as journal_id
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join side_slice_shares as sl
+        on sl.consolidation_group = e.consolidation_group
+        and sl.fiscal_year = e.fiscal_year
+        and sl.fiscal_period = e.fiscal_period
+        and sl.entity = e.credit_entity
+        and sl.account = e.credit_account
+    where e.elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}
