@@ -90,8 +90,9 @@ side_slices_by_pair as (
             partition by consolidation_group, fiscal_year, fiscal_period,
                          entity, partner, account
         ) as side_mov,
-        {# the side's GROSS. Divisibility is a ratio, so the net alone cannot
-           decide it — see divisible_share() and re-review finding 1. #}
+        {# the side's GROSS: the sum of each slice's magnitude. This is what
+           layer 2 weights by, so a share is bounded by 1 whatever the slices
+           do (re-review round 3, F1). #}
         sum(abs(sum(mov_group))) over (
             partition by consolidation_group, fiscal_year, fiscal_period,
                          entity, partner, account
@@ -106,28 +107,40 @@ side_shares_apportionable as (
     select
         consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
         {{ dim_select(trailing=true) }}
-        slice_mov / side_mov as share,
+        {# WEIGHTED BY MAGNITUDE, not by net (re-review round 3, F1).
+
+           slice_mov / side_mov was the wrong ratio. A side whose slices offset
+           has a small net and a large gross, so a share could be enormous: the
+           first version was unbounded (shares of 100000), and bounding the NET
+           relative to the gross only capped it at 50.5x — a -1000 leg still
+           became -50,500 and +49,500, with the total exact so nothing saw it.
+
+           abs(slice_mov) / side_gross cannot do that. Shares are in [0, 1] and
+           sum to 1, so no slice is ever moved further than the leg itself and
+           no slice takes the opposite sign to it. For a side whose slices all
+           share a sign — the ordinary case — this is IDENTICAL to the signed
+           ratio, so only the offsetting case changes, which is the case that
+           was wrong. #}
+        abs(slice_mov) / side_gross as share,
         toUInt8(1) as matched
     from side_slices_by_pair
-    {# RELATIVE, not absolute. materiality_floor() is an amount (0.005) and was
-       the wrong instrument: a side of +1000.00/-999.99 nets to 0.01, cleared
-       that floor, and produced shares of 100000/-99999 (re-review finding 1).
-       A side is divisible only when its net is a real fraction of its gross. #}
-    where abs(side_mov) >= {{ divisible_share() }} * side_gross
-      and abs(side_mov) >= {{ materiality_floor() }}
+    {# the side booked something to weight by. No ratio threshold any more:
+       magnitude weighting is bounded for every side, so there is nothing to
+       guard against. #}
+    where side_gross >= {{ materiality_floor() }}
 ),
 
-{# A side whose slices cancel (or round to nothing): not divisible, so ONE row,
-   blank slice, the whole leg. Not N rows, which was review finding F1. #}
 side_shares_flat as (
+    {# A side that booked essentially nothing: no magnitudes to weight by, so
+       ONE blank-slice row carrying the whole leg — the same answer this layer
+       gives for a side it knows nothing about. #}
     select distinct
         consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
         {{ dim_empty_strings(trailing=true) }}
         toFloat64(1) as share,
         toUInt8(1) as matched
     from side_slices_by_pair
-    where abs(side_mov) < {{ divisible_share() }} * side_gross
-       or abs(side_mov) < {{ materiality_floor() }}
+    where side_gross < {{ materiality_floor() }}
 ),
 
 side_slice_shares as (
@@ -176,9 +189,13 @@ ic_elims as (
            defensible (a side's NCI residual split over that side's own
            slices), but it is not what the note claimed.
 
-           The fallback is still SILENT: a blank row from a join miss cannot be
-           told from a blank row from a side that booked no value. Naming it
-           needs a reason column on the layer, which is not in this change. #}
+           The fallback is still SILENT, and it now has TWO causes that the
+           output cannot tell apart (re-review round 3, F4): a join miss, and a
+           side whose gross is below materiality so there are no magnitudes to
+           weight by. Naming them needs a reason column on the layer, which is
+           not in this change. (The third cause the round-3 review listed — a
+           side that booked a lot but was "not divisible" — no longer exists:
+           magnitude weighting apportions every side that booked anything.) #}
         e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
         if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         e.rule_id as journal_id

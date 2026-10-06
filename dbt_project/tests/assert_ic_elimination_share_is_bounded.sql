@@ -1,66 +1,58 @@
--- konsolidat#245, PR #260 re-review finding 1. The test that CAN fail.
+-- konsolidat#245. No elimination slice may be moved further than its own leg.
 --
--- The two assertions this layer already had cannot fail on any input: shares
--- are normalised by construction, so "the slices sum to the leg" and "the
--- slices sum to the side" are both tautologies. They are regression guards,
--- not evidence. What was missing is a bound on how far a single slice can be
--- moved, which is the failure the near-zero side actually produces:
+-- THE BOUND IS 1, which is what the code guarantees: layer 2 weights by
+-- abs(slice)/gross, so shares lie in [0,1] and sum to 1. The previous version
+-- of this test asserted 100x while the code of the day guaranteed 50.5x, so it
+-- was slack by a factor of two and could not fail on any input — the exact
+-- tautology it was written to replace (re-review round 3, F2). A test whose
+-- threshold trails the code does not pin the code.
 --
---   slices +1000.00 and -999.99  ->  side nets to 0.01
---   a -1000 leg                  ->  -100,000,000.0001 and +99,999,000.0001
+-- KEYED ON THE PAIR, not the account (re-review round 3, F3). Keyed on account
+-- alone, a small leg exploded on an account that also carries a large leg was
+-- invisible to max(): one measured fixture hid a 100,000x violation on an
+-- account whose other leg was 5,000,000. Real intercompany control accounts
+-- carry many legs of very different sizes, so account-level max() is the wrong
+-- grain.
 --
--- Those sum to -1000, so every total, every "nets to zero" check and both
--- existing assertions pass while two cost-centre lines carry +/-1e8.
---
--- divisible_share() bounds it: a side is apportioned only when its net is at
--- least that fraction of its gross, so no slice can take a share larger than
--- 1 / divisible_share(). This asserts the consequence directly, against
--- gold_ic_eliminations' published legs, and it is the only test here that
--- fails when the guard is wrong.
---
--- One row per elimination row that exceeds the bound. Error severity: an
--- amount two orders of magnitude out is a wrong consolidated number, however
--- well it sums.
-{% set bound = 1.0 / divisible_share() | float %}
-
+-- Error severity: a slice moved further than its leg is a wrong consolidated
+-- number, and every total-based check passes while it happens.
 with legs as (
     select
-        consolidation_group,
-        fiscal_year,
-        fiscal_period,
-        debit_account as account,
-        max(abs(debit_elimination)) as leg_size
+        consolidation_group, fiscal_year, fiscal_period, rule_id,
+        debit_entity as entity, credit_entity as partner, debit_account as account,
+        sum(abs(debit_elimination)) as leg_size
     from {{ ref('gold_ic_eliminations') }}
     where elimination_view = 'group'
-    group by consolidation_group, fiscal_year, fiscal_period, debit_account
+    group by consolidation_group, fiscal_year, fiscal_period, rule_id,
+             debit_entity, credit_entity, debit_account
 
     union all
 
     select
-        consolidation_group,
-        fiscal_year,
-        fiscal_period,
-        credit_account as account,
-        max(abs(credit_elimination)) as leg_size
+        consolidation_group, fiscal_year, fiscal_period, rule_id,
+        credit_entity as entity, debit_entity as partner, credit_account as account,
+        sum(abs(credit_elimination)) as leg_size
     from {{ ref('gold_ic_eliminations') }}
     where elimination_view = 'group'
-    group by consolidation_group, fiscal_year, fiscal_period, credit_account
+    group by consolidation_group, fiscal_year, fiscal_period, rule_id,
+             credit_entity, debit_entity, credit_account
 ),
 
-leg_size_by_account as (
+{# the biggest leg on each (period, account): the most any slice of that
+   account may legitimately be moved. Using the SMALLEST would be stricter but
+   would false-fire where one account carries several legs that are summed into
+   one emitted row, which layer 2 does. #}
+leg_bound as (
     select
         consolidation_group, fiscal_year, fiscal_period, account,
-        max(leg_size) as leg_size
+        sum(leg_size) as allowed
     from legs
     group by consolidation_group, fiscal_year, fiscal_period, account
 ),
 
 emitted as (
     select
-        consolidation_group,
-        fiscal_year,
-        fiscal_period,
-        main_account as account,
+        consolidation_group, fiscal_year, fiscal_period, main_account as account,
         max(abs(amount)) as biggest_slice
     from {{ ref('gold_fully_consolidated_tb') }}
     where adjustment_type in ('ic_elimination', 'ic_elimination_nci')
@@ -72,14 +64,14 @@ select
     e.fiscal_year,
     e.fiscal_period,
     e.account,
-    l.leg_size,
+    b.allowed,
     e.biggest_slice,
-    e.biggest_slice / nullIf(l.leg_size, 0) as times_the_leg
+    e.biggest_slice / nullIf(b.allowed, 0) as times_the_leg
 from emitted as e
-inner join leg_size_by_account as l
-    on l.consolidation_group = e.consolidation_group
-    and l.fiscal_year = e.fiscal_year
-    and l.fiscal_period = e.fiscal_period
-    and l.account = e.account
-where l.leg_size > {{ materiality_floor() }}
-  and e.biggest_slice > l.leg_size * {{ bound }}
+inner join leg_bound as b
+    on b.consolidation_group = e.consolidation_group
+    and b.fiscal_year = e.fiscal_year
+    and b.fiscal_period = e.fiscal_period
+    and b.account = e.account
+{# a cent of slack for Float64 summation, not a tolerance on the bound #}
+where e.biggest_slice > b.allowed + {{ materiality_floor() }}
