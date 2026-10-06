@@ -1,35 +1,35 @@
 {#
-    PRD-22: each consolidation layer must be present in the fully consolidated
-    TB wherever it applies. One row per (consolidation_group, missing_layer).
+    PRD-22: no consolidation layer the models computed is lost on its way into
+    gold_fully_consolidated_tb, and none appears there without its source.
 
-    Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-1, at error
-    severity. The test used to expect all four layers unconditionally. Live has
-    no declared intercompany account and no approved top-side journal, so it
-    then failed on correct data. Rejected: #238-2 (warn and keep asserting all
-    four: a permanent false warning) and #238-3 (delete the test: IC
-    elimination would be asserted by nothing).
+    Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error
+    severity. It supersedes #238-1, which conditioned the layers on
+    declarations (Published IC accounts, partner membership, more than one
+    currency). A review of PR #261 measured that this did not match the
+    models: an unmatched IC pair, with no ic_difference_account, is
+    eliminated by nothing, and CTA does not depend on how many currencies
+    the group has. Whether an elimination SHOULD exist stays with
+    gold_ic_reconciliation and gold_ic_unmatched. Rejected: #238-1 as worded,
+    and #238-2 (warn and keep asserting all four).
 
-    "Applies" reads the same inputs the layer-building models read, per group:
-      - entity: the group has rows in gold_consolidated_trial_balance, which
-        layer 1 of gold_fully_consolidated_tb sums. (An empty warehouse has
-        no group and so nothing to assert.)
-      - ic_elimination: the group has a gold_consolidated_trial_balance row
-        on a declared intercompany account (ic_account_map(), the Published
-        rows of epm_staging.intercompany_accounts) whose partner is another
-        entity, as in the `sides` CTE of gold_ic_reconciliation, which feeds
-        gold_ic_eliminations. The partner must also be line-consolidated in
-        the same group in the same period: gold_ic_reconciliation eliminates
-        a pair only while both sides are members (equity and none excluded).
-        A sub-group whose entity books against a partner outside it has
-        nothing to eliminate (measured on tests/integration's ic_decisions
-        fixture: ZZSUB/ZZS against ZZA). Accepted trade-off: a group that
-        never declares its intercompany accounts passes; partner rows on
-        undeclared accounts are konsol#317's to report.
-      - topside: gold_consolidation_adjustments, the model layer 4 reads, has
-        an adjustment_type 'topside' line for the group. The model keeps only
-        Approved and Reversed journals.
-      - cta: the group's entities in gold_consolidated_trial_balance carry
-        more than one accounting (functional) currency.
+    A layer must appear for a group exactly when its source model has rows for
+    that group. Each source is mapped to the adjustment_type
+    gold_fully_consolidated_tb gives it:
+      - entity:              gold_consolidated_trial_balance (layer 1);
+      - ic_elimination:      gold_ic_eliminations, elimination_view 'group' (layer 2).
+                             The 'nci' kind lands as ic_elimination_nci. Every
+                             other kind, including unrealized_profit from
+                             ic_elimination_rules, lands as ic_elimination.
+                             NCI-view rows never enter the consolidated TB;
+      - topside:             gold_consolidation_adjustments, adjustment_type
+                             'topside' (layer 4 passes adjustment_type through);
+      - cta:                 gold_fx_revaluation (layer 3).
+    Every model carries the group in consolidation_group.
+
+    Two directions, one row per (group, layer):
+      - missing_layer: the source has rows, the consolidated TB has none;
+      - unexpected_layer: the consolidated TB has the layer, the source has no
+        rows (a stale or misattributed layer).
 
     konsolidat#238 / #249: NOT IN, not a LEFT JOIN. adjustment_type is a
     String, and under join_use_nulls = 0 (the server default; a singular test
@@ -38,33 +38,18 @@
     nothing, and the test could never fail.
 #}
 
-with applies as (
+with expected as (
 
-    select consolidation_group, 'entity' as layer
+    select distinct consolidation_group, 'entity' as layer
     from {{ ref('gold_consolidated_trial_balance') }}
-    group by consolidation_group
 
     union all
 
-    select distinct ctb.consolidation_group, 'ic_elimination' as layer
-    from {{ ref('gold_consolidated_trial_balance') }} as ctb
-    inner join ({{ ic_account_map() }}) as ica
-        on ctb.main_account = ica.account
-    where ctb.partner_data_area_id != ''
-      and ctb.partner_data_area_id != ctb.data_area_id
-      and ctb.consolidation_method not in ('equity', 'none')
-      and (ctb.consolidation_group, ctb.partner_data_area_id, ctb.fiscal_year, ctb.fiscal_period) in (
-          select consolidation_group, data_area_id, fiscal_year, fiscal_period
-          from {{ ref('gold_consolidated_trial_balance') }}
-          where consolidation_method not in ('equity', 'none')
-      )
-
-    union all
-
-    select consolidation_group, 'cta' as layer
-    from {{ ref('gold_consolidated_trial_balance') }}
-    group by consolidation_group
-    having uniqExact(accounting_currency) > 1
+    select distinct
+        consolidation_group,
+        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as layer
+    from {{ ref('gold_ic_eliminations') }}
+    where elimination_view = 'group'
 
     union all
 
@@ -72,14 +57,25 @@ with applies as (
     from {{ ref('gold_consolidation_adjustments') }}
     where adjustment_type = 'topside'
 
+    union all
+
+    select distinct consolidation_group, 'cta' as layer
+    from {{ ref('gold_fx_revaluation') }}
+
+),
+
+actual as (
+    select distinct consolidation_group, adjustment_type as layer
+    from {{ ref('gold_fully_consolidated_tb') }}
+    where adjustment_type in ('entity', 'ic_elimination', 'ic_elimination_nci', 'topside', 'cta')
 )
 
-select
-    'missing_layer' as error,
-    consolidation_group,
-    layer as missing_layer
-from applies
-where (consolidation_group, layer) not in (
-    select distinct consolidation_group, adjustment_type
-    from {{ ref('gold_fully_consolidated_tb') }}
-)
+select 'missing_layer' as error, consolidation_group, layer
+from expected
+where (consolidation_group, layer) not in (select consolidation_group, layer from actual)
+
+union all
+
+select 'unexpected_layer' as error, consolidation_group, layer
+from actual
+where (consolidation_group, layer) not in (select consolidation_group, layer from expected)
