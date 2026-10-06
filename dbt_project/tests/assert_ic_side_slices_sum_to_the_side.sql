@@ -64,8 +64,13 @@ select
     r.side_group,
     s.sliced_group,
     r.side_group - s.sliced_group as difference
+{# PR #260 review F4: a FULL join, not an inner one. With an inner join a side
+   MISSING ENTIRELY from gold_ic_side_slices produced no row and the test
+   passed — and a filter that drops whole sides is exactly what sends layer 2
+   down its join-miss path. s.entity = '' now means "no slice rows at all",
+   which under join_use_nulls=0 is how an unmatched side reads. #}
 from reconciliation_side as r
-inner join per_side as s
+full outer join per_side as s
     on r.consolidation_group = s.consolidation_group
     and r.fiscal_year = s.fiscal_year
     and r.fiscal_period = s.fiscal_period
@@ -75,3 +80,7 @@ inner join per_side as s
 where abs(r.side_group - s.sliced_group) > {{ materiality_floor() }}
    or abs(r.side_local - s.sliced_local) > {{ materiality_floor() }}
    or abs(r.side_translated - s.sliced_translated) > {{ materiality_floor() }}
+   {# a side on one side of the join only: dropped from the slices, or invented
+      by them. Either way the apportionment base is wrong. #}
+   or r.entity = ''
+   or s.entity = ''

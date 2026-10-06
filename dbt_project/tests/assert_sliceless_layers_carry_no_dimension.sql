@@ -16,6 +16,15 @@
 -- either someone gave those documents a dimension (then this test is the place
 -- to record the new decision) or a layer is reading a slice it cannot know.
 --
+-- NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'.
+-- Layer 2 legs posted to a non-IC account (the NCI line, a group's
+-- IC-difference account) never match a slice row and correctly land on a blank
+-- slice, so blankness is legal there and this test would be wrong to forbid it.
+-- PR #260 review F5 is right that such a row is then indistinguishable from
+-- one blank because the side booked no value; distinguishing them needs a
+-- reason column on the layer, which is not in this change.
+-- assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead.
+--
 -- One row per offending layer and dimension. Error severity: a value here is
 -- not a data-quality warning, it is a layer claiming knowledge it does not have.
 {% set dims = var('dimensions') %}

@@ -208,6 +208,16 @@
    self-corrects when a site declares one more. Same technique as
    bronze_trial_balance_submissions' raw_columns guard. #}
 {% macro dims_present_in(relation) %}
-    {%- set present = adapter.get_columns_in_relation(relation) | map(attribute='name') | list -%}
-    {{- return(var('dimensions') | selectattr('name', 'in', present) | list) -}}
+    {#- PR #260 review F6: guarded with `if execute`, the precedent
+        gold_ic_reconciliation:88-96 sets. At parse time the adapter returns an
+        empty list, which would silently mean "this table has no dimension
+        columns" and emit '' for every one of them. Outside execution the
+        declared set is returned unfiltered, so parse-time SQL names the
+        columns and only a real run narrows them to what the table has. -#}
+    {%- if execute -%}
+        {%- set present = adapter.get_columns_in_relation(relation) | map(attribute='name') | list -%}
+        {{- return(var('dimensions') | selectattr('name', 'in', present) | list) -}}
+    {%- else -%}
+        {{- return(var('dimensions')) -}}
+    {%- endif -%}
 {% endmacro %}

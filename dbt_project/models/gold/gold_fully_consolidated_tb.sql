@@ -54,27 +54,74 @@ with entity_balances as (
    entity whose minority holds that share (#175 re-review L2). The cash flow
    statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
    (third review L1). #}
-{# konsolidat#245 option C: each side's slice and that side's total, so a leg
-   can be apportioned. The window total is over the side (entity, account,
-   group, period) — the same grain gold_ic_eliminations keys a leg on — so
-   slice_mov / side_mov sums to 1 across a side and the apportioned leg sums
-   to the leg. mov_group is the group-share movement, which is what the
-   consolidated TB's amounts are in. #}
-side_slice_shares as (
+{# konsolidat#245 option C, rewritten after PR #260 review findings F1 and F2.
+
+   A leg of gold_ic_eliminations belongs to ONE SIDE OF ONE PAIR, keyed
+   (entity_a, account_a, entity_b, account_b) — the PARTNER is part of that
+   key. The first version partitioned only on (group, period, entity,
+   account), so a leg was apportioned over everything the entity had booked on
+   that account against EVERY partner: review F2 showed a ZZA<->ZZB
+   elimination of -600 landing 360 on the slice holding ZZB's balance and 240
+   on a slice holding only ZZC's. The account total stayed right and the slices
+   were wrong, which no total-based check can see. `partner` is therefore in
+   the grain here and in the join.
+
+   TWO CASES, and they must not be confused (review F1). Under
+   join_use_nulls=0 a LEFT JOIN miss fills defaults, so `side_mov = 0` was
+   true both when no slice row existed AND when the side's slices summed to
+   zero. In the second case every one of N slice rows took factor 1.0 and the
+   leg was emitted N times at full amount: two offsetting cost centres on one
+   intercompany account left the layer out by the whole leg and broke
+   assert_ic_elimination_nets_zero. So a side is split only when its movement
+   is big enough to divide by; otherwise it collapses to ONE blank-slice row
+   carrying the whole leg. `matched` is a sentinel: 0 on a join miss, which
+   cannot be confused with a real value. #}
+side_slices_by_pair as (
     select
         consolidation_group,
         fiscal_year,
         fiscal_period,
         entity,
+        partner,
         account,
         {{ dim_select(trailing=true) }}
         sum(mov_group) as slice_mov,
         sum(sum(mov_group)) over (
-            partition by consolidation_group, fiscal_year, fiscal_period, entity, account
+            partition by consolidation_group, fiscal_year, fiscal_period,
+                         entity, partner, account
         ) as side_mov
     from {{ ref('gold_ic_side_slices') }}
-    group by consolidation_group, fiscal_year, fiscal_period, entity, account
+    group by consolidation_group, fiscal_year, fiscal_period, entity, partner, account
              {{ dim_group_by(leading=true) }}
+),
+
+{# A side whose movement is divisible: one row per slice, shares summing to 1. #}
+side_shares_apportionable as (
+    select
+        consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
+        {{ dim_select(trailing=true) }}
+        slice_mov / side_mov as share,
+        toUInt8(1) as matched
+    from side_slices_by_pair
+    where abs(side_mov) >= {{ materiality_floor() }}
+),
+
+{# A side whose slices cancel (or round to nothing): not divisible, so ONE row,
+   blank slice, the whole leg. Not N rows, which was review finding F1. #}
+side_shares_flat as (
+    select distinct
+        consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
+        {{ dim_empty_strings(trailing=true) }}
+        toFloat64(1) as share,
+        toUInt8(1) as matched
+    from side_slices_by_pair
+    where abs(side_mov) < {{ materiality_floor() }}
+),
+
+side_slice_shares as (
+    select * from side_shares_apportionable
+    union all
+    select * from side_shares_flat
 ),
 
 ic_elims as (
@@ -104,7 +151,10 @@ ic_elims as (
         '' as reporting_currency,
         {# the leg, apportioned to this slice; the whole leg when the side
            booked nothing to apportion over #}
-        e.debit_elimination * if(sl.side_mov = 0, 1.0, sl.slice_mov / sl.side_mov) as amount,
+        {# matched = 0 is a join miss (join_use_nulls=0 gives defaults, never
+           NULL), and then the whole leg lands on a blank slice. An NCI or
+           IC-difference leg posts to a non-IC account and always misses. #}
+        e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
         if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         e.rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }} as e
@@ -113,6 +163,7 @@ ic_elims as (
         and sl.fiscal_year = e.fiscal_year
         and sl.fiscal_period = e.fiscal_period
         and sl.entity = e.debit_entity
+        and sl.partner = e.credit_entity
         and sl.account = e.debit_account
     where e.elimination_view = 'group'
 
@@ -127,7 +178,7 @@ ic_elims as (
         'IC Elimination' as account_name,
         {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
-        e.credit_elimination * if(sl.side_mov = 0, 1.0, sl.slice_mov / sl.side_mov) as amount,
+        e.credit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
         if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
         e.rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }} as e
@@ -136,6 +187,7 @@ ic_elims as (
         and sl.fiscal_year = e.fiscal_year
         and sl.fiscal_period = e.fiscal_period
         and sl.entity = e.credit_entity
+        and sl.partner = e.debit_entity
         and sl.account = e.credit_account
     where e.elimination_view = 'group'
 ),
