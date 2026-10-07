@@ -56,6 +56,16 @@
 #   eliminations, NCI) — requires end-to-end cluster test.
 # =============================================================================
 
+x-logging: &default-logging
+  # Cap every container's Docker log. On 6 Oct 2026 ClickHouse's own log
+  # channel broke and wrote a stack trace to stderr for every message; the
+  # uncapped json-file log reached 28.6 GB and filled the disk, after which
+  # every ClickHouse write failed. 3 x 100 MB per container is plenty to debug.
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 x-clickhouse-common: &ch-common
   image: clickhouse/clickhouse-server:24.8-alpine
   ulimits:
@@ -72,6 +82,7 @@ x-clickhouse-common: &ch-common
 
 services:
   clickhouse:
+    logging: *default-logging
     <<: *ch-common
     container_name: konsolidat_ch_shard${SHARD_ID:-1}_replica${REPLICA_ID:-1}
     environment:

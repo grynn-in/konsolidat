@@ -6,6 +6,16 @@
 #         docker compose down      (stop all)
 # =============================================================================
 
+x-logging: &default-logging
+  # Cap every container's Docker log. On 6 Oct 2026 ClickHouse's own log
+  # channel broke and wrote a stack trace to stderr for every message; the
+  # uncapped json-file log reached 28.6 GB and filled the disk, after which
+  # every ClickHouse write failed. 3 x 100 MB per container is plenty to debug.
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 x-frappe-common: &frappe-common
   # ONE image for every Frappe-based service. Only frappe_backend has a
   # `build:` section (it builds and tags this image); the other five run the
@@ -59,6 +69,7 @@ services:
   # Infrastructure
   # ---------------------------------------------------------------------------
   mariadb:
+    logging: *default-logging
     image: mariadb:10.11
     container_name: konsolidat_mariadb
     environment:
@@ -75,6 +86,7 @@ services:
     restart: unless-stopped
 
   redis_cache:
+    logging: *default-logging
     image: redis:7-alpine
     container_name: konsolidat_redis_cache
     healthcheck:
@@ -85,6 +97,7 @@ services:
     restart: unless-stopped
 
   redis_queue:
+    logging: *default-logging
     image: redis:7-alpine
     container_name: konsolidat_redis_queue
     healthcheck:
@@ -95,6 +108,7 @@ services:
     restart: unless-stopped
 
   clickhouse:
+    logging: *default-logging
     image: clickhouse/clickhouse-server:24.8-alpine
     container_name: konsolidat_clickhouse
     networks:
@@ -134,6 +148,7 @@ services:
   # One-shot: Site setup (runs once, then exits)
   # ---------------------------------------------------------------------------
   configurator:
+    logging: *default-logging
     <<: *frappe-common
     container_name: konsolidat_configurator
     entrypoint: ["bash", "/home/frappe/configurator/init.sh"]
@@ -153,6 +168,7 @@ services:
   # Application
   # ---------------------------------------------------------------------------
   frappe_backend:
+    logging: *default-logging
     <<: *frappe-common
     # The only build in the stack: produces the shared <project>-frappe image
     # for all Frappe services. It lives here because frappe_backend is in the
@@ -177,18 +193,21 @@ services:
     restart: unless-stopped
 
   frappe_worker:
+    logging: *default-logging
     <<: *frappe-common
     container_name: konsolidat_worker
     command: ["worker"]
     restart: unless-stopped
 
   frappe_scheduler:
+    logging: *default-logging
     <<: *frappe-common
     container_name: konsolidat_scheduler
     command: ["scheduler"]
     restart: unless-stopped
 
   cubejs:
+    logging: *default-logging
     image: cubejs/cube:v0.36
     container_name: konsolidat_cubejs
     ports:
@@ -215,6 +234,7 @@ services:
   # One-shot: dbt seed + build (runs once after setup, then exits)
   # ---------------------------------------------------------------------------
   dbt_init:
+    logging: *default-logging
     <<: *frappe-common
     container_name: konsolidat_dbt_init
     entrypoint: ["/home/frappe/frappe-bench/env/bin/dbt"]
@@ -227,6 +247,7 @@ services:
   # Reverse proxy (auto-SSL when domain is set)
   # ---------------------------------------------------------------------------
   caddy:
+    logging: *default-logging
     image: caddy:2-alpine
     container_name: konsolidat_caddy
     ports:
@@ -248,6 +269,7 @@ services:
   # Nightly backup (runs via cron label or docker compose run)
   # ---------------------------------------------------------------------------
   backup:
+    logging: *default-logging
     <<: *frappe-common
     container_name: konsolidat_backup
     entrypoint: ["bash", "/home/frappe/backup/backup.sh"]
