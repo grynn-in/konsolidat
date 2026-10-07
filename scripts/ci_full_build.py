@@ -64,7 +64,9 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
-from tb_only_first_build import fixture_sql, run_dbt, split_sql, summary  # noqa: E402
+from tb_only_first_build import (  # noqa: E402
+    budget_dimension_columns, fixture_sql, project_dimensions, run_dbt, split_sql, summary,
+)
 
 PROJECT = os.path.join(REPO, "dbt_project")
 SCHEMA_SQL = ("clickhouse/init-db.sql", "clickhouse/raw-schema.sql")
@@ -83,6 +85,10 @@ def apply_schema(client):
         for stmt in statements:
             client.command(stmt)
         print(f"applied {rel} ({len(statements)} statements)", flush=True)
+    # konsol#287: what konsol adds to the budget input tables for the declared
+    # in_budget dimensions; init-db.sql names none.
+    for stmt in budget_dimension_columns(project_dimensions()):
+        client.command(stmt)
 
 
 def load_fixture(client):

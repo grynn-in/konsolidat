@@ -54,6 +54,36 @@ ERP_QUOTE_TESTS = ("assert_exchange_rate_currencies_are_iso", "assert_exchange_r
 CAST_TEST = "assert_cast_to_decimal128_is_exact"
 
 
+#: konsol#287: the budget input tables name no dimension in init-db.sql; konsol
+#: adds the site's Published in_budget dimensions by ALTER. A fresh site built
+#: here has no konsol, so these stand in for it.
+BUDGET_INPUT_TABLES = ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input")
+DIM_NAME_RE = re.compile(r"dim_[a-z0-9_]+\Z")
+
+
+def project_dimensions():
+    """The `dimensions` var of dbt_project.yml: what the build will read."""
+    import yaml  # dbt-core brings it; imported here so the module needs none
+
+    with open(os.path.join(REPO, "dbt_project", "dbt_project.yml"), encoding="utf-8") as f:
+        return (yaml.safe_load(f).get("vars") or {}).get("dimensions") or []
+
+
+def budget_dimension_columns(dims, prefix="epm"):
+    """The ALTERs konsol runs on a site declaring ``dims`` (the dimensions var).
+
+    One ADD COLUMN per budget input table per dimension marked in_budget, the
+    set gold_spread_budget reads through get_budget_dimensions(). Names are
+    validated before they are interpolated, as konsol does.
+    """
+    names = [d["name"] for d in dims if d.get("in_budget")]
+    bad = [n for n in names if not DIM_NAME_RE.match(n)]
+    if bad:
+        raise SystemExit(f"refusing budget dimension names {bad}: not dim_[a-z0-9_]+")
+    return [rewrite(f"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS {n} String DEFAULT ''", prefix)
+            for t in BUDGET_INPUT_TABLES for n in names]
+
+
 def rewrite(text, prefix):
     text = SCHEMA_RE.sub(prefix + "_", text)
     return BARE_DB_RE.sub(prefix, text)
@@ -249,6 +279,8 @@ def main():
                     if re.search(r"\bepm_", stmt):
                         raise SystemExit(f"unrewritten epm_ reference in {name}: {stmt[:120]}")
                     client.command(stmt)
+        for stmt in budget_dimension_columns(project_dimensions(), a.prefix):
+            client.command(stmt)
         copy_project(a.prefix, project)
         print(f"fresh TB-only shape created under {a.prefix}*; project copy at {project}")
 

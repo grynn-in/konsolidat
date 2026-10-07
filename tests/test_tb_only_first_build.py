@@ -228,3 +228,39 @@ class TbOnlyFixtureMatchesTheCashFlowCategoriesDdl(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
+    """konsol#287: init-db.sql's budget input tables name no dimension; konsol
+    adds the site's in_budget ones by ALTER. A fresh site built by these scripts
+    has no konsol, so they stand in for it, or gold_spread_budget selects
+    columns the tables lack (it failed exactly so in CI)."""
+
+    def test_one_add_column_per_budget_table_per_in_budget_dimension(self):
+        dims = [{"name": "dim_region", "in_budget": True},
+                {"name": "dim_tb_only", "in_budget": False}]
+        self.assertEqual(_load_script().budget_dimension_columns(dims, "zz"), [
+            "ALTER TABLE zz_gold.budget_annual_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
+            "ALTER TABLE zz_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
+        ])
+
+    def test_no_budget_dimension_means_no_alter(self):
+        self.assertEqual(_load_script().budget_dimension_columns([], "zz"), [])
+
+    def test_an_unsafe_name_is_refused_before_it_reaches_sql(self):
+        with self.assertRaises(SystemExit):
+            _load_script().budget_dimension_columns(
+                [{"name": "dim_x; DROP TABLE y", "in_budget": True}], "zz")
+
+    def test_both_ci_scripts_add_them_after_the_schema(self):
+        for name in ("tb_only_first_build.py", "ci_full_build.py"):
+            with open(os.path.join(PROJECT_ROOT, "scripts", name), encoding="utf-8") as f:
+                src = f.read()
+            self.assertIn("budget_dimension_columns(project_dimensions()", src, name)
+
+    def test_init_db_names_no_budget_dimension(self):
+        with open(INIT_DB, encoding="utf-8") as f:
+            sql = f.read()
+        for table in ("budget_annual_input", "budget_monthly_input"):
+            body = sql.split(f"CREATE TABLE IF NOT EXISTS epm_gold.{table} (")[1].split(")")[0]
+            self.assertNotRegex(body, r"\bdim_\w+", table)

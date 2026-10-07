@@ -342,15 +342,20 @@ CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
 -- budget_monthly_input is the bottom-up half, written by Budget Sheet; it has
 -- always been a konsol write-through with nothing that creates it, which is why
 -- gold_spread_budget has been failing every build.
+-- konsol#287: neither table names a dimension. Which dim_* columns they carry is
+-- the site's Published Dimensions ticked in_budget, which konsol adds by ALTER
+-- (schema_apply._sync_budget_dimension_columns); gold_spread_budget reads that
+-- same set through get_budget_dimensions(). They used to be created with two
+-- customers' dimensions as literal columns.
 CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String, dim_cost_center String, dim_department String,
+    main_account String,
     annual_amount Decimal(18,2), spread_profile_id String, submitted_by String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, main_account);
 
 CREATE TABLE IF NOT EXISTS epm_gold.budget_monthly_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String, dim_cost_center String, dim_department String,
+    main_account String,
     fiscal_period UInt8, amount Decimal(18,2), layer String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, layer);
 
