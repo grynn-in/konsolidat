@@ -1,8 +1,19 @@
+{# Round 5, F5: layer 2's one-representation-per-leg choice compares a side's
+   gross against the LEG's amount, i.e. a non-equality across both sides of the
+   join. ClickHouse refuses that in an ON clause unless
+   allow_experimental_join_condition is set — and gold_ic_eliminations, one
+   model upstream in this same chain, already sets it
+   (gold_ic_eliminations.sql:3). An earlier commit called the refusal a hard
+   limit and moved the choice into the WHERE. That was wrong, and it mattered:
+   in the WHERE a side matching no arm DROPS the leg (fail-silent), while in
+   the ON it is a join miss and the whole leg is emitted on a blank slice
+   (fail-safe). #}
 {{
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by='tuple()'
+        order_by='tuple()',
+        query_settings={'allow_experimental_join_condition': 1}
     )
 }}
 
@@ -97,9 +108,17 @@ side_slices_by_pair as (
 
 {# ALIGNED gross, in its own pass: only the slices pointing the same way as the
    side's net (decision 2B). A slice holding an opposite-signed balance
-   contributes nothing to the base and takes no share, so no slice is ever
-   moved away from zero. Magnitude weighting, which this replaces, was bounded
-   but gave a credit slice a credit elimination.
+   contributes nothing to the base and takes no share. Magnitude weighting,
+   which this replaces, gave such a slice an elimination of the leg's sign and
+   pushed it further from its own balance; it now receives nothing.
+
+   CORRECTION (round 5, F2): an earlier version of this note added "so no slice
+   is ever moved away from zero". That is FALSE — it holds only when the leg
+   opposes the side's net, and nothing guarantees that. When a side settles
+   while its partner catches up, the leg shares the side's sign and every
+   aligned slice is pushed further from zero. What 2B guarantees is narrower
+   and still worth having: a slice OPPOSING its side takes nothing, and with
+   leg_coverage() = 1.0 no slice is moved further than it moved itself.
 
    A SECOND CTE because ClickHouse refuses a window function inside another
    window function (ILLEGAL_AGGREGATION): side_mov is itself a window, so the
@@ -107,6 +126,12 @@ side_slices_by_pair as (
 side_slices_aligned as (
     select
         *,
+        {# DECLARED DEFAULT (round 5, F6): when side_mov is exactly 0 there is
+           no direction in the data, and `>= 0` picks the positive slices. On a
+           side of +1000 / -1000 that hands the whole elimination to the
+           positive slice; swap them and it goes to the other. The data does not
+           decide it, this line does, and the project's standard is that an
+           unavoidable default is declared and visible. #}
         sum(greatest(slice_mov * if(side_mov >= 0, 1, -1), 0)) over (
             partition by consolidation_group, fiscal_year, fiscal_period,
                          entity, partner, account
@@ -211,20 +236,16 @@ ic_elims as (
         and sl.entity = e.debit_entity
         and sl.partner = e.credit_entity
         and sl.account = e.debit_account
+        {# ONE representation of the side per leg (1B): its own activity must
+           cover the whole leg before its slices divide it, else the single
+           whole-leg row. In the ON, so a side matching neither arm is a join
+           miss and the leg is still emitted (fail-safe) rather than dropped. #}
+        and (sl.is_flat = 0
+             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
+             or sl.is_flat = 1
+             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
 
     where e.elimination_view = 'group'
-      {# Exactly ONE representation of the side per leg (decision 1B): the
-         side's own activity must cover at least leg_coverage() of the leg
-         before its slices divide it, else the single whole-leg row is taken.
-         In the WHERE and not the ON because ClickHouse refuses a join
-         condition mixing a non-equality across both tables
-         (INVALID_JOIN_ON_EXPRESSION). A join miss fills defaults under
-         join_use_nulls=0, so matched = 0 keeps it. #}
-      and (sl.matched = 0
-           or (sl.is_flat = 0
-               and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination))
-           or (sl.is_flat = 1
-               and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination)))
 
     union all
 
@@ -248,20 +269,16 @@ ic_elims as (
         and sl.entity = e.credit_entity
         and sl.partner = e.debit_entity
         and sl.account = e.credit_account
+        {# ONE representation of the side per leg (1B): its own activity must
+           cover the whole leg before its slices divide it, else the single
+           whole-leg row. In the ON, so a side matching neither arm is a join
+           miss and the leg is still emitted (fail-safe) rather than dropped. #}
+        and (sl.is_flat = 0
+             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
+             or sl.is_flat = 1
+             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
 
     where e.elimination_view = 'group'
-      {# Exactly ONE representation of the side per leg (decision 1B): the
-         side's own activity must cover at least leg_coverage() of the leg
-         before its slices divide it, else the single whole-leg row is taken.
-         In the WHERE and not the ON because ClickHouse refuses a join
-         condition mixing a non-equality across both tables
-         (INVALID_JOIN_ON_EXPRESSION). A join miss fills defaults under
-         join_use_nulls=0, so matched = 0 keeps it. #}
-      and (sl.matched = 0
-           or (sl.is_flat = 0
-               and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination))
-           or (sl.is_flat = 1
-               and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination)))
 ),
 
 {# Layer 3: CTA entries #}

@@ -17,19 +17,29 @@
    uses it. Shares are abs(slice) / gross, which is bounded by construction, so
    there is no ratio to threshold. See gold_fully_consolidated_tb layer 2. #}
 
-{# konsolidat#245, decision 1B (Deepak Pai, 9 Oct 2026). How much of a leg a
-   side's own activity must cover before the leg is apportioned across that
-   side's slices.
+{# konsolidat#245, decision 1B (Deepak Pai, 9 Oct 2026), CONSTANT CORRECTED
+   after review round 5.
 
-   The gate has to relate to the LEG, not to the side alone. Four earlier
-   attempts put an absolute floor on the side (half a cent, then a ratio of the
-   side's own net to its own gross) and each one let a side with almost no
-   activity split a very large leg: measured, a side with 0.008 of movement
-   divided a -1,000,000 elimination into -500,000 per cost centre. A side
-   cannot explain a leg its own activity does not account for.
+   How much of a leg a side's own activity must cover before the leg is
+   apportioned across that side's slices.
 
-   At 0.5 a side must have moved at least half the leg before its slices are
-   used to divide it. Below that the whole leg goes on ONE blank slice — the
-   same answer this layer gives for a side it knows nothing about, and a
-   declared loss of detail rather than an invented split. #}
-{% macro leg_coverage() %}0.5{% endmacro %}
+   IT IS 1.0, and that is arithmetic rather than taste. A slice receives
+   |leg| x aligned_i / aligned_gross, so it receives no more than its own
+   aligned movement exactly when aligned_gross >= |leg|. At the 0.5 I first
+   wrote, the gate permitted |leg| <= 2 x aligned_gross — so a slice could take
+   TWICE what it booked, and round 5 measured a cost centre that had ever
+   booked +100 ending at -100 on an intercompany receivable, with the account
+   total exactly right. That is the fourth time a guard on this layer BOUNDED
+   magnification instead of removing it (100000x, then 50.5x, then 2x).
+
+   1.0 is also what the next sentence always implied: a side cannot explain a
+   leg its own activity does not account for. The 0.5 contradicted it, which is
+   the same comment-versus-code mismatch round 3 found.
+
+   Below the bound the whole leg goes on ONE blank slice — the same answer this
+   layer gives for a side it knows nothing about, and a declared loss of detail
+   rather than an invented split.
+
+   assert_ic_slice_not_moved_past_its_own encodes the invariant directly, and
+   is the only assertion in this layer that is not satisfied by construction. #}
+{% macro leg_coverage() %}1.0{% endmacro %}
