@@ -89,64 +89,65 @@ side_slices_by_pair as (
         sum(sum(mov_group)) over (
             partition by consolidation_group, fiscal_year, fiscal_period,
                          entity, partner, account
-        ) as side_mov,
-        {# the side's GROSS: the sum of each slice's magnitude. This is what
-           layer 2 weights by, so a share is bounded by 1 whatever the slices
-           do (re-review round 3, F1). #}
-        sum(abs(sum(mov_group))) over (
-            partition by consolidation_group, fiscal_year, fiscal_period,
-                         entity, partner, account
-        ) as side_gross
+        ) as side_mov
     from {{ ref('gold_ic_side_slices') }}
     group by consolidation_group, fiscal_year, fiscal_period, entity, partner, account
              {{ dim_group_by(leading=true) }}
 ),
 
-{# A side that booked magnitudes to weight by: one row per slice, shares in [0,1] summing to 1. #}
-side_shares_apportionable as (
+{# ALIGNED gross, in its own pass: only the slices pointing the same way as the
+   side's net (decision 2B). A slice holding an opposite-signed balance
+   contributes nothing to the base and takes no share, so no slice is ever
+   moved away from zero. Magnitude weighting, which this replaces, was bounded
+   but gave a credit slice a credit elimination.
+
+   A SECOND CTE because ClickHouse refuses a window function inside another
+   window function (ILLEGAL_AGGREGATION): side_mov is itself a window, so the
+   sign it implies cannot be read in the same select. #}
+side_slices_aligned as (
+    select
+        *,
+        sum(greatest(slice_mov * if(side_mov >= 0, 1, -1), 0)) over (
+            partition by consolidation_group, fiscal_year, fiscal_period,
+                         entity, partner, account
+        ) as aligned_gross
+    from side_slices_by_pair
+),
+
+side_shares_sliced as (
     select
         consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
         {{ dim_select(trailing=true) }}
-        {# WEIGHTED BY MAGNITUDE, not by net (re-review round 3, F1).
-
-           slice_mov / side_mov was the wrong ratio. A side whose slices offset
-           has a small net and a large gross, so a share could be enormous: the
-           first version was unbounded (shares of 100000), and bounding the NET
-           relative to the gross only capped it at 50.5x — a -1000 leg still
-           became -50,500 and +49,500, with the total exact so nothing saw it.
-
-           abs(slice_mov) / side_gross cannot do that. Shares are in [0, 1] and
-           sum to 1, so no slice is ever moved further than the leg itself and
-           no slice takes the opposite sign to it. For a side whose slices all
-           share a sign — the ordinary case — this is IDENTICAL to the signed
-           ratio, so only the offsetting case changes, which is the case that
-           was wrong. #}
-        abs(slice_mov) / side_gross as share,
+        greatest(slice_mov * if(side_mov >= 0, 1, -1), 0)
+            / nullIf(aligned_gross, 0) as share,
+        aligned_gross,
+        toUInt8(0) as is_flat,
         toUInt8(1) as matched
-    from side_slices_by_pair
-    {# the side booked something to weight by. No ratio threshold any more:
-       magnitude weighting is bounded for every side, so there is nothing to
-       guard against. #}
-    where side_gross >= {{ materiality_floor() }}
+    from side_slices_aligned
+    where aligned_gross > 0
 ),
 
-side_shares_flat as (
-    {# A side that booked essentially nothing: no magnitudes to weight by, so
-       ONE blank-slice row carrying the whole leg — the same answer this layer
-       gives for a side it knows nothing about. #}
+{# And ONE row per side carrying the whole leg, used when the side's activity
+   does not cover enough of the leg to divide it (1B), or when there is no
+   aligned activity at all. #}
+side_shares_whole as (
     select distinct
         consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
         {{ dim_empty_strings(trailing=true) }}
         toFloat64(1) as share,
+        aligned_gross,
+        toUInt8(1) as is_flat,
         toUInt8(1) as matched
-    from side_slices_by_pair
-    where side_gross < {{ materiality_floor() }}
+    from side_slices_aligned
 ),
 
+{# Both representations of every side. Layer 2 picks exactly one per leg, and
+   it needs the leg's size to do it, which is why the choice is made at the
+   join and not here. #}
 side_slice_shares as (
-    select * from side_shares_apportionable
+    select * from side_shares_sliced
     union all
-    select * from side_shares_flat
+    select * from side_shares_whole
 ),
 
 ic_elims as (
@@ -210,7 +211,20 @@ ic_elims as (
         and sl.entity = e.debit_entity
         and sl.partner = e.credit_entity
         and sl.account = e.debit_account
+
     where e.elimination_view = 'group'
+      {# Exactly ONE representation of the side per leg (decision 1B): the
+         side's own activity must cover at least leg_coverage() of the leg
+         before its slices divide it, else the single whole-leg row is taken.
+         In the WHERE and not the ON because ClickHouse refuses a join
+         condition mixing a non-equality across both tables
+         (INVALID_JOIN_ON_EXPRESSION). A join miss fills defaults under
+         join_use_nulls=0, so matched = 0 keeps it. #}
+      and (sl.matched = 0
+           or (sl.is_flat = 0
+               and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination))
+           or (sl.is_flat = 1
+               and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination)))
 
     union all
 
@@ -234,7 +248,20 @@ ic_elims as (
         and sl.entity = e.credit_entity
         and sl.partner = e.debit_entity
         and sl.account = e.credit_account
+
     where e.elimination_view = 'group'
+      {# Exactly ONE representation of the side per leg (decision 1B): the
+         side's own activity must cover at least leg_coverage() of the leg
+         before its slices divide it, else the single whole-leg row is taken.
+         In the WHERE and not the ON because ClickHouse refuses a join
+         condition mixing a non-equality across both tables
+         (INVALID_JOIN_ON_EXPRESSION). A join miss fills defaults under
+         join_use_nulls=0, so matched = 0 keeps it. #}
+      and (sl.matched = 0
+           or (sl.is_flat = 0
+               and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination))
+           or (sl.is_flat = 1
+               and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination)))
 ),
 
 {# Layer 3: CTA entries #}
