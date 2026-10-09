@@ -218,6 +218,8 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_eliminations:
         +tags: ['gold', 'domain:consolidation']
+      gold_ic_side_slices:
+        +tags: ['gold', 'domain:consolidation']
       gold_ic_reconciliation:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_unmatched:

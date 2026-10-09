@@ -170,3 +170,54 @@
     {%- endfor %}
     {{- ',' if trailing and dimensions | length > 0 }}
 {% endmacro %}
+
+{# konsolidat#245 option D: a layer that knows SOME of the declared dimensions.
+
+   The consolidated TB's grain is every declared dimension, but a layer's source
+   carries only the subset it knows: the journal's staging table has a column
+   per Dimension ticked in_journal, the eliminations inherit whatever the
+   reconciliation carries. So each layer emits the real column where it has one
+   and '' where it has none — '' meaning "this layer cannot know", which is the
+   honest value and the one the deal journals keep by decision.
+
+   `available` is a list of dimension dicts (as var('dimensions') holds them),
+   normally derived from adapter.get_columns_in_relation on the source so dbt
+   never names a column a site has not declared.
+
+   Every column is QUALIFIED and ALIASED. gold_consolidation_adjustments'
+   header explains why: with the analyzer on and prefer_column_name_to_alias=0,
+   an unqualified name binds to the output alias, which is how #304 fault 1
+   silently generated no reversals at all. #}
+{% macro dim_select_or_blank(prefix='', available=none, trailing=false, leading=false) %}
+    {%- set dimensions = var('dimensions') %}
+    {%- set have = (available if available is not none else []) | map(attribute='name') | list %}
+    {{- ',' if leading and dimensions | length > 0 }}
+    {% for d in dimensions %}
+    {%- if d.name in have %}
+    {{ prefix }}{{ d.name }} as {{ d.name }}{{ ',' if not loop.last }}
+    {%- else %}
+    '' as {{ d.name }}{{ ',' if not loop.last }}
+    {%- endif %}
+    {%- endfor %}
+    {{- ',' if trailing and dimensions | length > 0 }}
+{% endmacro %}
+
+{# The declared dimensions a relation actually has a column for (konsolidat#245).
+   The konsol side creates a column only for a declared dimension, so the
+   intersection IS the declared subset for that table — no extra dbt var, and it
+   self-corrects when a site declares one more. Same technique as
+   bronze_trial_balance_submissions' raw_columns guard. #}
+{% macro dims_present_in(relation) %}
+    {#- PR #260 review F6: guarded with `if execute`, the precedent
+        gold_ic_reconciliation:88-96 sets. At parse time the adapter returns an
+        empty list, which would silently mean "this table has no dimension
+        columns" and emit '' for every one of them. Outside execution the
+        declared set is returned unfiltered, so parse-time SQL names the
+        columns and only a real run narrows them to what the table has. -#}
+    {%- if execute -%}
+        {%- set present = adapter.get_columns_in_relation(relation) | map(attribute='name') | list -%}
+        {{- return(var('dimensions') | selectattr('name', 'in', present) | list) -}}
+    {%- else -%}
+        {{- return(var('dimensions')) -}}
+    {%- endif -%}
+{% endmacro %}
