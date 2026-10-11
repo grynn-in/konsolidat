@@ -3,7 +3,7 @@
 -- Must-flag fixture for assert_deal_rate_resolved (konsol#204, row M2b): a submitted 80% deal that measures NCI
 -- at 'full' declares its nci_fair_value in the header's consideration_currency, which the group has no governed
 -- Closing rate for, while every consideration line is in the group currency.
--- Gate: `+gold_business_combination_journal assert_deal_rate_resolved` must show `FAIL 1 assert_deal_rate_resolved`
+-- In the gate, `+gold_business_combination_journal assert_deal_rate_resolved` must show `FAIL 1 assert_deal_rate_resolved`
 -- (ZZX -> USD, FY2026 P3, kind business_combination). Predicted side effects: `FAIL 1
 -- assert_acquisition_accounts_declared` / `Got 1 result` (the J12 share refusal of every deal below 100%, which
 -- stays: konsolidat#204) and, because that guard reads only the sources, the journal SKIPs in this gate.

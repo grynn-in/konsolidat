@@ -1,8 +1,8 @@
 -- gate: build +assert_tb_movements_difference_within_dimension
 -- konsolidat#266: renamed from .must_flag. This was the RED fixture of konsol#255 (test first);
 -- the model was fixed in 7f79109, and since then the rows build correctly and the test PASSES on
--- them, which is what the gate now holds it to. It no longer proves the test CAN fail: that
--- was measured once, at the red commit, and no standing must_flag fixture repeats it.
+-- them, which is what the gate now holds it to. That the test CAN fail is
+-- held by assert_tb_movements_difference_within_dimension.seeded.must_flag.sql, which seeds the model's output.
 --
 -- konsol#255 row 7a-2: a trial balance on a DIFFERENCING basis whose account is
 -- split across two dimension values.

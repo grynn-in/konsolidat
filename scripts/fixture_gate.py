@@ -37,16 +37,21 @@ What a fixture declares. Optional `-- gate:` lines, anywhere in the file:
 
     -- gate: build <dbt selector ...>   run `dbt build --select <selector>`
                                         (default: `dbt test --select <tests>`)
-    -- gate: expect <test> pass|flag [N]  judge this test (repeatable); N is
-                                        the exact result count when flagged
+    -- gate: expect <test> pass          judge this test (repeatable)
+    -- gate: expect <test> flag <N>      it must FAIL or WARN with exactly N
+                                        results (the count is required)
     -- gate: expect <model> built       the model must build (a fixture whose
                                         rule is the model's own guard)
     -- gate: refuse <model> <text>      the build must ERROR on <model> with
                                         <text> in the log (a pre_hook guard)
 
-With no `expect`, the test is the file name up to its first dot, and the
-expectation is `flag` for `.must_flag.` and `pass` otherwise. A plain fixture
-that declares `flag` is refused: the file name is the contract. In build mode
+With no `expect`, the test is the file name up to its first dot and it must
+pass; a `.must_flag.` fixture always declares `expect <test> flag <N>`. A plain
+fixture that declares `flag` is refused: the file name is the contract. So is a
+line that looks like a directive and does not parse (`-- gate build`,
+`-- Gate: build`). A fixture fails when dbt exits other than 0 or 1 (the
+invocation failed and nothing ran), or when any table it inserts into ends
+with 0 rows. In build mode
 an ERROR on any model fails the fixture unless `refuse` names it.
 
 Usage:
@@ -85,7 +90,14 @@ PREFIX = "zzg"
 SCRATCH_DBS = [PREFIX] + [f"{PREFIX}_{layer}" for layer in LAYERS]
 TABLE_RE = re.compile(r"\bepm_(%s)\.([A-Za-z0-9_]+)" % "|".join(LAYERS))
 INSERT_RE = re.compile(r"^\s*INSERT\s+INTO\s+(zzg_\w+\.\w+)", re.I)
-DIRECTIVE_RE = re.compile(r"^--\s*gate:\s*(\w+)\s*(.*?)\s*$", re.M)
+# Exactly `-- gate: <key> <args>`. Any other line that starts like one (`-- gate build`,
+# `-- Gate: build`, `--gate:build`) is refused, never ignored: an ignored `build` line
+# falls back to test mode and a plain fixture then passes on an empty table.
+DIRECTIVE_RE = re.compile(r"^-- gate: (build|expect|refuse) (\S.*?)\s*$")
+DIRECTIVE_LIKE_RE = re.compile(r"^--\s*gate\b", re.I)
+#: dbt exits 1 when a node fails and 2 when the invocation itself is wrong (a bad
+#: selector or flag). Only 0 and 1 mean the selected nodes ran.
+DBT_RAN = (0, 1)
 FLAGGED = ("fail", "warn")
 LEAK_RE = re.compile(r"\bepm_(%s)\b|['\"]epm_?['\"]" % "|".join(LAYERS))
 
@@ -100,7 +112,15 @@ def spec(path):
     must_flag = ".must_flag." in name
     s = {"name": name, "text": text, "mode": "test", "selector": None,
          "expect": [], "refuse": None, "must_flag": must_flag}
-    for key, arg in DIRECTIVE_RE.findall(text):
+    directives = []
+    for line in text.splitlines():
+        if DIRECTIVE_LIKE_RE.match(line):
+            m = DIRECTIVE_RE.match(line)
+            if not m:
+                raise SystemExit(f"{name}: malformed gate directive {line!r}; "
+                                 "write `-- gate: build|expect|refuse <args>`")
+            directives.append(m.groups())
+    for key, arg in directives:
         if key == "build":
             s["mode"], s["selector"] = "build", shlex.split(arg)
         elif key == "expect":
@@ -111,8 +131,6 @@ def spec(path):
         elif key == "refuse":
             model, _, needle = arg.partition(" ")
             s["refuse"] = (model, needle.strip().strip('"'))
-        else:
-            raise SystemExit(f"{name}: unknown directive `gate: {key}`")
     if not s["expect"] and not s["refuse"]:
         test = name.split(".")[0]
         s["expect"] = [(test, "flag" if must_flag else "pass", None)]
@@ -128,6 +146,10 @@ def spec(path):
         raise SystemExit(f"{name}: a plain fixture must PASS; rename it .must_flag. to expect {flags or 'a refusal'}")
     if must_flag and not (flags or s["refuse"]):
         raise SystemExit(f"{name}: a .must_flag. fixture expects nothing to flag")
+    # A flag without a count passes on any non-zero result, including the wrong rows.
+    uncounted = [t for t, v, n in s["expect"] if v == "flag" and n is None]
+    if uncounted:
+        raise SystemExit(f"{name}: say how many rows {uncounted} must flag: `-- gate: expect <test> flag <N>`")
     return s
 
 
@@ -216,9 +238,20 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
         m = INSERT_RE.match(stmt)
         if m and m.group(1) not in loaded:
             loaded.append(m.group(1))
+    empty = []
     for t in loaded:
         n = client.command(f"select count() from {t}")
         print(f"    fixture {t}: {n} rows", flush=True)
+        if not n:
+            empty.append(t)
+    # A fixture that loads nothing proves nothing: a plain one passes on an empty
+    # table, and a test that cannot fail passes with it.
+    if not loaded or empty:
+        problem = (f"loaded 0 rows into {', '.join(empty)}" if empty
+                   else "has no INSERT: it loads no rows")
+        reset_scratch(client, create=False)
+        print(f"    PROBLEM: {problem}", flush=True)
+        return "failed", [problem]
 
     if s["mode"] == "build":
         # cautious: a test runs only when ALL its parents are selected, so the
@@ -228,12 +261,19 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
     else:
         args = ["test", "--select"] + tests
     log = os.path.join(log_dir, s["name"] + ".log")
+    # The previous fixture's results must not be read as this one's: dbt leaves
+    # run_results.json alone when the invocation fails before running anything.
+    stale = os.path.join(project, "target", "run_results.json")
+    if os.path.exists(stale):
+        os.remove(stale)
     code, out = run_dbt(dbt, project, args, log)
-    results = load_results(project)
+    results = load_results(project) if code in DBT_RAN else {}
     for line in out.splitlines():
         if re.search(r"\b(PASS|FAIL|WARN|ERROR|SKIP)\b.*\b(assert_|gold_|silver_|bronze_)|Got \d+ result", line):
             print("    " + line.strip(), flush=True)
-    problems = judge(s, results, out)
+    problems = judge(s, results, out) if code in DBT_RAN else [
+        f"dbt exited {code}: the invocation failed before anything ran (bad selector or flag?); "
+        f"see {log}"]
     reset_scratch(client, create=False)
     for p in problems:
         print(f"    PROBLEM: {p}", flush=True)

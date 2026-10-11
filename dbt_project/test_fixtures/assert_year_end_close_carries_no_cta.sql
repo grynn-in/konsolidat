@@ -2,8 +2,7 @@
 -- assert_year_end_close_carries_no_cta (konsolidat#259-1): must PASS once the close is translated
 -- as a close. Seeds silver_gl_entries (with the 'Year-end close' posting layer), rates, calendar
 -- and ownership, so the gate builds the partner TB, the consolidation and the CTA itself:
---   gate-x.sh <wt> dbt_project/test_fixtures/assert_year_end_close_carries_no_cta.sql \
---     "gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta"
+--   selector "gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta" (the `-- gate: build` line at the top)
 --
 -- Two EUR entities in a USD group (ZZG), 100% owned. Calendar: FY2025 P11, P12 (Regular),
 -- P13 (Closing, so it translates at P12's rates), FY2026 P1.

@@ -19,7 +19,7 @@ the test must PASS on; `<test_name>.must_flag.sql` holds rows the test must stil
   DDL only when it exists live, and konsol's tables are not there until konsol deploys them. Use the
   exact bodies from `clickhouse/init-db.sql` (pinned by `tests/test_deal_tables_ddl.py`); the gate
   rewrites `epm_` to `zzg_`. The deal rows themselves follow the `ZZ` rule (`ZZG`, `ZZS`,
-  `BC-ZZG-ZZS-<date>`). `deal_tables_empty.sql` holds the six CREATEs with no rows, for `build-live`.
+  `BC-ZZG-ZZS-<date>`).
 - dbt ignores this folder: `test-paths` in `dbt_project.yml` is `["tests"]`, so nothing in
   here runs as a test. The fixtures are only read by the gate script below.
 
@@ -28,13 +28,14 @@ the test must PASS on; `<test_name>.must_flag.sql` holds rows the test must stil
 The gate reads optional `-- gate:` lines anywhere in the file:
 
     -- gate: build <dbt selector ...>      dbt build --indirect-selection cautious --select <selector>
-    -- gate: expect <test> pass|flag [N]   judge this test; N is the exact result count when it flags
+    -- gate: expect <test> pass            judge this test (repeatable)
+    -- gate: expect <test> flag <N>        it must FAIL or WARN with exactly N results
     -- gate: expect <model> built          the model must build (the rule is the model's own guard)
     -- gate: refuse <model> <text>         the build must ERROR on <model>, with <text> in the log
 
 With no `build` line the gate runs `dbt test --select <test>` on the seeded rows. With no
-`expect` line the test is the file name up to its first dot, and it must flag for
-`.must_flag.` and pass otherwise. The file name is the contract: a plain fixture that
+`expect` line the test is the file name up to its first dot, and it must pass; a
+`.must_flag.` fixture always declares `expect <test> flag <N>`. The file name is the contract: a plain fixture that
 expects a flag, or a `.must_flag.` fixture that expects none, is refused before anything
 runs. In build mode an ERROR on any model or test fails the fixture unless `refuse` names it.
 Other tests a build selects are printed, not judged: several deal fixtures document an
@@ -64,6 +65,15 @@ project at the real dimensions. The model tables a fixture seeds (`gold_trial_ba
 once dbt builds them, with the columns the model's SQL gives them.
 
 The earlier `build-live` mode (clone every live source with its rows, then build) is not in
-the committed script: it read live rows, which CI cannot have. `deal_tables_empty.sql`
-now runs as an ordinary build fixture: `+gold_fully_consolidated_tb` must build on the six
-empty deal tables and `assert_end_to_end_bs_balances` must pass.
+the committed script: it read live rows, which CI cannot have. `deal_tables_empty.sql`, which
+existed only for it, is deleted: `--prepare-ci` already builds `gold_fully_consolidated_tb` on
+empty deal tables, and the full-build job runs `assert_end_to_end_bs_balances` over them.
+
+## What fails a fixture
+
+- dbt exits with anything but 0 or 1 (a bad selector or flag: nothing ran). The previous
+  fixture's `run_results.json` is deleted before each run, so it can never be read instead.
+- A line that starts like a directive (`-- gate build`, `-- Gate: build`) but is not exactly
+  `-- gate: build|expect|refuse <args>`. It is refused before anything runs, never ignored.
+- Any table the fixture inserts into holds 0 rows afterwards, or the fixture has no INSERT.
+- A `flag` expectation with no count: every must_flag fixture names exactly how many rows.

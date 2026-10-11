@@ -211,6 +211,13 @@ jobs:
     # DDL. A throwaway has no live stack, so --prepare-ci builds one first:
     # clickhouse/*.sql for the sources, then `dbt run` for the model tables,
     # which those files do not declare (scripts/fixture_gate.py says why).
+    # That prepare step is a full `dbt run`: a model that does not build
+    # stops this job there, before any fixture runs, and the full-build job
+    # names the model.
+    #
+    # Memory: gold_business_combination_journal uses ~1.3 GiB per query even
+    # on a one-deal fixture (konsolidat#269). On a 3 GB ClickHouse seven deal
+    # fixtures failed MEMORY_LIMIT_EXCEEDED; a hosted runner has room.
     services:
       clickhouse:
         # Pinned to the running stack's major version (24.8).

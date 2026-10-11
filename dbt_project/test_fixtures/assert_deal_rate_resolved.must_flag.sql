@@ -2,7 +2,7 @@
 -- gate: expect assert_deal_rate_resolved flag 1
 -- Must-flag fixture for assert_deal_rate_resolved (konsolidat#198 row J9; PR #203 review 3 + 4): a submitted
 -- deal whose consideration is stated in a currency the group has no governed Closing rate for.
--- Gate: `+gold_business_disposal_journal assert_deal_rate_resolved assert_acquisition_journal_balances` must
+-- In the gate, `+gold_business_disposal_journal assert_deal_rate_resolved assert_acquisition_journal_balances` must
 -- show `FAIL 1 assert_deal_rate_resolved` / `Got 1 result` (GBP -> USD, FY2026 P3, kind business_combination),
 -- and gold_business_combination_journal must hold NO row for the deal: the journal INNER JOINs every rate it
 -- needs, so an unrated deal posts nothing. The guard reads only sources, so dbt runs it first; its FAIL SKIPs

@@ -2,8 +2,7 @@
 -- assert_bs_translated_at_closing_rate (konsolidat#257): must PASS once the model retranslates.
 --
 -- Seeds gold_consolidated_trial_balance's direct inputs, so the gate builds the model itself:
---   gate-v.sh <wt> dbt_project/test_fixtures/assert_bs_translated_at_closing_rate.sql \
---     "gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate"
+--   selector "gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate" (the `-- gate: build` line at the top)
 --
 -- One EUR entity (ZZE1) in a USD group (ZZG), 100% owned, FY2026 P1 and P2.
 -- Governed EUR->USD: P1 closing 1.10 / average 1.05; P2 closing 1.20 / average 1.15.
