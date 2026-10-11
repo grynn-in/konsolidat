@@ -1,3 +1,4 @@
+-- gate: build +assert_historical_is_equity_only
 -- assert_historical_is_equity_only: must FLAG (konsolidat#92 finding 4).
 -- konsol translates and does not remeasure, so fx_method = 'historical' is an Equity-only
 -- declaration (konsol#239 refuses anything else at publish). A stack whose chart predates

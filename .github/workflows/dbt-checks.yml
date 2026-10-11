@@ -18,6 +18,7 @@ on:
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
+      - 'scripts/fixture_gate.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
       - 'scripts/report_subsections.py'
@@ -40,6 +41,7 @@ on:
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
+      - 'scripts/fixture_gate.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
       - 'scripts/report_subsections.py'
@@ -192,6 +194,52 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: full-build-logs
+          path: ci-logs/
+          if-no-files-found: ignore
+
+  fixture-gate:
+    name: test fixtures make their tests pass or flag
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # konsolidat#266 (Deepak Pai, 11 Oct 2026, option G-1). Every fixture in
+    # dbt_project/test_fixtures runs: a `.must_flag.` fixture must make its
+    # test FAIL or WARN, any other must make it PASS. A test that cannot fail
+    # passes both, and this is the job that notices. konsolidat#249 and #238
+    # were tests that could not fail; #261 added fixtures nothing ran.
+    #
+    # The fixtures are cloned into zzg_* scratch databases with the epm_*
+    # DDL. A throwaway has no live stack, so --prepare-ci builds one first:
+    # clickhouse/*.sql for the sources, then `dbt run` for the model tables,
+    # which those files do not declare (scripts/fixture_gate.py says why).
+    services:
+      clickhouse:
+        # Pinned to the running stack's major version (24.8).
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_PASSWORD: ci
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8123/ping"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: '8123'
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
+      - name: every fixture, against the DDL of a fresh build
+        run: python scripts/fixture_gate.py --all --prepare-ci --log-dir ci-logs/fixtures
+      - name: upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-gate-logs
           path: ci-logs/
           if-no-files-found: ignore
 

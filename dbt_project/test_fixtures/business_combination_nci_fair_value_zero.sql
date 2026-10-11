@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal, konsol#204 (row M4; PR #205 review): an 80% deal that measures NCI at 'full' but has NOT
 -- declared its nci_fair_value (0) must post NOTHING, never an NCI of 0 with understated goodwill.
 -- Gate: `+gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared`

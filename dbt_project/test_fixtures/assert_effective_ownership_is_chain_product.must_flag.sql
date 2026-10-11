@@ -1,3 +1,4 @@
+-- gate: expect assert_effective_ownership_is_chain_product flag 1
 -- assert_effective_ownership_is_chain_product: must FAIL with exactly 1 result (konsolidat#249).
 --
 -- ZZE2 is held 50% by ZZE1, which the group holds 80%: the chain product is 0.40. The

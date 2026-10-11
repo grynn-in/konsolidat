@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_bargain_purchase_refused
+-- gate: expect assert_bargain_purchase_refused flag 1
 -- Acquisition journal, a BARGAIN PURCHASE under `bargain_purchase = 'Refuse'` (konsolidat#198 row J4, design §1a/§4 line 3b):
 -- `+gold_business_combination_journal assert_bargain_purchase_refused` must BUILD and the test must FAIL with
 -- `Got 1 result`: the journal posts NOTHING for the deal and the test names it (deal, group, bargain amount).

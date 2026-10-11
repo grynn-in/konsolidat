@@ -1,3 +1,4 @@
+-- gate: expect assert_all_layers_present flag 1
 -- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG entity (konsolidat#238-4).
 -- gold_consolidated_trial_balance has rows for ZZG; the fully consolidated TB carries its cta layer
 -- but lost the entity layer.

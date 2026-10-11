@@ -1,3 +1,6 @@
+-- gate: build gold_consolidated_trial_balance assert_equity_never_revalued assert_bs_translated_at_closing_rate
+-- gate: expect assert_equity_never_revalued pass
+-- gate: expect assert_bs_translated_at_closing_rate pass
 -- assert_equity_never_revalued (konsolidat#257 Q2): must PASS on the #257 model.
 --
 -- Seeds gold_consolidated_trial_balance's direct inputs, so the gate builds the model itself:

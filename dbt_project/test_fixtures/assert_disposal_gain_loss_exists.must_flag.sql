@@ -1,3 +1,6 @@
+-- gate: build +gold_business_disposal_journal assert_disposal_gain_loss_exists assert_cta_recycled_on_disposal --exclude assert_disposal_accounts_declared
+-- gate: expect assert_disposal_gain_loss_exists flag 1
+-- gate: expect assert_cta_recycled_on_disposal pass
 -- Must-flag fixture for assert_disposal_gain_loss_exists (konsolidat#198 row J6b, design §5/§7):
 -- `+gold_business_disposal_journal assert_disposal_gain_loss_exists assert_cta_recycled_on_disposal
 --  --exclude assert_disposal_accounts_declared` must

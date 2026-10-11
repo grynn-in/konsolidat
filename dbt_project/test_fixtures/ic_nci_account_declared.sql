@@ -1,3 +1,5 @@
+-- gate: build +gold_ic_eliminations assert_ic_nci_account_declared
+-- gate: expect assert_ic_nci_account_declared pass
 -- konsolidat#208: the intercompany NCI line posts to the group's declared NCI account.
 -- `+gold_ic_eliminations assert_ic_nci_account_declared` must BUILD and PASS on these rows, and every NCI line in
 -- zzg_gold.gold_ic_eliminations must be on ZZ3400, the account the ZZG root row declares (nci_account), never on

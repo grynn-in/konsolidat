@@ -1,3 +1,4 @@
+-- gate: build +assert_year_end_close_declared
 -- assert_year_end_close_declared: must PASS (konsolidat#199, PR 200 re-review finding 1).
 -- A period-end-balance entity with two fiscal years of BALANCE-SHEET-ONLY rows, no Closing period in
 -- the calendar and no retained-earnings flag on the chart. Nothing sits in a P&L account at the end of

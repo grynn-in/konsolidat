@@ -1,3 +1,5 @@
+-- gate: build +gold_business_disposal_journal assert_deal_rate_resolved assert_acquisition_journal_balances
+-- gate: expect assert_deal_rate_resolved flag 1
 -- Must-flag fixture for assert_deal_rate_resolved (konsolidat#198 row J9; PR #203 review 3 + 4): a submitted
 -- deal whose consideration is stated in a currency the group has no governed Closing rate for.
 -- Gate: `+gold_business_disposal_journal assert_deal_rate_resolved assert_acquisition_journal_balances` must

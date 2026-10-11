@@ -1,3 +1,4 @@
+-- gate: expect assert_variance_node_single_budget flag 3
 -- assert_variance_node_single_budget: must FAIL with exactly 3 results (konsolidat#249).
 --
 -- gold_variance_analysis has three leaf rows under cost-centre ZZCC1 of hierarchy ZZH.

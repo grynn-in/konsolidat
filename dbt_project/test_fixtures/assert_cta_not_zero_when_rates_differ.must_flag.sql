@@ -1,4 +1,6 @@
--- Fixture for assert_cta_not_zero_when_rates_differ: the test must FLAG exactly one row.
+-- gate: expect assert_cta_not_zero_when_rates_differ flag 2
+-- Fixture for assert_cta_not_zero_when_rates_differ: the test must FLAG exactly two rows, ZZPL and ZZHE
+-- (this header said one until konsolidat#266 ran it in CI; ZZHE was added below it).
 --
 -- ZZPL: balance-sheet row at closing (1.2) plus a P&L row at average (1.1), so two
 --       translation rates were used and CTA cannot be 0 -- yet gold_fx_revaluation says 0.

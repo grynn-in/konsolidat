@@ -1,3 +1,5 @@
+-- gate: build +gold_fully_consolidated_tb assert_journal_grain_unique
+-- gate: expect assert_journal_grain_unique pass
 -- konsol#305 V03 (P6): layer 4 (topside adjustments) of gold_fully_consolidated_tb must SUM to
 -- the grain `+gold_fully_consolidated_tb assert_journal_grain_unique` checks, like layer 6
 -- (konsolidat#198 J11/J13). business_combination_history.sql is included verbatim below so the

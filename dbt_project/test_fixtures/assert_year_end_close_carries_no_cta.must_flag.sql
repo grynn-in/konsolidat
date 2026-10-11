@@ -1,3 +1,4 @@
+-- gate: expect assert_year_end_close_carries_no_cta flag 2
 -- assert_year_end_close_carries_no_cta (konsolidat#259): must FLAG (warn), before and after the fix.
 --
 -- Seeds gold_consolidated_trial_balance and gold_fx_revaluation as the pre-#259 translation

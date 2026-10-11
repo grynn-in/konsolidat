@@ -1,3 +1,4 @@
+-- gate: build gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate
 -- assert_bs_translated_at_closing_rate (konsolidat#257): must PASS once the model retranslates.
 --
 -- Seeds gold_consolidated_trial_balance's direct inputs, so the gate builds the model itself:

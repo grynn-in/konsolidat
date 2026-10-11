@@ -1,3 +1,4 @@
+-- gate: expect assert_all_layers_present flag 1
 -- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG topside (konsolidat#238-4).
 -- gold_consolidation_adjustments has an Approved topside line for ZZG; the fully consolidated TB
 -- has no topside row.

@@ -23,21 +23,47 @@ the test must PASS on; `<test_name>.must_flag.sql` holds rows the test must stil
 - dbt ignores this folder: `test-paths` in `dbt_project.yml` is `["tests"]`, so nothing in
   here runs as a test. The fixtures are only read by the gate script below.
 
-## Running one
+## What a fixture declares
 
-The gate script lives outside the repository for now (a maintainer's scratch checkout). It takes
-three arguments; it prints `fixture <table>: N rows` per table, then dbt's `PASS` / `FAIL` + `Got N results` lines:
+The gate reads optional `-- gate:` lines anywhere in the file:
 
-    gate-dbt-test.sh <worktree> <test_name> <fixture.sql>
+    -- gate: build <dbt selector ...>      dbt build --indirect-selection cautious --select <selector>
+    -- gate: expect <test> pass|flag [N]   judge this test; N is the exact result count when it flags
+    -- gate: expect <model> built          the model must build (the rule is the model's own guard)
+    -- gate: refuse <model> <text>         the build must ERROR on <model>, with <text> in the log
 
-It creates every table the fixture names in a scratch schema (`zzg_<layer>`) with the live table's
-DDL, loads the fixture, runs the one test and drops the schema; the live `epm_*` tables are never
-read or written. `fixture … 0 rows` means an INSERT did not run.
+With no `build` line the gate runs `dbt test --select <test>` on the seeded rows. With no
+`expect` line the test is the file name up to its first dot, and it must flag for
+`.must_flag.` and pass otherwise. The file name is the contract: a plain fixture that
+expects a flag, or a `.must_flag.` fixture that expects none, is refused before anything
+runs. In build mode an ERROR on any model or test fails the fixture unless `refuse` names it.
+Other tests a build selects are printed, not judged: several deal fixtures document an
+intended FAIL of a neighbouring guard.
 
-Two more modes take a fourth argument: `build` runs `dbt build --select "<selector>"` (models are
-built in `zzg_<layer>`; a test runs only when all its parents are selected), and `build-live` first
-clones every declared source table from live (schema and rows) into `zzg_*`, applies the fixture if
-one is given (`-` for none), then builds `+<selector>` the same way:
+## Running the gate
 
-    gate-dbt-test.sh <worktree> "<model> <test_name>" <fixture.sql> build
-    gate-dbt-test.sh <worktree> "<model>" - build-live
+`scripts/fixture_gate.py` (konsolidat#266; Deepak Pai, 11 Oct 2026, option G-1). CI runs every
+fixture in the `fixture-gate` job of `.github/workflows/dbt-checks.yml`:
+
+    python scripts/fixture_gate.py --all --prepare-ci        # CI, on a throwaway ClickHouse
+    python scripts/fixture_gate.py <fixture.sql> [...]       # some fixtures, any stack
+
+Per fixture it creates every table the file names (comments included) in scratch schemas
+(`zzg_<layer>`), every declared dbt source, and in test mode every relation the test reads,
+all empty and with the DDL of the matching `epm_*` table. It rewrites `epm_` to `zzg_`, loads
+the fixture, prints `fixture <table>: N rows` per table, runs dbt on a copy of the project
+whose schemas are rewritten the same way, judges `target/run_results.json` and drops the
+scratch schemas. `fixture … 0 rows` means an INSERT did not run. The `epm_*` tables are only
+read, for their DDL.
+
+Where the DDL comes from: on a live stack, its own tables. In CI there is no live stack, so
+`--prepare-ci` (which refuses unless `CI=true` or `--yes-destroy-this-warehouse`) first
+applies `clickhouse/init-db.sql` and `raw-schema.sql`, then runs `dbt run` for the whole
+project at the real dimensions. The model tables a fixture seeds (`gold_trial_balance`,
+`silver_entity_currencies`, ...) are declared nowhere in `clickhouse/*.sql`; they exist only
+once dbt builds them, with the columns the model's SQL gives them.
+
+The earlier `build-live` mode (clone every live source with its rows, then build) is not in
+the committed script: it read live rows, which CI cannot have. `deal_tables_empty.sql`
+now runs as an ordinary build fixture: `+gold_fully_consolidated_tb` must build on the six
+empty deal tables and `assert_end_to_end_bs_balances` must pass.

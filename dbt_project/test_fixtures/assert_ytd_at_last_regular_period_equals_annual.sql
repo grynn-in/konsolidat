@@ -1,3 +1,4 @@
+-- gate: build +assert_ytd_at_last_regular_period_equals_annual
 -- assert_ytd_at_last_regular_period_equals_annual (konsolidat#199 row D10): the test must PASS on these rows.
 --
 -- Rule under test: a fiscal year's "annual" total is the sum of its Regular periods' activity; the

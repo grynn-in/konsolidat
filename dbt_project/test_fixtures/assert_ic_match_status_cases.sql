@@ -1,3 +1,6 @@
+-- gate: build +assert_ic_match_status_cases +assert_ic_difference_cause
+-- gate: expect assert_ic_match_status_cases pass
+-- gate: expect assert_ic_difference_cause pass
 -- konsol#305-W3-5 (Deepak Pai, 3 Oct 2026, option C): how gold_ic_reconciliation judges each kind of pair.
 -- `+assert_ic_match_status_cases +assert_ic_difference_cause` must BUILD and PASS on these rows.
 --

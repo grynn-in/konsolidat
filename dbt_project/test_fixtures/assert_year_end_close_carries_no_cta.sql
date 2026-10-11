@@ -1,3 +1,4 @@
+-- gate: build gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta
 -- assert_year_end_close_carries_no_cta (konsolidat#259-1): must PASS once the close is translated
 -- as a close. Seeds silver_gl_entries (with the 'Year-end close' posting layer), rates, calendar
 -- and ownership, so the gate builds the partner TB, the consolidation and the CTA itself:

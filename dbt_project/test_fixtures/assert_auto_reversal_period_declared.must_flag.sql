@@ -1,3 +1,4 @@
+-- gate: build +assert_auto_reversal_period_declared
 -- V01 fixture (konsol#305-D2-11): tables epm_staging.consolidation_adjustments
 ALTER TABLE epm_staging.consolidation_adjustments ADD COLUMN IF NOT EXISTS reverse_fiscal_year UInt16 DEFAULT 0;
 ALTER TABLE epm_staging.consolidation_adjustments ADD COLUMN IF NOT EXISTS reverse_fiscal_period UInt8 DEFAULT 0;

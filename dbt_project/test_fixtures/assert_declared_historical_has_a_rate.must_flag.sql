@@ -1,3 +1,5 @@
+-- gate: build +assert_declared_historical_has_a_rate
+-- gate: expect assert_declared_historical_has_a_rate flag 1
 -- assert_declared_historical_has_a_rate: must FLAG exactly one (entity, account, period).
 -- konsolidat#218: the retained-earnings account DECLARES its translation method. A customer who
 -- declares fx_method = 'historical' is expected to supply Historical Equity Rates for it; when a

@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_deal_rate_resolved
+-- gate: expect assert_deal_rate_resolved flag 1
 -- Must-flag fixture for assert_deal_rate_resolved (konsol#204, row M2b): a submitted 80% deal that measures NCI
 -- at 'full' declares its nci_fair_value in the header's consideration_currency, which the group has no governed
 -- Closing rate for, while every consideration line is in the group currency.

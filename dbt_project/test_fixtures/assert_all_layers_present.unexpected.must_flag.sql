@@ -1,3 +1,4 @@
+-- gate: expect assert_all_layers_present flag 1
 -- assert_all_layers_present: must FAIL with exactly 1 result: unexpected_layer ZZG topside (konsolidat#238-4).
 -- The fully consolidated TB carries a topside layer for ZZG, but gold_consolidation_adjustments
 -- holds only a reclassification line: a topside layer with no source.

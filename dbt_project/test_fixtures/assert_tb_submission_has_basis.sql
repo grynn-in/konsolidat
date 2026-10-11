@@ -1,3 +1,4 @@
+-- gate: build +assert_tb_submission_has_basis
 -- assert_tb_submission_has_basis: must PASS.
 -- One ZZ entity, two claimed batches, both declaring 'Period-end balance' (konsolidat#199).
 -- The live control table may predate the column: add it to the scratch clone first.

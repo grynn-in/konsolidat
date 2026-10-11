@@ -1,3 +1,5 @@
+-- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget
+-- gate: expect assert_variance_node_single_budget pass
 -- konsolidat#206: gold_variance_at_hierarchy_node keeps each budget scenario apart. gold_variance_analysis has
 -- one set of rows per active budget-type scenario (budget_scenario_id), so a node model that groups without it
 -- counts the actuals once per budget scenario and adds the budgets together.

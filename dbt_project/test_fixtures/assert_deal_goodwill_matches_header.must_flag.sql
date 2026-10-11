@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_deal_goodwill_matches_header
+-- gate: expect assert_deal_goodwill_matches_header flag 1
 -- assert_deal_goodwill_matches_header (konsolidat#213 row D4): must FAIL with exactly 1 result.
 -- business_combination_100pct.sql with ONE figure moved: the ZZG deal's header `goodwill` reads 7,220
 -- where the journal posts 6,720, a 500 gap far above materiality_floor(). Nothing else about the rows

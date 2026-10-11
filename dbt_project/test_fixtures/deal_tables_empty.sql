@@ -1,3 +1,6 @@
+-- gate: build +gold_fully_consolidated_tb assert_end_to_end_bs_balances
+-- gate: expect gold_fully_consolidated_tb built
+-- gate: expect assert_end_to_end_bs_balances pass
 -- The six deal tables, EMPTY, for a build against a clone of the live stack (konsolidat#198 row J7):
 --   $S/gate-dbt-test.sh $WB gold_fully_consolidated_tb <this file> build-live
 -- The gate's build-live clones every declared source that exists live and skips those that do not

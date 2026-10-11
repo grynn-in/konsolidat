@@ -1,3 +1,5 @@
+-- gate: build +gold_business_disposal_journal assert_disposal_journal_balances
+-- gate: expect assert_disposal_journal_balances pass
 -- Disposal journal, the full-disposal case (konsolidat#198 row J6, design §5):
 -- `+gold_business_disposal_journal assert_disposal_journal_balances` must BUILD and PASS on these rows,
 -- and so must `+gold_fully_consolidated_tb assert_journal_grain_unique assert_disposal_journal_balances`

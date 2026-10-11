@@ -1,3 +1,5 @@
+-- gate: build +gold_variance_analysis +assert_variance_covers_budget_scenarios
+-- gate: expect assert_variance_covers_budget_scenarios pass
 -- konsolidat#206: variance compares actuals with every active budget-type scenario, chosen by its declared
 -- scenario_type (epm_gold.scenario_definitions), not by a scenario code.
 -- `+gold_variance_analysis assert_variance_covers_budget_scenarios` must BUILD and PASS on these rows.

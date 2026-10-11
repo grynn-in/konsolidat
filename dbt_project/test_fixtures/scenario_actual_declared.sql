@@ -1,3 +1,6 @@
+-- gate: build +gold_variance_analysis +gold_variance_quarterly +gold_variance_ytd assert_scenario_rows_declared assert_variance_covers_budget_scenarios
+-- gate: expect assert_scenario_rows_declared pass
+-- gate: expect assert_variance_covers_budget_scenarios pass
 -- konsolidat#206 (PR #211 review 2): the GL branch of gold_scenario_trial_balance is stamped with the site's
 -- declared actual scenario, not the literal 'ACTUAL'.
 -- `+gold_variance_analysis +gold_variance_quarterly +gold_variance_ytd assert_scenario_rows_declared

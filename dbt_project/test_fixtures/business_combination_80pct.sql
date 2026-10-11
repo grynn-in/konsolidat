@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal, the 80% case: NCI under PARTIAL and under FULL measurement (konsolidat#198 row J3, design §4 lines 3 and 5):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances --exclude assert_acquisition_accounts_declared`
 -- must BUILD and PASS on these rows. Since row J12 (PR #203 review 1 -> konsolidat#204) assert_acquisition_accounts_declared

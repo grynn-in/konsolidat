@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_accounts_declared
+-- gate: expect assert_acquisition_accounts_declared flag 2
 -- Must-flag fixture for assert_acquisition_accounts_declared, the full-method NCI fair value (konsol#204):
 -- `+gold_business_combination_journal assert_acquisition_accounts_declared` must BUILD and the test must
 -- FAIL with `Got 2 results` on these rows.

@@ -1,3 +1,5 @@
+-- gate: build +assert_equity_rate_coverage
+-- gate: expect assert_equity_rate_coverage flag 1
 -- Must-flag fixture for assert_equity_rate_coverage (konsolidat#232).
 --
 -- The check asks for a historical equity rate only where the model applies one:

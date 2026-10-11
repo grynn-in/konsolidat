@@ -1,3 +1,4 @@
+-- gate: expect assert_all_layers_present flag 1
 -- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG ic_elimination (konsolidat#238-4).
 -- gold_ic_eliminations has a group-view matched elimination for ZZG; the fully consolidated TB
 -- has entity and cta but no ic_elimination row.
