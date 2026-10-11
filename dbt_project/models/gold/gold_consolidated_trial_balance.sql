@@ -138,12 +138,12 @@ with entity_tb as (
        gold_trial_balance_by_partner. #}
     from {{ ref('gold_trial_balance_by_partner') }} as tb
     {# konsol#110: the currency comes from silver_entity_currencies — konsol's
-       Entity master first, the ERP's company master second. This used to join
+       Entity master, and since konsolidat#255 nothing else. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a
        connector-less entity's submitted trial balance reached gold_trial_balance
        and then vanished here with nothing failing.
 
-       Resolved currencies only. An entity with no currency on either side
+       Resolved currencies only. An entity with no Functional Currency
        would otherwise join with '', miss every rate key, and translate at the
        1.0 parity fallback — a JPY ledger landing as CHF, ~170x. Dropping it is
        the lesser wrong, and not a silent one: assert_every_tb_entity_has_a_currency

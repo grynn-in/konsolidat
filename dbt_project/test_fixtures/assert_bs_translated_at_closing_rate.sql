@@ -25,9 +25,9 @@ VALUES
   ('ZZ3000', 'ZZ share capital', 'Equity', 'Equity', 0, 1, 1, 'closing', 1, 0, 0),
   ('ZZ4000', 'ZZ revenue', 'Revenue', 'Revenue', 1, 0, 0, 'average', 1, 0, 0);
 INSERT INTO epm_silver.silver_entity_currencies
-  (data_area_id, accounting_currency, currency_source, governed_currency, erp_currency, in_konsol, in_erp)
+  (data_area_id, accounting_currency)
 VALUES
-  ('ZZE1', 'EUR', 'konsol', 'EUR', '', 1, 0);
+  ('ZZE1', 'EUR');
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency)
 VALUES
