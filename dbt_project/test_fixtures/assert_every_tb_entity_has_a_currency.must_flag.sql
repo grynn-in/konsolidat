@@ -19,7 +19,7 @@ INSERT INTO epm_bronze.bronze_trial_balance_submissions
 VALUES
   ('ZZB8', 'ZZE8', 2026, 1, 'ZZ1000', 100, 0, '', '', '', '', '', 'ZZ-TBS-8', '2026-02-01 00:00:00', '2026-02-01 00:00:00', 1, 'Period movement');
 INSERT INTO epm_silver.silver_entity_currencies
-  (data_area_id, accounting_currency, currency_source, governed_currency, erp_currency, in_konsol, in_erp)
+  (data_area_id, accounting_currency)
 VALUES
-  ('ZZE1', 'USD', 'konsol', 'USD', '', 1, 0),
-  ('ZZE7', '', 'konsol', '', '', 1, 0);
+  ('ZZE1', 'USD'),
+  ('ZZE7', '');
