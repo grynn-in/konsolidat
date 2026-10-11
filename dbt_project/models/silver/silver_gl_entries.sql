@@ -138,7 +138,7 @@ select
        none, and the non-D365 convention is 0 — NOT the local amount, which
        would let a consumer sum untranslated currencies believing them
        translated. Consolidation retranslates from debit/credit itself. #}
-    toDecimal128(0, 2) as reporting_currency_amount,
+    toDecimal128(0, {{ amount_scale() }}) as reporting_currency_amount,
     tbs.net_amount as transaction_currency_amount,
     '' as transaction_currency_code,
     {# silver_tb_movements already split the movement into debit/credit
