@@ -85,7 +85,7 @@ select
         amount_basis = 'Year-to-date movement', running_fiscal_year,
         running_all_periods
     ) as cumulated_amount,
-    round(cumulated_amount - source_net_amount, 2) as difference
+    cumulated_amount - source_net_amount as difference
 from cumulated
 where amount_basis in ('Period movement', 'Year-to-date movement', 'Period-end balance')
   and abs(difference) > 0.01

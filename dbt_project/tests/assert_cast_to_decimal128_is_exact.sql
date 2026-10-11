@@ -17,8 +17,11 @@
     Cases: an ordinary two-decimal amount, a large amount from the reported
     batch (177,485,814.95), a negative amount, a Nullable(Float64) input
     (assumeNotNull must still work through toString), a float sum whose
-    binary result is a hair short of the cent, and a very small value at
-    scale 12 (the exchange-rate caller's scale).
+    binary result is a hair short of the cent, a very small value at
+    scale 12 (the exchange-rate caller's scale), and #256's cases at the TB
+    amount scale, amount_scale(): a three-decimal amount (BHD, KWD), a
+    four-decimal one, and a three-decimal float sum. At scale 2 each of the
+    last three loses a digit and is listed.
 
     Depends on bronze_trial_balance_submissions (not read otherwise) purely
     so CI's indirect test selection picks this test up whenever that model
@@ -38,7 +41,10 @@ with cases as (
         ('negative amount', {{ cast_to_decimal128('toFloat64(-1234.56)', 12) }}, toDecimal128('-1234.56', 12)),
         ('nullable float input', {{ cast_to_decimal128('toNullable(toFloat64(5.1))', 12) }}, toDecimal128('5.1', 12)),
         ('float sum a hair short of the cent', {{ cast_to_decimal128('toFloat64(0.7) + toFloat64(0.1)', 2) }}, toDecimal128('0.80', 2)),
-        ('scale-12 small value (exchange-rate caller)', {{ cast_to_decimal128('toFloat64(0.0000001)', 12) }}, toDecimal128('0.0000001', 12))
+        ('scale-12 small value (exchange-rate caller)', {{ cast_to_decimal128('toFloat64(0.0000001)', 12) }}, toDecimal128('0.0000001', 12)),
+        ('three-decimal amount at the TB scale (#256)', {{ cast_to_decimal128('toFloat64(1234.567)', amount_scale()) }}, toDecimal128('1234.567', 12)),
+        ('four-decimal amount at the TB scale (#256)', {{ cast_to_decimal128('toFloat64(-98765.4321)', amount_scale()) }}, toDecimal128('-98765.4321', 12)),
+        ('three-decimal float sum at the TB scale (#256)', {{ cast_to_decimal128('toFloat64(0.007) + toFloat64(0.001)', amount_scale()) }}, toDecimal128('0.008', 12))
     )
 )
 
