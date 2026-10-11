@@ -15,6 +15,7 @@ on:
       - 'tests/test_deal_tables_ddl.py'
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
+      - 'tests/test_sync_watermark_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -38,6 +39,7 @@ on:
       - 'tests/test_deal_tables_ddl.py'
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
+      - 'tests/test_sync_watermark_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -128,6 +130,10 @@ jobs:
       # `sign` column that nothing read.
       - name: cash flow categories DDL without the retired sign
         run: python -m unittest -v tests.test_cash_flow_categories_ddl
+      # konsolidat#246: the sync watermark is konsol's DDL, verbatim, with the
+      # reconcile run id in its sort key, and the upgrade is asked first.
+      - name: sync watermark DDL carries the reconcile run id
+        run: python -m unittest -v tests.test_sync_watermark_ddl
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip

@@ -170,6 +170,9 @@ sources:
           database. This is how the "never stale" guarantee is recovered
           without the coupling — see tests/assert_staging_not_stale.sql.
         loaded_at_field: synced_at
+        columns:
+          - name: reconcile_run_id
+            description: "The reconcile_all() run that stamped this row; '' = a write-through (konsolidat#246). In the sort key, so each table keeps one row per run plus its latest write-through."
       - name: scenario_definitions
         description: "Scenario metadata created via the API"
         loaded_at_field: updated_at
