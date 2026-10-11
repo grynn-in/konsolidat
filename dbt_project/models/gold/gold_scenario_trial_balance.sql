@@ -66,7 +66,7 @@ select
     '' as account_name,
     '' as account_type_name,
     {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
-    {{ cast_to_decimal128('sum(period_amount)', 2) }} as amount,
+    {{ cast_to_decimal128('sum(period_amount)', amount_scale()) }} as amount,
     'budget' as data_source
 from {{ ref('gold_spread_budget') }}
 group by

@@ -2,11 +2,20 @@
     config(
         materialized='incremental',
         incremental_strategy='append',
-        pre_hook="{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter(include_period=false) }} {{ scope_filter() }}{% endif %}",
+        pre_hook=[
+            "{{ widen_amount_columns(var('base_measures') | map(attribute='name') | list + ['ytd_net_amount']) }}",
+            "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter(include_period=false) }} {{ scope_filter() }}{% endif %}"
+        ],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# #256: the widen_amount_columns pre_hook (macros/amount_scale.sql) runs before
+   the DELETE and the append. A table built before #256 holds its amounts as
+   Decimal(38, 2), and an append into it would cut a three-decimal amount (BHD,
+   KWD) to two places, without an error. The hook widens those columns to
+   amount_type() once; after that it finds nothing to widen and renders nothing. #}
 
 {# A2 / grynn-in/konsolidat#116: incremental-by-period materialization. A scoped
    close narrows the SELECT to its slice; the YTD running sum partitions by
