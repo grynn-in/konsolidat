@@ -1,3 +1,5 @@
+-- gate: build +gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances
+-- gate: expect assert_goodwill_amortisation_journal_balances pass
 -- Goodwill amortisation per policy (konsolidat#198 row J5):
 -- `+gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances` must BUILD and PASS on
 -- these rows (since row J5cb each journal has its own balance test, so this selector is self-contained).

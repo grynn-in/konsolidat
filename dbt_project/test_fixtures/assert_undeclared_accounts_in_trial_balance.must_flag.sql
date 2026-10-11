@@ -1,3 +1,4 @@
+-- gate: expect assert_undeclared_accounts_in_trial_balance flag 1
 -- assert_undeclared_accounts_in_trial_balance: must flag exactly 1 result (konsolidat#249).
 -- The test is severity warn, so dbt reports WARN 1 rather than FAIL 1.
 -- ZZ9999 is posted to but absent from the group chart; ZZ1000 is declared.

@@ -1,3 +1,7 @@
+-- gate: build +assert_tb_movements_balance +assert_tb_movements_cumulate_to_source +assert_year_end_close_declared
+-- gate: expect assert_tb_movements_balance pass
+-- gate: expect assert_tb_movements_cumulate_to_source pass
+-- gate: expect assert_year_end_close_declared pass
 -- silver_tb_movements, basis 'Period-end balance' across a year end (konsolidat#199, PR 200 finding 1):
 -- assert_tb_movements_balance, assert_tb_movements_cumulate_to_source and
 -- assert_year_end_close_declared must PASS, and the model must synthesize the year-end close.

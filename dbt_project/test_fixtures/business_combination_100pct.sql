@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal, the 100% case with an acquired-balances table (konsolidat#198 row J2):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
 -- It is also the Impairment-only proof for goodwill amortisation (row J5): with

@@ -1,3 +1,7 @@
+-- gate: build +assert_hierarchy_closure_windows +assert_hierarchy_node_as_of +assert_unassigned_as_of
+-- gate: expect assert_hierarchy_closure_windows pass
+-- gate: expect assert_hierarchy_node_as_of pass
+-- gate: expect assert_unassigned_as_of pass
 -- konsolidat#220: a reporting hierarchy whose members are dated. A member row is one tranche of a code, valid
 -- from member_effective_from to member_effective_to (open = 2299-12-31); a renamed, moved or ended node is a
 -- second tranche of the same code. The closure and every node model must resolve the tree as it was in a period.

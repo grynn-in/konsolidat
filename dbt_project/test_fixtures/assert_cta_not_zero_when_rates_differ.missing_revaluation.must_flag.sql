@@ -1,3 +1,4 @@
+-- gate: expect assert_cta_not_zero_when_rates_differ flag 1
 -- assert_cta_not_zero_when_rates_differ: must FAIL with exactly 1 result (konsolidat#249).
 --
 -- ZZMS: two translation rates were used (closing 1.2, average 1.1), and gold_fx_revaluation

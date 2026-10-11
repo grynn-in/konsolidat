@@ -1,3 +1,6 @@
+-- gate: build +assert_tb_movements_balance +assert_tb_movements_cumulate_to_source
+-- gate: expect assert_tb_movements_balance pass
+-- gate: expect assert_tb_movements_cumulate_to_source pass
 -- silver_tb_movements, basis 'Year-to-date movement': assert_tb_movements_balance and
 -- assert_tb_movements_cumulate_to_source must PASS (konsolidat#199).
 -- One ZZ entity, FY2026 periods 1-3, each batch a balanced set of year-to-date movements:

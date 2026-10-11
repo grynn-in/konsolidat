@@ -1,3 +1,4 @@
+-- gate: expect assert_every_tb_entity_has_a_currency flag 3
 -- assert_every_tb_entity_has_a_currency: must FAIL with exactly 3 results (konsolidat#249).
 -- ZZE9: trial-balance rows, and no row in silver_entity_currencies at all.
 -- ZZE8: a submitted batch only (bronze), and no currency row at all.

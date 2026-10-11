@@ -323,9 +323,8 @@ Fixtures under `dbt_project/test_fixtures/` (`ZZ` codes only, see its README):
 `business_combination_100pct.sql`, `business_combination_80pct.sql`,
 `business_combination_history.sql`, `business_combination_bargain.sql` and
 `.refuse.sql`, `business_combination_costs.sql`, `goodwill_amortisation.sql` and
-`.disposal.sql`, `business_disposal.sql`, the `*.must_flag.sql` fixtures of the
-guards, and `deal_tables_empty.sql` for a `build-live` run before konsol has deployed
-the six tables. Because konsol's tables do not exist on a stack until konsol deploys
+`.disposal.sql`, `business_disposal.sql`, and the `*.must_flag.sql` fixtures of the
+guards; CI runs every one (`scripts/fixture_gate.py`, konsolidat#266). Because konsol's tables do not exist on a stack until konsol deploys
 them, these fixtures `CREATE TABLE IF NOT EXISTS` the deal tables with the exact DDL
 before inserting.
 

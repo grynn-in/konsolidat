@@ -1,3 +1,5 @@
+-- gate: build +assert_year_end_close_declared
+-- gate: expect assert_year_end_close_declared flag 1
 -- assert_year_end_close_declared: must FAIL with exactly 1 result (konsolidat#199).
 -- The same two period-end-balance files as silver_tb_movements.year_end_close.sql (ZZOP, FY2025 P12
 -- then FY2026 P1), but the chart flags no retained-earnings account and the calendar has no Closing

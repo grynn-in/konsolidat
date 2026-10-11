@@ -1,3 +1,4 @@
+-- gate: expect assert_all_layers_present flag 1
 -- assert_all_layers_present: must FAIL with exactly 1 result: missing_layer ZZG cta (konsolidat#238-4).
 -- gold_fx_revaluation has a row for ZZG (it emits one per entity-period, whatever the currency);
 -- the fully consolidated TB has no cta row.

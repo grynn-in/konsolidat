@@ -1,3 +1,5 @@
+-- gate: build +assert_is_equity_is_account_type_equity
+-- gate: expect assert_is_equity_is_account_type_equity pass
 -- assert_is_equity_is_account_type_equity: must PASS (konsolidat#213).
 -- is_equity is what the account IS (account_type = 'Equity'); uses_historical_rate is what the
 -- chart DECLARES about translation (fx_method = 'historical'). The two are independent, so this

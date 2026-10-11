@@ -1,3 +1,5 @@
+-- gate: build +gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances
+-- gate: expect assert_goodwill_amortisation_journal_balances pass
 -- Goodwill amortisation stops at the disposal (konsolidat#198 row J5b, design §1 "until fully amortised or
 -- disposal"): `+gold_goodwill_amortisation_journal assert_goodwill_amortisation_journal_balances` must BUILD
 -- and PASS on these rows, and the schedule must hold 12 instalments, not 120. (Since row J5cb each journal has

@@ -1,3 +1,6 @@
+-- gate: build +assert_historical_is_equity_only
+-- gate: expect assert_historical_is_equity_only flag 2
+-- Flags 2, both ZZ1400: its DECLARATION row (Asset at historical) and its RATE row (a rate on a non-equity account).
 -- assert_historical_is_equity_only: must FLAG (konsolidat#92 finding 4).
 -- konsol translates and does not remeasure, so fx_method = 'historical' is an Equity-only
 -- declaration (konsol#239 refuses anything else at publish). A stack whose chart predates

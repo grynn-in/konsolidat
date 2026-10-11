@@ -1,3 +1,9 @@
+-- gate: build +assert_tb_movements_balance
+-- konsolidat#266: renamed from .must_flag. It was committed WITH the konsol#255 fix (58b7d61),
+-- named for the defect it describes; on the fixed model the rows build correctly and the test
+-- PASSES on them, which is what the gate now holds it to. That the test CAN fail is
+-- held by assert_tb_movements_balance.seeded.must_flag.sql, which seeds the model's output.
+--
 -- konsol#255 row 17: the SECOND symptom of the close's contradiction — a P&L
 -- account that a file splits across declared dimension values is never reversed
 -- by the year-end close at all, so the next year's first period reads last

@@ -1,3 +1,5 @@
+-- gate: build +assert_auto_reversal_generated
+-- gate: expect assert_auto_reversal_generated pass
 -- V01 fixture (konsol#305-D2-11), dropped variant: tables epm_staging.consolidation_adjustments without auto_reverse_period (proves the model no longer reads it)
 ALTER TABLE epm_staging.consolidation_adjustments ADD COLUMN IF NOT EXISTS reverse_fiscal_year UInt16 DEFAULT 0;
 ALTER TABLE epm_staging.consolidation_adjustments ADD COLUMN IF NOT EXISTS reverse_fiscal_period UInt8 DEFAULT 0;

@@ -1,3 +1,4 @@
+-- gate: expect assert_hierarchy_all_entities_resolved flag 1
 -- assert_hierarchy_all_entities_resolved: must FAIL with exactly 1 result (konsolidat#249).
 -- ZZE2 is in the consolidation structure but missing from the ancestry closure, so the
 -- tree walk never reaches it. An unmatched LEFT JOIN would read '' for it under

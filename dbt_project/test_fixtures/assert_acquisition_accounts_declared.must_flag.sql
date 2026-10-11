@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_accounts_declared
+-- gate: expect assert_acquisition_accounts_declared flag 3
 -- Must-flag fixture for assert_acquisition_accounts_declared (konsolidat#198 row J7, design §1/§1a):
 -- `+gold_business_combination_journal assert_acquisition_accounts_declared` must BUILD and the test must
 -- FAIL with `Got 3 results` on these rows.

@@ -1,9 +1,9 @@
+-- gate: expect assert_year_end_close_carries_no_cta flag 2
 -- assert_year_end_close_carries_no_cta (konsolidat#259): must FLAG (warn), before and after the fix.
 --
 -- Seeds gold_consolidated_trial_balance and gold_fx_revaluation as the pre-#259 translation
 -- produced them, and runs the test alone:
---   gate-x.sh <wt> dbt_project/test_fixtures/assert_year_end_close_carries_no_cta.must_flag.sql \
---     "assert_year_end_close_carries_no_cta"
+--   test mode: dbt test --select assert_year_end_close_carries_no_cta
 --
 -- EUR entities in ZZG (USD); FY2025 P12 (average 1.10, closing 1.20), P13 Closing (P12's rates).
 -- Each has revenue -100 at P12 (-110 translated) and cash +100.

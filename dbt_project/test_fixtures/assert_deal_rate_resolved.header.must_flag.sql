@@ -1,7 +1,9 @@
+-- gate: build +gold_business_combination_journal assert_deal_rate_resolved
+-- gate: expect assert_deal_rate_resolved flag 1
 -- Must-flag fixture for assert_deal_rate_resolved (konsolidat#198 row J13; PR #203 second review 1): a submitted
 -- deal with NO consideration lines whose header total_consideration is stated in a currency the group has no
 -- governed Closing rate for, while the document does have one acquisition-costs line (in the group currency).
--- Gate: `+gold_business_combination_journal assert_deal_rate_resolved` must show `FAIL 1 assert_deal_rate_resolved`
+-- In the gate, `+gold_business_combination_journal assert_deal_rate_resolved` must show `FAIL 1 assert_deal_rate_resolved`
 -- / `Got 1 result` (GBP -> USD, FY2026 P3, kind business_combination), and gold_business_combination_journal must
 -- hold NO row for the deal: with no consideration lines the journal falls back to the header figure and INNER JOINs
 -- its rate (header_consideration_rated), so the unrated header drops the deal; assert_goodwill_calculated FAIL 1
