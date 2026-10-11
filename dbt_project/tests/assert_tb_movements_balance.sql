@@ -21,7 +21,7 @@ select
     fiscal_year,
     fiscal_period,
     any(amount_basis) as amount_basis,
-    round(sum(movement_amount), 2) as total_movement
+    sum(movement_amount) as total_movement
 from {{ ref('silver_tb_movements') }}
 group by data_area_id, fiscal_year, fiscal_period
 having abs(total_movement) > 0.01
