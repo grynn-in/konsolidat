@@ -67,6 +67,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -365,6 +366,7 @@ def main():
             verdicts.append((s["name"], verdict, problems))
     finally:
         reset_scratch(client, create=False)
+        shutil.rmtree(work, ignore_errors=True)
 
     print("\n== fixtures")
     for name, verdict, problems in verdicts:
