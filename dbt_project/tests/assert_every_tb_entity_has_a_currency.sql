@@ -2,9 +2,9 @@
     konsol#110 — every entity with trial-balance rows must resolve a currency.
 
     gold_consolidated_trial_balance joins only entities whose currency
-    silver_entity_currencies resolved, so an entity that is in neither konsol's
-    Entity master nor the ERP's company master — or is in either with no
-    currency set — is left out of consolidation. Leaving it out is deliberate
+    silver_entity_currencies resolved, so an entity that is not in konsol's
+    Entity master, or is in it with no Functional Currency, is left out of
+    consolidation (konsolidat#255: there is no ERP fallback). Leaving it out is deliberate
     (joining it with '' would translate at the 1.0 parity fallback); this test
     is what stops that being silent.
 

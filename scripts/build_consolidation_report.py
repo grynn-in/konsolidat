@@ -111,7 +111,7 @@ def discover_config(group, year):
     entity_list_sql = ", ".join(f"'{e}'" for e in entity_ids)
 
     # Names and the group's reporting currency from the group tree; each
-    # entity's currency from the resolved registry (konsol first, ERP second).
+    # entity's currency from konsol's Entity master (silver_entity_currencies).
     names = {r["data_area_id"]: r for r in ch_query(f"""
         SELECT data_area_id, entity_name AS label, reporting_currency AS group_ccy
         FROM epm_gold.consolidation_groups

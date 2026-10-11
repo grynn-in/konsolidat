@@ -58,16 +58,12 @@ The currency each entity keeps its books in, resolved once (konsol#110).
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
 | `data_area_id` | String | Entity code | not_null, unique |
-| `accounting_currency` | String | konsol's functional currency when set, else the ERP's; `''` when neither | — |
-| `currency_source` | String | `konsol`, `erp`, or `''` | — |
-| `governed_currency` | String | From konsol's Entity master (`epm_staging.entities`) | — |
-| `erp_currency` | String | From `silver_legal_entities` | — |
-| `in_konsol` / `in_erp` | UInt8 | Which registry knows the entity | — |
+| `accounting_currency` | String | konsol's Functional Currency; `''` when the Entity has none | — |
 
-**Sources**: `epm_staging.entities` (leaves only) + `silver_legal_entities`.
-`assert_entity_currency_sources_agree` fails when both are set and differ;
+**Source**: `epm_staging.entities` (leaves only). No ERP fallback
+(konsolidat#255): a blank Functional Currency stays blank, and
 `assert_every_tb_entity_has_a_currency` fails when an entity with trial-balance
-rows resolves none.
+rows has none.
 
 ## silver_fiscal_periods
 

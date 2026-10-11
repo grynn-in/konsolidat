@@ -13,18 +13,18 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **132** |
-| carrying their reasoning | 114 |
-| citing the issue that caused them | 90 |
-| severity `warn` (reports, does not stop a build) | 20 |
-| severity `error` (stops the build, and its children) | 112 |
+| assertions | **134** |
+| carrying their reasoning | 116 |
+| citing the issue that caused them | 94 |
+| severity `warn` (reports, does not stop a build) | 21 |
+| severity `error` (stops the build, and its children) | 113 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
 
 ## Contents
 
-- [Trial balance intake](#trial-balance-intake) — 18
+- [Trial balance intake](#trial-balance-intake) — 19
 - [Currency and translation](#currency-and-translation) — 22
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
@@ -36,7 +36,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 4
 - [Platform and data integrity](#platform-and-data-integrity) — 14
-- [Other](#other) — 1
+- [Other](#other) — 2
 
 ---
 
@@ -58,9 +58,9 @@ silver_tb_movements normalises each batch to period movements from its declared 
 
 **konsol#110 — every entity with trial-balance rows must resolve a currency.**
 
-gold_consolidated_trial_balance joins only entities whose currency silver_entity_currencies resolved, so an entity that is in neither konsol's Entity master nor the ERP's company master — or is in either with no currency set — is left out of consolidation. Leaving it out is deliberate (joining it with '' would translate at the 1.0 parity fallback); this test is what stops that being silent. Replaces assert_tb_submission_entities_consolidatable, the interim guard F8 shipped: it checked submitted entities against silver_legal_entities alone, because the ERP was then the only place a currency could come from. Submitted batches are checked as well as gold_trial_balance, so an entity lost between bronze and gold is still caught. NOT IN rather than a LEFT JOIN: with join_use_nulls=0 an unmatched row fills with '' and `where x is null` never fires.
+gold_consolidated_trial_balance joins only entities whose currency silver_entity_currencies resolved, so an entity that is not in konsol's Entity master, or is in it with no Functional Currency, is left out of consolidation (konsolidat#255: there is no ERP fallback). Leaving it out is deliberate (joining it with '' would translate at the 1.0 parity fallback); this test is what stops that being silent. Replaces assert_tb_submission_entities_consolidatable, the interim guard F8 shipped: it checked submitted entities against silver_legal_entities alone, because the ERP was then the only place a currency could come from. Submitted batches are checked as well as gold_trial_balance, so an entity lost between bronze and gold is still caught. NOT IN rather than a LEFT JOIN: with join_use_nulls=0 an unmatched row fills with '' and `where x is null` never fires.
 
-<sub>`error (default)` · `tests/assert_every_tb_entity_has_a_currency.sql` · konsol#110</sub>
+<sub>`error (default)` · `tests/assert_every_tb_entity_has_a_currency.sql` · konsol#110 konsolidat#255</sub>
 
 ### `fctb_entity_layer_ties`
 
@@ -164,6 +164,14 @@ silver_tb_movements closes a period-end-balance year by moving the P&L balances 
 
 <sub>`warn` · `tests/assert_year_end_close_carried.sql` · konsolidat#199</sub>
 
+### `year_end_close_carries_no_cta`
+
+**konsolidat#259 (option #259-1, decided by Deepak Pai, 6 Oct 2026): the year-end close moves amounts that are already translated, so it creates no exchange difference.**
+
+silver_tb_movements closes a period-end-balance year in the year's Closing period: every P&L key is reversed and the result moves into the retained-earnings account (posting_layer 'Year-end close' in silver_gl_entries). Translated naively, the reversal goes at the period's average rate and retained earnings at its own declared rate, so the close leaves -(the year's P&L) x (average - closing) in that period's CTA, which cancels the year's CTA and moves it into retained earnings every year. Under #259-1 retained earnings is credited with the year's TRANSLATED result, whatever the account's fx_method declares, and the P&L reversal returns each P&L key's translated year to exactly zero. So, for every (group, entity, Closing-type period) that carries a year-end close: | CTA of that period |                                   <= 0.01 | the year's translated P&L, summed through that period | <= 0.01 It also names an ERP-POSTED close: a Closing period with no 'Year-end close' rows but P&L activity, whose CTA is not zero. The warehouse cannot tell such a close from ordinary activity, so it translates it as activity and does not guess; this test says where that happened. Warn severity (plan §3 R3): the consolidated statements still balance, the split between retained earnings and CTA is what is wrong. Kinds: year_end_close    the synthesized close, checked on both conditions erp_posted_close  P&L activity in a Closing period, checked on CTA
+
+<sub>`warn` · `tests/assert_year_end_close_carries_no_cta.sql` · konsolidat#259</sub>
+
 ### `year_end_close_declared`
 
 **Every period-end-balance year that must be closed can be closed (konsolidat#199, PR 200 finding 1;**
@@ -184,6 +192,14 @@ silver_tb_movements synthesises a post-close period for a 'Period-end balance' e
 
 ## Currency and translation
 
+### `bs_translated_at_closing_rate`
+
+**konsolidat#257: a balance-sheet balance is translated at the CLOSING rate of the reporting date (IAS 21.39(a)), not as the sum of each period's movement at that period's own closing rate.**
+
+gold_consolidated_trial_balance keeps the movement grain: one row per (group, entity, period, account, partner, dimensions) carrying that period's translated movement. Every reader sums those movements to get a balance. So for every key of a balance sheet account that is translated at the closing rate, the translated movements summed to period p must equal the local movements summed to p times p's closing rate: | sum(translated_amount to p) - sum(local_amount to p) x closing(p) | <= 0.01 Which keys: a balance sheet account (is_balance_sheet = 1) that is not equity (is_equity = 0; equity is never revalued, decided on #257 Q2, 6 Oct 2026) and whose chart declares fx_method = 'closing' or declares nothing (an undeclared account translates at the closing rate). An account declared 'average' or 'historical' is out of scope. The declaration comes from the chart (silver_main_accounts), not from the rate the row happens to carry. Which periods: EVERY period in which the entity has any row for the group (the entity's spine), from the key's first row on - not only the periods the key itself moved in. A balance that did not move in a period still has to be retranslated there; checking only the key's own rows would miss exactly that case. The closing rate of a spine period is read from the entity's rows in that period (one currency pair per entity and group, so one closing rate). Same-currency entities translate at 1.0 and are skipped.
+
+<sub>`error (default)` · `tests/assert_bs_translated_at_closing_rate.sql` · konsolidat#257</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -196,9 +212,9 @@ The adapter's else-branch passes an unrecognised factor through unscaled — the
 
 **PRD-2 Test: CTA must be non-zero when an entity-period translated at more than one rate.**
 
-What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translation, -sum(group_amount) per entity-period. Balance-sheet rows translate at the closing rate, P&L rows at the average rate and (with an approved Historical Equity Rate) equity rows at that historical rate. Because the local trial balance sums to zero, the translated one only fails to sum to zero when more than one rate was applied; that gap is the CTA. When CTA must be non-zero: an entity-period in which at least one row translated at a rate other than its closing_rate. A zero CTA there means gold_fx_revaluation lost the residual, and this test flags it. Why a rate difference alone is not enough: closing_rate != average_rate only says two rates were *available*. A balance-sheet-only entity (no P&L rows, no historical equity rate) translates every row at closing_rate, so its CTA is 0 by construction and must not be flagged (konsolidat#195). Since konsolidat#176 a missing historical equity rate is a warning, not an error, and such equity rows fall back to the closing rate, which makes balance-sheet-only entities with CTA 0 a normal case. Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0` condition below (a row that put nothing into the group translated nothing, whatever its rate).
+What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translation, -sum(group_amount) per entity-period. Balance-sheet rows translate at the closing rate, P&L rows at the average rate and (with an approved Historical Equity Rate) equity rows at that historical rate. Because the local trial balance sums to zero, the translated one only fails to sum to zero when more than one rate was applied; that gap is the CTA. When CTA must be non-zero: an entity-period in which at least one row translated at a rate other than its closing_rate. A zero CTA there means gold_fx_revaluation lost the residual, and this test flags it. Why a rate difference alone is not enough: closing_rate != average_rate only says two rates were *available*. A balance-sheet-only entity (no P&L rows, no historical equity rate) translates every row at closing_rate, so its CTA is 0 by construction and must not be flagged (konsolidat#195). Since konsolidat#176 a missing historical equity rate is a warning, not an error, and such equity rows fall back to the closing rate, which makes balance-sheet-only entities with CTA 0 a normal case. Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0` condition below (a row that put nothing into the group translated nothing, whatever its rate). konsolidat#259 (option #259-1, 6 Oct 2026): an entity-period that carries the year-end close silver_tb_movements synthesizes is not checked. Its P&L reversal translates at the average rate, but retained earnings takes exactly the translated result, so its CTA is 0 by construction; assert_year_end_close_carries_no_cta requires that 0.
 
-<sub>`error (default)` · `tests/assert_cta_not_zero_when_rates_differ.sql` · konsolidat#176 konsolidat#195</sub>
+<sub>`error (default)` · `tests/assert_cta_not_zero_when_rates_differ.sql` · konsolidat#176 konsolidat#195 konsolidat#259</sub>
 
 ### `cta_recycled_on_disposal`
 
@@ -225,14 +241,6 @@ PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the g
 ### `declared_historical_has_a_rate`
 
 <sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsolidat#213 konsolidat#218 konsolidat#92</sub>
-
-### `entity_currency_sources_agree`
-
-**konsol#110 — konsol's Entity master and the ERP must not disagree about the currency an entity keeps its books in.**
-
-silver_entity_currencies prefers konsol's answer, so a disagreement would otherwise be settled silently: the entity translates from the currency konsol names while its ledger is in the one the ERP names, and every translated balance is wrong by the cross rate. Fix whichever side is wrong; this test does not pick one.
-
-<sub>`error (default)` · `tests/assert_entity_currency_sources_agree.sql` · konsol#110</sub>
 
 ### `equity_historical_rate_is_asof`
 
@@ -310,9 +318,11 @@ konsol translates and does not remeasure. fx_method = 'historical' is therefore 
 
 ### `translated_amount_formula`
 
-**PRD-1 Test: translated_amount must equal local_amount × translation_rate**
+**PRD-1 Test: translated_amount must equal local_amount × translation_rate + retranslation_amount.**
 
-<sub>`error (default)` · `tests/assert_translated_amount_formula.sql`</sub>
+konsolidat#257: a balance sheet key declared at closing also carries its retranslation, cum_local(prev) × (closing(p) − closing(prev)), on its own row; every other row carries 0.
+
+<sub>`error (default)` · `tests/assert_translated_amount_formula.sql` · konsolidat#257</sub>
 
 ### `translation_follows_fx_method`
 
@@ -332,9 +342,11 @@ Two failure modes, both of which silently misstate translated balances: 1. trans
 
 ### `all_layers_present`
 
-**PRD-22 Test: All expected consolidation layers must be present in the FCTB At minimum: entity, ic_elimination, cta, topside (layers 1-4 always expected)**
+**PRD-22: no consolidation layer the models computed is lost on its way into gold_fully_consolidated_tb, and none appears there without its source.**
 
-<sub>`error (default)` · `tests/assert_all_layers_present.sql`</sub>
+Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severity. It supersedes #238-1, which conditioned the layers on declarations (Published IC accounts, partner membership, more than one currency). A review of PR #261 measured that this did not match the models: an unmatched IC pair, with no ic_difference_account, is eliminated by nothing, and CTA does not depend on how many currencies the group has. Whether an elimination SHOULD exist stays with gold_ic_reconciliation and gold_ic_unmatched. Rejected: #238-1 as worded, and #238-2 (warn and keep asserting all four). A layer must appear for a group exactly when its source model has rows for that group. Each source is mapped to the adjustment_type gold_fully_consolidated_tb gives it: - entity:              gold_consolidated_trial_balance (layer 1); - ic_elimination:      gold_ic_eliminations, elimination_view 'group' (layer 2). The 'nci' kind lands as ic_elimination_nci. Every other kind, including unrealized_profit from ic_elimination_rules, lands as ic_elimination. NCI-view rows never enter the consolidated TB; - topside:             gold_consolidation_adjustments, adjustment_type 'topside' (layer 4 passes adjustment_type through); - cta:                 gold_fx_revaluation (layer 3). Every model carries the group in consolidation_group. Two directions, one row per (group, layer): - missing_layer: the source has rows, the consolidated TB has none; - unexpected_layer: the consolidated TB has the layer, the source has no rows (a stale or misattributed layer). konsolidat#238 / #249: NOT IN, not a LEFT JOIN. adjustment_type is a String, and under join_use_nulls = 0 (the server default; a singular test carries no settings clause) an unmatched LEFT JOIN fills it with '' rather than NULL. The former `where actual.layer is null` therefore matched nothing, and the test could never fail.
+
+<sub>`error (default)` · `tests/assert_all_layers_present.sql` · konsolidat#238 konsolidat#249 konsolidat#261</sub>
 
 ### `consolidated_cf_reconciles`
 
@@ -1025,4 +1037,12 @@ With a row per intercompany partner, each got a partial running total (250 inste
 Before the fix, layer 4 of gold_fully_consolidated_tb sums topside/reclassification/auto_reversal lines to the account grain and reports any(journal_id) for the group — one journal name survives when two journals post to the same account in the same period (batch review 27 Sep finding 2: ZZJ-00001 and ZZJ-00002 on one key became one row labelled with only one of them). This test returns every journal_id present in gold_consolidation_adjustments (the topside/reclassification/ auto_reversal rows, none of them 'entity') that is absent from gold_consolidation_journal. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql (reused from V03, not copied): ZZJ-00001 and ZZJ-00002, both Dr ZZ1100 / Cr ZZ2100, ZZG/ZZS FY2026 P3.
 
 <sub>`error (default)` · `tests/assert_consolidation_journal_names_every_journal.sql` · konsol#305</sub>
+
+### `equity_never_revalued`
+
+**konsolidat#257 Q2 (decided by Deepak Pai, 6 Oct 2026): equity is never revalued.**
+
+An equity account's translated movement is its local movement at the rate the row declares (historical, else the closing rate of the period it was posted in), whatever its fx_method. A balance sheet balance is retranslated at each closing rate (#257), but an equity balance is not: retranslating it would bury the exchange difference in equity lines and leave no separate component to recycle on disposal (IAS 21.39(c), .48). So on every equity row (is_equity = 1, from the chart): | translated_amount - local_amount x translation_rate | <= 0.01 A revaluation shows up as exactly that difference: a filler row with local_amount = 0 and a translated amount, or a retranslation_amount on a row that moved. The one declared exception is the year-end close leg of the retained-earnings account (konsolidat#259-1, decided 6 Oct 2026): in a Closing-type period, retained earnings is credited with the year's translated result, not its local result at a rate. That leg is governed by assert_year_end_close_carries_no_cta, so this test leaves the retained-earnings account's rows in Closing periods to it. Nothing else is exempt: another equity account in a Closing period is still checked.
+
+<sub>`error (default)` · `tests/assert_equity_never_revalued.sql` · konsolidat#257 konsolidat#259</sub>
 
