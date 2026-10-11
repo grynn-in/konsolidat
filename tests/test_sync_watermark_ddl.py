@@ -76,8 +76,9 @@ class SyncWatermarkDDL(unittest.TestCase):
         """A no-op ALTER still moves metadata_modification_time, the test's
         no-run-yet grace clock: the macro must look before it alters."""
         macro = _read(MACRO)
-        self.assertIn("system.columns", macro)
-        self.assertIn("name = 'reconcile_run_id'", macro)
+        # the same question konsol asks: is the column in the sorting key?
+        self.assertIn("select sorting_key from system.tables", macro)
+        self.assertIn("'reconcile_run_id' in keys[0]", macro)
 
     def test_lagging_reads_the_run_not_the_newest_stamp(self):
         sql = _read(TEST)

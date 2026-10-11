@@ -17,8 +17,13 @@
 
     LAGGING — a table missing from the latest reconcile run. reconcile_all()
     stamps every watermark it writes with one run id; a write-through stamps
-    none (''). A table that some reconcile has stamped, but that has no row
-    from the latest run, is one that run could not reach. This is the case
+    none (''). Every table with a watermark row and no row from the latest
+    run is one that run could not reach, including a table no reconcile has
+    ever stamped: one that has failed in every reconcile since the upgrade
+    keeps only its old '' stamp, and is exactly the case below. (Retired
+    tables lose their rows in konsol's _retired_watermark_cleanup; on
+    11 Oct 2026 every live table was in the 7 Oct reconcile, none is
+    write-through only.) This is the case
     that matters most: epm_staging.ownership_periods held three rows dated
     2026-06-19 for records Frappe no longer had, and AMDE at 75% from that
     ghost row drove every consolidated statement while Frappe's own
@@ -32,12 +37,17 @@
     can no longer do that. Rejected: #246-2 (drop LAGGING) and #246-3 (raise
     the lag hours).
 
-    The latest run is the one that started last (its earliest stamp). A run
-    that failed or was killed partway is still the latest run, so every table
-    it did not reach is LAGGING, even one a write-through has refreshed since:
-    the rule asks whether the reconcile reached the table, not whether the
-    table is recent. A table no reconcile has ever stamped (only write-through
-    writes it) is not judged.
+    The latest run is the settled run that started last (its earliest
+    stamp). A run is settled once its newest stamp is at least
+    watermark_run_settle_seconds (default 60) old: a reconcile still running
+    when dbt tests (a fresh install's queued reconcile_warehouse can overlap
+    one) has stamped only the tables it has reached so far, and judging it
+    would report the rest LAGGING for the second or so it takes to finish.
+    Until it settles, the run before it is judged. A run that failed or was
+    killed partway is the latest run once settled, so every table it did not
+    reach is LAGGING, even one a write-through has refreshed since: the rule
+    asks whether the reconcile reached the table, not whether the table is
+    recent.
 
     NO_RECONCILE_RUN — no reconcile has stamped a run id yet. An upgrading
     site is in this state from the moment the watermark gains its
@@ -62,6 +72,7 @@
 #}
 
 {% set lag_hours = var('watermark_lag_hours', 24) %}
+{% set settle_seconds = var('watermark_run_settle_seconds', 60) %}
 {% set wm = source('epm_staging', 'sync_watermark') %}
 
 with stamps as (
@@ -84,7 +95,10 @@ watermark as (
 
 runs as (
 
-    select reconcile_run_id as run_id, min(synced_at) as run_started_at
+    select
+        reconcile_run_id as run_id,
+        min(synced_at)   as run_started_at,
+        max(synced_at)   as run_last_stamp_at
     from stamps
     where reconcile_run_id != ''
     group by reconcile_run_id
@@ -92,12 +106,17 @@ runs as (
 ),
 
 -- One row even with no run: an aggregate over nothing returns its defaults.
+-- runs_seen counts every run (it ends NO_RECONCILE_RUN's grace); the latest
+-- run is chosen among settled ones only.
 latest_run as (
 
     select
-        argMax(run_id, run_started_at) as latest_run_id,
-        max(run_started_at)            as latest_started_at,
-        count()                        as runs_seen
+        argMaxIf(run_id, run_started_at,
+                 run_last_stamp_at <= now() - {{ settle_seconds }}) as latest_run_id,
+        maxIf(run_started_at,
+              run_last_stamp_at <= now() - {{ settle_seconds }})    as latest_started_at,
+        countIf(run_last_stamp_at <= now() - {{ settle_seconds }})  as settled_runs,
+        count()                                                    as runs_seen
     from runs
 
 ),
@@ -110,14 +129,15 @@ in_latest_run as (
 
 ),
 
-reconciled as (
+-- Every table with a watermark row; its last run, '' when no run ever
+-- stamped it (argMaxIf over no rows returns the type default).
+judged as (
 
     select
         table_name,
-        argMax(reconcile_run_id, synced_at) as last_run_id,
-        max(synced_at)                      as last_run_at
+        argMaxIf(reconcile_run_id, synced_at, reconcile_run_id != '') as last_run_id,
+        maxIf(synced_at, reconcile_run_id != '')                      as last_run_at
     from stamps
-    where reconcile_run_id != ''
     group by table_name
 
 ),
@@ -160,15 +180,17 @@ select
     w.last_synced_at,
     concat(
         'LAGGING: missing from the latest reconcile run ', l.latest_run_id,
-        ' (started ', toString(l.latest_started_at), '); last reconciled by run ',
-        r.last_run_id, ' at ', toString(r.last_run_at),
+        ' (started ', toString(l.latest_started_at), '); ',
+        if(r.last_run_id = '',
+           'no reconcile run has ever stamped it',
+           concat('last reconciled by run ', r.last_run_id, ' at ', toString(r.last_run_at))),
         ' — its rows may outlive their Frappe records'
     ) as problem
-from reconciled as r
+from judged as r
 inner join watermark as w on w.table_name = r.table_name
 left join actual as a on a.table_name = r.table_name
 cross join latest_run as l
-where l.runs_seen > 0
+where l.settled_runs > 0
   and r.table_name not in (select table_name from in_latest_run)
 
 union all

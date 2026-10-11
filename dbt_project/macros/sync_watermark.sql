@@ -8,10 +8,17 @@
     keeps the test from reading a column that is not there, and it starts the
     test's no-run-yet grace at the upgrade, whoever made it.
 
-    The ALTER is issued only when the column is missing. An ALTER that changes
-    nothing still rewrites the table's metadata_modification_time (measured on
-    ClickHouse 24.8), and the test measures its grace from that time, so
-    issuing it on every dbt run would keep the grace open for ever.
+    The ALTER is issued only when the table's sorting key lacks the column,
+    the same question konsol's _watermark_upgrade_ddl() asks of
+    system.tables.sorting_key. An ALTER that changes nothing still rewrites
+    the table's metadata_modification_time (measured on ClickHouse 24.8), and
+    the test measures its grace from that time, so issuing it on every dbt run
+    would keep the grace open for ever. A table that has the column but not
+    the key (only a manual ALTER makes one) gets the ALTER too, and ClickHouse
+    refuses it ("Existing column reconcile_run_id is used in the expression
+    that was added to the sorting key"): the run fails loudly, as konsol's
+    upgrade logs it, rather than judging runs on a table whose merges drop
+    them. A missing table is left to the CREATE before this hook.
 
     One ALTER, no DEFAULT: ClickHouse adds a column to the sorting key only in
     the ALTER that adds it, and only when it has no default expression. Keep
@@ -24,10 +31,11 @@
         {{ return('select 1') }}
     {%- endif -%}
     {%- set found = run_query(
-        "select count() from system.columns where database = '" ~ wm.schema
-        ~ "' and table = '" ~ wm.identifier ~ "' and name = 'reconcile_run_id'"
+        "select sorting_key from system.tables where database = '" ~ wm.schema
+        ~ "' and name = '" ~ wm.identifier ~ "'"
     ) -%}
-    {%- if found.columns[0].values()[0] | int > 0 -%}
+    {%- set keys = found.columns[0].values() -%}
+    {%- if keys | length == 0 or 'reconcile_run_id' in keys[0] -%}
         {{ return('select 1') }}
     {%- endif -%}
     {{ return(
