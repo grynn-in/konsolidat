@@ -1,8 +1,19 @@
+{# Round 5, F5: layer 2's one-representation-per-leg choice compares a side's
+   gross against the LEG's amount, i.e. a non-equality across both sides of the
+   join. ClickHouse refuses that in an ON clause unless
+   allow_experimental_join_condition is set — and gold_ic_eliminations, one
+   model upstream in this same chain, already sets it
+   (gold_ic_eliminations.sql:3). An earlier commit called the refusal a hard
+   limit and moved the choice into the WHERE. That was wrong, and it mattered:
+   in the WHERE a side matching no arm DROPS the leg (fail-silent), while in
+   the ON it is a join miss and the whole leg is emitted on a blank slice
+   (fail-safe). #}
 {{
     config(
         materialized='table',
         engine='MergeTree()',
-        order_by='tuple()'
+        order_by='tuple()',
+        query_settings={'allow_experimental_join_condition': 1}
     )
 }}
 
@@ -54,38 +65,220 @@ with entity_balances as (
    entity whose minority holds that share (#175 re-review L2). The cash flow
    statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
    (third review L1). #}
-ic_elims as (
+{# konsolidat#245 option C, rewritten after PR #260 review findings F1 and F2.
+
+   A leg of gold_ic_eliminations belongs to ONE SIDE OF ONE PAIR, keyed
+   (entity_a, account_a, entity_b, account_b) — the PARTNER is part of that
+   key. The first version partitioned only on (group, period, entity,
+   account), so a leg was apportioned over everything the entity had booked on
+   that account against EVERY partner: review F2 showed a ZZA<->ZZB
+   elimination of -600 landing 360 on the slice holding ZZB's balance and 240
+   on a slice holding only ZZC's. The account total stayed right and the slices
+   were wrong, which no total-based check can see. `partner` is therefore in
+   the grain here and in the join.
+
+   TWO CASES, and they must not be confused (review F1). Under
+   join_use_nulls=0 a LEFT JOIN miss fills defaults, so `side_mov = 0` was
+   true both when no slice row existed AND when the side's slices summed to
+   zero. In the second case every one of N slice rows took factor 1.0 and the
+   leg was emitted N times at full amount: two offsetting cost centres on one
+   intercompany account left the layer out by the whole leg and broke
+   assert_ic_elimination_nets_zero. So a side is split only when its movement
+   is big enough to divide by; otherwise it collapses to ONE blank-slice row
+   carrying the whole leg. `matched` is a sentinel: 0 on a join miss, which
+   cannot be confused with a real value. #}
+side_slices_by_pair as (
     select
         consolidation_group,
-        if(elimination_kind = 'nci', debit_entity, '') as data_area_id,
         fiscal_year,
         fiscal_period,
-        debit_account as main_account,
-        'IC Elimination' as account_name,
+        entity,
+        partner,
+        account,
+        {{ dim_select(trailing=true) }}
+        sum(mov_group) as slice_mov,
+        sum(sum(mov_group)) over (
+            partition by consolidation_group, fiscal_year, fiscal_period,
+                         entity, partner, account
+        ) as side_mov
+    from {{ ref('gold_ic_side_slices') }}
+    group by consolidation_group, fiscal_year, fiscal_period, entity, partner, account
+             {{ dim_group_by(leading=true) }}
+),
+
+{# ALIGNED gross, in its own pass: only the slices pointing the same way as the
+   side's net (decision 2B). A slice holding an opposite-signed balance
+   contributes nothing to the base and takes no share. Magnitude weighting,
+   which this replaces, gave such a slice an elimination of the leg's sign and
+   pushed it further from its own balance; it now receives nothing.
+
+   CORRECTION (round 5, F2): an earlier version of this note added "so no slice
+   is ever moved away from zero". That is FALSE — it holds only when the leg
+   opposes the side's net, and nothing guarantees that. When a side settles
+   while its partner catches up, the leg shares the side's sign and every
+   aligned slice is pushed further from zero. What 2B guarantees is narrower
+   and still worth having: a slice OPPOSING its side takes nothing, and with
+   leg_coverage() = 1.0 no slice is moved further than it moved itself.
+
+   A SECOND CTE because ClickHouse refuses a window function inside another
+   window function (ILLEGAL_AGGREGATION): side_mov is itself a window, so the
+   sign it implies cannot be read in the same select. #}
+side_slices_aligned as (
+    select
+        *,
+        {# DECLARED DEFAULT (round 5, F6): when side_mov is exactly 0 there is
+           no direction in the data, and `>= 0` picks the positive slices. On a
+           side of +1000 / -1000 that hands the whole elimination to the
+           positive slice; swap them and it goes to the other. The data does not
+           decide it, this line does, and the project's standard is that an
+           unavoidable default is declared and visible. #}
+        sum(greatest(slice_mov * if(side_mov >= 0, 1, -1), 0)) over (
+            partition by consolidation_group, fiscal_year, fiscal_period,
+                         entity, partner, account
+        ) as aligned_gross
+    from side_slices_by_pair
+),
+
+side_shares_sliced as (
+    select
+        consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
+        {{ dim_select(trailing=true) }}
+        greatest(slice_mov * if(side_mov >= 0, 1, -1), 0)
+            / nullIf(aligned_gross, 0) as share,
+        aligned_gross,
+        toUInt8(0) as is_flat,
+        toUInt8(1) as matched
+    from side_slices_aligned
+    where aligned_gross > 0
+),
+
+{# And ONE row per side carrying the whole leg, used when the side's activity
+   does not cover enough of the leg to divide it (1B), or when there is no
+   aligned activity at all. #}
+side_shares_whole as (
+    select distinct
+        consolidation_group, fiscal_year, fiscal_period, entity, partner, account,
         {{ dim_empty_strings(trailing=true) }}
+        toFloat64(1) as share,
+        aligned_gross,
+        toUInt8(1) as is_flat,
+        toUInt8(1) as matched
+    from side_slices_aligned
+),
+
+{# Both representations of every side. Layer 2 picks exactly one per leg, and
+   it needs the leg's size to do it, which is why the choice is made at the
+   join and not here. #}
+side_slice_shares as (
+    select * from side_shares_sliced
+    union all
+    select * from side_shares_whole
+),
+
+ic_elims as (
+
+{# konsolidat#245 layer 2, option C (Deepak Pai, 6 Oct 2026): each leg carries
+   ITS OWN side's slice. The leg's amount is split across that side's dimension
+   values in proportion to what the side booked (gold_ic_side_slices), so the
+   per-slice amounts sum to exactly the leg's elimination — Sum(slice_mov)/side_mov
+   is 1 by construction, and assert_ic_side_slices_sum_to_the_side guards that
+   identity. A side with no slice information (nothing booked, so the ratio is
+   undefined) keeps the whole leg on a blank slice rather than inventing one.
+
+   The split is HERE and not in gold_ic_eliminations because that model carries
+   both legs on one row: splitting there would need a cross product of the two
+   sides' slices, which is not what either leg eliminates. Layer 2 has already
+   separated the legs, so each can be split against its own side. That also
+   leaves gold_ic_eliminations, its ten singular tests and its documented
+   "every row nets to zero" invariant completely untouched. #}
+    select
+        e.consolidation_group as consolidation_group,
+        if(e.elimination_kind = 'nci', e.debit_entity, '') as data_area_id,
+        e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        e.debit_account as main_account,
+        'IC Elimination' as account_name,
+        {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
-        debit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
-        rule_id as journal_id
-    from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+        {# the leg, apportioned to this slice; the whole leg when the side
+           booked nothing to apportion over #}
+        {# matched = 0 is a join miss (join_use_nulls=0 gives defaults, never
+           NULL), and then the whole leg lands on a blank slice.
+
+           CORRECTION (re-review finding 4): an earlier note here said an NCI
+           or IC-difference leg "posts to a non-IC account and always misses".
+           That is wrong. gold_ic_eliminations pairs (account_a, entity_a) with
+           (nci_account, entity_b) — only the SECOND leg is on a non-IC
+           account. The first is on the real IC account at the real entity
+           against the real partner, so it matches and IS apportioned, and
+           ic_elimination_nci rows do carry dimension values. That is
+           defensible (a side's NCI residual split over that side's own
+           slices), but it is not what the note claimed.
+
+           The fallback is still SILENT, and it has THREE causes the output
+           cannot tell apart (round 4, F6 — the previous note said two):
+             1. a join miss, this branch;
+             2. a side whose gross is below materiality, the flat branch;
+             3. a GENUINE slice whose declared dimension value is blank —
+                gold_ic_side_slices takes dim_select straight from the
+                consolidated TB, where an unset dimension is '' and not NULL.
+           Cause 3 is the only one live produces, because every dimension
+           column on this site is blank. Naming them needs a reason column on
+           the layer, which is not in this change. #}
+        e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
+        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        e.rule_id as journal_id
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join side_slice_shares as sl
+        on sl.consolidation_group = e.consolidation_group
+        and sl.fiscal_year = e.fiscal_year
+        and sl.fiscal_period = e.fiscal_period
+        and sl.entity = e.debit_entity
+        and sl.partner = e.credit_entity
+        and sl.account = e.debit_account
+        {# ONE representation of the side per leg (1B): its own activity must
+           cover the whole leg before its slices divide it, else the single
+           whole-leg row. In the ON, so a side matching neither arm is a join
+           miss and the leg is still emitted (fail-safe) rather than dropped. #}
+        and (sl.is_flat = 0
+             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
+             or sl.is_flat = 1
+             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
+
+    where e.elimination_view = 'group'
 
     union all
 
     select
-        consolidation_group,
-        if(elimination_kind = 'nci', credit_entity, '') as data_area_id,
-        fiscal_year,
-        fiscal_period,
-        credit_account as main_account,
+        e.consolidation_group as consolidation_group,
+        if(e.elimination_kind = 'nci', e.credit_entity, '') as data_area_id,
+        e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        e.credit_account as main_account,
         'IC Elimination' as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
-        credit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
-        rule_id as journal_id
-    from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+        e.credit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
+        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        e.rule_id as journal_id
+    from {{ ref('gold_ic_eliminations') }} as e
+    left join side_slice_shares as sl
+        on sl.consolidation_group = e.consolidation_group
+        and sl.fiscal_year = e.fiscal_year
+        and sl.fiscal_period = e.fiscal_period
+        and sl.entity = e.credit_entity
+        and sl.partner = e.debit_entity
+        and sl.account = e.credit_account
+        {# ONE representation of the side per leg (1B): its own activity must
+           cover the whole leg before its slices divide it, else the single
+           whole-leg row. In the ON, so a side matching neither arm is a join
+           miss and the leg is still emitted (fail-safe) rather than dropped. #}
+        and (sl.is_flat = 0
+             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
+             or sl.is_flat = 1
+             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
+
+    where e.elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}
@@ -97,6 +290,14 @@ cta_entries as (
         fiscal_period,
         main_account,
         'CTA' as account_name,
+        {# konsolidat#245 option D: BLANK BY ARITHMETIC, not by omission. The CTA
+           is one plug per entity and period — gold_fx_revaluation computes
+           -sum(group_amount) across EVERY account and posts it to a synthetic
+           'CTA' account — so it is the residual that makes the entity's
+           translated balance sheet balance. It has no slice: a per-dimension
+           plug would not be a translation difference, it would be an arbitrary
+           allocation of one. assert_sliceless_layers_carry_no_dimension
+           asserts this layer stays blank. #}
         {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         cta_amount as amount,
@@ -120,14 +321,19 @@ topside as (
         fiscal_period,
         main_account,
         any(description) as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {# konsolidat#245 option D: a top-side carries the slice its line
+           declared, so the dimensions are part of this grain — two lines on one
+           account and period with different values are two rows, not one. The
+           amount is still a sum, so a finer partition cannot change the total,
+           only split it. That is the invariant the A/B asserts. #}
+        {{ dim_select(trailing=true) }}
         '' as reporting_currency,
         sum({{ cast_to_float64('net_amount') }}) as amount,
         adjustment_type,
         any(journal_id) as journal_id
     from {{ ref('gold_consolidation_adjustments') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
-             adjustment_type
+             adjustment_type{{ dim_group_by(leading=true) }}
 ),
 
 {# Layer 5: Equity method entries (PRD-14) #}
@@ -139,6 +345,22 @@ equity_method as (
         fiscal_period,
         main_account,
         account_name,
+        {# konsolidat#245 option D: BLANK BY DECISION. Settled by Claude on
+           6 Oct 2026 under Deepak Pai's instruction to settle it — NOT a
+           decision he made, and open to reversal on his word.
+
+           It COULD inherit: gold_equity_method_associates sums the associate's
+           P&L out of gold_trial_balance, which carries real dimension values,
+           and sum(per-slice net income) x ownership_pct is arithmetically
+           sound. It is left blank because equity income is a ONE-LINE PICKUP
+           in the investor's books — "share of profit of associates" — and
+           splitting it by the associate's cost centres attributes the
+           investor's line to a DIFFERENT entity's management structure,
+           importing that entity's dimension vocabulary into the group's.
+
+           Reverse this by replacing the macro with dim_select over the
+           associate's slices and removing 'equity_method' from
+           assert_sliceless_layers_carry_no_dimension. #}
         {{ dim_empty_strings(trailing=true) }}
         reporting_currency,
         amount,

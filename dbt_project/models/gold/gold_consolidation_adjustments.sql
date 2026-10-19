@@ -29,6 +29,12 @@
    consolidation group `GLOBAL` and an entity `GROUP` that exist nowhere in the
    Consolidation Group tree, and a top-side journal is transactional data, not
    configuration to ship. #}
+{# konsolidat#245 option D: the journal's declared dimensions. Read off the
+   staging relation rather than from a var, so dbt never names a column the
+   site has not declared — konsol creates one per Dimension ticked in_journal
+   (bronze_trial_balance_submissions uses the same technique for the TB). #}
+{%- set journal_dims = dims_present_in(source('epm_staging', 'consolidation_adjustments')) %}
+
 with staging_adjustments as (
     select
         sa.consolidation_group as consolidation_group,
@@ -48,6 +54,7 @@ with staging_adjustments as (
         sa.reversal_journal_id as reversal_journal_id,
         sa.reverse_fiscal_year as reverse_fiscal_year,
         sa.reverse_fiscal_period as reverse_fiscal_period
+        {{ dim_select_or_blank('sa.', available=journal_dims, leading=true) }}
     from {{ source('epm_staging', 'consolidation_adjustments') }} as sa
     where sa.status in ('Approved', 'Reversed')
 ),
@@ -71,6 +78,8 @@ auto_reversals as (
         s.journal_id as reversal_journal_id,
         toUInt16(0) as reverse_fiscal_year,
         toUInt8(0) as reverse_fiscal_period
+        {# the reversal reverses an amount, not a slice: same dimension values #}
+        {{ dim_select_or_blank('s.', available=var('dimensions'), leading=true) }}
     from staging_adjustments as s
     where s.reverse_fiscal_year > 0
       and s.status = 'Approved'
