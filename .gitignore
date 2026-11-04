@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.prebak
+.env.v16
 deploy.log
 *.pyc
 __pycache__/

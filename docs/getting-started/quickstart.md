@@ -7,7 +7,7 @@ Get Konsolidat running locally and pull your first financial value into Excel.
 - Docker Desktop (or Docker Engine + Compose)
 - Python 3.10+ with `pip`
 - Excel (desktop, Windows or Mac)
-- Frappe Bench installed ([bench docs](https://frappeframework.com/docs/user/en/installation))
+- Frappe Bench installed ([bench docs](https://frappeframework.com/docs/user/en/installation)). konsol runs on Frappe v16, which needs Python 3.14 and Node 24 for a native bench.
 
 ## Step 1: Start ClickHouse (2 min)
 

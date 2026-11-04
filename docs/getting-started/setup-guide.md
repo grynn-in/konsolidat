@@ -146,9 +146,11 @@ dbt build      # Build all models + run 26 tests
 
 ### 5.1 Install Frappe Bench
 
+konsol runs on Frappe v16, which needs Python 3.14, Node 24, and `pkg-config` with the MariaDB client headers (`libmariadb-dev`) to build `mysqlclient`.
+
 ```bash
 pip install frappe-bench
-bench init frappe-bench --frappe-branch version-15
+bench init frappe-bench --frappe-branch version-16
 cd frappe-bench
 ```
 

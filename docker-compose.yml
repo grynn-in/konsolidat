@@ -176,10 +176,11 @@ services:
     # it is missing. It inherits the anchor's pull_policy: never. That only
     # rules out pulling from a registry; Compose still builds a service with
     # `build:` under `never`, and skips a pointless Docker Hub lookup first.
+    # No FRAPPE_BRANCH build arg: the Dockerfile is tied to Frappe v16
+    # (Python 3.14, Node 24), and deploy.sh refuses a .env naming another
+    # branch (scripts/check-frappe-branch.sh, konsol#358).
     build:
       context: ./docker/frappe
-      args:
-        FRAPPE_BRANCH: ${FRAPPE_BRANCH:-version-15}
     container_name: konsolidat_backend
     command: ["web"]
     ports:

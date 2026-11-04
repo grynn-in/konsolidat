@@ -217,6 +217,9 @@ else
   fi
 fi
 
+# The image is tied to one Frappe branch (konsol#358); refuse a .env naming another.
+bash scripts/check-frappe-branch.sh .env || exit 1
+
 # Source env for printing later
 set -a
 source .env

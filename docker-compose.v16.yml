@@ -1,0 +1,53 @@
+# =============================================================================
+# Side-by-side stack for verifying a Frappe upgrade
+# =============================================================================
+# Runs a second, independent stack next to the live v15 one so the v16
+# upgrade can be verified without touching it (Deepak Pai, 4 Nov 2026).
+#
+#   docker compose -p konsolidat16 --env-file .env.v16 \
+#     -f docker-compose.yml -f docker-compose.v16.yml up -d
+#
+# `-p konsolidat16` gives this stack its own image tag (konsolidat16-frappe)
+# and its own volumes (konsolidat16_mariadb_data, ...). This file renames
+# every fixed container name, moves the network to its own subnet, and
+# .env.v16 moves every host port. Caddy is not started: reach the stack on
+# FRAPPE_PORT directly.
+# =============================================================================
+
+services:
+  mariadb:
+    container_name: konsolidat16_mariadb
+  redis_cache:
+    container_name: konsolidat16_redis_cache
+  redis_queue:
+    container_name: konsolidat16_redis_queue
+  clickhouse:
+    container_name: konsolidat16_clickhouse
+    networks:
+      default:
+        ipv4_address: 172.31.0.10
+  configurator:
+    container_name: konsolidat16_configurator
+  frappe_backend:
+    container_name: konsolidat16_backend
+  frappe_worker:
+    container_name: konsolidat16_worker
+  frappe_scheduler:
+    container_name: konsolidat16_scheduler
+  cubejs:
+    container_name: konsolidat16_cubejs
+  dbt_init:
+    container_name: konsolidat16_dbt_init
+  caddy:
+    container_name: konsolidat16_caddy
+    profiles:
+      - caddy
+  backup:
+    container_name: konsolidat16_backup
+
+networks:
+  default:
+    name: open_epm_v16
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24

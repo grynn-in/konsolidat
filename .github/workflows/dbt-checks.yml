@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - run: pip install pyyaml
       - name: Every gold model has a known Build Governance domain
         run: python scripts/check_gold_domains.py dbt_project/dbt_project.yml
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # Pinned to what the running stack installs (docker/frappe/Dockerfile).
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       # No connection needed: parse compiles the DAG without touching
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # konsol#182: the governed chart's DDL is byte-identical to konsol's, and
       # silver and the guard read every one of its columns. Plain unittest, no
       # installs: nothing else in tests/ runs in CI.
@@ -184,7 +184,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # pytest and requests are what tests/integration/conftest.py imports.
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3" pytest requests
       - name: full dbt build at real and zero dimensions, then the integration suite
@@ -286,7 +286,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       - name: dbt build --select @silver_main_accounts (empty, then ZZ fixture)
         run: python scripts/tb_only_first_build.py --prefix ci_fb --fixture
