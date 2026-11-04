@@ -9,7 +9,10 @@ set -euo pipefail
 SUPPORTED="version-16"
 ENV_FILE="${1:?usage: check-frappe-branch.sh <env-file>}"
 [ -f "$ENV_FILE" ] || exit 0
-value=$(grep -E '^FRAPPE_BRANCH=' "$ENV_FILE" | tail -n 1 | cut -d= -f2- | tr -d '"'"'"' \r' || true)
+# Accept what a .env allows: leading spaces, `export`, spaces around `=`, an
+# inline ` # comment`, quotes, CRLF. A commented-out line does not count.
+line=$(grep -E '^[[:space:]]*(export[[:space:]]+)?FRAPPE_BRANCH[[:space:]]*=' "$ENV_FILE" | tail -n 1 || true)
+value=$(printf '%s' "${line#*=}" | tr -d '\r' | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//' | tr -d '"'"'"'')
 if [ -n "$value" ] && [ "$value" != "$SUPPORTED" ]; then
   echo "[ERROR] $ENV_FILE sets FRAPPE_BRANCH=$value, but this image builds Frappe $SUPPORTED only." >&2
   echo "        Back up the site first (bench --site <site> backup --with-files): the" >&2

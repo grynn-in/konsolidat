@@ -35,6 +35,16 @@ class FrappeBranchGuard(unittest.TestCase):
         self.assertEqual(run_guard('FRAPPE_BRANCH="version-15"\n').returncode, 1)
         self.assertEqual(run_guard("FRAPPE_BRANCH=version-15\r\n").returncode, 1)
 
+    def test_reads_every_spelling_dotenv_allows(self):
+        """Review of konsol#358: `export`, spaces around `=` and an inline
+        comment slipped past (or tripped) an anchored `^FRAPPE_BRANCH=`."""
+        self.assertEqual(run_guard("export FRAPPE_BRANCH=version-15\n").returncode, 1)
+        self.assertEqual(run_guard("FRAPPE_BRANCH = version-15\n").returncode, 1)
+        self.assertEqual(run_guard("  FRAPPE_BRANCH=version-15  # old\n").returncode, 1)
+        self.assertEqual(run_guard("FRAPPE_BRANCH=version-16 # pinned\n").returncode, 0)
+        self.assertEqual(run_guard("# FRAPPE_BRANCH=version-15\n").returncode, 0)
+        self.assertEqual(run_guard("FRAPPE_BRANCH=\n").returncode, 0)
+
     def test_accepts_v16_absent_line_and_missing_file(self):
         self.assertEqual(run_guard("FRAPPE_BRANCH=version-16\n").returncode, 0)
         self.assertEqual(run_guard('FRAPPE_BRANCH="version-16"\r\n').returncode, 0)
