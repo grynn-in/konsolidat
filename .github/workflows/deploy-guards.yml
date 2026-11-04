@@ -53,3 +53,5 @@ jobs:
       # than declaring the skip it must declare on a Mac.
       - name: deploy.sh creates its temp files portably
         run: python -m unittest -v tests.test_deploy_portability
+      - name: deploy.sh refuses a .env naming an unsupported Frappe branch (konsol#358)
+        run: python -m unittest -v tests.test_deploy_frappe_branch
