@@ -1,15 +1,16 @@
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.14-slim-bookworm AS base
 
-ARG FRAPPE_BRANCH=version-15
+ARG FRAPPE_BRANCH=version-16
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl wget cron \
     mariadb-client file \
+    pkg-config libmariadb-dev \
     xfonts-75dpi xfonts-base \
     libfontconfig1 libxrender1 libxext6 \
     build-essential python3-dev \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g yarn \
     && curl -sL https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb -o /tmp/wkhtmltox.deb \
