@@ -125,6 +125,8 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      # konsol#229: set-password.sh defines konsol_measure_check from it.
+      CLICKHOUSE_MEASURE_CHECK_PASSWORD: ${CLICKHOUSE_MEASURE_CHECK_PASSWORD:-}
     entrypoint: ["/usr/local/bin/set-password.sh"]
     volumes:
       - clickhouse_data:/var/lib/clickhouse
@@ -132,6 +134,7 @@ services:
       - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
       - ./clickhouse/raw-schema.sql:/docker-entrypoint-initdb.d/02-raw-schema.sql:ro
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+      - ./clickhouse/access_control.xml:/etc/clickhouse-server/config.d/access_control.xml:ro
       - ./clickhouse/set-password.sh:/usr/local/bin/set-password.sh:ro
     ulimits:
       nofile:
@@ -156,6 +159,8 @@ services:
       <<: *frappe-env
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run ./deploy.sh to generate secrets in .env}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?run ./deploy.sh to generate secrets in .env}
+      # konsol#229: EPM Settings' Measure-Check ClickHouse User.
+      CLICKHOUSE_MEASURE_CHECK_PASSWORD: ${CLICKHOUSE_MEASURE_CHECK_PASSWORD:-}
     volumes:
       - frappe_sites:/home/frappe/frappe-bench/sites
       - frappe_logs:/home/frappe/frappe-bench/logs

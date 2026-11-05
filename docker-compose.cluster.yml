@@ -114,6 +114,7 @@ services:
       - ./clickhouse/cluster/macros-shard${SHARD_ID:-1}-replica${REPLICA_ID:-1}.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       # PostgreSQL wire protocol for Excel/ODBC (optional)
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+      - ./clickhouse/access_control.xml:/etc/clickhouse-server/config.d/access_control.xml:ro
     extra_hosts:
       # Map shard hostnames to actual IPs.
       # Replace with real IPs or use a DNS / overlay network.
