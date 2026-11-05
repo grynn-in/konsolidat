@@ -97,8 +97,11 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_adjustments (
     fiscal_year UInt16,
     fiscal_period UInt8,
     main_account String,
-    debit_amount Decimal(18,2) DEFAULT 0,
-    credit_amount Decimal(18,2) DEFAULT 0,
+    -- konsol#353 option C (Deepak Pai, 5 Nov 2026): 4 decimal places, so a
+    -- journal in a 3-decimal currency (BHD, KWD, OMR) is stored exactly. konsol
+    -- widens an existing table on migrate (ALTER TABLE ... MODIFY COLUMN).
+    debit_amount Decimal(20,4) DEFAULT 0,
+    credit_amount Decimal(20,4) DEFAULT 0,
     description String DEFAULT '',
     posted_by String DEFAULT '',
     -- PRD-16: Workflow fields
