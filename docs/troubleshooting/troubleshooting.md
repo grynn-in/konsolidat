@@ -108,7 +108,7 @@ dbt build --full-refresh    # Drop all tables and rebuild
 1. Query ClickHouse directly to isolate API vs data issues
 2. Check the period — is it 1-12 (month) or a range code (Q1, FY)?
 3. Check the measure — is it the right one for the scenario?
-4. Check dimensions — are cost_center/department filters narrowing results unexpectedly?
+4. Check dimensions — is the `dimensions` argument narrowing results unexpectedly?
 5. Run dbt tests: `dbt test` — any failures?
 
 ## Getting Help

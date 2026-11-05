@@ -24,14 +24,12 @@ The request body is a **bare JSON array** (not an object wrapper). Each element:
   "measure": "period_net_amount",
   "scenario": "actuals",
   "scenario_id": "",
-  "cost_center": "",
-  "department": "",
-  "dimensions": { "dim_cost_center": "001" }
+  "dimensions": { "dim_region": "EU" }
 }
 ```
 
 Canonical keys: **`entity`, `year`, `period`, `account`, `measure`, `scenario`**
-(plus optional `scenario_id`, `cost_center`, `department`, `dimensions`).
+(plus optional `scenario_id`, `dimensions`). Dimensions go only in `dimensions`; any other request key is refused for that row.
 
 - `period` accepts `1`–`12`, or a range token `Q1`–`Q4`, `H1`/`H2`, `FY`.
 - **Do not** use `fiscal_year` / `fiscal_period` for `epm_batch` — those are the

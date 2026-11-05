@@ -44,7 +44,7 @@ group by
 
 ### 3. API Filters Automatically
 
-The Frappe API's `_batch_query_clickhouse()` function accepts `cost_center` and `department` as optional filters. These map to `dim_cost_center` and `dim_department` in the SQL `WHERE` clause.
+The Frappe API takes dimension filters only as a `dimensions` object of declared dimension names to values (the Excel add-in's `dimensions` argument sends the same object). There are no fixed dimension parameters (konsol#287).
 
 ## Adding a New Dimension
 

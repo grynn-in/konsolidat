@@ -119,7 +119,7 @@ The batch endpoint rejects requests exceeding 2000 items. The Excel add-in group
 
 ## Query Optimization
 
-The batch endpoint groups requests by `(scenario, measure, period_tuple, has_cost_center, has_department)` and issues one SQL query per group. This means 500 requests for the same scenario/measure/period combination become a single ClickHouse query with an `IN` clause.
+The batch endpoint groups requests by `(fact, measure, the set of dimension names)` and issues one SQL query per group. This means 500 requests for the same scenario/measure/period combination become a single ClickHouse query with an `IN` clause.
 
 ## Next Steps
 
