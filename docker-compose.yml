@@ -134,6 +134,7 @@ services:
       - ./clickhouse/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
       - ./clickhouse/raw-schema.sql:/docker-entrypoint-initdb.d/02-raw-schema.sql:ro
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+      - ./clickhouse/access_control.xml:/etc/clickhouse-server/config.d/access_control.xml:ro
       - ./clickhouse/set-password.sh:/usr/local/bin/set-password.sh:ro
     ulimits:
       nofile:

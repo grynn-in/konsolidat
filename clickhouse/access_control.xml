@@ -1,0 +1,13 @@
+<clickhouse>
+    <!-- konsol#229: reading system.* or information_schema.* needs a grant.
+         ClickHouse 24.8 ships both true; pinned so an image change cannot
+         reopen them. konsol_measure_check (a user an EPM Admin's Measure
+         expression runs as) has no such grant, so a subquery cannot read
+         query_log, processes, parts, dictionaries or users. The catalogs
+         ClickHouse keeps readable for everyone (tables, columns, databases)
+         list only what the user is granted: epm_silver.silver_gl_entries. -->
+    <access_control_improvements>
+        <select_from_system_db_requires_grant>true</select_from_system_db_requires_grant>
+        <select_from_information_schema_requires_grant>true</select_from_information_schema_requires_grant>
+    </access_control_improvements>
+</clickhouse>
