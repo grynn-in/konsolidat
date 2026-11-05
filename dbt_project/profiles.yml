@@ -53,7 +53,7 @@ open_epm:
     #
     # NEEDS-A-CLUSTER: This target cannot be used without a running multi-node
     # ClickHouse cluster + ClickHouse Keeper.
-    # See: docs/admin-guide/cluster-setup.md
+    # See: https://docs.konsolidat.com/admin-guide/cluster-setup
     cluster:
       type: clickhouse
       host: "{{ env_var('CLICKHOUSE_HOST') }}"
