@@ -53,7 +53,7 @@ class ConsolidationAdjustmentsDDL(unittest.TestCase):
         statement = _normalise(_create_statements(_read(INIT_DB), TABLE)[0])
         for column in ("debit_amount", "credit_amount"):
             with self.subTest(column=column):
-                self.assertIn(f"{column} Decimal(20,4) DEFAULT 0", statement)
+                self.assertIn(_normalise(f"{column} Decimal(20,4) DEFAULT 0"), statement)
 
     def test_ci_runs_this_test_and_watches_its_inputs(self):
         wf = _read(WORKFLOW)
