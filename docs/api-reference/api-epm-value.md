@@ -22,7 +22,7 @@ All parameters are passed as query string arguments.
 | `account` | string | Yes | — | Main account code (e.g., `401100`) |
 | `measure` | string | No | `period_net_amount` | Measure name. Validated against the active **Measure** registry intersected with the fact's allowed measures. |
 | `fact` | string | No | — | Fact registry name (e.g. `gl_journal_entries`, `budget_input`, `headcount`) selecting the source table. Case-insensitive. **Wins over `scenario`** when both are given. |
-| `dimensions` | string (JSON) | No | `{}` | Dimension filters as a JSON object, e.g. `{"dim_cost_center":"CC001","dim_project":"P01"}`. Keys are canonical dimension names; validated against the fact's allowed dimensions. This is the only way to filter by dimension. |
+| `dimensions` | string (JSON) | No | `{}` | Dimension filters as a JSON object, e.g. `{"dim_region":"EU","dim_product":"X"}`. Keys are canonical dimension names; validated against the fact's allowed dimensions. This is the only way to filter by dimension. |
 | `scenario` | string | No | `actuals` | Resolves the fact via its `scenario_key` when `fact` is not supplied. |
 | `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to facts whose `has_scenario_id` flag is set (e.g. `budget_input`). When empty, returns the sum across all scenario IDs. |
 
@@ -75,10 +75,10 @@ measure=period_amount&scenario=budget" \
 ### With generic dimension filters (Phase 2.4)
 
 ```bash
-# dimensions is a URL-encoded JSON object: {"dim_cost_center":"SALES","dim_project":"P01"}
+# dimensions is a URL-encoded JSON object: {"dim_region":"EU","dim_product":"X"}
 curl "http://localhost:8069/api/method/konsol.api.epm_value?\
 entity=USMF&year=2024&period=FY&account=401100&\
-dimensions=%7B%22dim_cost_center%22%3A%22SALES%22%2C%22dim_project%22%3A%22P01%22%7D" \
+dimensions=%7B%22dim_region%22%3A%22EU%22%2C%22dim_product%22%3A%22X%22%7D" \
   -b "cookies.txt"
 ```
 
@@ -125,7 +125,7 @@ measure=period_amount&scenario=budget&scenario_id=BUDGET_2025" \
 ```json
 {
   "exc_type": "ValidationError",
-  "_server_messages": "[\"Invalid dimension 'dim_project' for fact 'gl_journal_entries'. Allowed: dim_business_unit, dim_cost_center, dim_department\"]"
+  "_server_messages": "[\"Invalid dimension 'dim_product' for fact 'gl_journal_entries'. Allowed: dim_region\"]"
 }
 ```
 
