@@ -69,8 +69,10 @@ Every read function and `K.EPMSAVE` take one `dimensions` argument for any numbe
 of dimensions (konsol#287). Give it in one of two forms:
 
 - **One text cell:** `"dim_region=EU;dim_product=X"`. Spaces around names and values are ignored.
+  This form cannot carry a value that contains `;`. Use the range form for such a value.
 - **A 2-column range:** names in the first column, values in the second, e.g. `$H$1:$I$2`
-  holding `dim_region | EU` and `dim_product | X`. A fully blank row is skipped.
+  holding `dim_region | EU` and `dim_product | X`. The range has no header row: every row
+  is a name/value pair. A fully blank row is skipped.
 
 Each name is a dimension your site declared (a Published Dimension record).
 The server refuses a name the Dataset does not have (reads) or that is not a
@@ -95,10 +97,27 @@ one.
 | `=K.EPMSAVE(B5,"USMF",2025,1,"6100","BUDGET_2025","base","EU")` | `=K.EPMSAVE(B5,"USMF",2025,1,"6100","BUDGET_2025","base","dim_region=EU")` |
 
 Use the name your site declared for the dimension the old argument filtered
-on; the examples use `dim_region` and `dim_product`. A formula left
-unrewritten shows an error rather than a wrong number: a bare value such as
-`"EU"` in the `dimensions` slot is not `name=value`, and a scenario id that
-moved into the `hierarchy` slot is refused because it has no node.
+on; the examples use `dim_region` and `dim_product`.
+
+A formula left unrewritten shows an error, not a wrong number. Each old value
+lands one slot to the left, and each landing is refused:
+
+- a bare value such as `"EU"` in `dimensions` is not `name=value`;
+- an old department value in `scenario_id` is refused when the Dataset has no
+  scenario column (actuals), and when it names no Scenario (budget);
+- an old scenario id in `hierarchy` is refused because it has no node;
+- an old last argument (`layer`, `node`) is one argument too many, and the
+  add-in refuses a formula with more arguments than the signature.
+
+Two consequences of these refusals:
+
+- **A hierarchy needs a node on every row.** A sheet that fixes the hierarchy
+  and leaves `node` blank on some rows now shows an error on those rows.
+  Before, the hierarchy was ignored there. This is the accepted trade-off of
+  the guard against a scenario id moved into the `hierarchy` slot.
+- **A scenario id must exist and must have a column to filter.** A
+  `scenario_id` on actuals, or one that names no Scenario, is refused, not
+  ignored or read as 0.
 
 ### K.EPM_BUDGET() — Budget Values
 
