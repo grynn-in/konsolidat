@@ -2,8 +2,8 @@
 
 Sample workbooks for the konsol Excel add-in. The add-in's worksheet functions
 (`=K.EPM()`, `=K.EPM_BUDGET()`, `=K.EPMSAVE()` and the rest) are documented in the
-[Excel Formulas Guide](../docs/user-guide/excel-formulas-guide.md); install the add-in
-as described in the [Excel Task Pane Guide](../docs/user-guide/excel-taskpane-guide.md).
+[Excel custom functions guide](https://docs.konsolidat.com/user-guide/excel-custom-functions); install the add-in
+as described in the [Excel task pane guide](https://docs.konsolidat.com/user-guide/excel-taskpane-guide).
 
 | Workbook | What it is | State |
 |----------|------------|-------|

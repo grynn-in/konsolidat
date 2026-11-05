@@ -53,7 +53,7 @@ vars:
   #   dbt build --target cluster --vars '{"cluster_enabled": true}'
   # When false, all cluster_* macros return the same values as the original
   # hardcoded literals; compiled SQL is byte-for-byte identical to pre-cluster.
-  # See docs/admin-guide/cluster-setup.md for the full procedure.
+  # See https://docs.konsolidat.com/admin-guide/cluster-setup for the full procedure.
   cluster_enabled: false
 
   # Active ERP source systems. This is the single switch that controls BOTH

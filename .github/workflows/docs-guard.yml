@@ -1,0 +1,37 @@
+# Guard for the decision recorded in konsolidat-docs#2 (2026-11-05): this repo's
+# docs/ holds records only; reader-facing prose lives in grynn-in/konsolidat-docs.
+name: docs-guard
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'mkdocs.yml']
+  pull_request:
+    paths: ['docs/**', 'mkdocs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  records-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docs/ contains only record folders
+        run: |
+          set -euo pipefail
+          bad=$(find docs -type f \
+            -not -path 'docs/decisions/*' \
+            -not -path 'docs/prd/*' \
+            -not -path 'docs/design/rules.md' \
+            -not -path 'docs/README.md' || true)
+          if [[ -n "$bad" ]]; then
+            echo "Reader-facing docs belong in grynn-in/konsolidat-docs (konsolidat-docs#2). Offending files:"; echo "$bad"; exit 1
+          fi
+          [[ -e mkdocs.yml ]] && { echo "mkdocs.yml must not return (konsolidat-docs#2)"; exit 1; }
+          echo "OK: docs/ holds records only"
+      - name: rules.md is up to date with the tests
+        run: |
+          python3 scripts/extract_assertion_rules.py
+          git diff --exit-code -- docs/design/rules.md || { echo "docs/design/rules.md is stale: run scripts/extract_assertion_rules.py"; exit 1; }

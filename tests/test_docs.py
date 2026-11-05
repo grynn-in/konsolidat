@@ -24,7 +24,7 @@ def test_readme_documents_cube():
     Cube is the semantic / SQL-API layer that scales concurrent reads to the
     target 50–500 users (Excel ODBC and BI tools query through it). The Frappe
     direct-query path remains the source of truth for the =EPM() formulas and
-    write-back. See docs/reference/semantic-layer.md.
+    write-back. See https://docs.konsolidat.com/reference/semantic-layer.
     """
     with open(os.path.join(PROJECT_ROOT, "README.md")) as f:
         content = f.read()
