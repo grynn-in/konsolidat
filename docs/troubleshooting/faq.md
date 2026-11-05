@@ -15,7 +15,7 @@ Yes. Use period range codes: `"Q1"`, `"Q2"`, `"Q3"`, `"Q4"`, `"H1"`, `"H2"`, or 
 No data exists for that entity, period, account and measure: a missing combination shows 0. Not being signed in shows `#N/A`, not 0.
 
 **Q: How do I filter by cost center or department?**
-Add the optional parameters: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount", "actuals", "SALES", "SALES")`
+Add the optional parameters: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount", "actuals", "dim_region=EU;dim_product=X")`
 
 **Q: How often is the data updated?**
 After each Airbyte sync + dbt build cycle. Typically daily or on-demand. Ask your IT admin about the schedule.

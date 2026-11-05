@@ -24,7 +24,7 @@ Send a JSON array as the raw POST body. Each element is a request object.
 | `account` | string | Yes | — | Main account code |
 | `measure` | string | No | `period_net_amount` | Measure name. Validated against the active Measure registry ∩ the fact's measures. |
 | `fact` | string | No | — | Fact registry name selecting the source table. Case-insensitive; wins over `scenario`. |
-| `dimensions` | object | No | `{}` | Dimension filters, e.g. `{"dim_cost_center":"SALES","dim_project":"P01"}`. Keys are canonical dimension names, validated against the fact's allowed dimensions. The only way to filter by dimension. |
+| `dimensions` | object | No | `{}` | Dimension filters, e.g. `{"dim_region":"EU","dim_product":"X"}`. Keys are canonical dimension names, validated against the fact's allowed dimensions. The only way to filter by dimension: a request key outside this table (such as a top-level dimension name) is refused for that row with "Unknown request key". |
 | `scenario` | string | No | `actuals` | Resolves the fact via its `scenario_key` when `fact` is not supplied. |
 | `scenario_id` | string | No | `""` | Filter to a specific scenario (e.g., `BUDGET_2025`). Only applies to facts whose `has_scenario_id` flag is set. |
 
@@ -72,7 +72,7 @@ curl -X POST "http://localhost:8069/api/method/konsol.api.epm_batch" \
     {"entity": "USMF", "year": 2024, "period": 5, "account": "501100"},
     {"entity": "DEMF", "year": 2024, "period": "Q1", "account": "401100", "measure": "period_net_amount"},
     {"entity": "USMF", "year": 2025, "period": "FY", "account": "6100", "measure": "period_amount", "fact": "budget_input"},
-    {"entity": "USMF", "year": 2024, "period": 5, "account": "401100", "measure": "variance_abs", "fact": "variance_analysis", "dimensions": {"dim_cost_center": "SALES"}}
+    {"entity": "USMF", "year": 2024, "period": 5, "account": "401100", "measure": "variance_abs", "fact": "variance_analysis", "dimensions": {"dim_region": "EU"}}
   ]'
 ```
 

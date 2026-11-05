@@ -80,7 +80,7 @@ Variance supports the same period range codes:
 ### With Dimension Filters
 
 ```
-=K.EPM_VARIANCE("USMF", 2025, "FY", "6100", "SALES", "SALES")
+=K.EPM_VARIANCE("USMF", 2025, "FY", "6100", "dim_region=EU;dim_product=X")
 ```
 
 ## YTD Variance

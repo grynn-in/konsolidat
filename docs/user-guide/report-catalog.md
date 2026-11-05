@@ -103,12 +103,12 @@ For accounts where you need both sides:
 =K.EPM_CREDIT("USMF", 2024, 5, "1300")   ' Receivables credit
 ```
 
-### Cost Center Drill-Down
+### Drill-Down by a Dimension
 
 ```
-=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "IT")
-=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "SALES")
-=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "FACILITY")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "dim_function=IT")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "dim_function=SALES")
+=K.EPM("USMF", 2024, "FY", "7100", "period_net_amount", "actuals", "dim_function=FACILITY")
 ```
 
 ### YTD Tracking

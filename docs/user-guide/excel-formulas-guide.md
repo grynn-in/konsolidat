@@ -26,7 +26,7 @@ The five `K.EPM` read functions share the same parameter pattern. They differ on
 ### K.EPM() — General Purpose
 
 ```
-=K.EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [cost_center], [department], [scenario_id], [hierarchy], [node], [layer])
+=K.EPM(entity, fiscal_year, fiscal_period, account, [measure], [scenario], [dimensions], [scenario_id], [hierarchy], [node], [layer])
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -37,8 +37,7 @@ The five `K.EPM` read functions share the same parameter pattern. They differ on
 | `account` | String | Yes | — | Main account code (e.g., `"401100"`) |
 | `measure` | String | No | `"period_net_amount"` | Which value to return (see [Measures](#measures)) |
 | `scenario` | String | No | `"actuals"` | Data scenario (see [Scenarios](#scenarios)) |
-| `cost_center` | String | No | `""` | Filter by cost center |
-| `department` | String | No | `""` | Filter by department |
+| `dimensions` | Text or range | No | `""` | Dimension filter: one text cell such as `"dim_region=EU;dim_product=X"`, or a 2-column range of name/value rows. See [Dimensions](#dimensions). |
 | `scenario_id` | String | No | `""` | Filter to a specific scenario ID (e.g., `"BUDGET_2025"`). See [Scenario ID Filtering](#scenario-id-filtering). |
 | `hierarchy`, `node` | String | No | `""` | Read a reporting-hierarchy node instead of a single entity |
 | `layer` | String | No | `""` | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
@@ -48,8 +47,8 @@ The five `K.EPM` read functions share the same parameter pattern. They differ on
 ```
 =K.EPM("USMF", 2024, 5, "401100")
 =K.EPM("USMF", 2024, "Q1", "401100", "ytd_net_amount")
-=K.EPM("USMF", 2024, "FY", "401100", "period_net_amount", "actuals", "SALES")
-=K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "", "BUDGET_2025")
+=K.EPM("USMF", 2024, "FY", "401100", "period_net_amount", "actuals", "dim_region=EU")
+=K.EPM("USMF", 2025, 5, "6100", "period_amount", "budget", "", "BUDGET_2025")
 ```
 
 **Reading a reporting-hierarchy node.** Set `node` to a member code from a
@@ -61,13 +60,50 @@ exactly one published hierarchy. If the code is in several, for example
 with a message naming both trees, and you add the hierarchy name to choose.
 
 ```
-=K.EPM("ALL", 2026, "FY", "400000", "", "", "", "", "", "MGMT_2026", "DACH")
+=K.EPM("ALL", 2026, "FY", "400000", "", "", "", "", "MGMT_2026", "DACH")
 ```
+
+### Dimensions
+
+Every read function and `K.EPMSAVE` take one `dimensions` argument for any number
+of dimensions (konsol#287). Give it in one of two forms:
+
+- **One text cell:** `"dim_region=EU;dim_product=X"`. Spaces around names and values are ignored.
+- **A 2-column range:** names in the first column, values in the second, e.g. `$H$1:$I$2`
+  holding `dim_region | EU` and `dim_product | X`. A fully blank row is skipped.
+
+Each name is a dimension your site declared (a Published Dimension record).
+The server refuses a name the Dataset does not have (reads) or that is not a
+budget dimension (`K.EPMSAVE`). The add-in refuses a malformed argument: a
+pair without `=`, a name without a value, a value without a name, a name given
+twice, or a range that is not 2 columns wide.
+
+#### Rewriting formulas from before konsol#287
+
+The functions used to take two fixed arguments, `cost_center` and
+`department`, where `dimensions` now is. Every later argument moved one place
+left. A formula breaks only if it passes one of those two arguments or a later
+one.
+
+| Before | After |
+|---|---|
+| `=K.EPM("USMF",2024,"FY","401100","period_net_amount","actuals","EU","X")` | `=K.EPM("USMF",2024,"FY","401100","period_net_amount","actuals","dim_region=EU;dim_product=X")` |
+| `=K.EPM("USMF",2025,5,"6100","period_amount","budget","","","BUDGET_2025")` | `=K.EPM("USMF",2025,5,"6100","period_amount","budget","","BUDGET_2025")` |
+| `=K.EPM_BUDGET("USMF",2025,5,"6100","","","BUDGET_2025")` | `=K.EPM_BUDGET("USMF",2025,5,"6100","","BUDGET_2025")` |
+| `=K.EPM_VARIANCE("USMF",2025,"FY","6100","EU","X")` | `=K.EPM_VARIANCE("USMF",2025,"FY","6100","dim_region=EU;dim_product=X")` |
+| `=K.EPM_DEBIT("USMF",2024,5,"1300","","","MGMT_2026","DACH")` | `=K.EPM_DEBIT("USMF",2024,5,"1300","","MGMT_2026","DACH")` |
+| `=K.EPMSAVE(B5,"USMF",2025,1,"6100","BUDGET_2025","base","EU")` | `=K.EPMSAVE(B5,"USMF",2025,1,"6100","BUDGET_2025","base","dim_region=EU")` |
+
+Use the name your site declared for the dimension the old argument filtered
+on; the examples use `dim_region` and `dim_product`. A formula left
+unrewritten shows an error rather than a wrong number: a bare value such as
+`"EU"` in the `dimensions` slot is not `name=value`, and a scenario id that
+moved into the `hierarchy` slot is refused because it has no node.
 
 ### K.EPM_BUDGET() — Budget Values
 
 ```
-=K.EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id], [hierarchy], [node], [layer])
+=K.EPM_BUDGET(entity, fiscal_year, fiscal_period, account, [dimensions], [scenario_id], [hierarchy], [node], [layer])
 ```
 
 Shorthand for `=K.EPM(..., "period_amount", "budget", ...)`.
@@ -75,7 +111,7 @@ Shorthand for `=K.EPM(..., "period_amount", "budget", ...)`.
 ### K.EPM_VARIANCE() — Actual vs Budget Variance
 
 ```
-=K.EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [scenario_id], [hierarchy], [node])
+=K.EPM_VARIANCE(entity, fiscal_year, fiscal_period, account, [dimensions], [scenario_id], [hierarchy], [node])
 ```
 
 Shorthand for `=K.EPM(..., "variance_abs", "variance", ...)`.
@@ -83,7 +119,7 @@ Shorthand for `=K.EPM(..., "variance_abs", "variance", ...)`.
 ### K.EPM_DEBIT() — Period Debits
 
 ```
-=K.EPM_DEBIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [hierarchy], [node])
+=K.EPM_DEBIT(entity, fiscal_year, fiscal_period, account, [dimensions], [hierarchy], [node])
 ```
 
 Shorthand for `=K.EPM(..., "period_debit", "actuals", ...)`.
@@ -91,7 +127,7 @@ Shorthand for `=K.EPM(..., "period_debit", "actuals", ...)`.
 ### K.EPM_CREDIT() — Period Credits
 
 ```
-=K.EPM_CREDIT(entity, fiscal_year, fiscal_period, account, [cost_center], [department], [hierarchy], [node])
+=K.EPM_CREDIT(entity, fiscal_year, fiscal_period, account, [dimensions], [hierarchy], [node])
 ```
 
 Shorthand for `=K.EPM(..., "period_credit", "actuals", ...)`.
@@ -109,7 +145,7 @@ Reads one line of the consolidated cash-flow statement for a consolidation group
 ### K.EPMSAVE() — Budget Write-Back
 
 ```
-=K.EPMSAVE(amount, entity, fiscal_year, fiscal_period, account, scenario_id, layer, [cost_center], [department], [hierarchy], [node])
+=K.EPMSAVE(amount, entity, fiscal_year, fiscal_period, account, scenario_id, layer, [dimensions], [hierarchy], [node])
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -121,11 +157,10 @@ Reads one line of the consolidated cash-flow statement for a consolidation group
 | `account` | String | Yes | — | Main account code (e.g., `"6100"`) |
 | `scenario_id` | String | Yes | — | Scenario instance (e.g., `"BUDGET_2025"`) |
 | `layer` | String | Yes | — | Budget layer: `"base"`, `"challenge"`, `"management"`, `"board"` |
-| `cost_center` | String | No | `""` | Cost center dimension |
-| `department` | String | No | `""` | Department dimension |
+| `dimensions` | Text or range | No | `""` | The budget line's dimensions, in the same form as for `K.EPM`. A name that is not one of the site's budget dimensions is refused. |
 | `hierarchy`, `node` | String | No | `""` | Save against a reporting-hierarchy node (as for `K.EPM`) |
 
-**The cell displays the amount.** The write to the server happens in the background.
+**The cell displays the amount once the server has saved it.** If the server refuses the write (an undeclared dimension, a locked cycle, no permission), the cell shows `#N/A` with the server's reason.
 
 **Examples:**
 
@@ -290,8 +325,8 @@ When `scenario_id` is omitted or empty, the query returns the sum across **all**
 | Formula | What It Returns |
 |:--------|:----------------|
 | `=K.EPM_BUDGET("USMF", 2025, 5, "6100")` | Sum of ALL budget scenarios for P5 |
-| `=K.EPM_BUDGET("USMF", 2025, 5, "6100", "", "", "BUDGET_2025")` | Only BUDGET_2025 for P5 |
-| `=K.EPM_BUDGET("USMF", 2025, "Q1", "6100", "", "", "BUDGET_2025")` | BUDGET_2025 Q1 total |
+| `=K.EPM_BUDGET("USMF", 2025, 5, "6100", "", "BUDGET_2025")` | Only BUDGET_2025 for P5 |
+| `=K.EPM_BUDGET("USMF", 2025, "Q1", "6100", "", "BUDGET_2025")` | BUDGET_2025 Q1 total |
 
 ## Building a Report
 

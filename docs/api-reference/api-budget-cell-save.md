@@ -21,8 +21,7 @@ POST /api/method/konsol.api.budget_cell_save
 | `fiscal_period` | integer | Yes | Period number (`1`–`12`) |
 | `amount` | number | Yes | Budget amount |
 | `layer` | string | Yes | Budget layer: `base`, `challenge`, `management`, `board` |
-| `dim_cost_center` | string | No | Cost center dimension |
-| `dim_department` | string | No | Department dimension |
+| `dimensions` | object | No | The budget line's dimensions, e.g. `{"dim_region": "EU"}`. A name that is not one of the site's budget dimensions is refused. |
 
 ## Upsert Behavior
 
