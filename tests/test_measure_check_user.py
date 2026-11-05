@@ -97,3 +97,19 @@ def test_deploy_generates_the_secret_for_a_new_and_an_existing_env():
         text = f.read()
     assert "set_env CLICKHOUSE_MEASURE_CHECK_PASSWORD" in text, \
         "an existing .env (every redeploy) would never get the check user"
+
+
+def test_system_and_information_schema_reads_require_a_grant():
+    """Pinned, not left to the image default (24.8 ships both true): the check
+    user has no grant on system or information_schema, so a subquery in a
+    Measure expression cannot read query_log, processes, parts, dictionaries
+    or users (konsol#229 re-review)."""
+    path = os.path.join(PROJECT_ROOT, "clickhouse", "access_control.xml")
+    root = ET.parse(path).getroot()
+    aci = root.find("access_control_improvements")
+    assert aci is not None
+    assert aci.findtext("select_from_system_db_requires_grant") == "true"
+    assert aci.findtext("select_from_information_schema_requires_grant") == "true"
+    for name in ("docker-compose.yml", "docker-compose.cluster.yml"):
+        with open(os.path.join(PROJECT_ROOT, name)) as f:
+            assert "./clickhouse/access_control.xml:/etc/clickhouse-server/config.d/" in f.read(), name
