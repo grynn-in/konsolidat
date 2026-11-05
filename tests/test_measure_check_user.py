@@ -84,8 +84,12 @@ def test_compose_gives_the_secret_to_clickhouse_and_the_configurator():
 def test_the_configurator_hands_the_check_user_to_konsol():
     with open(os.path.join(PROJECT_ROOT, "docker", "configurator", "init.sh")) as f:
         text = f.read()
-    assert "ch_check_user" in text and "ch_check_password" in text
+    assert "konsol.install.setup_measure_check_user" in text
     assert "CLICKHOUSE_MEASURE_CHECK_PASSWORD" in text
+    # its own call: a konsol that predates it must not skip the main connection
+    main = text.index("konsol.install.setup_epm_settings")
+    line = text[main:text.index("\n\n", main)]
+    assert "CHECK" not in line, line
 
 
 def test_deploy_generates_the_secret_for_a_new_and_an_existing_env():

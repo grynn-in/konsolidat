@@ -217,6 +217,14 @@ else
   fi
 fi
 
+# konsol#229: the password of konsol_measure_check, the least-privilege
+# ClickHouse user konsol runs a Measure expression as. Generated for a new and
+# an existing .env alike, so a redeploy of an older stack gets the user too.
+if ! grep -q "^CLICKHOUSE_MEASURE_CHECK_PASSWORD=." .env; then
+  set_env CLICKHOUSE_MEASURE_CHECK_PASSWORD "$(openssl rand -hex 16)"
+  ok "Generated CLICKHOUSE_MEASURE_CHECK_PASSWORD (konsol Measure expression check)"
+fi
+
 # The image is tied to one Frappe branch (konsol#358); refuse a .env naming another.
 bash scripts/check-frappe-branch.sh .env || exit 1
 
