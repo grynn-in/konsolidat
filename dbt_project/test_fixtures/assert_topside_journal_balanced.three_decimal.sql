@@ -9,7 +9,11 @@
 -- is cut to 0.00 on insert, so the balanced journal arrives in gold as debit 0
 -- against credit 0.02 and the test fails with 1 result. Green (Decimal(20,4)):
 -- every line keeps its third place and the journal balances.
--- tables: epm_staging.consolidation_adjustments
+-- The group ZZG reports in BHD (minor unit 3): the test's tolerance is one
+-- unit of that currency (konsol#353 follow-up).
+-- tables: epm_staging.consolidation_adjustments epm_gold.consolidation_groups epm_gold.currencies
+INSERT INTO epm_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency) VALUES ('ZZG', '', 'ZZ Group', 'BHD');
+INSERT INTO epm_gold.currencies (currency_code, currency_name, symbol, minor_unit) VALUES ('BHD', 'ZZ BHD', 'BHD', 3);
 INSERT INTO epm_staging.consolidation_adjustments
   (consolidation_group, adjustment_type, journal_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, posted_by, status, approved_by, reverse_fiscal_year, reverse_fiscal_period)
 VALUES
