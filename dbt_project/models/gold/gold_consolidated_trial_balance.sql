@@ -8,12 +8,19 @@
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS uses_historical_rate UInt8 DEFAULT 0{% endif %}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS retranslation_amount Float64 DEFAULT 0{% endif %}",
+            "{{ widen_amount_columns(['local_amount']) }}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
         ],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# #256: the widen_amount_columns pre_hook (macros/amount_scale.sql) runs before
+   the DELETE and the append. A table built before #256 holds its amounts as
+   Decimal(38, 2), and an append into it would cut a three-decimal amount (BHD,
+   KWD) to two places, without an error. The hook widens those columns to
+   amount_type() once; after that it finds nothing to widen and renders nothing. #}
 
 {# The query_settings line (konsolidat PR "Fix the TB-only first build after
    #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
@@ -541,7 +548,7 @@ densified as (
         account_name, account_type_name, is_balance_sheet, is_pnl, is_equity,
         partner_data_area_id,
         {{ dim_select(trailing=true) }}
-        toDecimal128(0, 2) as local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
+        toDecimal128(0, {{ amount_scale() }}) as local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
         closing_rate, average_rate,
         cast(null as Nullable(Float64)) as historical_equity_rate,
         cast(closing_rate as Nullable(Float64)) as translation_rate,
