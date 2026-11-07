@@ -52,15 +52,24 @@ ORDER BY (consolidation_group, data_area_id);
 -- ============================================================
 -- PRD-10: Historical FX rates for equity accounts (IAS 21)
 -- ============================================================
+-- konsol#374 (option b; Deepak Pai, 7 Nov 2026): a rate converts INTO one
+-- presentation currency (to_currency), so a sub-group presenting in EUR and
+-- its parent presenting in USD each carry their own rate for the same entity
+-- and account. to_currency is LAST in the sort key and has no DEFAULT: konsol
+-- upgrades an existing table with one ALTER (ADD COLUMN, MODIFY ORDER BY), and
+-- ClickHouse appends to a sorting key only a column that ALTER adds, without a
+-- default expression. Keep in step with konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_historical_equity_rates_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.historical_equity_rates (
     consolidation_group String,
     data_area_id String,
     main_account String,
     rate_date Date,
     historical_rate Decimal(18,6),
+    to_currency LowCardinality(String),
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (consolidation_group, data_area_id, main_account, rate_date);
+ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency);
 
 -- ============================================================
 -- PRD-9 / PRD-11 / PRD-12: Ownership periods (temporal ownership,

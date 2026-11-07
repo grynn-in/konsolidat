@@ -29,7 +29,8 @@
 -- epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years,
 -- epm_gold.entity_fiscal_calendars, epm_staging.dimension_mappings.
 --
--- The live tables may predate these two columns: add them to the scratch clones first.
+-- The live tables may predate these three columns: add them to the scratch clones first.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 INSERT INTO epm_staging.main_accounts
@@ -80,14 +81,15 @@ VALUES
   ('USD', 'EUR', 2026, 1, 'Average', 1.05, 'ZZ-GER-2026-01'),
   ('USD', 'EUR', 2026, 2, 'Closing', 1.20, 'ZZ-GER-2026-02'),
   ('USD', 'EUR', 2026, 2, 'Average', 1.15, 'ZZ-GER-2026-02');
--- The rates themselves, keyed (consolidation_group, data_area_id, main_account) on the entity's
--- OWNING group. ZZ3000's only tranche starts in P2, so P1 resolves to no rate; ZZ3100's predates
--- both periods, so neither of its periods may be named.
+-- The rates themselves, keyed (consolidation_group, data_area_id, main_account, to_currency) on the
+-- entity's OWNING group and the consolidating group's presentation currency (konsol#374). ZZ3000's
+-- only tranche starts in P2, so P1 resolves to no rate; ZZ3100's predates both periods, so neither
+-- of its periods may be named.
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
 VALUES
-  ('ZZGRP', 'ZZOP', 'ZZ3000', '2026-02-01', 1.30),
-  ('ZZGRP', 'ZZOP', 'ZZ3100', '2025-01-01', 1.10);
+  ('ZZGRP', 'ZZOP', 'ZZ3000', '2026-02-01', 1.30, 'USD'),
+  ('ZZGRP', 'ZZOP', 'ZZ3100', '2025-01-01', 1.10, 'USD');
 INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
 VALUES
