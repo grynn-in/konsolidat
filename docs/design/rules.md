@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **136** |
-| carrying their reasoning | 118 |
-| citing the issue that caused them | 98 |
+| assertions | **139** |
+| carrying their reasoning | 121 |
+| citing the issue that caused them | 103 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 114 |
+| severity `error` (stops the build, and its children) | 117 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,17 +26,17 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 19
 - [Currency and translation](#currency-and-translation) — 22
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 21
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 11
 - [Equity method](#equity-method) — 4
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 7
+- [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 4
 - [Platform and data integrity](#platform-and-data-integrity) — 14
-- [Other](#other) — 2
+- [Other](#other) — 3
 
 ---
 
@@ -242,15 +242,15 @@ PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the g
 
 ### `declared_historical_has_a_rate`
 
-<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsolidat#213 konsolidat#218 konsolidat#92</sub>
+<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#374 konsolidat#213 konsolidat#218 konsolidat#92</sub>
 
 ### `equity_historical_rate_is_asof`
 
 **grynn-in/konsolidat#92 finding #2: the historical equity rate applied to a period must be the AS-OF rate (the latest tranche whose rate_date <= period_date), not the most-recent-ever rate.**
 
-The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. Fails (returns rows) when, for a row that applied a historical rate: * no tranche actually qualifies as-of the period (rate borrowed from the future — the exact pre-fix bug), or * the applied rate differs from the as-of expected rate.
+The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
 
-<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsolidat#92</sub>
+<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#374 konsolidat#92</sub>
 
 ### `equity_rate_coverage`
 
@@ -374,19 +374,19 @@ PR #203 review 6): a consolidation group with more than one root row in epm_gold
 
 ### `effective_ownership_in_range`
 
-**PRD-8 / F2: a resolved ownership share must be a fraction between 0 and 1, and the effective share can never exceed the direct one.**
+**PRD-8 / F2 / konsol#117: a resolved ownership share is a fraction between 0 and 1, and the direct links into an entity's node sum to at most 1.**
 
-Was "gold_consolidation_hierarchy.effective_ownership_pct is between 0 and 100" — a column that held the DIRECT percentage despite its name, and which F2 deleted along with the second grain it represented. The range check moves to where ownership now lives, and gains the invariant that makes the chain product meaningful: multiplying by another link's share can only shrink it, so effective <= direct always. A chain arithmetic bug that inverted or dropped a link shows up here.
+Was "gold_consolidation_hierarchy.effective_ownership_pct is between 0 and 100" — a column that held the DIRECT percentage despite its name, and which F2 deleted along with the second grain it represented. Until konsol#117 this test also asserted effective <= direct: true for one chain, where every further link can only shrink the share, and false for a graph, where a second path adds to it (shape 1: direct links into D sum to 0.80, the effective share at P is 0.68, at A it is 0.60 — but P→A 80% and P→D 20% with A→D 100% would give effective 1.0 against a direct 1.0, and three paths can put effective above any single direct link). What holds for a graph: eff(G, E) <= 1 (konsol refuses issued shares past 100%, validate refusal 4), and direct_ownership_pct — the sum of the DISTINCT links into E's node — is at most 1 for the same reason.
 
-<sub>`error (default)` · `tests/assert_effective_ownership_in_range.sql`</sub>
+<sub>`error (default)` · `tests/assert_effective_ownership_in_range.sql` · konsol#117</sub>
 
-### `effective_ownership_is_chain_product`
+### `effective_ownership_is_path_sum`
 
-**F2: the effective share must be the PRODUCT of every link's dated percentage along the consolidation chain.**
+**konsol#117: the effective share is the SUM over paths of the PRODUCT of each path's dated link percentages.**
 
-This replaces assert_ownership_fallback, which asserted the behaviour F2 deleted — that an entity with no temporal ownership row falls back to the consolidation_groups seed. There is no fallback and no seed any more. Independent of the model's arithmetic: gold_entity_ownership multiplies with arrayProduct over a groupArray; this recomputes the same product as exp(sum(log(...))) directly from the ancestry closure and the periods, so a bug in either aggregation shows up as a disagreement rather than cancelling out. Rows with a zero link are excluded because log(0) is undefined — the has_complete_chain / zero case is covered by assert_ownership_chain_complete.
+Replaces assert_effective_ownership_is_chain_product, which took one product over every link of a (group, entity) and so would have multiplied two paths into each other (shape 1: 0.8 x 0.6 x 0.2 = 0.096 instead of 0.48 + 0.20 = 0.68). Independent of the model's arithmetic: gold_entity_ownership uses arrayProduct over a groupArray per path and sum across paths; this recomputes each path as exp(sum(log(...))) keyed on path_id, straight from the ancestry closure and the periods, then sums, so a bug in either aggregation shows up as a disagreement rather than cancelling out. A link is matched on BOTH its nodes (owned and owner), as the model does: two owners of one node are two links. A (group, entity, period) with an unresolved link on any path is skipped (the has_complete_chain / window case is assert_ownership_chain_complete's), and so is one with a zero link (log(0) is undefined). Fixtures: assert_effective_ownership_is_path_sum.direct_plus_indirect.sql (+ .must_flag), .indirect_associate.sql, .single_chain.sql.
 
-<sub>`error (default)` · `tests/assert_effective_ownership_is_chain_product.sql`</sub>
+<sub>`error (default)` · `tests/assert_effective_ownership_is_path_sum.sql` · konsol#117</sub>
 
 ### `end_to_end_bs_balances`
 
@@ -471,6 +471,14 @@ Decision 12 moves the minority's share of an intragroup balance to the NCI line 
 Ownership Period is the only grain now, so a node with no period covering the date has no ownership at all — and a chain is only as resolvable as its weakest link. gold_entity_ownership reports such a chain as has_complete_chain = 0 and effective 0 rather than inventing a number (`ownership_pct or 100` is exactly the falsy-zero bug F2 removes). This turns that flag into a failed build naming the entity, so the gap is fixed by adding a period rather than absorbed as a silent zero. `outside_ownership_window` is excluded on purpose: a node whose ownership history exists but does not reach this period is one we did not own then — before an acquisition, after a disposal (PRD-11/12, both first-class here). Consolidation excludes those rows either way, but only an UNRECORDED gap is worth failing a build over. Without the distinction an entity acquired in 2025 failed for every period back to the start of the warehouse.
 
 <sub>`error (default)` · `tests/assert_ownership_chain_complete.sql`</sub>
+
+### `ownership_paths_acyclic`
+
+**konsol#117 (design section 3): a path from a group to an entity never visits a node twice.**
+
+konsol refuses a cycle at Ownership Period validate and build_rows raises on one; this is the warehouse backstop for a closure row that slipped past both (a patch, a hand-written row). One result per cyclic path, naming it. `path` (the tree path, kept for readers) is checked too, so a volume whose closure predates path_id is covered. Fixture: assert_ownership_paths_acyclic.must_flag.sql seeds ZZA/ZZB/ZZA (flags 1).
+
+<sub>`error (default)` · `tests/assert_ownership_paths_acyclic.sql` · konsol#117</sub>
 
 ### `ownership_uses_effective_date`
 
@@ -776,6 +784,14 @@ Each selects it from the leaf closure (lc) in a join whose other side (the long 
 
 <sub>`error (default)` · `tests/assert_hierarchy_node_columns.sql` · konsolidat#206</sub>
 
+### `tree_node_reached_by_links`
+
+**konsol#117 (design section 1): the Consolidation Group tree stays the reporting structure, the links say what is owned.**
+
+The one rule tying them together: every non-root tree node is reached from its tree parent by at least one link path. Paths compose, so this local rule covers every ancestor. What "reached" reads as here: - an ENTITY node: epm_staging.consolidation_ancestry has a (tree parent group, entity) row — konsol's path enumeration writes one per path from each group node to each entity it reaches, so no row means no path; - a pure GROUP node (no entity): at least one Ownership Period names it as the owned node. The closure carries no rows for group nodes (a group is a destination, never a contributor), so which owner holds it is not checked here; konsol's validate refuses an owner outside the same root. A node with no path gives its tree ancestors nothing: its numbers never reach the consolidated result, silently. This fails the build naming it. Fixtures: assert_tree_node_reached_by_links.sql (pass), .must_flag.sql (flags 2: one unreached entity node, one unlinked group node).
+
+<sub>`error (default)` · `tests/assert_tree_node_reached_by_links.sql` · konsol#117</sub>
+
 ### `unassigned_as_of`
 
 **konsolidat#220: a dimension value is unassigned in a period only when no leaf tranche of the default hierarchy covers that period.**
@@ -1067,4 +1083,12 @@ Before the fix, layer 4 of gold_fully_consolidated_tb sums topside/reclassificat
 An equity account's translated movement is its local movement at the rate the row declares (historical, else the closing rate of the period it was posted in), whatever its fx_method. A balance sheet balance is retranslated at each closing rate (#257), but an equity balance is not: retranslating it would bury the exchange difference in equity lines and leave no separate component to recycle on disposal (IAS 21.39(c), .48). So on every equity row (is_equity = 1, from the chart): | translated_amount - local_amount x translation_rate | <= 0.01 A revaluation shows up as exactly that difference: a filler row with local_amount = 0 and a translated amount, or a retranslation_amount on a row that moved. The one declared exception is the year-end close leg of the retained-earnings account (konsolidat#259-1, decided 6 Oct 2026): in a Closing-type period, retained earnings is credited with the year's translated result, not its local result at a rate. That leg is governed by assert_year_end_close_carries_no_cta, so this test leaves the retained-earnings account's rows in Closing periods to it. Nothing else is exempt: another equity account in a Closing period is still checked.
 
 <sub>`error (default)` · `tests/assert_equity_never_revalued.sql` · konsolidat#257 konsolidat#259</sub>
+
+### `method_declared_for_multi_path`
+
+**konsol#117 (design section 2): when a group reaches an entity along several paths and the links do not settle the method — their weakest-link methods disagree, or no path is all-`full` and the paths sum past DECLARATION_TRIGGER_PCT (50%, the IFRS 10.B35 presumption of control) — the group must DECLARE the method (Consolidation Method Declaration on the group node, synced to epm_staging.consolidation_method_declarations).**
+
+The macro resolves such a row as method_source = 'undeclared' and consolidation_method 'none', so nothing consolidates for (group, entity); this test fails the build naming the group, the entity, the period, the sum and the paths. The percentage decides nothing here: 60% held as two 30% equity stakes may be joint control (IFRS 11) or control (IFRS 10); only the group can say. Fixtures: assert_method_declared_for_multi_path.undeclared.must_flag.sql (flags 1), .declared_full.sql and .declared_equity.sql (pass).
+
+<sub>`error (default)` · `tests/assert_method_declared_for_multi_path.sql` · konsol#117</sub>
 

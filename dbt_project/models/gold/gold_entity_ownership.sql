@@ -55,7 +55,7 @@ with entity_periods as (
     from {{ ref('gold_trial_balance') }}
 ),
 
-{# The chain itself is resolved by ownership_resolution_ctes (macros/
+{# The graph itself is resolved by ownership_resolution_ctes (macros/
    ownership_resolution.sql), which gold_ic_reconciliation also uses on a
    period spine of its own. What each step does, and why:
 
@@ -64,26 +64,39 @@ with entity_periods as (
      with no ownership period would read as a real 0%, indistinguishable from
      a deliberate deconsolidation. The same defaulting trap the FX and
      historical-rate blocks in gold_consolidated_trial_balance guard against.
-   - entity_windows: does the ENTITY's own node have any ownership history at
-     all, and does it cover this period? "We know when we owned it and this is
-     not it" (before an acquisition, after a disposal) is a deliberate 0, not a
-     missing percentage. Consolidation excludes it either way, but only the
-     latter is worth failing a build over.
-   - links: ASOF picks the latest period whose effective_date <= period_date;
-     end_date is then checked explicitly, because ASOF cannot carry a second
-     inequality and would otherwise keep applying an expired period forever.
-   - resolved: owner_group is the entity's IMMEDIATE parent group (a
-     historical equity rate and an entity name are recorded once, under the
-     node that owns the entity, not under every ancestor that consolidates
-     it); direct_pct is the entity's own link, what its immediate parent owns
-     of it; and the weakest link's method governs: a sub-group held at equity
-     is not line consolidated into its parent, so nothing beneath it is
-     either. An unrecognised method is treated as the strictest rather than
-     silently as 'full'.
-   - resolution: outside_ownership_window is 1 when the entity's node HAS
-     ownership history but none of it covers this period, i.e. we did not own
-     it then. It distinguishes a deliberate gap from an unrecorded one;
-     assert_ownership_chain_complete only fails on the latter. #}
+   - link_history: does this LINK (owned node, owner node) have any ownership
+     history at all? "We know when we held it and this is not it" (before an
+     acquisition, after a disposal) is a deliberate 0, not a missing
+     percentage. Consolidation excludes it either way, but only the latter is
+     worth failing a build over.
+   - links: ASOF picks the latest period whose effective_date <= period_date,
+     matched on both the owned and the owning node (konsol#117: two owners of
+     one node are two links); end_date is then checked explicitly, because
+     ASOF cannot carry a second inequality and would otherwise keep applying
+     an expired period forever.
+   - paths: one row per path_id: the product of its links, the weakest link's
+     method (a sub-group held at equity is not line consolidated into its
+     parent, so nothing beneath it is either; an unrecognised or unresolved
+     method ranks as the strictest rather than silently as 'full'), and its
+     direct link, the one into the entity's own node.
+   - resolved: the paths summed. effective = sum of the resolved paths'
+     products; direct = the sum of the DISTINCT links into the entity's node;
+     owner_group is the consolidation_group of the entity's own node, as
+     before (a historical equity rate is recorded once, under that node, and
+     konsol validates it against it); path_count and direct_owner_count tell
+     a reader how the number was reached and how many nodes hold the entity.
+   - ruled / resolution: the method rule of design section 2 (konsol#117).
+     One path, or several whose links agree with an all-full path among them
+     or a sum within DECLARATION_TRIGGER_PCT: the links decide ('link').
+     Otherwise the group's declaration decides ('declared'), read ASOF from
+     consolidation_method_declarations; required and absent is 'undeclared'
+     with method 'none', so nothing consolidates and
+     assert_method_declared_for_multi_path names it. has_complete_chain is 1
+     when at least one path resolves and no path has an unrecorded link;
+     outside_ownership_window is 1 when no path resolves but every link has
+     history, i.e. we did not own it then. It distinguishes a deliberate gap
+     from an unrecorded one; assert_ownership_chain_complete only fails on
+     the latter. #}
 {{ ownership_resolution_ctes('entity_periods') }}
 
 select * from resolution
