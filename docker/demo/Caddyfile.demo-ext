@@ -19,7 +19,7 @@ https://demo-ext.konsolidat.com {
 				<!doctype html><meta charset="utf-8"><title>Konsolidat demo</title>
 				<style>body{font:16px/1.5 system-ui,sans-serif;max-width:36em;margin:15vh auto;padding:0 1em;color:#222}</style>
 				<h1>Back in a few minutes</h1>
-				<p>The demo resets to its starting point every hour. The restore takes two to four minutes; reload after that.</p>
+				<p>The demo resets to its starting point at the top of every hour. The restore takes about two minutes; reload after that.</p>
 				HTML 503
 		}
 	}
