@@ -26,6 +26,14 @@ SITE_DIR=$BENCH_DIR/sites/$SITE
 DC="docker compose -p konsolidat-ext --env-file $EXT_DIR/.env -f $EXT_DIR/docker-compose.yml -f $EXT_DIR/docker-compose.ext.yml"
 
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG"; }
+# Frappe v16 caches site_config per gunicorn worker while it serves requests, so a changed demo_user key is
+# seen by some workers and not others until they reload. HUP to the gunicorn master replaces the workers
+# gracefully (no dropped requests, no downtime); the first live off/on cycle showed one worker still logging in.
+reload_web() {
+  local pid
+  pid=$(docker exec "$BACKEND" bash -c 'for p in /proc/[0-9]*; do c=$(tr "\0" " " < $p/cmdline 2>/dev/null); case "$c" in *gunicorn*) if [ "$(awk "/^PPid/{print \$2}" $p/status)" = 1 ]; then echo ${p#/proc/}; fi;; esac; done' | head -1)
+  if [ -n "$pid" ]; then docker exec "$BACKEND" kill -HUP "$pid"; sleep 3; else log "gunicorn master not found; restarting the backend"; docker restart "$BACKEND" >/dev/null; fi
+}
 bench_in() { docker exec "$BACKEND" bash -lc "cd $BENCH_DIR && bench --site $SITE $*" 2>&1 | grep -v RuntimeWarning || true; }
 need_golden() { [ -f "$GOLDEN/database.sql.gz" ] || { echo "no golden copy in $GOLDEN: run 'demo.sh snapshot' first" >&2; exit 2; }; }
 
@@ -68,6 +76,7 @@ cmd_on() {
   # a visitor who hit /try while the demo was off left a cached 404 for that URL (frappe.cache website_404);
   # clear-cache alone did not drop it on the first live run
   bench_in "execute frappe.website.utils.clear_website_cache" >/dev/null
+  reload_web
   install_timer
   systemctl enable --now $TIMER
   cmd_status
@@ -78,12 +87,14 @@ cmd_off() {
   systemctl disable --now $TIMER 2>/dev/null || true
   bench_in "execute konsol.demo_mode.end_sessions" | tail -1
   bench_in "set-config demo_user ''"
-  docker exec "$BACKEND" python3 - "$SITE_DIR/site_config.json" <<'PY'
+  # set-config cannot remove a key; drop it from the file (docker exec needs -i to read the heredoc)
+  docker exec -i "$BACKEND" python3 - "$SITE_DIR/site_config.json" <<'PY'
 import json, sys
 p = sys.argv[1]; c = json.load(open(p)); c.pop("demo_user", None); json.dump(c, open(p, "w"), indent=1)
 PY
   bench_in "clear-cache"
   bench_in "execute frappe.website.utils.clear_website_cache" >/dev/null
+  reload_web
   cmd_status
 }
 
