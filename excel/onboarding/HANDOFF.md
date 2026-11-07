@@ -16,6 +16,10 @@ live verification on a second stack `demo-ext.konsolidat.com` (not a third site 
 - `aquila_bike_offline.py` → `model/expected.json`: a replica of the warehouse's consolidation written from the dbt models
   (movements, window, translation with #257 retranslation and #259 close, CTA, IC pairs/legs, ACQ/DSP journals, equity method
   as FIXED, topside). Every period nets to 0; 472 IC pairs matched.
+- `aquila_bike_pl.py` → the twelve-line P&L three ways (before/after consolidation FY2024, P5/P6 acquisition, P11/P12
+  disposal) from `expected.json`, printed as Markdown into the example README; 168 cells checked against the live
+  demo-ext warehouse (0 differences > 0.05) and the five IFRS-view reconciliation figures against the recalculated
+  walkthrough (to the cent), 7 Nov 2026.
 - `build_aquila_bike_walkthrough.py` → `Aquila_Bike_Walkthrough.xlsx`: 357,270 live formulas; recalculated with LibreOffice
   (installed via brew for this; the xlsx skill's `recalc.py`): 0 errors, 0.00 difference to the replica on every account-period,
   tool and IFRS balance sheets balance in every period. Excel-via-AppleScript was tried first and failed (Excel would not open a

@@ -14,7 +14,7 @@ warehouse, and the three agree to the cent (see *Verification* below).
 | `tb/TB_FY2023_P12.xlsx` … `tb/TB_FY2024_P12.xlsx` | 13 bulk trial-balance files on the Period-end balance basis. FY2023 P12 is the opening year end (the FY2023 result still in its P&L accounts). ABCZ appears from FY2024 P05, ABDK through P12. |
 | `Aquila_Bike_Walkthrough.xlsx` | The consolidation done offline in Excel, step by step, with live formulas and a talk track (sheet *Walkthrough*). The Python replica's figures sit beside the formulas as a check column. |
 | `model/inputs.json`, `model/expected.json` | What the generator produced and what the Python replica computes from it (every layer of the consolidated trial balance per period). |
-| `../../build_aquila_bike.py` | Regenerates the master workbook and the trial balances. `../../aquila_bike_offline.py` recomputes `expected.json`; `../../build_aquila_bike_walkthrough.py` rebuilds the Excel. |
+| `../../build_aquila_bike.py` | Regenerates the master workbook and the trial balances. `../../aquila_bike_offline.py` recomputes `expected.json`; `../../build_aquila_bike_walkthrough.py` rebuilds the Excel; `../../aquila_bike_pl.py` prints the twelve-line P&L tables below. |
 
 ## The group
 
@@ -69,6 +69,81 @@ every pair matches to the cent and the difference account stays empty.
 7. **Go back to P6, P7.** Every period's movements are kept. In this workbook change the column; in Excel with the
    add-in, `=K.EPM("AQBIKE", 2024, 7, "4110", "consolidated_amount", "consolidated")` reads the live figure
    (sheet LiveCheck).
+
+## The P&L in twelve lines
+
+Three views of the same year, each from `../../aquila_bike_pl.py`, which reads `model/expected.json` (nothing is
+typed in; `uv run aquila_bike_pl.py --unit 1` gives the EUR figures). Credit-positive: revenue and profit positive,
+costs in brackets. Tool view: subsidiaries at the group's share, so ABSE contributes 70% of every line. The same
+168 cells computed from the live warehouse on `demo-ext.konsolidat.com` (`gold_fully_consolidated_tb`, AQBIKE)
+agree with these to the cent (7 Nov 2026).
+
+**Before and after consolidation, FY2024** (EUR thousand; costs in brackets)
+
+| Line | Ten entities summed, 100% | Minority's 30% of ABSE | Intercompany eliminations | Deal journals | Equity method | Consolidated FY2024 |
+|---|---:|---:|---:|---:|---:|---:|
+| Revenue, net of dealer discounts (4110-4220, 4910) | 202,428 | (5,497) | – | – | – | 196,931 |
+| Intercompany revenue: goods and management fees (4310, 4340) | 24,493 | – | (24,493) | – | – | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (127,289) | 2,921 | 23,848 | – | – | (100,520) |
+| **Gross profit** | **99,632** | **(2,576)** | **(645)** | **–** | **–** | **96,411** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (49,436) | 1,349 | – | – | – | (48,087) |
+| Depreciation, amortisation, impairment (66xx) | (6,728) | 163 | – | – | – | (6,565) |
+| Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | – | – | 1,925 | – | 1,925 |
+| **Operating profit** | **43,468** | **(1,064)** | **(645)** | **1,925** | **–** | **43,684** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (2,374) | 48 | (27) | – | – | (2,353) |
+| Share of result of the associate ABPT, 30% (EQ_INCOME) | – | – | – | – | 211 | 211 |
+| Income taxes (8xxx) | (9,800) | 209 | – | – | – | (9,590) |
+| **Net result for the period (group share)** | **31,294** | **(807)** | **(672)** | **1,925** | **211** | **31,952** |
+
+IFRS 10 view of the same year: total result at 100% 33,430, of which non-controlling interests 807 and owners of the parent 32,623. The owners' result is 672 above the tool's: the minority's 30% of the group's sales, fees and interest to ABSE, which the tool takes out of the P&L and books to NCI equity (3700, decision 12).
+
+**Before and after the acquisition of ABCZ (1 June 2024)** (EUR thousand; costs in brackets)
+
+| Line | P5 (May) consolidated | P6 (June) consolidated | of which ABCZ's own June (entity layer) | of which the acquisition journal |
+|---|---:|---:|---:|---:|
+| Revenue, net of dealer discounts (4110-4220, 4910) | 21,163 | 23,208 | 1,674 | – |
+| Intercompany revenue: goods and management fees (4310, 4340) | – | – | – | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (10,721) | (11,992) | (862) | – |
+| **Gross profit** | **10,442** | **11,216** | **812** | **–** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (5,074) | (5,605) | (413) | – |
+| Depreciation, amortisation, impairment (66xx) | (526) | (562) | (37) | – |
+| Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | (300) | – | (300) |
+| **Operating profit** | **4,842** | **4,748** | **362** | **(300)** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (161) | (428) | (7) | – |
+| Share of result of the associate ABPT, 30% (EQ_INCOME) | 26 | 25 | – | – |
+| Income taxes (8xxx) | (1,152) | (1,123) | (75) | – |
+| **Net result for the period (group share)** | **3,554** | **3,223** | **280** | **(300)** |
+
+**Before and after the disposal of ABDK (31 December 2024)** (EUR thousand; costs in brackets)
+
+| Line | P11 (Nov) consolidated | P12 (Dec) consolidated | of which ABDK's own December (entity layer) | of which the disposal journal |
+|---|---:|---:|---:|---:|
+| Revenue, net of dealer discounts (4110-4220, 4910) | 12,394 | 13,958 | 701 | – |
+| Intercompany revenue: goods and management fees (4310, 4340) | – | – | – | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (5,873) | (7,400) | (337) | – |
+| **Gross profit** | **6,521** | **6,558** | **364** | **–** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (3,080) | (3,484) | (180) | – |
+| Depreciation, amortisation, impairment (66xx) | (562) | (562) | (27) | – |
+| Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | 2,225 | – | 2,225 |
+| **Operating profit** | **2,879** | **4,737** | **157** | **2,225** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (179) | (200) | (10) | – |
+| Share of result of the associate ABPT, 30% (EQ_INCOME) | 18 | 11 | – | – |
+| Income taxes (8xxx) | (661) | (559) | (32) | – |
+| **Net result for the period (group share)** | **2,056** | **3,989** | **115** | **2,225** |
+
+Reading the three tables:
+
+- **Consolidation** removes the EUR 24.5m the group sold to itself (goods from ABIT and ABPL, management fees from
+  ABH) and the matching purchases, takes the minority's 30% of ABSE out of every line, expenses the acquisition
+  costs, books the gain on the sale of ABDK and picks up 30% of ABPT's result. The group's revenue to the outside
+  world is unchanged by consolidation: the 5.5m drop is ABSE's minority share, not an elimination.
+- **Acquisition.** June is the first month ABCZ's own P&L is in the group (its 31 May balance sheet came in through
+  the journal, with no P&L). ABCZ adds 1.7m revenue and 0.3m result; the 0.3m of legal and due-diligence costs are
+  expensed in the same month (IFRS 3.53), so the group result for June is below May's although revenue is higher.
+- **Disposal.** ABDK's December result is still in the group (IFRS 10.B98: consolidated until control is lost, here
+  31 December), and the gain on disposal of 2.2m (proceeds 7.0m less net assets of 4.8m at the December closing
+  rate, plus 15k of accumulated CTA recycled) lifts the December result to about twice November's. The example ends
+  there; from FY2025 ABDK is simply not in the group.
 
 ## What the tool does that an IFRS reader should know
 
