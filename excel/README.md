@@ -14,3 +14,11 @@ Both were made for the retired VBA module and need updating in Excel. For
 `Open_EPM_PnL.xlsx`, replace `EPM(` with `K.EPM(`: the arguments are the same, in the
 same order. The VBA-only budget upload workbook (`Budget_Forecast_2024.xlsx`) and its
 generator were removed with the VBA module; budgets are written with `=K.EPMSAVE()`.
+
+## Onboarding template
+
+`onboarding/` holds the **Konsolidat_Onboarding_Template.xlsx** a new group fills in (entities, calendar,
+dimensions, hierarchies, chart, intercompany pairs, consolidation tree, ownership, FX and historical rates),
+the bulk trial-balance file format, a loader that writes it all to a konsol site through `frappectl`, and a
+complete filled example (the fictional Aquila Group: 46 entities, 10 currencies, 238 accounts, 12 periods of
+trial balances). See [onboarding/README.md](onboarding/README.md).
