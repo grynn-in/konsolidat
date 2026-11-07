@@ -42,13 +42,11 @@ graph LR
 
     DBT["<b>dbt Core</b><br/><br/>Medallion Architecture<br/>Bronze → Silver → Gold"]
 
-    CUBE["<b>Cube.js</b><br/><br/>Semantic Layer<br/>Metrics & Dimensions"]
-
     FRAPPE["<b>Frappe / Konsol</b><br/><br/>REST API & Auth<br/>Workflow & Settings"]
 
     EXCEL["<b>Excel</b><br/><br/>=K.EPM() Formulas<br/>Office.js add-in"]
 
-    ERP --> AIR --> CH --> DBT --> CUBE --> FRAPPE --> EXCEL
+    ERP --> AIR --> CH --> DBT --> FRAPPE --> EXCEL
 ```
 
 ## Technology Stack

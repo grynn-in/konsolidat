@@ -34,8 +34,6 @@ services:
     container_name: konsolidat16_worker
   frappe_scheduler:
     container_name: konsolidat16_scheduler
-  cubejs:
-    container_name: konsolidat16_cubejs
   dbt_init:
     container_name: konsolidat16_dbt_init
   caddy:

@@ -212,30 +212,6 @@ services:
     command: ["scheduler"]
     restart: unless-stopped
 
-  cubejs:
-    logging: *default-logging
-    image: cubejs/cube:v0.36
-    container_name: konsolidat_cubejs
-    ports:
-      - "${CUBEJS_PORT:-4000}:4000"
-    environment:
-      CUBEJS_DB_TYPE: clickhouse
-      CUBEJS_DB_HOST: clickhouse
-      CUBEJS_DB_PORT: "8123"
-      CUBEJS_DB_USER: ${CLICKHOUSE_USER:-default}
-      CUBEJS_DB_PASS: ${CLICKHOUSE_PASSWORD:?run ./deploy.sh to generate secrets in .env}
-      CUBEJS_DB_NAME: epm_gold
-      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:?Run ./deploy.sh to generate CUBEJS_API_SECRET}
-      CUBEJS_DEV_MODE: ${CUBEJS_DEV_MODE:-false}
-      CUBEJS_SCHEMA_PATH: /cube/schema
-    volumes:
-      - ./cube/schema:/cube/schema:ro
-      - ./cube/views:/cube/views:ro
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    restart: unless-stopped
-
   # ---------------------------------------------------------------------------
   # One-shot: dbt seed + build (runs once after setup, then exits)
   # ---------------------------------------------------------------------------
@@ -268,7 +244,6 @@ services:
       - caddy_config:/config
     depends_on:
       - frappe_backend
-      - cubejs
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------

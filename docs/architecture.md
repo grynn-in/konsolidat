@@ -37,16 +37,16 @@ Konsol is an open-source Enterprise Performance Management stack for D365 Financ
 │  epm_gold    ← dbt (consolidated TB, IC elim, CTA)       │
 │  epm_staging ← Frappe writes budget/config here           │
 │                                                           │
-│  Cube SQL API (port 15432) → Excel ODBC / Add-in         │
+│  PostgreSQL wire (port 15432) → Excel ODBC               │
 └──────────────────────────────────────────────────────────┘
 ```
 
 ### Current Data Flow (v1 — FastAPI)
 
 ```
-D365 F&O (OData) → Airbyte → ClickHouse → dbt → Cube → Excel
-                                                    ↑
-                                              FastAPI (write-back)
+D365 F&O (OData) → Airbyte → ClickHouse → dbt → Excel
+                                              ↑
+                                        FastAPI (write-back)
 ```
 
 ## Medallion Architecture
@@ -65,7 +65,6 @@ D365 F&O (OData) → Airbyte → ClickHouse → dbt → Cube → Excel
 | Extraction | Airbyte (abctl) | D365 OData → ClickHouse |
 | Warehouse | ClickHouse | Columnar analytics, fast aggregation |
 | Transformation | dbt Core | Medallion layer models + tests |
-| Semantic Layer | Cube Core | SQL API (Postgres wire) for Excel |
 | Orchestration | Dagster | Airbyte + dbt asset graph, schedules |
 | Write-back | FastAPI (v1) → Frappe (v2) | Budget/forecast input from Excel |
 | Admin UI | Streamlit (v1) → Frappe Desk (v2) | Pipeline monitoring, rule editing, config management |
@@ -81,8 +80,8 @@ ClickHouse provides 10-100x faster aggregation queries for TB/consolidation work
 ### ADR-002: Airbyte via abctl, not Docker Compose
 Airbyte is resource-heavy and has its own orchestration. Running it via `abctl` (local K8s) keeps Docker Compose lean. Dagster talks to Airbyte API on `localhost:8000`.
 
-### ADR-003: Cube SQL API for Excel
-Excel connects via PostgreSQL ODBC driver to Cube's SQL API (port 15432). This avoids REST API complexity and gives Excel users native PivotTable support. Cube handles caching and query optimization.
+### ADR-003: Cube SQL API for Excel (superseded)
+Superseded 7 Nov 2026 (konsol#232, konsolidat#283): Cube was never wired into the read path and has been removed from the stack. Excel reads through the konsol `K.` worksheet functions; where ODBC is used, it is ClickHouse's own PostgreSQL wire port (15432). The Dataset / Measure registry is the semantic layer. See [semantic-layer.md](reference/semantic-layer.md).
 
 ### ADR-004: Write-back via Staging (D365 stays read-only)
 Budget/forecast input goes to ClickHouse staging tables, not back to D365. dbt unions staging data with actuals in the next run. This keeps D365 as the read-only source of truth.
@@ -103,7 +102,7 @@ See [`docs/security-architecture.md`](security-architecture.md) for the full sec
 - **Roles:** Reader (view) → Planner (view + submit budgets) → Controller (+ edit config) → Admin (+ user management)
 - **Transport:** HTTPS via Caddy reverse proxy with auto-TLS; CORS for `*.officeapps.live.com`
 - **Audit:** Frappe built-in — every change logged with user, timestamp, field-level diff
-- **ClickHouse:** Never exposed to internet — private network only, accessed via Frappe or Cube
+- **ClickHouse:** Never exposed to internet — private network only, accessed via Frappe
 - **D365 OData:** Azure AD app registration (client credentials flow)
 
 ## Excel Online: EPM.VALUE() Custom Function

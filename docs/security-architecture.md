@@ -9,7 +9,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 **Design principles:**
 - Frappe owns **application concerns** (users, config, workflows, write-back, audit)
 - ClickHouse owns **analytical concerns** (GL data, consolidation, reporting)
-- ClickHouse is never exposed to the internet — all access goes through Frappe or Cube
+- ClickHouse is never exposed to the internet — all access goes through Frappe
 - Excel users get `=EPM.VALUE(...)` custom functions that work in Online, Desktop, and iPad
 
 ---
@@ -51,7 +51,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 │  epm_gold    ← dbt (consolidated TB, IC elim, CTA)   │
 │  epm_staging ← Frappe writes budget data here         │
 │                                                       │
-│  Cube SQL API (port 15432) → Excel ODBC / Add-in     │
+│  PostgreSQL wire (port 15432) → Excel ODBC           │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -87,8 +87,8 @@ Frappe RBAC enforces this on every DocType and API endpoint automatically.
 | **TLS** | Caddy reverse proxy with automatic Let's Encrypt certificates |
 | **CORS** | Whitelist `*.officeapps.live.com` + company tenant domain |
 | **Rate limiting** | 100 requests/min per user (prevents runaway Excel refresh loops) |
-| **ClickHouse isolation** | Target posture: private network only, no public endpoint — all access via Frappe or Cube. The bundled `docker-compose.yml` binds ClickHouse ports to loopback (`CLICKHOUSE_BIND=127.0.0.1`) by default; see *Deployment profiles* below. |
-| **Cube SQL API** | Internal network only, or VPN for desktop Excel ODBC users |
+| **ClickHouse isolation** | Target posture: private network only, no public endpoint — all access via Frappe. The bundled `docker-compose.yml` binds ClickHouse ports to loopback (`CLICKHOUSE_BIND=127.0.0.1`) by default; see *Deployment profiles* below. |
+| **ClickHouse PostgreSQL wire (15432)** | Internal network only, or VPN for desktop Excel ODBC users |
 
 > #### Deployment profiles — read before exposing anything
 >
@@ -101,7 +101,6 @@ Frappe RBAC enforces this on every DocType and API endpoint automatically.
 > | ClickHouse port binding | Loopback only (`CLICKHOUSE_BIND=127.0.0.1`) | Keep loopback; reach ClickHouse via the Caddy proxy or a private network. Never bind `0.0.0.0` on a public host. |
 > | ClickHouse transport | Plaintext HTTP (`CLICKHOUSE_SECURE=false`) | Set `CLICKHOUSE_SECURE=true` / `CLICKHOUSE_VERIFY=true` and use the dbt `prod` target (`DBT_TARGET=prod`). |
 > | Secrets | `deploy.sh` generates random passwords into `.env`; compose refuses to start if any password is unset | Use a real secrets manager; rotate the generated values. |
-> | Cube API secret | Required (compose fails if unset) | Keep; rotate per environment. |
 >
 > "Encryption in transit — TLS everywhere" (below) is only true once
 > `CLICKHOUSE_SECURE=true`; the loopback-only default keeps the plaintext hop

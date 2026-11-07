@@ -39,7 +39,7 @@ See [../prd/README.md](../prd/README.md) for the per-feature PRD index.
 
 Full docker-compose stack + single deploy script. Completed in PRs #7 and #9.
 
-- [x] 9 Docker services: Frappe backend/worker/scheduler, MariaDB, Redis (cache + queue), ClickHouse, Cube.js, Caddy
+- [x] 8 Docker services: Frappe backend/worker/scheduler, MariaDB, Redis (cache + queue), ClickHouse, Caddy (Cube.js shipped here too; removed 7 Nov 2026, #283)
 - [x] 2 one-shot init containers: configurator (site setup), dbt_init (seed + build)
 - [x] `deploy.sh` — generates secrets, clones konsol, runs compose up, health checks
 - [x] Caddy reverse proxy with auto-SSL

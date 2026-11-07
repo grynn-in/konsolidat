@@ -194,12 +194,10 @@ if [ ! -f .env ]; then
   GENERATED_ADMIN_PW=$(openssl rand -base64 12 | tr -d '/+=' | head -c 16)
   GENERATED_DB_PW=$(openssl rand -base64 12 | tr -d '/+=' | head -c 16)
   GENERATED_CH_PW=$(openssl rand -base64 12 | tr -d '/+=' | head -c 16)
-  GENERATED_CUBEJS_SECRET=$(openssl rand -hex 16)
 
   sedi "s|ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${GENERATED_ADMIN_PW}|" .env
   sedi "s|DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${GENERATED_DB_PW}|" .env
   sedi "s|CLICKHOUSE_PASSWORD=.*|CLICKHOUSE_PASSWORD=${GENERATED_CH_PW}|" .env
-  sedi "s|CUBEJS_API_SECRET=.*|CUBEJS_API_SECRET=${GENERATED_CUBEJS_SECRET}|" .env
 
   if [ -n "$DOMAIN" ]; then
     SCHEME=$(domain_scheme "$DOMAIN")
@@ -320,7 +318,7 @@ docker compose --profile setup run --rm configurator
 # ---------------------------------------------------------------------------
 echo ""
 info "Step 4/5: Starting application services..."
-docker compose up -d frappe_backend frappe_worker frappe_scheduler cubejs caddy
+docker compose up -d frappe_backend frappe_worker frappe_scheduler caddy
 
 # Wait for Frappe to respond
 info "Waiting for Frappe to start..."
@@ -433,10 +431,8 @@ echo ""
 
 if [ -n "$DOMAIN" ]; then
   echo -e "  ${CYAN}Frappe:${NC}     https://${DOMAIN}"
-  echo -e "  ${CYAN}Cube.js:${NC}    https://${DOMAIN}:4443"
 else
   echo -e "  ${CYAN}Frappe:${NC}     http://localhost:${FRAPPE_PORT:-8069}"
-  echo -e "  ${CYAN}Cube.js:${NC}    http://localhost:${CUBEJS_PORT:-4000}"
 fi
 echo -e "  ${CYAN}Excel ODBC:${NC} localhost:${EXCEL_ODBC_PORT:-15432}"
 echo ""
@@ -457,11 +453,9 @@ cat > .credentials <<EOF
 Frappe Admin:     Administrator / ${ADMIN_PASSWORD:-admin123}
 MariaDB Root:     root / ${DB_ROOT_PASSWORD:-rootpassword}
 ClickHouse:       ${CLICKHOUSE_USER:-default} / ${CLICKHOUSE_PASSWORD:-open_epm_dev}
-Cube.js Secret:   ${CUBEJS_API_SECRET}
 
 URLs:
   Frappe:     http://localhost:${FRAPPE_PORT:-8069}
-  Cube.js:    http://localhost:${CUBEJS_PORT:-4000}
   Excel ODBC: localhost:${EXCEL_ODBC_PORT:-15432}
 EOF
 chmod 600 .credentials

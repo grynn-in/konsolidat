@@ -84,11 +84,6 @@ Multi-entity consolidation, budgeting, and variance analysis — powered by `=K.
       <strong>Frappe</strong>
       <span>Web Framework & API</span>
     </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
-      <strong>Cube</strong>
-      <span>Semantic Layer</span>
-    </div>
   </div>
 </div>
 

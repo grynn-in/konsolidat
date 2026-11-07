@@ -9,7 +9,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 **Design principles:**
 - Frappe owns **application concerns** (users, config, workflows, write-back, audit)
 - ClickHouse owns **analytical concerns** (GL data, consolidation, reporting)
-- ClickHouse is never exposed to the internet — all access goes through Frappe or Cube
+- ClickHouse is never exposed to the internet — all access goes through Frappe
 - Excel users get `=EPM.VALUE(...)` custom functions that work in Online, Desktop, and iPad
 
 ---
@@ -51,7 +51,7 @@ This document describes the security architecture for exposing Konsol to Excel O
 │  epm_gold    ← dbt (consolidated TB, IC elim, CTA)   │
 │  epm_staging ← Frappe writes budget data here         │
 │                                                       │
-│  Cube SQL API (port 15432) → Excel ODBC / Add-in     │
+│  PostgreSQL wire (port 15432) → Excel ODBC           │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -87,8 +87,8 @@ Frappe RBAC enforces this on every DocType and API endpoint automatically.
 | **TLS** | Caddy reverse proxy with automatic Let's Encrypt certificates |
 | **CORS** | Whitelist `*.officeapps.live.com` + company tenant domain |
 | **Rate limiting** | 100 requests/min per user (prevents runaway Excel refresh loops) |
-| **ClickHouse isolation** | Private network only — no public endpoint. All access via Frappe or Cube. |
-| **Cube SQL API** | Internal network only, or VPN for desktop Excel ODBC users |
+| **ClickHouse isolation** | Private network only — no public endpoint. All access via Frappe. |
+| **ClickHouse PostgreSQL wire (15432)** | Internal network only, or VPN for desktop Excel ODBC users |
 
 ### 4. Audit Trail
 

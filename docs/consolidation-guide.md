@@ -59,7 +59,7 @@ The `gold_fx_revaluation` model calculates CTA entries to keep the balance sheet
 
 ## Viewing Consolidated Reports
 
-In Excel, connect to `v_consolidated_report` via Cube SQL API. Available dimensions:
+In Excel, read the consolidated figures with the `K.` worksheet functions. Available dimensions:
 - Consolidation Group
 - Legal Entity (for drill-down)
 - Fiscal Year / Period

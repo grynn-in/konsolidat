@@ -18,17 +18,17 @@ def test_readme_no_streamlit():
     assert "Streamlit" not in content
 
 
-def test_readme_documents_cube():
-    """Cube.js is a core component — README must mention it.
+def test_readme_no_cube():
+    """README must not list Cube.js as a component.
 
-    Cube is the semantic / SQL-API layer that scales concurrent reads to the
-    target 50–500 users (Excel ODBC and BI tools query through it). The Frappe
-    direct-query path remains the source of truth for the =EPM() formulas and
-    write-back. See docs/reference/semantic-layer.md.
+    Cube was removed from the stack on 7 Nov 2026 (konsol#232 ratified "do not
+    wire Cube"; konsolidat#283 removed it). konsol reads ClickHouse directly;
+    the Dataset / Measure registry is the semantic layer. See
+    docs/reference/semantic-layer.md for the record and the reopen conditions.
     """
     with open(os.path.join(PROJECT_ROOT, "README.md")) as f:
         content = f.read()
-    assert "Cube" in content
+    assert "Cube" not in content
 
 
 def test_readme_no_dagster():

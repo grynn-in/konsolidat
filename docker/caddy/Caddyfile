@@ -6,10 +6,6 @@
 {$SITE_SCHEME:http}://{$SITE_DOMAIN:localhost} {
 	encode gzip
 
-	handle /api/method/konsol.cube_proxy/* {
-		reverse_proxy cubejs:4000
-	}
-
 	# Excel Online hosts the add-in in an iframe on *.office.com — allow framing
 	# and drop any X-Frame-Options Frappe may send on static add-in assets.
 	@excel_addin_pane path /assets/konsol/excel-addin/index.html /assets/konsol/excel-addin/functions.js
@@ -60,12 +56,4 @@
 			header_up Host {$SITE_NAME:konsolidat.local}
 		}
 	}
-}
-
-# Cube.js playground (optional, disable in production). Always plain HTTP: it's
-# a dev-only tool on a non-published port (4443 is not mapped in compose), so it
-# must NOT inherit SITE_SCHEME=https — that would make Caddy chase a Let's
-# Encrypt cert for an unreachable endpoint.
-http://{$SITE_DOMAIN:localhost}:4443 {
-	reverse_proxy cubejs:4000
 }

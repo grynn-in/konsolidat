@@ -9,9 +9,12 @@ def test_streamlit_dir_removed():
     assert not os.path.exists(os.path.join(PROJECT_ROOT, "streamlit"))
 
 
-def test_cube_dir_present():
-    """Cube is a core component (semantic layer that scales reads to 50–500 users)."""
-    assert os.path.exists(os.path.join(PROJECT_ROOT, "cube"))
+def test_cube_dir_removed():
+    """Cube left the stack (konsol#232, konsolidat#283, decided 7 Nov 2026)."""
+    assert not os.path.exists(os.path.join(PROJECT_ROOT, "cube"))
+    assert not os.path.exists(
+        os.path.join(PROJECT_ROOT, "scripts", "generate_cube_schemas.py")
+    )
 
 
 def test_api_dir_removed():
@@ -33,21 +36,23 @@ def test_docker_compose_core_services():
         dc = yaml.safe_load(f)
 
     services = list(dc.get("services", {}).keys())
-    # Core stack: ClickHouse warehouse, Frappe app, and the Cube semantic layer
-    # (Cube scales concurrent reads to the target 50–500 users).
+    # Core stack: ClickHouse warehouse and the Frappe app. Reads go through
+    # konsol straight to ClickHouse; there is no semantic-layer service.
     assert "clickhouse" in services
     assert "frappe_backend" in services
-    assert "cubejs" in services
-    # Retired alternatives that must stay gone.
+    # Retired alternatives that must stay gone. cubejs: konsolidat#283.
     removed = [
         "dagster_postgres",
         "dagster_webserver",
         "dagster_daemon",
         "api",
         "streamlit",
+        "cubejs",
     ]
     for svc in removed:
         assert svc not in services, f"Service {svc} should be removed"
+    caddy_deps = dc["services"]["caddy"].get("depends_on") or []
+    assert "cubejs" not in caddy_deps
 
 
 def test_docker_compose_no_removed_volumes():
@@ -60,12 +65,29 @@ def test_docker_compose_no_removed_volumes():
     assert "dagster_postgres_data" not in volumes
 
 
-def test_env_example_has_cube_vars():
-    """Cube is a core service, so its config belongs in .env.example."""
+def test_env_example_no_cube_vars():
+    """No Cube env vars in .env.example (konsolidat#283)."""
     path = os.path.join(PROJECT_ROOT, ".env.example")
     with open(path) as f:
         content = f.read()
-    assert "CUBEJS" in content
+    assert "CUBEJS" not in content
+
+
+def test_caddyfile_no_cube_route():
+    """Caddy no longer proxies the never-built konsol.cube_proxy endpoint or
+    the Cube playground (konsolidat#283)."""
+    path = os.path.join(PROJECT_ROOT, "docker", "caddy", "Caddyfile")
+    with open(path) as f:
+        content = f.read()
+    assert "cube" not in content.lower()
+
+
+def test_deploy_sh_no_cube():
+    """deploy.sh neither generates CUBEJS_API_SECRET nor starts cubejs."""
+    path = os.path.join(PROJECT_ROOT, "deploy.sh")
+    with open(path) as f:
+        content = f.read()
+    assert "cube" not in content.lower()
 
 
 def test_env_example_no_dagster_vars():

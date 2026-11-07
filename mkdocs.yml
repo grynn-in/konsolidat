@@ -140,6 +140,7 @@ nav:
           - "#131 Asset self-heal staleness": developer-guide/decisions/konsolidat-131-selfheal-staleness.md
           - "#90 Productionize Airbyte": developer-guide/decisions/konsolidat-90-airbyte-prod.md
           - "#57 ClickHouse cluster mode": developer-guide/decisions/konsolidat-57-clickhouse-cluster.md
+          - "#283 Remove Cube": developer-guide/decisions/konsolidat-283-remove-cube.md
           - "konsol #56 Orchestrator epic": developer-guide/decisions/konsol-56-orchestrator-epic.md
           - "konsol #58 Orchestrator P2": developer-guide/decisions/konsol-58-orchestrator-p2.md
           - "konsol #59 Orchestrator P3": developer-guide/decisions/konsol-59-orchestrator-p3.md
