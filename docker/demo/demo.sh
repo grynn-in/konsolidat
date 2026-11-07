@@ -46,10 +46,16 @@ cmd_snapshot() {
   mkdir -p "$GOLDEN"
   rm -f "$GOLDEN"/*
   docker cp "$BACKEND:$SITE_DIR/private/backups/golden/." "$GOLDEN/"
-  # normalise names: one database, one private, one public archive
-  ( cd "$GOLDEN" && for f in *-database.sql.gz; do mv "$f" database.sql.gz; done \
-    && for f in *-private-files.tar; do mv "$f" private-files.tar; done \
-    && for f in *-files.tar; do mv "$f" public-files.tar; done ) 2>/dev/null || true
+  # normalise names: one database, one private, one public archive ("*-files.tar" also matches the
+  # private archive, so the public one is picked by exclusion; the first live run lost it that way)
+  (
+    cd "$GOLDEN"
+    for f in *-database.sql.gz; do [ -e "$f" ] && mv "$f" database.sql.gz; done
+    for f in *-private-files.tar; do [ -e "$f" ] && mv "$f" private-files.tar; done
+    for f in *-files.tar; do case "$f" in *private*) ;; *) [ -e "$f" ] && mv "$f" public-files.tar ;; esac; done
+    true
+  )
+  [ -f "$GOLDEN/database.sql.gz" ] || { echo "snapshot produced no database archive" >&2; exit 2; }
   docker exec "$BACKEND" rm -rf "$SITE_DIR/private/backups/golden"
   ls -la "$GOLDEN"
   log "snapshot done"
@@ -83,15 +89,21 @@ cmd_reset() {
   log "reset: begin"
   # The web tier goes down for the restore: Caddy answers with the maintenance page
   # (docker/demo/Caddyfile.demo-ext handle_errors) until the backend is back.
+  # Whatever happens below, the web tier comes back: a failed restore must not leave the site down.
+  trap 'log "reset FAILED at line $LINENO; starting the web tier"; $DC start frappe_backend frappe_worker frappe_scheduler >/dev/null 2>&1 || true' ERR
   $DC stop frappe_backend frappe_worker frappe_scheduler >/dev/null
-  # One-off container over the same volumes; mariadb and redis keep running.
+  # One-off container over the same volumes; mariadb and redis keep running. The image's entrypoint only
+  # knows web|worker|scheduler, hence --entrypoint. Only the archives that exist are restored.
+  local files=""
+  [ -f "$GOLDEN/private-files.tar" ] && files="$files --with-private-files /golden/private-files.tar"
+  [ -f "$GOLDEN/public-files.tar" ] && files="$files --with-public-files /golden/public-files.tar"
   DB_ROOT_PASSWORD=$(grep -E '^DB_ROOT_PASSWORD=' "$EXT_DIR/.env" | cut -d= -f2-)
-  $DC run --rm --no-deps -v "$GOLDEN:/golden:ro" frappe_backend bash -lc \
-    "cd $BENCH_DIR && bench --site $SITE --force restore /golden/database.sql.gz \
-       --with-private-files /golden/private-files.tar --with-public-files /golden/public-files.tar \
+  $DC run --rm --no-deps --entrypoint bash -v "$GOLDEN:/golden:ro" frappe_backend -lc \
+    "cd $BENCH_DIR && bench --site $SITE --force restore /golden/database.sql.gz $files \
        --db-root-password '$DB_ROOT_PASSWORD'" 2>&1 | grep -vE "RuntimeWarning|^\s*$" | tail -3 | tee -a "$LOG"
   $DC start frappe_backend frappe_worker frappe_scheduler >/dev/null
-  for _ in $(seq 1 60); do docker exec "$BACKEND" curl -sf -o /dev/null http://localhost:8000/api/method/ping 2>/dev/null && break; sleep 2; done
+  trap - ERR
+  for _ in $(seq 1 60); do curl -sf -o /dev/null "https://$SITE/api/method/ping" 2>/dev/null && break; sleep 2; done
   bench_in "clear-cache"
   bench_in "execute frappe.sessions.clear_all_sessions" >/dev/null
   # Warehouse: reference tables from Frappe, submitted trial balances re-landed, visitor batches dropped.
