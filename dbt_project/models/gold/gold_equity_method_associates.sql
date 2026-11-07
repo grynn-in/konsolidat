@@ -149,7 +149,11 @@ entity_net_income as (
    governed_rate_guard() does, the message is CAST to UInt8 and the cast
    raises with the text. The inner query always returns one row; the outer
    WHERE keeps it only when there is something to refuse, so the CAST is
-   never evaluated on a clean run. `checked` reads it as a scalar subquery,
+   never evaluated on a clean run. That holds only because concat reads the
+   non-constant `n` and `keys`: make the message a pure literal and
+   ClickHouse constant-folds the CAST at analysis time, behind the WHERE or
+   not, and refuses every build (measured on 24.8: cast('X' as UInt8) under
+   `where n > 0` throws with n = 0). `checked` reads it as a scalar subquery,
    which ClickHouse evaluates before any row of `translated`, so this stop
    comes before the rate one. assert_equity_associate_has_average_rate
    labels the same rows `no_reporting_currency`. #}
