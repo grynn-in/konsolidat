@@ -185,16 +185,20 @@ def tree_order(rows, key, parent_key, scope=None):
     def k(r, col):
         v = r.get(col)
         return (r.get(scope), v) if scope else v
-    by_key = {k(r, key): r for r in rows}
+    # several rows may share a key (a member's tranches with different effective_from): every row is kept,
+    # the parent lookup resolves to the first row of the parent's key
+    by_key = {}
+    for r in rows:
+        by_key.setdefault(k(r, key), r)
     done, out = set(), []
 
     def visit(r, depth=0):
-        if k(r, key) in done or depth > 60:
+        if id(r) in done or depth > 60:
             return
         p = k(r, parent_key)
         if r.get(parent_key) and p in by_key and p != k(r, key):
             visit(by_key[p], depth + 1)
-        done.add(k(r, key))
+        done.add(id(r))
         out.append(r)
 
     for r in rows:
@@ -319,6 +323,10 @@ class Loader:
 
     def load_fiscal_years(self, sheet, rows, periods):
         years = {y.get("fiscal_year") for y in rows}
+        blank = [p for p in periods if p.get("fiscal_year") in ("", None)]
+        if blank:
+            self.fail("Fiscal_Periods", "%d row(s)" % len(blank), "fiscal_year is empty (not loaded)")
+        periods = [p for p in periods if p.get("fiscal_year") not in ("", None)]
         orphans = sorted({str(p.get("fiscal_year")) for p in periods if p.get("fiscal_year") not in years})
         if orphans:
             self.fail("Fiscal_Periods", "FY" + ", FY".join(orphans), "Fiscal_Periods rows without a Fiscal_Years row (not loaded)")
@@ -361,7 +369,11 @@ class Loader:
         for r in rows:
             doc = doc_fields(sheet, r)
             publish = doc.get("status") == "Published"
-            existing = self.fc.list(sheet.doctype, {"hierarchy_name": r["hierarchy_name"]}, fields=("name", "status"))
+            try:
+                existing = self.fc.list(sheet.doctype, {"hierarchy_name": r["hierarchy_name"]}, fields=("name", "status"))
+            except Failed as e:
+                self.fail(sheet.name, r["hierarchy_name"], e)
+                continue
             live = existing[0].get("status") if existing else None
             if publish and live != "Published":
                 doc["status"] = "Draft"
@@ -527,12 +539,18 @@ class Loader:
 
     def _wait_upload(self, name, wait):
         deadline = time.time() + wait
-        last = ""
+        last, misses = "", 0
         while time.time() < deadline:
             try:
                 st = self.fc.call("konsol.tb_bulk.get_upload", _verb="GET", name=name)
+                misses = 0
             except Failed as e:
-                return "status unknown (%s)" % e
+                # one failed poll is transient; three in a row are not
+                misses += 1
+                if misses >= 3:
+                    return "status unknown after 3 failed polls (%s); check Trial Balance Upload %s" % (_short(str(e), 120), name)
+                time.sleep(5)
+                continue
             status = (st or {}).get("status_now") or (st or {}).get("status") or ""
             if status != last:
                 last = status
@@ -565,8 +583,8 @@ def main():
     want = set(args.only) if args.only else set(LOAD_ORDER) | {"Trial_Balance"}
     want -= set(args.skip)
 
-    data = {name: read_sheet(wb, BY_NAME[name]) for name in LOAD_ORDER}
     try:
+        data = {name: read_sheet(wb, BY_NAME[name]) for name in LOAD_ORDER}
         for name in LOAD_ORDER:
             if data[name]:
                 ld.guard_examples(BY_NAME[name], data[name])
