@@ -12,8 +12,9 @@
 -- A historical balance-sheet account is a legitimate declaration as far as the chart guard is
 -- concerned (governed_chart_guard refuses only P&L at historical and balance sheet at average),
 -- so the build reaches the test rather than being refused before it.
--- The live table may predate is_retained_earnings: add it to the scratch clone first.
+-- The live tables may predate these columns: add them to the scratch clones first.
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
@@ -29,7 +30,7 @@ VALUES
 --   ZZGRP/ZZ01/ZZ1400 -> the ignored rate, must be named
 --   ZZGRP/ZZ01/ZZ3000 -> applied as declared, must NOT be named
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
 VALUES
-  ('ZZGRP', 'ZZ01', 'ZZ1400', '2026-01-01', 1.25),
-  ('ZZGRP', 'ZZ01', 'ZZ3000', '2026-01-01', 1.25);
+  ('ZZGRP', 'ZZ01', 'ZZ1400', '2026-01-01', 1.25, 'USD'),
+  ('ZZGRP', 'ZZ01', 'ZZ3000', '2026-01-01', 1.25, 'USD');

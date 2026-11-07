@@ -17,6 +17,7 @@ on:
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'tests/test_sync_watermark_ddl.py'
+      - 'tests/test_historical_equity_rates_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -42,6 +43,7 @@ on:
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'tests/test_sync_watermark_ddl.py'
+      - 'tests/test_historical_equity_rates_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -140,6 +142,11 @@ jobs:
       # reconcile run id in its sort key, and the upgrade is asked first.
       - name: sync watermark DDL carries the reconcile run id
         run: python -m unittest -v tests.test_sync_watermark_ddl
+      # konsol#374: a Historical Equity Rate is keyed by the presentation
+      # currency it converts into; init-db.sql, konsol's DDL, the model's join
+      # and every fixture agree on the column.
+      - name: historical equity rates DDL carries the To currency
+        run: python -m unittest -v tests.test_historical_equity_rates_ddl
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
