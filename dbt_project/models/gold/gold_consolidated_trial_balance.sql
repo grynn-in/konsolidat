@@ -218,17 +218,6 @@ entity_ownership as (
         and grp.data_area_id = ''
 ),
 
-{# PRD-10: Historical equity rates from staging #}
-historical_rates as (
-    select
-        consolidation_group,
-        data_area_id,
-        main_account,
-        rate_date,
-        toFloat64(historical_rate) as historical_rate
-    from {{ source('epm_staging', 'historical_equity_rates') }}
-),
-
 {# konsolidat#93 / konsol#103: translation reads ONLY the group's governed
    rates. Group finance approves one Closing and one Average rate per fiscal
    period, from each currency into a group reporting currency, in konsol's
@@ -368,6 +357,7 @@ rated as (
             consolidation_group,
             data_area_id,
             main_account,
+            to_currency,
             rate_date,
             {# Nullable so an ASOF miss (period before the first tranche) yields
                NULL, not 0.0 — a non-nullable column would default to 0 on a
@@ -384,10 +374,20 @@ rated as (
            fan-out missed at every ancestor above it, so the same equity account
            translated at the acquisition rate in the sub-group and silently fell
            through to the closing rate in the parent — two different CTAs for
-           one entity. #}
+           one entity.
+           konsol#374 (option b; Deepak Pai, 7 Nov 2026): AND on the
+           consolidating group's presentation currency. A rate converts the
+           entity's currency into ONE currency (to_currency); a sub-group that
+           presents in EUR and its parent that presents in USD each need their
+           own rate for the same entity and account, and keyed without the
+           currency the two tranches were one as-of series, the later one
+           winning at both levels. A missing (group, currency) pair is a
+           closing-rate fallback here and a named row in
+           assert_declared_historical_has_a_rate, as a missing rate always was. #}
         on eo.owner_group = hr.consolidation_group
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
+        and eo.reporting_currency = hr.to_currency
         and etb.period_date >= hr.rate_date
     {# PRD-14: equity-method entities are handled in a separate model. The
        method is the WEAKEST link on the chain, so an entity below an

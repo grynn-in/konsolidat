@@ -380,7 +380,15 @@ sources:
           - name: description
             description: "Free text."
       - name: historical_equity_rates
-        description: "PRD-10: Historical FX rates for equity accounts (IAS 21)"
+        description: >
+          PRD-10: Historical FX rates for equity accounts (IAS 21), written
+          through from konsol's Historical Equity Rate (submitted rows). Keyed
+          (consolidation_group, data_area_id, main_account, rate_date,
+          to_currency): the owning group, the entity, the account, the tranche
+          date and the presentation currency the rate converts into
+          (konsol#374). gold_consolidated_trial_balance matches a rate on the
+          consolidating group's reporting_currency, so a group presenting in a
+          different currency from its sub-group carries its own rate.
         loaded_at_field: updated_at
       - name: group_exchange_rates
         description: >

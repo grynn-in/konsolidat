@@ -85,11 +85,11 @@ class HistoricalEquityRatesDDL(unittest.TestCase):
         (MODIFY ORDER BY may only append), and ClickHouse refuses to put a newly
         added column with a DEFAULT into the sorting key; the fresh shape must
         match the upgraded one."""
-        order_by = re.search(r"ORDER BY \(([^)]*)\)", _normalise(EXPECTED_STATEMENT)).group(1)
+        order_by = re.search(r"ORDER BY\s*\(([^)]*)\)", _normalise(EXPECTED_STATEMENT)).group(1)
         self.assertTrue(order_by.endswith(",to_currency"), order_by)
         column = re.search(r"to_currency [^,]*", KONSOL_BODY).group(0)
         self.assertNotIn("DEFAULT", column, column)
-        upgrade_key = re.search(r"MODIFY ORDER BY \(([^)]*)\)", _normalise(KONSOL_UPGRADE)).group(1)
+        upgrade_key = re.search(r"MODIFY ORDER BY\s*\(([^)]*)\)", _normalise(KONSOL_UPGRADE)).group(1)
         self.assertEqual(upgrade_key, order_by)
 
     def test_the_model_matches_a_rate_on_the_reporting_currency(self):
