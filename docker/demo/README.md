@@ -18,12 +18,12 @@ policy); hourly reset from a golden snapshot. Rejected: a demo-only branch, a re
 | `demo.sh` | `status`, `snapshot`, `on`, `off`, `reset` (see the header of the script) |
 | `konsolidat-demo-reset.{service,timer}` | systemd timer, hourly, installed by `demo.sh on` |
 | `Caddyfile.demo-ext` | the vhost block appended to the live stack's Caddyfile, with the maintenance page shown while a reset runs |
-| `docker-compose.ext.yml` | the override that makes the second stack (container names, network 172.31.0.0/24, caddy/cubejs/backup under profiles) |
+| `docker-compose.ext.yml` | the override that makes the second stack (container names, network 172.31.0.0/24, caddy/backup under profiles) |
 
 ## The second stack
 
 ```
-/root/konsolidat-ext/            copy of the deploy checkout's compose files, .env, clickhouse/, cube/, docker/, dbt_project/
+/root/konsolidat-ext/            copy of the deploy checkout's compose files, .env, clickhouse/, docker/, dbt_project/
   .env                           COMPOSE_PROJECT_NAME=konsolidat-ext, SITE_NAME=SITE_DOMAIN=demo-ext.konsolidat.com,
                                  FRAPPE_PORT=172.30.0.1:8169, CLICKHOUSE_*_PORT 8223/9100, EXCEL_ODBC_PORT 15433, own passwords
   .credentials                   Administrator, MariaDB root, ClickHouse, frappectl API key (0600; never print it)

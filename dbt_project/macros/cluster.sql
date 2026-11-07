@@ -43,7 +43,7 @@
   Tables written by dbt models:
     epm_bronze.<model>_local   ReplicatedMergeTree  — one per shard (data)
   Distributed overlay (created by run-operation):
-    epm_bronze.<model>         Distributed          — query surface for API/Cube.js
+    epm_bronze.<model>         Distributed          — query surface for the API
 
   Shard key: cityHash64(data_area_id) — a given legal entity colocates on one
   shard. NOTE: the shard column is `data_area_id` (the LE column materialized
@@ -234,7 +234,7 @@
       epm_bronze.bronze_*_local   ← dbt model builds this (ReplicatedMergeTree)
       epm_bronze.bronze_*         ← this operation creates it (Distributed)
 
-    The Distributed table is the query surface for the API and Cube.js.
+    The Distributed table is the query surface for the API.
     The _local table is INSERT-targeted by dbt and ClickHouse replication.
 
     Usage

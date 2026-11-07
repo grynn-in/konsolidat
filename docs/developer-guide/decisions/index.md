@@ -13,6 +13,7 @@ Context → Options (with trade-offs) → **Recommendation** → Consequences.
 | konsolidat #131 | [Asset self-heal staleness](konsolidat-131-selfheal-staleness.md) | **Hash-guard + timeout** the heal |
 | konsolidat #90 | [Productionize Airbyte](konsolidat-90-airbyte-prod.md) | Defer (P2); when needed, **Helm Airbyte on real k8s** |
 | konsolidat #57 | [ClickHouse cluster mode](konsolidat-57-clickhouse-cluster.md) | Defer (scale-gated); prefer **managed CH or Keeper+shards** when scale lands |
+| konsolidat #283 | [Remove Cube from the stack](konsolidat-283-remove-cube.md) | **Decided 7 Nov 2026:** Cube removed; konsol reads ClickHouse directly, the Dataset / Measure registry is the semantic layer |
 | konsol #56 | [Orchestrator epic](konsol-56-orchestrator-epic.md) | Keep as tracker; roadmap P2 → P3 |
 | konsol #58 | [Orchestrator P2](konsol-58-orchestrator-p2.md) | **Scheduler execution first**, then definitions editor, then resume UX |
 | konsol #59 | [Orchestrator P3](konsol-59-orchestrator-p3.md) | Lowest priority; do **FX surfacing + basic lineage view** |

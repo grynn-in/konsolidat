@@ -34,7 +34,7 @@ the live `konsolidat-frappe:latest` re-tagged; ~1.4 GB RAM). Reach it from the M
 `ssh -f -N -L 8169:172.30.0.1:8169 hetzner-konsolidat` and `FRAPPE_SITE=http://localhost:8169 FRAPPE_API_KEY=… FRAPPE_API_SECRET=…`
 (frappectl's headless mode). Its `dbt_project` is the live copy plus the equity-method fix from branch `fix-equity-method-journal`
 (commit 5548ff7, worktree `docker/worktrees/equity-fix`, not pushed). Not done: DNS A record `demo-ext.konsolidat.com →
-178.105.252.186` (Route 53, Deepak), the live Caddyfile vhost → `172.30.0.1:8169` + `caddy reload`, cube/backup profiles.
+178.105.252.186` (Route 53, Deepak), the live Caddyfile vhost → `172.30.0.1:8169` + `caddy reload`, backup profile (the cube profile went with konsolidat#283).
 
 **First live run (loader through the tunnel):** master data created (2 years, 18 entities, 3 dims, 3 hierarchies, 144 accounts,
 5 IC pairs, 12 group nodes); every submit refused — the fresh site has no self-approval policy and the loader used bare submits.

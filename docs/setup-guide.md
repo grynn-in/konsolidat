@@ -5,7 +5,7 @@
 - Docker Desktop (or Docker Engine + Compose)
 - Python 3.10+
 - Excel with Power Query (Microsoft 365 or Excel 2019+)
-- PostgreSQL ODBC driver (for Excel → Cube connection)
+- PostgreSQL ODBC driver (optional: Excel ODBC through ClickHouse's PostgreSQL wire port)
 - D365 Finance environment with OData API access
 
 ## Step 1: Clone and Configure
@@ -20,8 +20,6 @@ Edit `.env` with your credentials:
 - `CLICKHOUSE_PASSWORD` — change from default for production
 - `D365_TENANT_ID`, `D365_CLIENT_ID`, `D365_CLIENT_SECRET` — Azure AD app registration
 - `D365_ENVIRONMENT_URL` — your D365 F&O OData endpoint
-- `CUBEJS_API_SECRET` — random string for Cube API security
-- `CUBEJS_SQL_PASSWORD` — password for Excel ODBC connection
 
 ## Step 2: Start Infrastructure
 
