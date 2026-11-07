@@ -191,6 +191,43 @@ sources:
           the effective share, which is what makes consolidation multi-level.
           Before F2 the tree was stored and never traversed: a sub-group's
           entities never reached its parent's consolidated result.
+          konsol#117: ownership is a graph, so the closure is one row per
+          (ancestor group, entity, PATH, link on that path): `path_id` keys the
+          path, and each link names the node it owns (link_group,
+          link_data_area_id) and the node holding it (link_owner_group,
+          link_owner_data_area_id). gold_entity_ownership sums the per-path
+          products. `path` keeps the tree path for readers.
+        columns:
+          - name: path_id
+            description: "konsol#117: the path string (node labels joined by '/'), unique per (group, entity) path. '' on a closure konsol has not rebuilt since the upgrade: one path."
+          - name: link_owner_group
+            description: "konsol#117: the consolidation_group of the node that holds this link ('' before the upgrade; matches ownership_periods.owner_group)."
+          - name: link_owner_data_area_id
+            description: "konsol#117: the entity of the node that holds this link; '' for a pure group node (matches ownership_periods.owner_data_area_id)."
+      - name: consolidation_method_declarations
+        description: >
+          konsol#117: the consolidation method a group DECLARES for an entity it
+          reaches along several paths whose links do not settle it (methods
+          disagree, or no path is all-full and the paths sum past the 50%
+          trigger). One row per Consolidation Method Declaration on the group
+          node, effective-dated; ownership_resolution reads it ASOF
+          (effective_date <= period_date < end_date) only when the rule asks for
+          it, and resolves method_source = 'undeclared' when it is required and
+          absent. May be absent on a volume konsol has not upgraded yet.
+        loaded_at_field: updated_at
+        columns:
+          - name: consolidation_group
+            description: "The consolidating group making the declaration."
+          - name: data_area_id
+            description: "The entity reached by more than one path."
+          - name: consolidation_method
+            description: "full / proportional / equity / none."
+          - name: effective_date
+            description: "From when the declaration applies."
+          - name: end_date
+            description: "Exclusive end; 9999-12-31 (clamped by ClickHouse) = open."
+          - name: reason
+            description: "Why this method, in the group's words (e.g. IFRS 11.7 joint control)."
       - name: entities
         description: >
           konsol#110: the governed entity registry — one row per konsol Entity,
@@ -401,8 +438,18 @@ sources:
           1 from_currency), published by konsol, the single source of FX
           rates; the warehouse never scales or inverts it.
       - name: ownership_periods
-        description: "PRD-9/11/12: Temporal ownership periods with acquisition and disposal fields"
+        description: >
+          PRD-9/11/12: Temporal ownership periods with acquisition and disposal
+          fields. konsol#117: a period is a LINK, from the owner node
+          (owner_group, owner_data_area_id) to the owned node
+          (consolidation_group, data_area_id); two owners of one node are two
+          rows, and ownership_resolution matches a closure link on both nodes.
         loaded_at_field: updated_at
+        columns:
+          - name: owner_group
+            description: "konsol#117: the consolidation_group of the node holding this link ('' before the upgrade patch)."
+          - name: owner_data_area_id
+            description: "konsol#117: the entity of the node holding this link; '' for a pure group node."
       - name: consolidation_adjustments
         description: >
           PRD-16: Top-side adjustments with workflow status and auto-reversal.
