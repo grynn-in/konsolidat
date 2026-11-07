@@ -65,6 +65,9 @@ cmd_on() {
   log "on: demo_user=$DEMO_USER"
   bench_in "set-config demo_user $DEMO_USER"
   bench_in "clear-cache"
+  # a visitor who hit /try while the demo was off left a cached 404 for that URL (frappe.cache website_404);
+  # clear-cache alone did not drop it on the first live run
+  bench_in "execute frappe.website.utils.clear_website_cache" >/dev/null
   install_timer
   systemctl enable --now $TIMER
   cmd_status
@@ -80,6 +83,7 @@ import json, sys
 p = sys.argv[1]; c = json.load(open(p)); c.pop("demo_user", None); json.dump(c, open(p, "w"), indent=1)
 PY
   bench_in "clear-cache"
+  bench_in "execute frappe.website.utils.clear_website_cache" >/dev/null
   cmd_status
 }
 
