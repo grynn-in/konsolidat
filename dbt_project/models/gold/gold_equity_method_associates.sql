@@ -41,7 +41,27 @@
    pre_hook guard or by assert_every_translated_currency_has_a_governed_rate:
    governed_translated_keys() excludes equity-method entities on purpose
    (they are not line-consolidated), so for an associate this throwIf is the
-   only stop, and its message says what to approve. #}
+   only stop. ClickHouse's throwIf takes a constant message, so the stop
+   names no key: assert_equity_associate_has_average_rate (konsolidat#279)
+   is the sibling that lists every (group, associate, currencies, period,
+   reason) the throwIf would fire on, built from the same inputs with the
+   same rate_period_map() keying and never from this model, so it still
+   runs when the build is refused. The two are one rule: change the keying
+   or the reasons here and there together. A zero result is not translated
+   and needs no rate: neither the throwIf nor the test looks at it.
+
+   Before the rate check, `no_reporting_currency` refuses the build when an
+   associate's group has no root row in epm_gold.consolidation_groups
+   (data_area_id = '') or its reporting_currency is blank: under
+   join_use_nulls=0 the root-row miss reads reporting_currency = '', and
+   the rate throwIf would then fire with an "approve the rate" message for
+   what is a Consolidation Group defect. Its message names the keys (the
+   cast-to-UInt8 trick governed_rate_guard() uses), and the test labels the
+   same rows `no_reporting_currency`, never `missing`.
+
+   A translated share of 0.01 or less in group currency posts no journal
+   (`equity_entries`, abs(equity_income_amount) > 0.01): the rounding
+   threshold, so a result that rounds to nothing is not a two-line entry. #}
 
 {# F2: ownership and method come from gold_entity_ownership — dated, chain
    multiplied, one row per ancestor group. This read the consolidation_groups
@@ -114,6 +134,48 @@ entity_net_income as (
     group by ee.consolidation_group, tb.data_area_id, tb.fiscal_year, tb.fiscal_period,
              ee.reporting_currency, ec.accounting_currency, ee.ownership_pct,
              rate_year, rate_period
+    {# A zero result is not translated (0 x any rate is 0), so it needs no
+       rate: it is kept out here so the rate throwIf below and
+       assert_equity_associate_has_average_rate look at the same rows. #}
+    having sum(tb.period_net_amount) != 0
+),
+
+{# konsolidat#279: a group with no root row in consolidation_groups
+   (data_area_id = ''), or a root row with a blank reporting_currency, has no
+   currency to translate INTO. The LEFT JOIN in equity_entities reads it as
+   '' (join_use_nulls=0), and the rate throwIf would fire with an "approve
+   the rate" message for a Consolidation Group defect. Refused here first,
+   naming the keys: ClickHouse's throwIf needs a constant message, so, as
+   governed_rate_guard() does, the message is CAST to UInt8 and the cast
+   raises with the text. The inner query always returns one row; the outer
+   WHERE keeps it only when there is something to refuse, so the CAST is
+   never evaluated on a clean run. `checked` reads it as a scalar subquery,
+   which ClickHouse evaluates before any row of `translated`, so this stop
+   comes before the rate one. assert_equity_associate_has_average_rate
+   labels the same rows `no_reporting_currency`. #}
+no_reporting_currency as (
+    select cast(concat(
+        'PRD-14 / konsolidat#279 refused: ', toString(n),
+        ' equity-method associate period(s) whose group has no reporting currency to translate into',
+        ' (no root row with data_area_id = '''' in epm_gold.consolidation_groups, or a blank reporting_currency): ', keys,
+        if(n > 50, concat(' ... and ', toString(n - 50), ' more (assert_equity_associate_has_average_rate lists all)'), ''),
+        '. Fix the Consolidation Group in konsol; this is not a missing rate.'
+    ) as UInt8) as refused
+    from (
+        select
+            count() as n,
+            arrayStringConcat(arraySlice(arraySort(groupArray(
+                concat(consolidation_group, '/', data_area_id, ' FY', toString(fiscal_year), ' P', toString(fiscal_period)))), 1, 50), '; ') as keys
+        from entity_net_income
+        where reporting_currency = ''
+    )
+    where n > 0
+),
+
+checked as (
+    select *
+    from entity_net_income
+    where ifNull((select sum(refused) from no_reporting_currency), 0) = 0
 ),
 
 {# One approved Average rate per key, as gold_consolidated_trial_balance's
@@ -152,7 +214,7 @@ translated as (
             when gr.n_average != 1 or gr.n_invalid > 0 then null
             else gr.gov_average
         end as average_rate
-    from entity_net_income as ni
+    from checked as ni
     left join governed_average_rates as gr
         on ni.accounting_currency = gr.from_currency
         and ni.reporting_currency = gr.to_currency
@@ -163,11 +225,13 @@ translated as (
        folded and raise on every build); ClickHouse needs a constant message,
        so the key is not in it. #}
     where throwIf(average_rate is null,
-                  'PRD-14 / konsolidat#93: an equity-method associate''s accounting currency has no usable governed Average rate into its group''s reporting currency for its period (missing, duplicated, or zero, negative or not finite; a Closing period reads its year''s last Regular period). Approve it in konsol Group Exchange Rate. assert_every_translated_currency_has_a_governed_rate does not list it: that covers line-consolidated entities only.') = 0
+                  'PRD-14 / konsolidat#93: an equity-method associate''s accounting currency has no usable governed Average rate into its group''s reporting currency for its period (missing, duplicated, or zero, negative or not finite; a Closing period reads its year''s last Regular period). Approve it in konsol Group Exchange Rate. assert_equity_associate_has_average_rate (konsolidat#279) names every such key; assert_every_translated_currency_has_a_governed_rate does not list it: that covers line-consolidated entities only.') = 0
 ),
 
 {# Equity income = net_income × ownership_pct × average rate, in the group's
-   reporting currency. #}
+   reporting currency. average_rate is Nullable (the CASE above has a null
+   branch) and the throwIf has refused every null, so assumeNotNull keeps
+   amount a plain Float64. #}
 equity_income as (
     select
         consolidation_group,
@@ -178,7 +242,7 @@ equity_income as (
         ownership_pct,
         net_income,
         average_rate,
-        net_income * ownership_pct * average_rate as equity_income_amount
+        net_income * ownership_pct * assumeNotNull(average_rate) as equity_income_amount
     from translated
 ),
 
@@ -202,6 +266,8 @@ equity_entries as (
         concat('EQ_', consolidation_group, '_', data_area_id, '_',
                toString(fiscal_year), '_P', toString(fiscal_period)) as journal_id
     from equity_income
+    {# The posting threshold: a translated share of 0.01 or less in group
+       currency is no journal. The data dictionary quotes this. #}
     where abs(equity_income_amount) > 0.01
 
     union all

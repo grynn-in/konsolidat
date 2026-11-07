@@ -331,13 +331,17 @@ posted once in the disposal period. Replaced `gold_disposal_adjustments`.
 
 PRD-14: the equity-method journal, one two-line entry per associate (an entity
 `gold_entity_ownership` resolves as `consolidation_method = 'equity'` with a complete chain)
-per period it has a P&L result in. The share of the result (`net_income × effective_ownership_pct`,
+per period with a translated share above 0.01 in group currency (the threshold is the
+`abs(equity_income_amount) > 0.01` filter in the model's `equity_entries` CTE; a result that
+rounds to nothing posts no journal). The share of the result (`net_income × effective_ownership_pct`,
 where `net_income` is debit minus credit over `is_pnl = 1` accounts, so a profit is negative) is
 translated from the associate's accounting currency (`silver_entity_currencies`) into the group's
 reporting currency at the period's governed Average rate (`epm_staging.group_exchange_rates`;
 1.0 for a same-currency associate; a Closing period reads its year's last Regular period's rate,
 `rate_period_map()`). A missing, duplicated or invalid Average rate stops the build (`throwIf`),
-as in `gold_consolidated_trial_balance`. Layer 5 of `gold_fully_consolidated_tb`.
+as in `gold_consolidated_trial_balance`; `assert_equity_associate_has_average_rate` names every
+such key (konsolidat#279), and a group with no root row (no reporting currency) is refused first,
+by name. Layer 5 of `gold_fully_consolidated_tb`.
 
 | Column | Type | Description | Test |
 |--------|------|-------------|------|
@@ -348,13 +352,15 @@ as in `gold_consolidated_trial_balance`. Layer 5 of `gold_fully_consolidated_tb`
 | `main_account` | String | `EQ_INCOME` (share of profit) or `EQ_INVEST` (investment movement): reserved pseudo-accounts, not in the chart | — |
 | `account_name` | String | `Equity method - share of profit` / `Equity method - investment` | — |
 | `reporting_currency` | String | The group's reporting currency, which `amount` is in | — |
-| `amount` | Float64 | Signed, debit positive. `EQ_INCOME` = translated share of the result (a profit is a credit, negative); `EQ_INVEST` = its negation, so the journal sums to 0 | — |
+| `amount` | Float64 | Signed, debit positive. `EQ_INCOME` = translated share of the result (a profit is a credit, negative); `EQ_INVEST` = its negation, so the journal sums to 0. Plain Float64, not Nullable: the rate CASE has a null branch, refused by the `throwIf`, and `assumeNotNull` after it keeps the type | — |
 | `adjustment_type` | String | `equity_method` | — |
 | `journal_id` | String | `EQ_<group>_<entity>_<year>_P<period>` | — |
 
 **Tests**: `assert_equity_method_journal_balances` (each journal sums to 0),
 `assert_equity_income_formula` (the `EQ_INCOME` line equals the translated formula),
-`assert_equity_method_single_line`, `assert_equity_method_no_ic_elim`.
+`assert_equity_associate_has_average_rate` (every associate period the model would refuse, by key
+and reason, from the model's inputs), `assert_equity_method_single_line`,
+`assert_equity_method_no_ic_elim`.
 
 ### gold_fully_consolidated_tb
 
