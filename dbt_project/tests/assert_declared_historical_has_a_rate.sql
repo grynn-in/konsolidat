@@ -22,12 +22,18 @@
 -- Coverage is resolved EXACTLY the way translation resolves the rate, or the test
 -- would disagree with the numbers (gold_consolidated_trial_balance, the `hr` ASOF
 -- join):
---   * keys   (owner_group, data_area_id, main_account) — the entity's OWNING group,
---            not the consolidating one. A historical equity rate is recorded once,
---            under the node that owns the entity; after the multi-level fan-out the
---            same entity appears under every ancestor, all resolving to that one
---            owner group (F2). owner_group is not a column of the consolidated TB,
---            so it is read back from gold_entity_ownership on the same period key.
+--   * keys   (owner_group, data_area_id, main_account, to_currency) — the entity's
+--            OWNING group, not the consolidating one, and the consolidating group's
+--            reporting currency. A historical equity rate is recorded once, under
+--            the node that owns the entity; after the multi-level fan-out the same
+--            entity appears under every ancestor, all resolving to that one owner
+--            group (F2). owner_group is not a column of the consolidated TB, so it
+--            is read back from gold_entity_ownership on the same period key. The
+--            currency IS a column of the TB (reporting_currency): konsol#374
+--            (Deepak Pai, 7 Nov 2026, option b) keys a rate by the presentation
+--            currency it converts into, so a sub-group presenting in EUR under a
+--            parent presenting in USD needs two rates, and a gap is named per
+--            (group, currency) pair.
 --   * as-of  the latest tranche whose rate_date <= period_date. A period BEFORE the
 --            first tranche yields no rate — the case the ASOF join was fixed for
 --            (konsolidat#92 finding 2: the old row_number()/rn=1 join took the most
@@ -47,15 +53,18 @@ with declared as (
     where uses_historical_rate = 1
 ),
 
-{# One row per (owning group, entity, declared account, period) that was actually
-   consolidated. DISTINCT because the TB is grained finer than this (dimensions,
-   partner) and because one entity fans out to every ancestor group — all of which
-   share the one owner_group, so the fan-out must not multiply the findings. #}
+{# One row per (owning group, entity, declared account, presentation currency,
+   period) that was actually consolidated. DISTINCT because the TB is grained finer
+   than this (dimensions, partner) and because one entity fans out to every ancestor
+   group — all of which share the one owner_group, so ancestors presenting in the
+   same currency must not multiply the findings; ancestors presenting in different
+   currencies are different findings. #}
 candidates as (
     select distinct
         eo.owner_group as owner_group,
         ctb.data_area_id as data_area_id,
         ctb.main_account as main_account,
+        ctb.reporting_currency as reporting_currency,
         ctb.fiscal_year as fiscal_year,
         ctb.fiscal_period as fiscal_period,
         {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }} as period_date
@@ -74,6 +83,7 @@ rates as (
         consolidation_group,
         data_area_id,
         main_account,
+        to_currency,
         rate_date
     from {{ source('epm_staging', 'historical_equity_rates') }}
 ),
@@ -88,6 +98,7 @@ resolved as (
         c.owner_group as owner_group,
         c.data_area_id as data_area_id,
         c.main_account as main_account,
+        c.reporting_currency as reporting_currency,
         c.fiscal_year as fiscal_year,
         c.fiscal_period as fiscal_period,
         c.period_date as period_date,
@@ -97,10 +108,12 @@ resolved as (
         on c.owner_group = r.consolidation_group
         and c.data_area_id = r.data_area_id
         and c.main_account = r.main_account
+        and c.reporting_currency = r.to_currency
     group by
         c.owner_group,
         c.data_area_id,
         c.main_account,
+        c.reporting_currency,
         c.fiscal_year,
         c.fiscal_period,
         c.period_date
@@ -110,15 +123,17 @@ select
     owner_group,
     data_area_id,
     main_account,
+    reporting_currency,
     fiscal_year,
     fiscal_period,
     period_date,
     concat(
-        'account ', main_account, ' declares fx_method = historical, but no Historical Equity Rate covers ',
-        'FY', toString(fiscal_year), ' P', toString(fiscal_period),
+        'account ', main_account, ' declares fx_method = historical, but no Historical Equity Rate into ',
+        reporting_currency, ' covers FY', toString(fiscal_year), ' P', toString(fiscal_period),
         ' for entity ', data_area_id, ' under group ', owner_group,
         ': the balance translated at the CLOSING rate instead. Record a Historical Equity Rate for ',
-        'this group, entity and account dated on or before ', toString(period_date), '.'
+        'this group, entity and account with To Currency ', reporting_currency,
+        ', dated on or before ', toString(period_date), '.'
     ) as problem
 from resolved
 where n_eligible_tranches = 0

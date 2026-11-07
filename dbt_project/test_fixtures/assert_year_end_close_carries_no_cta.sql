@@ -49,10 +49,12 @@ VALUES
   ('ZZG', 'ZZE2', 2025, 12, '2025-12-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full'),
   ('ZZG', 'ZZE2', 2025, 13, '2025-12-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full'),
   ('ZZG', 'ZZE2', 2026, 1, '2026-01-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full');
+-- The live table may predate to_currency (konsol#374): add it to the scratch clone first.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
 VALUES
-  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90);
+  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90, 'USD');
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
