@@ -32,7 +32,7 @@ log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG"; }
 reload_web() {
   local pid
   pid=$(docker exec "$BACKEND" bash -c 'for p in /proc/[0-9]*; do c=$(tr "\0" " " < $p/cmdline 2>/dev/null); case "$c" in *gunicorn*) if [ "$(awk "/^PPid/{print \$2}" $p/status)" = 1 ]; then echo ${p#/proc/}; fi;; esac; done' | head -1)
-  if [ -n "$pid" ]; then docker exec "$BACKEND" kill -HUP "$pid"; sleep 3; else log "gunicorn master not found; restarting the backend"; docker restart "$BACKEND" >/dev/null; fi
+  if [ -n "$pid" ]; then docker exec "$BACKEND" bash -c "kill -HUP $pid"; sleep 3; else log "gunicorn master not found; restarting the backend"; docker restart "$BACKEND" >/dev/null; fi
 }
 bench_in() { docker exec "$BACKEND" bash -lc "cd $BENCH_DIR && bench --site $SITE $*" 2>&1 | grep -v RuntimeWarning || true; }
 need_golden() { [ -f "$GOLDEN/database.sql.gz" ] || { echo "no golden copy in $GOLDEN: run 'demo.sh snapshot' first" >&2; exit 2; }; }
