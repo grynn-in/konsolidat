@@ -108,7 +108,9 @@ cmd_reset() {
   bench_in "execute frappe.sessions.clear_all_sessions" >/dev/null
   # Warehouse: reference tables from Frappe, submitted trial balances re-landed, visitor batches dropped.
   bench_in "execute konsol.clickhouse.reconcile_all" | tail -1 | tee -a "$LOG"
-  bench_in "execute konsol.consolidation.doctype.trial_balance_submission.trial_balance_submission.reland_submitted --kwargs '{\"apply\":1,\"remove_orphans\":1}'" | tail -1 | tee -a "$LOG"
+  # run_reland is the job reland_submitted(apply=1) would queue; called directly it runs to completion here,
+  # so the dbt build below never starts before the visitor batches are gone
+  bench_in "execute konsol.consolidation.doctype.trial_balance_submission.trial_balance_submission.run_reland --kwargs '{\"remove_orphans\":1}'" | tail -1 | tee -a "$LOG"
   $DC --profile setup run --rm dbt_init build --profiles-dir /home/frappe/dbt_project --project-dir /home/frappe/dbt_project 2>&1 \
     | grep -E "Done\.|Completed with|ERROR creating" | tail -2 | tee -a "$LOG"
   log "reset done in $(( $(date +%s) - t0 ))s"
