@@ -43,7 +43,7 @@ SUBJECTS = [
         "acquisition", "acquired", "disposal", "goodwill", "bargain", "deal_",
         "measured_in_period", "proration")),
     ("Intercompany", ("ic_", "intercompany", "unrealized", "reciprocal")),
-    ("Equity method", ("equity_method", "equity_income")),
+    ("Equity method", ("equity_method", "equity_income", "equity_associate")),
     ("Cash flow", ("cf_", "cash_flow", "consolidated_cf")),
     ("Reporting hierarchies", ("hierarchy", "node", "unassigned")),
     ("Budget, forecast and variance", (

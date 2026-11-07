@@ -1,9 +1,11 @@
--- gate: build gold_entity_ownership gold_equity_method_associates assert_equity_method_journal_balances assert_equity_income_formula
+-- gate: build gold_entity_ownership gold_equity_method_associates assert_equity_method_journal_balances assert_equity_income_formula assert_equity_associate_has_average_rate
 -- gate: expect assert_equity_method_journal_balances pass
 -- gate: expect assert_equity_income_formula pass
+-- gate: expect assert_equity_associate_has_average_rate pass
 -- Equity-method journal (PRD-14), the translated two-sided case: `gold_entity_ownership
--- gold_equity_method_associates assert_equity_method_journal_balances assert_equity_income_formula`
--- must BUILD and both tests must PASS on these rows.
+-- gold_equity_method_associates assert_equity_method_journal_balances assert_equity_income_formula
+-- assert_equity_associate_has_average_rate` must BUILD and all three tests must PASS on these rows
+-- (the third, konsolidat#279: the SEK->EUR Average rate every associate period needs is approved).
 --
 -- Group ZZG reports in EUR. Associate ZZA keeps its books in SEK and is held at 30% under the
 -- equity method (epm_staging.ownership_periods, method 'equity'), so gold_entity_ownership resolves
@@ -20,9 +22,9 @@
 --   per Regular period). rate_period_map() keys it on FY2026 P12's Average rate.
 --   Expected journal EQ_ZZG_ZZA_2026_P13 (EUR): EQ_INCOME -13.50 / EQ_INVEST +13.50 -> sums to 0.
 --
--- Before the fix both lines carried -27.00 (net -54.00, in SEK x 0.30 = -300 unlabelled as EUR), so
--- assert_equity_method_journal_balances flagged 2 journals and assert_equity_income_formula (now the
--- translated oracle) flagged 2 rows.
+-- Before the fix the model never translated: both lines carried the SEK share labelled as EUR, -300
+-- each (net -600) in P12 and -150 each (net -300) in P13, so assert_equity_method_journal_balances
+-- flagged 2 journals and assert_equity_income_formula (now the translated oracle) flagged 2 rows.
 --
 -- The model's direct inputs are seeded as model tables (gold_trial_balance, silver_main_accounts,
 -- silver_entity_currencies) and gold_entity_ownership is built from the seeded staging rows.
