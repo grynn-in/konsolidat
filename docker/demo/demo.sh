@@ -130,6 +130,8 @@ cmd_on() {
   need_golden
   log "on: demo_user=$DEMO_USER"
   bench_run "set-config demo_user $DEMO_USER" >/dev/null
+  # re-enable the demo user (off disables it, which every worker sees at once, unlike the cached key)
+  bench_run "execute konsol.demo_mode.switch_on" | tail -1
   bench_in "clear-cache" >/dev/null
   # a visitor who hit /try while the demo was off left a cached 404 for that URL (frappe.cache website_404),
   # which clear-cache alone did not drop on the first live run
@@ -145,7 +147,9 @@ cmd_off() {
   if reset_running; then echo "a reset is running; try again in a few minutes" >&2; exit 3; fi
   log "off"
   systemctl disable --now "$TIMER" >/dev/null 2>&1 || true
-  bench_in "execute konsol.demo_mode.end_sessions" | tail -1
+  # first disable the demo user and end every session (konsol.demo_mode.switch_off): decide() reads the User
+  # row on every request, so this closes the door before the cached key has expired on every worker
+  bench_run "execute konsol.demo_mode.switch_off" | tail -1
   # set-config cannot remove a key; drop it from the file (docker exec needs -i to read the heredoc)
   docker exec -i "$BACKEND" python3 - "$SITE_DIR/site_config.json" <<'PY'
 import json, sys
