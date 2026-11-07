@@ -370,15 +370,25 @@ models:
         description: "The weakest method on the chain: full < proportional < equity < none."
 
   - name: gold_equity_method_associates
-    description: "PRD-14: Equity method entries for associates (20-50% ownership)"
+    description: >
+      PRD-14: the equity-method journal for associates (20-50% ownership): one
+      two-line entry per associate per period, balanced by construction. The
+      share of the result is translated from the associate's accounting
+      currency into the group's reporting currency at the period's governed
+      Average rate (1.0 when they are the same; a Closing period reads its
+      year's last Regular period's rate); a missing rate stops the build.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: main_account
-        description: "EQ_INCOME or EQ_INVEST"
+        description: "EQ_INCOME (share of profit) or EQ_INVEST (investment movement)"
       - name: amount
-        description: "Equity income or investment movement amount"
+        description: >
+          Signed, debit positive, in reporting_currency. EQ_INCOME carries the
+          translated share of the result (a profit is a credit, negative);
+          EQ_INVEST carries its negation, so each journal sums to 0
+          (assert_equity_method_journal_balances).
 
   - name: gold_acquisition_adjustments
     description: >

@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **134** |
-| carrying their reasoning | 116 |
-| citing the issue that caused them | 95 |
-| severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 113 |
+| assertions | **136** |
+| carrying their reasoning | 118 |
+| citing the issue that caused them | 97 |
+| severity `warn` (reports, does not stop a build) | 22 |
+| severity `error` (stops the build, and its children) | 114 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -29,7 +29,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 11
-- [Equity method](#equity-method) — 2
+- [Equity method](#equity-method) — 4
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 7
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
@@ -672,15 +672,35 @@ Every elimination posted while both sides were in the group has been reversed. M
 
 ## Equity method
 
+### `equity_associate_has_average_rate`
+
+**konsolidat#279 / PRD-14: every equity-method associate with a non-zero result in a period, whose accounting currency differs from its group's reporting currency, has exactly one usable governed Average rate for that period into the group currency (epm_staging.group_exchange_rates, konsolidat#93), keyed through rate_period_map() exactly as gold_equity_method_associates keys it (a Closing-type period reads its year's last Regular period, konsolidat#199 row D9).**
+
+Why a sibling test and not the model's own stop. gold_equity_method_associates refuses to build when an associate's Average rate is missing, duplicated or invalid (throwIf in its `translated` CTE), but ClickHouse's throwIf takes a constant message, so the stop names no key, and the line-consolidation guards do not cover an associate at all: governed_translated_keys() (the pre_hook guard, assert_every_translated_currency_has_a_governed_rate, deploy.sh's fx_precheck) excludes consolidation_method = 'equity' on purpose. Without this test an operator got "some associate, some period". This lists every key, in the shape a person fixes it: approve the Average rate in konsol Group Exchange Rate (or cancel the extra one). reason is one of: missing (no approved Average rate for the rate key); duplicate (more than one approved Average rate: the model's anyIf would pick one); invalid (an Average rate that is zero, negative or not finite); no_reporting_currency (the group has no root row in epm_gold.consolidation_groups, data_area_id = '', or its reporting_currency is blank, so there is no currency to translate INTO: not a rate problem, fix the Consolidation Group in konsol. The model stops on this first, with its own message, and the row is labelled so it is never read as a missing rate). Built from the model's own inputs (never from the model: a refused build must still let this run and name the key). A zero result needs no rate (0 x anything is 0), and the model does not stop on one either, so a zero-result period is not listed. join_use_nulls=0: a rate miss fills n_average = 0 on the LEFT JOIN, so the count is the signal, never a NULL test across the join; a group-root miss fills to_currency = ''. severity warn, on purpose, as assert_every_translated_currency_has_a_governed_rate: this test sits on the model's INPUTS, and at error severity a flag made `dbt build` SKIP gold_equity_method_associates and everything below it before the model ran, so its throwIf never decided and the fixture gate saw SKIPPED where it expected REFUSED (CI run 42393401046 on 34eaddf). The model decides: its throwIf stops the build; this test, in the same run, names the keys. A WARN here is never "fine": it is the list of what the refused build needs. Fixtures: dbt_project/test_fixtures/assert_equity_associate_has_average_rate.must_flag.sql (SEK associate in a EUR group with a Closing rate but no Average rate: 2 rows, FY2026 P12 and the Closing period P13 that reads P12), ...no_reporting_currency.must_flag.sql (no root row: 2 rows), and assert_equity_method_journal_balances.sql (the balanced case: passes).
+
+<sub>`warn` · `tests/assert_equity_associate_has_average_rate.sql` · konsolidat#199 konsolidat#279 konsolidat#93</sub>
+
 ### `equity_income_formula`
 
-**PRD-14 Test: Equity income = net_income × ownership_pct The EQ_INCOME entry should match the formula**
+**PRD-14 Test: Equity income = net_income × ownership_pct × the period's governed Average rate from the associate's accounting currency into the group's reporting currency (1.0 when they are the same).**
 
-<sub>`error (default)` · `tests/assert_equity_income_formula.sql`</sub>
+The EQ_INCOME entry should match the formula. 7 Nov 2026: the oracle translates, as the model does since the same day. It compared the entry with net_income × ownership_pct in the associate's OWN currency, so it passed on a SEK associate in a EUR group whose figure had never been translated (the defect it should have caught). A Closing-type period reads its year's last Regular period's rate (rate_period_map(), konsolidat#199 row D9), the same rule the model applies. join_use_nulls=0: an entry whose rate key has no Average rate reads 0 here, so its expected value is 0 and the entry (never 0 itself, the model drops |amount| <= 0.01) is flagged rather than excused. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql.
+
+<sub>`error (default)` · `tests/assert_equity_income_formula.sql` · konsolidat#199</sub>
+
+### `equity_method_journal_balances`
+
+**PRD-14: every equity-method journal (EQ_<group>_<entity>_<year>_P<period>) the warehouse posts sums to zero in its period: the EQ_INCOME line and the EQ_INVEST line are the two sides of one entry (Cr share of profit, Dr investment), so a row here is a model bug, not a data problem.**
+
+Found 7 Nov 2026 building the aquila-bike example: gold_equity_method_associates put the SAME signed figure on both lines, so a profit of X posted -X twice (net -2X) into layer 5 of gold_fully_consolidated_tb, and assert_end_to_end_bs_balances (PRD-22) failed for any group with an associate in every period the associate had a result. Same pattern as the deal-journal tests (assert_acquisition_journal_balances and siblings): one test, ref-ing only its own model, so `gold_equity_method_associates assert_equity_method_journal_balances` is selectable on its own. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql (SEK associate at 30% in a EUR group; a 1,000 SEK profit at a 0.09 Average rate is EQ_INCOME -27.00 / EQ_INVEST +27.00).
+
+<sub>`error` · `tests/assert_equity_method_journal_balances.sql`</sub>
 
 ### `equity_method_single_line`
 
-**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation)**
+**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation).**
+
+The two accounts allowed are the two sides of the one journal gold_equity_method_associates posts per associate per period: EQ_INCOME (the translated share of the result) and its negation on EQ_INVEST (assert_equity_method_journal_balances).
 
 <sub>`error (default)` · `tests/assert_equity_method_single_line.sql`</sub>
 
