@@ -1,0 +1,26 @@
+# Appended to the LIVE stack's Caddyfile (/root/konsolidat/docker/caddy/Caddyfile) and reloaded
+# with `docker exec konsolidat_caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+# Second stack (konsolidat-ext, aquila-bike example). Frappe of that stack listens on the docker
+# bridge gateway, 172.30.0.1:8169 (not public). While `demo.sh reset` runs, the backend is stopped
+# and the proxy error becomes the maintenance page below.
+https://demo-ext.konsolidat.com {
+	encode gzip
+	handle {
+		reverse_proxy 172.30.0.1:8169 {
+			header_up Host demo-ext.konsolidat.com
+		}
+	}
+	handle_errors {
+		@down expression `{err.status_code} in [502, 503, 504]`
+		handle @down {
+			header Retry-After 120
+			header Content-Type "text/html; charset=utf-8"
+			respond <<HTML
+				<!doctype html><meta charset="utf-8"><title>Konsolidat demo</title>
+				<style>body{font:16px/1.5 system-ui,sans-serif;max-width:36em;margin:15vh auto;padding:0 1em;color:#222}</style>
+				<h1>Back in a few minutes</h1>
+				<p>The demo resets to its starting point every hour. The restore takes two to four minutes; reload after that.</p>
+				HTML 503
+		}
+	}
+}

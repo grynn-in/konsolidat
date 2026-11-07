@@ -1,0 +1,9 @@
+[Unit]
+Description=Konsolidat demo (demo-ext): reset the site to its golden copy
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/root/konsolidat-ext/demo/demo.sh reset
+TimeoutStartSec=900
