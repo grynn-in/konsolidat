@@ -81,14 +81,10 @@ class Frappectl:
     def list(self, doctype, filters, fields=("name",), limit=20):
         """Documents matching an equality filter dict. A None value means 'is not set'."""
         args = ["doc", "list", doctype, "--fields", ",".join(fields), "--limit", str(limit)]
-        plain = {k: v for k, v in filters.items() if v is not None}
-        unset = [k for k, v in filters.items() if v is None]
-        if unset:
-            fj = [[k, "=", v] for k, v in plain.items()] + [[k, "is", "not set"] for k in unset]
-            args += ["--filters-json", json.dumps(fj)]
-        else:
-            for k, v in plain.items():
-                args += ["-f", "%s=%s" % (k, v)]
+        # always JSON: frappectl's `-f k=v` parser splits on any operator inside a value, so a free-text key such
+        # as a journal description containing ">= 50%" or " like " would become a different filter
+        fj = [[k, "=", v] if v is not None else [k, "is", "not set"] for k, v in filters.items()]
+        args += ["--filters-json", json.dumps(fj)]
         if self.dry_run:
             return []
         out = self._run(args, read_only=True)
@@ -143,7 +139,7 @@ def read_sheet(wb, sheet: Sheet):
     header = [str(h).strip() if h is not None else "" for h in rows[0]]
     kinds = {c.name: c for c in sheet.cols}
     out = []
-    for raw in rows[1:]:
+    for i, raw in enumerate(rows[1:], start=2):
         if not any(v not in (None, "") for v in raw):
             continue
         row = {}
@@ -151,7 +147,11 @@ def read_sheet(wb, sheet: Sheet):
             if not h:
                 continue
             col = kinds.get(h)
-            row[h] = _coerce(v, col)
+            try:
+                row[h] = _coerce(v, col)
+            except ValueError as e:
+                # a cell that is not what its column declares stops the run before anything is sent
+                raise Failed("%s row %d, %s" % (sheet.name, i, e))
         out.append(row)
     return out
 
@@ -165,10 +165,13 @@ def _coerce(v, col):
         return v if not isinstance(v, str) else v.strip()
     if col.kind == "check":
         return 1 if str(v).strip().lower() in ("1", "1.0", "true", "yes", "x") else 0
-    if col.kind == "int":
-        return int(float(v))
-    if col.kind == "float":
-        return float(v)
+    if col.kind in ("int", "float"):
+        if isinstance(v, str) and not v.strip():
+            return ""
+        try:
+            return int(float(v)) if col.kind == "int" else float(v)
+        except (TypeError, ValueError):
+            raise ValueError("column %s: %r is not a number" % (col.name, v))
     if col.kind == "date":
         return str(v).strip()[:10]
     if isinstance(v, float) and v.is_integer():
@@ -176,23 +179,32 @@ def _coerce(v, col):
     return str(v).strip()
 
 
-def tree_order(rows, key, parent_key):
-    """Parents before children; rows whose parent is not in the sheet come first."""
-    by_key = {r[key]: r for r in rows}
+def tree_order(rows, key, parent_key, scope=None):
+    """Parents before children; rows whose parent is not in the sheet come first. With `scope`, keys are
+    (scope value, key): the same member code may root two hierarchies."""
+    def k(r, col):
+        v = r.get(col)
+        return (r.get(scope), v) if scope else v
+    by_key = {k(r, key): r for r in rows}
     done, out = set(), []
 
     def visit(r, depth=0):
-        if r[key] in done or depth > 60:
+        if k(r, key) in done or depth > 60:
             return
-        p = r.get(parent_key)
-        if p and p in by_key and p != r[key]:
+        p = k(r, parent_key)
+        if r.get(parent_key) and p in by_key and p != k(r, key):
             visit(by_key[p], depth + 1)
-        done.add(r[key])
+        done.add(k(r, key))
         out.append(r)
 
     for r in rows:
         visit(r)
     return out
+
+
+def _key_value(v):
+    """A natural-key value: blank is 'not set', but 0 (the Opening period) is a value."""
+    return None if v in ("", None) else v
 
 
 def doc_fields(sheet: Sheet, row):
@@ -261,6 +273,8 @@ class Loader:
                 nm = self.fc.create(sheet.doctype, doc)
                 if nm is None and self.fc.dry_run:
                     nm = "<%s>" % label   # so the dry run shows the approval calls too
+                if nm is None:
+                    raise Failed("doc create returned no name; nothing approved")
                 what = "approved" if sheet.doctype in APPROVAL_DOCTYPES else "submitted"
             if nm:
                 self.approve(sheet, nm)
@@ -304,7 +318,14 @@ class Loader:
                 self.fail(sheet.name, single, e)
 
     def load_fiscal_years(self, sheet, rows, periods):
+        years = {y.get("fiscal_year") for y in rows}
+        orphans = sorted({str(p.get("fiscal_year")) for p in periods if p.get("fiscal_year") not in years})
+        if orphans:
+            self.fail("Fiscal_Periods", "FY" + ", FY".join(orphans), "Fiscal_Periods rows without a Fiscal_Years row (not loaded)")
         for y in rows:
+            if y.get("fiscal_year") in ("", None):
+                self.fail(sheet.name, "(blank)", "fiscal_year is empty")
+                continue
             fy = int(y["fiscal_year"])
             child = [doc_fields(BY_NAME["Fiscal_Periods"], p) for p in periods if int(p["fiscal_year"]) == fy]
             for c in child:
@@ -326,8 +347,8 @@ class Loader:
         if sheet.tree:
             rows = tree_order(rows, sheet.key[0], sheet.tree)
         for r in rows:
-            key = {k: r.get(k) or None for k in sheet.key}
-            label = "/".join(str(v) for v in key.values() if v)
+            key = {k: _key_value(r.get(k)) for k in sheet.key}
+            label = "/".join(str(v) for v in key.values() if v is not None)
             doc = doc_fields(sheet, r)
             if sheet.submit:
                 self.submit_once(sheet, key, doc, label)
@@ -335,17 +356,31 @@ class Loader:
                 self.upsert(sheet, r, key, doc, label)
 
     def load_hierarchies(self, sheet, rows):
-        # publish after members exist: a Published header needs at least one member
+        # a Published header needs at least one member, so a NEW hierarchy is created Draft and published by
+        # publish_hierarchies() after the members; an existing Published one is never demoted
         for r in rows:
             doc = doc_fields(sheet, r)
             publish = doc.get("status") == "Published"
-            if publish:
+            existing = self.fc.list(sheet.doctype, {"hierarchy_name": r["hierarchy_name"]}, fields=("name", "status"))
+            live = existing[0].get("status") if existing else None
+            if publish and live != "Published":
                 doc["status"] = "Draft"
-            r["_publish"] = publish
+            r["_publish"] = publish and live != "Published"
             self.upsert(sheet, r, {"hierarchy_name": r["hierarchy_name"]}, doc, r["hierarchy_name"])
 
+    def publish_hierarchies(self, headers):
+        """Runs after Reporting_Hierarchy_Members whether or not that sheet loaded: a header declared Published
+        is published, and a hierarchy without members is reported, not left Draft in silence."""
+        for hd in headers:
+            if hd.get("_publish"):
+                try:
+                    self.fc.update("Reporting Hierarchy", hd["hierarchy_name"], {"status": "Published"})
+                    self.note("Reporting_Hierarchies", "published")
+                except Failed as e:
+                    self.fail("Reporting_Hierarchies", hd["hierarchy_name"], e)
+
     def load_members(self, sheet, rows, headers):
-        rows = tree_order(rows, "member_code", "parent_member_code")   # codes are unique within a hierarchy in practice
+        rows = tree_order(rows, "member_code", "parent_member_code", scope="reporting_hierarchy")
         for r in rows:
             h, code = r["reporting_hierarchy"], r["member_code"]
             doc = doc_fields(sheet, r)
@@ -359,16 +394,9 @@ class Loader:
                     self.fail(sheet.name, "%s/%s" % (h, code), "parent member %s not found" % parent_code)
                     continue
                 doc["parent_member"] = pname or "<%s>" % parent_code
-            key = {"reporting_hierarchy": h, "member_code": code, "effective_from": r.get("effective_from") or None}
+            key = {"reporting_hierarchy": h, "member_code": code, "effective_from": _key_value(r.get("effective_from"))}
             nm = self.upsert(sheet, r, key, doc, "%s/%s" % (h, code))
             self.member_names[(h, code)] = nm
-        for hd in headers:
-            if hd.get("_publish"):
-                try:
-                    self.fc.update("Reporting Hierarchy", hd["hierarchy_name"], {"status": "Published"})
-                    self.note("Reporting_Hierarchies", "published")
-                except Failed as e:
-                    self.fail("Reporting_Hierarchies", hd["hierarchy_name"], e)
 
     def load_groups(self, sheet, rows):
         groups = [r for r in rows if r.get("is_group") or not r.get("data_area_id")]
@@ -421,9 +449,9 @@ class Loader:
             for child, crows in children_by_sheet.items():
                 link = links[child]
                 doc[child.table_field] = [doc_fields(child, c) for c in crows if c.get(link) == r.get(link)]
-            key = {k: r.get(k) or None for k in sheet.key}
+            key = {k: _key_value(r.get(k)) for k in sheet.key}
             ref = next((r.get(l) for l in links.values() if r.get(l)), None)
-            label = "%s (%s)" % (ref, "/".join(str(v) for v in key.values() if v))
+            label = "%s (%s)" % (ref, "/".join(str(v) for v in key.values() if v is not None))
             self.submit_once(sheet, key, doc, label)
 
     # -- trial balances ---------------------------------------------------------
@@ -444,7 +472,9 @@ class Loader:
                 if self.fc.dry_run:
                     self.fc.call("konsol.tb_bulk.load", name="<Trial Balance Upload>")
                     continue
-                name = report.get("name") if isinstance(report, dict) else None
+                if not isinstance(report, dict):
+                    raise Failed("check_file returned %r (an upload may have been created server-side)" % (report,))
+                name = report.get("name")
                 rows = (report.get("report") if isinstance(report, dict) else None) or []
                 if isinstance(rows, str):
                     rows = json.loads(rows)
@@ -465,21 +495,35 @@ class Loader:
                 if not ready or not name:
                     self.note("Trial_Balance", "nothing loaded")
                     continue
-                try:
-                    self.fc.call("konsol.tb_bulk.load", name=name, skip_invalid=1)
-                except Failed as e:
-                    # the previous file's load job may still be committing its submissions; a deadlock (MariaDB 1213)
-                    # on the shared rows is transient, so try once more after a pause
-                    if "Deadlock" not in str(e):
-                        raise
-                    print("    deadlock on load, retrying once")
-                    time.sleep(10)
-                    self.fc.call("konsol.tb_bulk.load", name=name, skip_invalid=1)
+                self._start_load(name)
                 status = self._wait_upload(name, wait)
-                self.note("Trial_Balance", status)
                 print("    -> %s" % status)
+                if status.startswith("Loaded"):
+                    self.note("Trial_Balance", status)
+                else:
+                    # Failed, Partly Loaded, Cancelled, unknown or timed out: the run must not end green
+                    self.fail("Trial_Balance", f, status)
             except Failed as e:
                 self.fail("Trial_Balance", f, e)
+
+    def _start_load(self, name):
+        """konsol.tb_bulk.load answers 200 with `refused` when its re-check disagrees with check_file and
+        leaves the upload at Checked; waiting for it would run to the timeout."""
+        def once():
+            out = self.fc.call("konsol.tb_bulk.load", name=name, skip_invalid=1)
+            if isinstance(out, dict) and out.get("refused"):
+                raise Failed("load refused: %s" % out["refused"])
+            return out
+        try:
+            return once()
+        except Failed as e:
+            # the previous file's load job may still be committing its submissions; a deadlock (MariaDB 1213)
+            # on the shared rows is transient, so try once more after a pause
+            if "Deadlock" not in str(e):
+                raise
+            print("    deadlock on load, retrying once")
+            time.sleep(10)
+            return once()
 
     def _wait_upload(self, name, wait):
         deadline = time.time() + wait
@@ -556,6 +600,9 @@ def main():
             ld.load_deals(sheet, data[name], {c: data[c.name] for c in CHILD_SHEETS[name]})
         else:
             ld.load_simple(sheet, data[name])
+
+    if "Reporting_Hierarchies" in want:
+        ld.publish_hierarchies(data["Reporting_Hierarchies"])
 
     if args.tb_dir and "Trial_Balance" in want:
         print("Trial_Balance -> Trial Balance Upload (%s)" % args.tb_dir)

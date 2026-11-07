@@ -730,7 +730,7 @@ def build():
         return "=Statements!%s%d" % (L(spine.index(p) + 2), row)
     steps = [
         ("1 Jan 2024", "We start from the FY2023 year-end trial balances of ten consolidated companies and one associate, in five currencies. The holding's investments in its subsidiaries are eliminated against their share capital by the opening consolidation journal; the balance sheet balances with the translation difference (CTA) in equity.",
-         stmt(end2 - 1 if False else end2 - 2, (2023, 13)), "Statements: total equity at 2023-13 (after the year-end close moved the FY2023 result to retained earnings)"),
+         stmt(end2 - 1, (2023, 13)), "Statements: total equity at 2023-13 (after the year-end close moved the FY2023 result to retained earnings)"),
         ("FY2023 result", "The FY2023 result sits in the P&L accounts of the P12 file; the warehouse closes it to retained earnings in the Closing period (2023-13), translated at the 2023 annual average rate declared on FY2023 P12.",
          stmt(end1, (2023, 12)), "Statements: net result 2023-12"),
         ("P1-P5", "Each month: balances at the month's closing rate, movements of the P&L at the month's average rate, share capital at historical rates. Intercompany receivables equal payables after translation to the cent, so the eliminations leave nothing in the difference account.",
@@ -744,7 +744,7 @@ def build():
         ("FY2024 P&L", "Twelve months at monthly average rates, ABCZ from June, ABDK for the whole year (IFRS 10.B98: the results to the date of disposal stay in the group).",
          "=Statements!%s%d" % (L(len(spine) + 2), end1), "Statements: FY2024 net result (tool view)"),
         ("31 Dec 2024", "The consolidated balance sheet: goodwill on ABCZ, no ABDK, CTA in equity, the result of the year still open until the FY2024 close.",
-         stmt(end2 - 2, (2024, 12)), "Statements: total equity 2024-12"),
+         stmt(end2 - 1, (2024, 12)), "Statements: total equity 2024-12"),
         ("Go back", "Every period's movements are kept. Period 6 or 7 is read the same way as period 12: in this workbook by column, in konsol with =K.EPM(\"AQBIKE\", 2024, 7, account, \"consolidated_amount\", \"consolidated\") (sheet LiveCheck).",
          stmt(end1, (2024, 7)), "Statements: net result 2024-7"),
     ]
