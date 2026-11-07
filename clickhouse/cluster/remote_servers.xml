@@ -28,7 +28,7 @@
   The _local tables are created by dbt build (--target cluster).
   The Distributed overlays are created by dbt run-operation create_distributed_tables.
 
-  Open questions (see docs/admin-guide/cluster-setup.md)
+  Open questions (see https://docs.konsolidat.com/admin-guide/cluster-setup)
   ───────────────────────────────────────────────────────
   - Hot-shard: a single very large LE may saturate one shard.
     Mitigate with composite key or per-LE routing.

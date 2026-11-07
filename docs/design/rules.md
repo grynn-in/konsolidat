@@ -15,7 +15,7 @@ consolidation engine with every defect this one has already paid for.
 |---|---|
 | assertions | **134** |
 | carrying their reasoning | 116 |
-| citing the issue that caused them | 95 |
+| citing the issue that caused them | 96 |
 | severity `warn` (reports, does not stop a build) | 21 |
 | severity `error` (stops the build, and its children) | 113 |
 
@@ -144,9 +144,11 @@ Two claimed batches for the same entity-period flow ADDITIVELY into silver_gl_en
 
 ### `topside_journal_balanced`
 
-**PRD-5 Test: Each top-side journal must be balanced (debits = credits)**
+**PRD-5 Test: Each top-side journal must be balanced (debits = credits).**
 
-<sub>`error (default)` · `tests/assert_topside_journal_balanced.sql`</sub>
+konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency. A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
+
+<sub>`error (default)` · `tests/assert_topside_journal_balanced.sql` · konsol#353 konsolidat#209</sub>
 
 ### `trial_balance_balances`
 
