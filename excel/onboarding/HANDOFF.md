@@ -160,7 +160,7 @@ Key files: `konsol/tb_bulk_model.py`, `konsol/tb_bulk.py`, `konsol/close/tb_mode
 1. Log a frappectl profile into the demo site as EPM Admin; `--dry-run`, then load the example; fix loader shape mismatches.
 2. `konsol schema apply --run-dbt`; read `docs/design/rules.md` failures against the example; adjust generator or chart.
 3. Commit (`excel/onboarding/`, `excel/README.md`), open an issue recording the frappectl-vs-konsol-cli decision and the
-   Period-end-balance / Closing-period convention, and link the README from `docs/user-guide/initial-setup-guide.md`.
+   Period-end-balance / Closing-period convention, and link the README from the site's Initial Setup guide (konsolidat-docs `docs/user-guide/initial-setup-guide.md`, https://docs.konsolidat.com/user-guide/initial-setup-guide).
 4. Optional: trim the chart toward 200 rows, add a budget sheet example (`dim_project`, `dim_channel` are declared for it).
 
 ### 7 Nov 2026, later: demo-ext.konsolidat.com is reachable

@@ -24,7 +24,8 @@ def test_readme_no_cube():
     Cube was removed from the stack on 7 Nov 2026 (konsol#232 ratified "do not
     wire Cube"; konsolidat#283 removed it). konsol reads ClickHouse directly;
     the Dataset / Measure registry is the semantic layer. See
-    docs/reference/semantic-layer.md for the record and the reopen conditions.
+    https://docs.konsolidat.com/reference/semantic-layer and docs/decisions/
+    konsolidat-283-remove-cube.md for the record and the reopen conditions.
     """
     with open(os.path.join(PROJECT_ROOT, "README.md")) as f:
         content = f.read()
