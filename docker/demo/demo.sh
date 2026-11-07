@@ -36,9 +36,10 @@ log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG"; }
 # bench_in: a bench command whose failure is tolerated (status, cache); bench_run: one whose failure matters.
 bench_in() { docker exec "$BACKEND" bash -lc "cd $BENCH_DIR && bench --site $SITE $*" 2>&1 | grep -v RuntimeWarning || true; }
 bench_run() {
-  local out rc
-  out=$(docker exec "$BACKEND" bash -lc "cd $BENCH_DIR && bench --site $SITE $*" 2>&1); rc=$?
-  printf '%s\n' "$out" | grep -v RuntimeWarning | tail -3
+  local out rc=0
+  # `out=$(…); rc=$?` would exit under set -e before rc is read; the if-form keeps the status
+  if out=$(docker exec "$BACKEND" bash -lc "cd $BENCH_DIR && bench --site $SITE $*" 2>&1); then rc=0; else rc=$?; fi
+  printf '%s\n' "$out" | grep -v RuntimeWarning | tail -3 || true
   return $rc
 }
 need_golden() { [ -f "$GOLDEN/database.sql.gz" ] || { echo "no golden copy in $GOLDEN: run 'demo.sh snapshot' first" >&2; exit 2; }; }
@@ -55,7 +56,8 @@ reload_web() {
     for p in /proc/[0-9]*; do
       c=$(tr "\0" " " < "$p/cmdline" 2>/dev/null) || continue
       case "$c" in *bin/gunicorn*) ;; *) continue;; esac
-      pp=$(awk "/^PPid/{print \$2}" "$p/status"); pc=$(tr "\0" " " < "/proc/$pp/cmdline" 2>/dev/null || true)
+      pp=$(awk "/^PPid/{print \$2}" "$p/status" 2>/dev/null); [ -n "$pp" ] || continue
+      pc=$(tr "\0" " " < "/proc/$pp/cmdline" 2>/dev/null || true)
       case "$pc" in *bin/gunicorn*) ;; *) echo "${p#/proc/}";; esac
     done' | head -1)
   if [ -n "$pid" ]; then docker exec "$BACKEND" bash -c "kill -HUP $pid"; sleep 3; else log "gunicorn master not found; restarting the backend"; docker restart "$BACKEND" >/dev/null; fi
@@ -63,12 +65,16 @@ reload_web() {
 
 # MariaDB root password for bench restore: kept in common_site_config.json (`root_password`, the key
 # frappe's get_root_connection falls back to) inside the sites volume, written once from .env through
-# stdin, so it never appears on a command line, in `ps` or in `docker inspect`.
+# stdin (base64, so quotes and backslashes survive), so it never appears on a command line, in `ps` or in
+# `docker inspect`. Runs in a one-off container over the sites volume, not in the backend: a reset must
+# be able to run while the web tier is stopped (that is the state a failed reset leaves behind).
 ensure_root_password() {
-  docker exec -i "$BACKEND" python3 - "$BENCH_DIR/sites/common_site_config.json" <<PY
-import json, sys
+  local b64
+  b64=$(grep -E '^DB_ROOT_PASSWORD=' "$EXT_DIR/.env" | cut -d= -f2- | sed -e "s/^['\"]//" -e "s/['\"]\$//" | tr -d '\n' | base64 | tr -d '\n')
+  $DC run --rm --no-deps -T --entrypoint python3 frappe_backend - "$BENCH_DIR/sites/common_site_config.json" <<PY 2>&1 | grep -vE "^\s*$|Container|Creating|Created" || true
+import base64, json, sys
 p = sys.argv[1]; c = json.load(open(p))
-pw = """$(grep -E '^DB_ROOT_PASSWORD=' "$EXT_DIR/.env" | cut -d= -f2- | sed -e "s/^['\"]//" -e "s/['\"]\$//")"""
+pw = base64.b64decode("$b64").decode()
 if pw and c.get("root_password") != pw:
     c["root_password"] = pw; json.dump(c, open(p, "w"), indent=1); print("root_password written to common_site_config.json")
 PY
@@ -97,7 +103,7 @@ cmd_snapshot() {
   if reset_running; then echo "a reset is running; try again in a few minutes" >&2; exit 3; fi
   log "snapshot: backing up $SITE with files (demo_user='${du}')"
   docker exec "$BACKEND" rm -rf "$SITE_DIR/private/backups/golden"
-  bench_run "backup --with-files --backup-path $SITE_DIR/private/backups/golden"
+  bench_run "backup --with-files --backup-path $SITE_DIR/private/backups/golden" || { log "snapshot FAILED: bench backup; the old golden copy is untouched"; exit 2; }
   # build the new copy beside the old one; replace only when it is complete (an old copy is never lost to a
   # failed backup)
   rm -rf "$GOLDEN.new"; mkdir -p "$GOLDEN.new"
@@ -169,9 +175,11 @@ restore_once() {
   local files=""
   [ -f "$GOLDEN/private-files.tar" ] && files="$files --with-private-files /golden/private-files.tar"
   [ -f "$GOLDEN/public-files.tar" ] && files="$files --with-public-files /golden/public-files.tar"
-  $DC run --rm --no-deps --entrypoint bash -v "$GOLDEN:/golden:ro" frappe_backend -lc \
+  # -T: no TTY, so frappe's get_root_connection never prompts; the username is given so it is never asked
+  $DC run --rm --no-deps -T --entrypoint bash -v "$GOLDEN:/golden:ro" frappe_backend -lc \
     "cd $BENCH_DIR && rm -rf $SITE_DIR/public/files/* $SITE_DIR/private/files/* \
-       && bench --site $SITE --force restore /golden/database.sql.gz $files" 2>&1 | grep -vE "RuntimeWarning|^\s*$" | tail -3 | tee -a "$LOG"
+       && bench --site $SITE --force restore /golden/database.sql.gz $files --db-root-username root" 2>&1 \
+    | { grep -vE "RuntimeWarning|^\s*$" || true; } | tail -3 | tee -a "$LOG"
   return "${PIPESTATUS[0]}"
 }
 
@@ -186,7 +194,8 @@ cmd_reset() {
   # Whatever happens below (set -e, a signal from systemd's TimeoutStartSec, a failed step), the outcome is
   # logged. The web tier is restarted only after a successful restore; see the failure policy in the header.
   step="stop"
-  trap 'rc=$?; if [ "${RESET_OK:-0}" != 1 ]; then log "reset FAILED at step ${step:-?} (rc=$rc); web tier left STOPPED, Caddy serves the maintenance page; next hour retries"; exit 1; fi' EXIT
+  # shellcheck disable=SC2154  # state is assigned inside the trap string itself
+  trap 'rc=$?; state=""; if [ "${RESET_OK:-0}" != 1 ]; then case "${step:-?}" in stop|restore) state="web tier left STOPPED, Caddy serves the maintenance page";; *) state="web tier RUNNING on the restored database, warehouse may be stale";; esac; log "reset FAILED at step ${step:-?} (rc=$rc); $state; next hour retries"; exit 1; fi' EXIT
   $DC stop frappe_backend frappe_worker frappe_scheduler >/dev/null
   step="restore"
   if ! restore_once; then log "restore failed once; retrying"; sleep 10; restore_once; fi
@@ -211,17 +220,19 @@ cmd_reset() {
   log "reset done in $(( $(date +%s) - t0 ))s"
 }
 
-# One demo.sh at a time: a manual `off` or `snapshot` during the timer's reset would act on a stopped
-# container and leave the demo half-switched.
-mkdir -p "$(dirname "$LOCK")"
-exec 9>"$LOCK"
-flock -n 9 || { echo "another demo.sh is running (lock $LOCK)" >&2; exit 3; }
+# One state-changing demo.sh at a time: a manual `off` or `snapshot` during the timer's reset would act on a
+# stopped container and leave the demo half-switched. `status` never takes the lock, so it answers during a reset.
+take_lock() {
+  mkdir -p "$(dirname "$LOCK")"
+  exec 9>"$LOCK"
+  flock -n 9 || { log "refused: another demo.sh holds $LOCK ($1 not run)"; exit 3; }
+}
 
 case "${1:-}" in
   status) cmd_status ;;
-  snapshot) cmd_snapshot "${2:-}" ;;
-  on) cmd_on ;;
-  off) cmd_off ;;
-  reset) cmd_reset ;;
+  snapshot) take_lock snapshot; cmd_snapshot "${2:-}" ;;
+  on) take_lock on; cmd_on ;;
+  off) take_lock off; cmd_off ;;
+  reset) take_lock reset; cmd_reset ;;
   *) sed -n '2,12p' "$0"; exit 1 ;;
 esac

@@ -54,8 +54,10 @@ certificate once the vhost block is in its Caddyfile.
    on, the command refuses (visitors' uploads, journals and sessions would be frozen into the starting
    point); `--force` overrides. A failed backup never destroys the previous copy (`golden.prev` keeps the one
    before).
-4. `demo.sh on` — sets `demo_user`, clears the cache, reloads the gunicorn workers (Frappe v16 caches
-   site_config per worker), starts the hourly timer.
+4. `demo.sh on` — refuses without a golden copy; re-enables the demo user (`konsol.demo_mode.switch_on`),
+   sets `demo_user`, clears the cache, reloads the gunicorn workers (Frappe v16 caches site_config per
+   worker), starts the hourly timer. `demo.sh off` first runs `konsol.demo_mode.switch_off` (user disabled,
+   every session ended), which every worker sees at once, then drops the key.
 5. Check: `curl -sI https://demo-ext.konsolidat.com/try` is 200; a browser at `/try` → "Try the demo" → Desk as the demo user.
 
 `demo.sh off` removes the key (the endpoint and `/try` answer 404 again), ends the demo user's
@@ -75,11 +77,14 @@ sessions and stops the timer. `demo.sh status` shows all of it.
 
 The golden copy is replaced only by `demo.sh snapshot`, never by the timer.
 
-Failure policy: the restore is tried twice; if it still fails the web tier stays stopped (Caddy keeps
-answering 503 with the maintenance page, which is honest; a half-restored site answering 500s would not be),
-`reset FAILED at step …` is logged to `reset.log` and shown by `demo.sh status`, and the next hour or a manual
-`demo.sh reset` tries again. One `demo.sh` runs at a time (`flock` on `/run/lock/konsolidat-demo.lock`), and
-`on`, `off` and `snapshot` refuse while the reset service is active.
+Failure policy: the restore is tried twice; if it fails at the stop or restore step the web tier stays
+stopped (Caddy keeps answering 503 with the maintenance page, which is honest; a half-restored site
+answering 500s would not be); a failure in a later step (cache, reconcile, re-land, dbt) leaves the site
+running on the restored database with a possibly stale warehouse. Either way `reset FAILED at step …` is
+logged to `reset.log` and shown by `demo.sh status`, and the next hour or a manual `demo.sh reset` tries
+again (the password step runs in a one-off container, so a retry works with the web tier down). One
+state-changing `demo.sh` runs at a time (`flock` on `/run/lock/konsolidat-demo.lock`); `status` never takes
+the lock; `on`, `off` and `snapshot` refuse while the reset service is active.
 
 ## The live Caddyfile is locally modified
 
