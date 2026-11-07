@@ -9,7 +9,7 @@ ERP SOURCES (D365 F&O / ERPNext)
    │ Airbyte → epm_raw
    ▼
 1. DATA PIPELINE ──► 2. EPM MODEL/REGISTRY ──► 3. BUDGET ──► 4. CONSOLIDATION ──► OUTPUTS
-                                                                                  (Excel add-in / API / Cube.js)
+                                                                                  (Excel add-in / API)
 ```
 
 ## Stacks + key sections

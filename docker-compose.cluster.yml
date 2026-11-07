@@ -51,7 +51,6 @@
 #   shard.  Consider composite key (entity_id, fiscal_year) for largest tenants.
 # - Rebalancing: accept distribution skew on new-LE onboarding or run
 #   periodic reshard.
-# - Cube.js pre-aggregation: confirm shard-aware refresh key for pre-agg layer.
 # - ON CLUSTER correctness for cross-shard gold models (consolidated TB, IC
 #   eliminations, NCI) — requires end-to-end cluster test.
 # =============================================================================

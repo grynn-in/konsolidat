@@ -140,11 +140,6 @@ No proprietary runtimes. No vendor SDK. No Java applets from 2008. Just tools yo
       <strong>Frappe</strong>
       <span>Web Framework & API</span>
     </div>
-    <div class="ic-logo-card">
-      <div class="ic-logo-mark" style="color: #FF6492;">&#9671;</div>
-      <strong>Cube</strong>
-      <span>Semantic Layer</span>
-    </div>
   </div>
 </div>
 
@@ -154,7 +149,6 @@ No proprietary runtimes. No vendor SDK. No Java applets from 2008. Just tools yo
 | **dbt** | SQL transformations as code. Version-controlled, testable, reviewable. Your consolidation logic is in Git, not a vendor black box. |
 | **Frappe** | Python web framework with built-in auth, roles, and REST API. No separate auth service, no API gateway, no token server. |
 | **Airbyte** | Open-source ELT. D365 OData connector with `cross_company=true`. Full extraction in one sync. |
-| **Cube** | Semantic layer for metrics and dimensions. Consistent definitions across Excel, API, and dashboards. |
 | **Excel add-in** | The interface your finance team chose for themselves 30 years ago. We're not fighting it — we're powering it. |
 
 Every component is replaceable. Don't like Frappe? The API is 200 lines of Python. Don't like Airbyte? Any tool that writes to ClickHouse works. Don't like Excel? The REST API is standard HTTP JSON.

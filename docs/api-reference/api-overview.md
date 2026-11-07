@@ -41,15 +41,12 @@ Only the [health endpoint](api-health.md) allows guest access (`allow_guest=True
 sequenceDiagram
     participant Client as Excel / HTTP Client
     participant Frappe as Frappe (Konsol)
-    participant Cube as Cube.js (Semantic Layer)
     participant CH as ClickHouse
 
     Client->>Frappe: POST /api/method/konsol.api.epm_batch
     Frappe->>Frappe: Validate scenario + measure per item
-    Frappe->>Cube: Query metrics & dimensions
-    Cube->>CH: Optimized SQL query
-    CH-->>Cube: Result set
-    Cube-->>Frappe: Structured response
+    Frappe->>CH: SQL over the gold models
+    CH-->>Frappe: Result set
     Frappe-->>Client: JSON {values: [...], errors: [...]}
 ```
 

@@ -118,7 +118,7 @@ A company like a Swiss-headquartered luxury retailer with stores across CH, DE, 
 
 | Requirement | Why It's Not a Gap |
 |---|---|
-| **Store-level P&L** | D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Konsolidat extracts these in bronze and flows them through to gold. Just configure the Cube schema to expose them. |
+| **Store-level P&L** | D365 financial dimensions (cost center, department, business unit) carry store/location on every GL entry. Konsolidat extracts these in bronze and flows them through to gold. Declare them as Dimensions in konsol to expose them. |
 | **Management reporting hierarchies** (by region, brand, product category) | Same — financial dimensions support arbitrary rollups. Add hierarchy mapping as a dbt seed and join in gold models. |
 | **Multi-currency consolidation** (CHF, EUR, GBP, DKK, USD) | Fully implemented — closing rate for BS, average rate for P&L, CTA equity plug, all tested. |
 | **IC elimination** (intercompany sales between country entities) | Implemented with configurable rules (CSV seed). |
@@ -164,7 +164,7 @@ In a mid-market company ($100M–$1B revenue, 2–50 entities), Konsolidat is ma
 | Role | FTE | Team | Responsibilities |
 |---|---|---|---|
 | **Group Controller** | 1 | Finance | Owns consolidation rules, IC elimination logic, group reporting. Edits CSV seeds (consolidation groups, IC rules, ownership %). Runs Excel reports. |
-| **FP&A Analyst** | 1–2 | Finance | Budget input via Excel write-back, variance analysis, scenario management. Power user of PivotTables via Cube SQL. |
+| **FP&A Analyst** | 1–2 | Finance | Budget input via Excel write-back, variance analysis, scenario management. Power user of the `K.` worksheet functions. |
 | **Data/Analytics Engineer** | 1 | IT or Finance | Maintains dbt models, Airbyte connections, Frappe config, ClickHouse. Owns the `docker compose` stack. The "platform owner." |
 | **IT Ops** | 0.2 | IT | VM/server, backups, monitoring. Minimal — it's Docker containers. |
 
@@ -212,7 +212,7 @@ A company running Tagetik or OneStream at similar scale typically needs:
 |---|---|---|
 | **Private mid-market, 2–10 entities** | **Best fit** | Saves $200K–600K over 3 years, covers all core EPM/CPM functions |
 | **D365 F&O shop wanting fast EPM** | **Best fit** | Native OData integration, `docker compose up` and go |
-| **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Cube) is mainstream, maintainable, extensible |
+| **Budget-conscious with internal dbt/analytics team** | **Best fit** | Stack (dbt + ClickHouse + Frappe) is mainstream, maintainable, extensible |
 | **Private group, 10–50 entities** | **Best fit** | Handles NCI and multi-currency; production-tested consolidation engine |
 | **Planning-heavy (500+ planners)** | **Best fit** | Layered budgets (base/challenge/management/board), approval workflows, Excel write-back, spread profiles, and scenario management — on par with commercial EPM/CPM |
 

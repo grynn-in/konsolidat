@@ -296,7 +296,7 @@ The pipeline executes two phases:
 ```mermaid
 graph LR
     SYNC[Phase 1: Airbyte Sync<br/>ERP → ClickHouse staging] --> DBT[Phase 2: dbt Build<br/>staging → bronze → silver → gold]
-    DBT --> READY[Data ready in<br/>Cube.js + Excel]
+    DBT --> READY[Data ready in<br/>Excel + API]
 ```
 
 Monitor progress in the Pipeline Run document — status updates automatically:
@@ -312,7 +312,6 @@ Monitor progress in the Pipeline Run document — status updates automatically:
 After the first successful run, your data is available in:
 
 - **Excel**: `=K.EPM("USMF", 2024, 5, "401100", "period_net_amount")`
-- **Cube.js**: [https://localhost:4443](https://localhost:4443) (query playground)
 - **API**: `GET /api/method/konsol.api.epm_value?entity=USMF&year=2024&period=5&account=401100&measure=period_net_amount`
 
 ---

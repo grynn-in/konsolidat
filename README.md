@@ -17,9 +17,8 @@ ERP (D365 / SAP / ERPNext)
   → Airbyte (ELT)
     → ClickHouse (Columnar DW)
       → dbt Core (Medallion Architecture: Bronze → Silver → Gold)
-        → Cube.js (Semantic Layer)
-          → Frappe (API, Auth, Workflow)
-            → Excel (=EPM formulas)
+        → Frappe (API, Auth, Workflow)
+          → Excel (=EPM formulas)
 ```
 
 ## Why Konsolidat?
@@ -44,7 +43,6 @@ ERP (D365 / SAP / ERPNext)
   <a href="https://airbyte.com"><img src="https://img.shields.io/badge/Airbyte-615EFF?style=for-the-badge&logo=airbyte&logoColor=white" alt="Airbyte"></a>
   <a href="https://getdbt.com"><img src="https://img.shields.io/badge/dbt-FF694A?style=for-the-badge&logo=dbt&logoColor=white" alt="dbt"></a>
   <a href="https://frappe.io"><img src="https://img.shields.io/badge/Frappe-0089FF?style=for-the-badge&logo=frappe&logoColor=white" alt="Frappe"></a>
-  <a href="https://cube.dev"><img src="https://img.shields.io/badge/Cube.js-FF6492?style=for-the-badge&logo=cube&logoColor=white" alt="Cube.js"></a>
 </p>
 
 | | Technology | Role |
@@ -53,7 +51,6 @@ ERP (D365 / SAP / ERPNext)
 | ![](https://img.shields.io/badge/-615EFF?style=flat-square&logo=airbyte&logoColor=white) | **Airbyte** | ELT data integration |
 | ![](https://img.shields.io/badge/-FF694A?style=flat-square&logo=dbt&logoColor=white) | **dbt Core** | SQL transformations (Medallion Architecture) |
 | ![](https://img.shields.io/badge/-0089FF?style=flat-square&logo=frappe&logoColor=white) | **Frappe** | Web framework, API, auth, workflow |
-| ![](https://img.shields.io/badge/-FF6492?style=flat-square&logo=cube&logoColor=white) | **Cube.js** | Semantic layer for metrics and dimensions |
 
 ## Quick Start
 

@@ -53,11 +53,11 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          │Frappe Backend│ │ Worker │ │ Scheduler │              │
 │          │   :8069      │ │ (jobs) │ │  (cron)   │              │
 │          └──────────────┘ └────────┘ └───────────┘              │
-│          ┌──────────┐ ┌──────────┐                               │
-│          │ Cube.js  │ │  Caddy   │                               │
-│          │ (API)    │ │(reverse  │                               │
-│          │  :4000   │ │ proxy)   │                               │
-│          └──────────┘ └──────────┘                               │
+│          ┌──────────┐                                            │
+│          │  Caddy   │                                            │
+│          │(reverse  │                                            │
+│          │ proxy)   │                                            │
+│          └──────────┘                                            │
 │                                                                  │
 │  Step 5: Run dbt build                                           │
 │          • Creates gold models (trial balance, P&L, etc.)        │
@@ -69,7 +69,6 @@ Caddy auto-provisions Let's Encrypt certificates.
 │          │                                              │        │
 │          │ Frappe:     http://your-ip:8069              │        │
 │          │ Admin:      Administrator / xK9m2...         │        │
-│          │ Cube.js:    http://your-ip:4000              │        │
 │          │ Excel ODBC: your-ip:15432                    │        │
 │          └──────────────────────────────────────────────┘        │
 └──────────────────────────────────────────────────────────────────┘
@@ -110,11 +109,11 @@ A single server runs everything:
 │  │  │  • Pipeline runner (dbt build)                   │  │  │
 │  │  └──────────────────────────────────────────────────┘  │  │
 │  │                                                        │  │
-│  │  ┌────────────┐  ┌──────────────────────────────────┐  │  │
-│  │  │  Cube.js   │  │         Caddy                    │  │  │
-│  │  │ (semantic  │  │  (reverse proxy + auto-SSL)      │  │  │
-│  │  │  layer)    │  │                                  │  │  │
-│  │  └────────────┘  └──────────────────────────────────┘  │  │
+│  │  ┌──────────────────────────────────┐                  │  │
+│  │  │         Caddy                    │                  │  │
+│  │  │  (reverse proxy + auto-SSL)      │                  │  │
+│  │  │                                  │                  │  │
+│  │  └──────────────────────────────────┘                  │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                                                             │
 │  Persistent volumes: mariadb_data, clickhouse_data,         │
@@ -127,7 +126,6 @@ A single server runs everything:
 | Service | Port | Purpose |
 |---------|------|---------|
 | **Frappe** | 8069 | Web UI, API, doctype management |
-| **Cube.js** | 4000 | Semantic layer for dashboards |
 | **ClickHouse HTTP** | 8123 | Direct ClickHouse queries |
 | **Excel ODBC** | 15432 | PostgreSQL wire protocol for Excel |
 | **Caddy** | 80, 443 | HTTPS reverse proxy |

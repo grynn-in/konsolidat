@@ -36,7 +36,7 @@ dbt build --target cluster --vars '{"cluster_enabled": true}'
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ API / Cube.js / dbt tests                                        │
+│ API / dbt tests                                                  │
 │          ↓ SELECT from Distributed table                         │
 ├──────────────────┬──────────────────┬──────────────────────────┤
 │  ch-shard1       │  ch-shard2       │  ch-shard3               │
@@ -151,7 +151,7 @@ Tables are named `<model>_local` by the convention established in the macros.
 ## Step 6 — Create Distributed overlay tables
 
 After the `_local` ReplicatedMergeTree tables exist on all shards, create
-the unsuffixed `Distributed` tables that the API and Cube.js query:
+the unsuffixed `Distributed` tables that the API queries:
 
 ```bash
 dbt run-operation create_distributed_tables \
@@ -300,10 +300,3 @@ Points to verify on a real cluster:
   match the single-node baseline.
 - `asof left join` in `gold_consolidated_trial_balance` and temporal ownership
   joins may behave differently under Distributed read semantics.
-
-### Cube.js pre-aggregation
-
-Cube.js schema files point at `epm_gold.<table>` which will be the Distributed
-table after Step 6.  Pre-aggregation may need a shard-aware refresh key or
-pre-agg tables collocated per-shard to avoid cross-shard materialisation.
-Evaluate before enabling pre-aggregations in cluster mode.

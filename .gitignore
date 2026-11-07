@@ -27,10 +27,6 @@ dbt_project/logs/
 dbt_project/dbt_packages/
 dbt_project/.user.yml
 
-# Cube
-cube/node_modules/
-cube/.cubestore/
-
 # Python
 *.egg-info/
 dist/
