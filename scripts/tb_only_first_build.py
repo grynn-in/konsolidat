@@ -182,8 +182,11 @@ def fixture_sql(p):
         # columns named (tests/test_ownership_graph_ddl.py): the graph columns default to ''
         f"INSERT INTO {p}_staging.consolidation_ancestry (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id) VALUES "
         "('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP', 'ZZGRP/ZZOP', 'ZZGRP', '')",
-        f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method) VALUES "
-        "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full')",
+        # konsol#117 pair 1: a period is a link and names its owner; the macro
+        # matches a closure link on the owned AND the owner node, so this row's
+        # owner must be the ancestry row's link_owner_group above.
+        f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method, owner_group, owner_data_area_id) VALUES "
+        "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full', 'ZZGRP', '')",
         f"INSERT INTO {p}_gold.currencies VALUES ('USD', 'US Dollar', '$', 2, 0)",
         # konsolidat#206: the scenarios a real site gets from konsol's Scenario
         # fixtures (synced to epm_gold.scenario_definitions); the GL branch of
