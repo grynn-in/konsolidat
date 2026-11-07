@@ -179,7 +179,9 @@ def fixture_sql(p):
         "('ZZGRP', '', 'ZZ Group', 'USD'), ('ZZGRP', 'ZZOP', 'ZZ Operating', 'USD')",
         f"INSERT INTO {p}_staging.consolidation_hierarchy (consolidation_group, data_area_id, parent_group, hierarchy_level, path) VALUES "
         "('ZZGRP', 'ZZOP', '', 1, 'ZZGRP')",
-        f"INSERT INTO {p}_staging.consolidation_ancestry VALUES ('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP')",
+        # columns named (tests/test_ownership_graph_ddl.py): the graph columns default to ''
+        f"INSERT INTO {p}_staging.consolidation_ancestry (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id) VALUES "
+        "('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP', 'ZZGRP/ZZOP', 'ZZGRP', '')",
         f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method) VALUES "
         "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full')",
         f"INSERT INTO {p}_gold.currencies VALUES ('USD', 'US Dollar', '$', 2, 0)",

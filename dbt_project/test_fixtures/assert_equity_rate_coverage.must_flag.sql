@@ -43,7 +43,9 @@ INSERT INTO epm_gold.consolidation_groups (consolidation_group, data_area_id, en
 INSERT INTO epm_staging.consolidation_hierarchy (consolidation_group, data_area_id, parent_group, hierarchy_level, path) VALUES
 ('ZZGRP', 'ZZOP', '', 1, 'ZZGRP');
 
-INSERT INTO epm_staging.consolidation_ancestry VALUES ('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP');
+INSERT INTO epm_staging.consolidation_ancestry
+  (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id)
+VALUES ('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP', 'ZZGRP/ZZOP', 'ZZGRP', '');
 
 INSERT INTO epm_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method) VALUES
 ('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full');
