@@ -174,13 +174,15 @@ restore_once() {
 cmd_reset() {
   need_golden
   ensure_root_password >/dev/null
-  local t0 ok=0 step
+  # not `local`: the EXIT trap runs after the function has returned, where a local is unbound (set -u)
+  RESET_OK=0; step="init"
+  local t0
   t0=$(date +%s)
   log "reset: begin"
   # Whatever happens below (set -e, a signal from systemd's TimeoutStartSec, a failed step), the outcome is
   # logged. The web tier is restarted only after a successful restore; see the failure policy in the header.
   step="stop"
-  trap 'rc=$?; if [ "$ok" != 1 ]; then log "reset FAILED at step $step (rc=$rc); web tier left STOPPED, Caddy serves the maintenance page; next hour retries"; fi' EXIT
+  trap 'rc=$?; if [ "${RESET_OK:-0}" != 1 ]; then log "reset FAILED at step ${step:-?} (rc=$rc); web tier left STOPPED, Caddy serves the maintenance page; next hour retries"; exit 1; fi' EXIT
   $DC stop frappe_backend frappe_worker frappe_scheduler >/dev/null
   step="restore"
   if ! restore_once; then log "restore failed once; retrying"; sleep 10; restore_once; fi
@@ -201,7 +203,7 @@ cmd_reset() {
   local dbt_out
   dbt_out=$($DC --profile setup run --rm dbt_init build --profiles-dir /home/frappe/dbt_project --project-dir /home/frappe/dbt_project 2>&1) || { printf '%s\n' "$dbt_out" | tail -5 | tee -a "$LOG"; false; }
   printf '%s\n' "$dbt_out" | grep -E "Done\.|Completed with" | tail -2 | tee -a "$LOG"
-  ok=1
+  RESET_OK=1
   log "reset done in $(( $(date +%s) - t0 ))s"
 }
 
