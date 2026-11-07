@@ -13,6 +13,8 @@
 --     ZZG / ZZA  SEK -> EUR  FY2026 P12  missing
 --     ZZG / ZZA  SEK -> EUR  FY2026 P13  missing   (keyed on P12's rate, which is not there)
 -- The test reads the model's inputs, never the model, which is why it still runs here.
+-- Both are judged in ONE build because the test is severity warn: at error severity dbt skipped the
+-- model after the flag (CI 42393401046: 'must be REFUSED, got SKIPPED') and the throwIf never ran.
 -- The model's direct inputs are seeded as model tables (gold_trial_balance, silver_main_accounts,
 -- silver_entity_currencies) and gold_entity_ownership is built from the seeded staging rows.
 INSERT INTO epm_silver.silver_main_accounts

@@ -27,11 +27,18 @@
 -- n_average = 0 on the LEFT JOIN, so the count is the signal, never a NULL test across the join;
 -- a group-root miss fills to_currency = ''.
 --
+-- severity warn, on purpose, as assert_every_translated_currency_has_a_governed_rate: this test
+-- sits on the model's INPUTS, and at error severity a flag made `dbt build` SKIP
+-- gold_equity_method_associates and everything below it before the model ran, so its throwIf never
+-- decided and the fixture gate saw SKIPPED where it expected REFUSED (CI run 42393401046 on
+-- 34eaddf). The model decides: its throwIf stops the build; this test, in the same run, names the
+-- keys. A WARN here is never "fine": it is the list of what the refused build needs.
+--
 -- Fixtures: dbt_project/test_fixtures/assert_equity_associate_has_average_rate.must_flag.sql (SEK
 -- associate in a EUR group with a Closing rate but no Average rate: 2 rows, FY2026 P12 and the
 -- Closing period P13 that reads P12), ...no_reporting_currency.must_flag.sql (no root row: 2 rows),
 -- and assert_equity_method_journal_balances.sql (the balanced case: passes).
-{{ config(severity='error') }}
+{{ config(severity='warn') }}
 with associate_results as (
     select
         eo.consolidation_group as consolidation_group,
