@@ -327,6 +327,35 @@ posted once in the disposal period. Replaced `gold_disposal_adjustments`.
 **Tests**: `assert_disposal_journal_balances`, `assert_disposal_gain_loss_exists`,
 `assert_cta_recycled_on_disposal`.
 
+### gold_equity_method_associates
+
+PRD-14: the equity-method journal, one two-line entry per associate (an entity
+`gold_entity_ownership` resolves as `consolidation_method = 'equity'` with a complete chain)
+per period it has a P&L result in. The share of the result (`net_income × effective_ownership_pct`,
+where `net_income` is debit minus credit over `is_pnl = 1` accounts, so a profit is negative) is
+translated from the associate's accounting currency (`silver_entity_currencies`) into the group's
+reporting currency at the period's governed Average rate (`epm_staging.group_exchange_rates`;
+1.0 for a same-currency associate; a Closing period reads its year's last Regular period's rate,
+`rate_period_map()`). A missing, duplicated or invalid Average rate stops the build (`throwIf`),
+as in `gold_consolidated_trial_balance`. Layer 5 of `gold_fully_consolidated_tb`.
+
+| Column | Type | Description | Test |
+|--------|------|-------------|------|
+| `consolidation_group` | String | Group identifier (the entry is emitted once per ancestor group) | not_null |
+| `data_area_id` | String | The associate | — |
+| `fiscal_year` | UInt16 | Fiscal year | — |
+| `fiscal_period` | UInt16 | Fiscal period | — |
+| `main_account` | String | `EQ_INCOME` (share of profit) or `EQ_INVEST` (investment movement): reserved pseudo-accounts, not in the chart | — |
+| `account_name` | String | `Equity method - share of profit` / `Equity method - investment` | — |
+| `reporting_currency` | String | The group's reporting currency, which `amount` is in | — |
+| `amount` | Float64 | Signed, debit positive. `EQ_INCOME` = translated share of the result (a profit is a credit, negative); `EQ_INVEST` = its negation, so the journal sums to 0 | — |
+| `adjustment_type` | String | `equity_method` | — |
+| `journal_id` | String | `EQ_<group>_<entity>_<year>_P<period>` | — |
+
+**Tests**: `assert_equity_method_journal_balances` (each journal sums to 0),
+`assert_equity_income_formula` (the `EQ_INCOME` line equals the translated formula),
+`assert_equity_method_single_line`, `assert_equity_method_no_ic_elim`.
+
 ### gold_fully_consolidated_tb
 
 Unified consolidated TB: entity balances + IC eliminations + CTA + topside adjustments

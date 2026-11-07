@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **134** |
-| carrying their reasoning | 116 |
-| citing the issue that caused them | 95 |
+| assertions | **135** |
+| carrying their reasoning | 117 |
+| citing the issue that caused them | 96 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 113 |
+| severity `error` (stops the build, and its children) | 114 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -29,7 +29,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 11
-- [Equity method](#equity-method) — 2
+- [Equity method](#equity-method) — 3
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 7
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
@@ -674,13 +674,25 @@ Every elimination posted while both sides were in the group has been reversed. M
 
 ### `equity_income_formula`
 
-**PRD-14 Test: Equity income = net_income × ownership_pct The EQ_INCOME entry should match the formula**
+**PRD-14 Test: Equity income = net_income × ownership_pct × the period's governed Average rate from the associate's accounting currency into the group's reporting currency (1.0 when they are the same).**
 
-<sub>`error (default)` · `tests/assert_equity_income_formula.sql`</sub>
+The EQ_INCOME entry should match the formula. 7 Nov 2026: the oracle translates, as the model does since the same day. It compared the entry with net_income × ownership_pct in the associate's OWN currency, so it passed on a SEK associate in a EUR group whose figure had never been translated (the defect it should have caught). A Closing-type period reads its year's last Regular period's rate (rate_period_map(), konsolidat#199 row D9), the same rule the model applies. join_use_nulls=0: an entry whose rate key has no Average rate reads 0 here, so its expected value is 0 and the entry (never 0 itself, the model drops |amount| <= 0.01) is flagged rather than excused. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql.
+
+<sub>`error (default)` · `tests/assert_equity_income_formula.sql` · konsolidat#199</sub>
+
+### `equity_method_journal_balances`
+
+**PRD-14: every equity-method journal (EQ_<group>_<entity>_<year>_P<period>) the warehouse posts sums to zero in its period: the EQ_INCOME line and the EQ_INVEST line are the two sides of one entry (Cr share of profit, Dr investment), so a row here is a model bug, not a data problem.**
+
+Found 7 Nov 2026 building the aquila-bike example: gold_equity_method_associates put the SAME signed figure on both lines, so a profit of X posted -X twice (net -2X) into layer 5 of gold_fully_consolidated_tb, and assert_end_to_end_bs_balances (PRD-22) failed for any group with an associate in every period the associate had a result. Same pattern as the deal-journal tests (assert_acquisition_journal_balances and siblings): one test, ref-ing only its own model, so `gold_equity_method_associates assert_equity_method_journal_balances` is selectable on its own. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql (SEK associate at 30% in a EUR group; a 1,000 SEK profit at a 0.09 Average rate is EQ_INCOME -27.00 / EQ_INVEST +27.00).
+
+<sub>`error` · `tests/assert_equity_method_journal_balances.sql`</sub>
 
 ### `equity_method_single_line`
 
-**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation)**
+**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation).**
+
+The two accounts allowed are the two sides of the one journal gold_equity_method_associates posts per associate per period: EQ_INCOME (the translated share of the result) and its negation on EQ_INVEST (assert_equity_method_journal_balances).
 
 <sub>`error (default)` · `tests/assert_equity_method_single_line.sql`</sub>
 
