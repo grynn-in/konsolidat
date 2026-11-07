@@ -186,11 +186,26 @@ sources:
       - name: consolidation_ancestry
         description: >
           F2: the link closure of the consolidation tree — one row per (ancestor
-          group, entity, link between them), written by konsol's tree walk.
-          gold_entity_ownership multiplies each link's dated percentage to get
-          the effective share, which is what makes consolidation multi-level.
-          Before F2 the tree was stored and never traversed: a sub-group's
-          entities never reached its parent's consolidated result.
+          group, entity, link on one path between them), written by konsol's
+          path walk over the ownership links. gold_entity_ownership multiplies
+          each link's dated percentage within a path to get that path's share,
+          which is what makes consolidation multi-level. Before F2 the tree was
+          stored and never traversed: a sub-group's entities never reached its
+          parent's consolidated result. konsol#117 pair 1: ownership is a
+          graph, so an entity may be reached by more than one path; `path_id`
+          names the path (unique per (group, entity) path) and the per-path
+          products are summed; `link_owner_group` / `link_owner_data_area_id`
+          name the node each link leaves. `path` is still the entity's tree
+          path from the root.
+      - name: consolidation_method_declarations
+        description: >
+          konsol#117 pair 1: the consolidation method a group declares for an
+          entity its links reach by more than one path, where the links alone
+          do not decide it (design comment section 2), with its reason and
+          validity window. Written through from konsol's Consolidation Method
+          Declaration child table; read by the ownership macro only when the
+          rule asks for a declaration.
+        loaded_at_field: updated_at
       - name: entities
         description: >
           konsol#110: the governed entity registry — one row per konsol Entity,
@@ -401,7 +416,12 @@ sources:
           1 from_currency), published by konsol, the single source of FX
           rates; the warehouse never scales or inverts it.
       - name: ownership_periods
-        description: "PRD-9/11/12: Temporal ownership periods with acquisition and disposal fields"
+        description: >
+          PRD-9/11/12: temporal ownership periods with acquisition and disposal
+          fields. konsol#117 pair 1: a period is the ownership LINK, and names
+          its owner node as `owner_group` / `owner_data_area_id` ('' for a pure
+          group node), both in the sorting key so two owners' links into one
+          node from one date are two rows.
         loaded_at_field: updated_at
       - name: consolidation_adjustments
         description: >
