@@ -69,7 +69,7 @@ nci_amount        = 127,000 × 0.20 =  25,400 USD
 
 Equity accounts (share capital, share premium, pre-acquisition reserves) must **not** move with exchange rates. Under IAS 21 they are frozen at the **historical rate** — the FX rate on the date the equity was originally contributed or acquired. Translating them at the closing rate instead would make share capital appear to grow or shrink purely from currency movement, even though no shareholder put in or withdrew anything.
 
-Konsolidat stores these frozen rates in the **Historical Equity Rate** doctype. Each record locks one rate for one equity account of one entity in one group. During translation, `gold_consolidated_trial_balance` applies it ahead of the closing rate:
+Konsolidat stores these frozen rates in the **Historical Equity Rate** doctype. Each record locks one rate for one equity account of one entity, recorded under the group that owns the entity, **into one presentation currency** (konsol#374). A group that consolidates the entity applies the rate whose To Currency is its own reporting currency, so a sub-group presenting in EUR under a parent presenting in USD carries two rates for the same account. During translation, `gold_consolidated_trial_balance` applies it ahead of the closing rate:
 
 ```
 when accounting_currency = reporting_currency  → 1.0
@@ -107,9 +107,10 @@ Create a **Historical Equity Rate** record (Consolidation module) and **submit**
 | `data_area_id` | `GBMF` | Entity whose equity is being frozen |
 | `main_account` | `3000` | The equity account (e.g. Share Capital) |
 | `rate_date` | `2020-01-15` | Date the equity was contributed/acquired |
-| `historical_rate` | `1.40` | FX rate on that date |
+| `to_currency` | `USD` | The presentation currency the rate converts into: the reporting currency of the owning group or of a group above it |
+| `historical_rate` | `1.40` | Units of `to_currency` for one unit of the entity's functional currency on that date |
 
-On submit, the rate syncs to `epm_staging.historical_equity_rates` and is picked up on the next `gold_consolidated_trial_balance` build. If no historical rate is defined for an equity account, translation falls back to the closing rate.
+On submit, the rate syncs to `epm_staging.historical_equity_rates` and is picked up on the next `gold_consolidated_trial_balance` build. If no historical rate into a group's reporting currency is defined for an equity account, that group's translation falls back to the closing rate, and `assert_declared_historical_has_a_rate` names the group, currency, account and period.
 
 ### Tests
 

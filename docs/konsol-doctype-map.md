@@ -119,7 +119,7 @@ Doctypes shown with only a name have no labeled section breaks (flat field lists
 | Main Account Category | epm | Virtual | Read-only budget permission-target proxy |
 | Consolidation Group | consolidation | DOC | Entity groupings, multi-level hierarchy |
 | Ownership Period | consolidation | DOC | Temporal ownership (acquisition / disposal) |
-| Historical Equity Rate | consolidation | DOC | IAS 21 historical FX rates for equity accounts |
+| Historical Equity Rate | consolidation | DOC | IAS 21 historical FX rates for equity accounts, one per presentation currency (`to_currency`, konsol#374) |
 | IC Balance | consolidation | DOC | Intercompany sales/inventory balances (entity pairs) |
 | IC Elimination Rule | consolidation | DOC | Intercompany elimination rules |
 | Consolidation Adjustment | consolidation | DOC | Topside journals with status workflow |
