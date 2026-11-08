@@ -602,6 +602,12 @@ def equity_of(code, m):
     return sc, sp, lr
 
 
+def jv_stake_cents(jv, pct, models):
+    """A holder's cost of its stake in a joint venture, EUR cents: pct of the JV's share capital + premium (EUR)."""
+    sc, sp, _lr = equity_of(jv, models[jv])
+    return R((sc + sp) * pct / 100)
+
+
 def investment_lines(models):
     """The holding's cost of each legacy subsidiary and of the associate, EUR cents, line by line
     (share capital and share premium x ownership x the historical rate) - the figures the opening
@@ -706,6 +712,11 @@ def entity_rows(code, p, m, ic_rows, models, state):
     put("1119", -(0.40 * G + dep * (0 if p == (2023, 12) else k)))
     put("1122", I)
     put("1129", -(0.30 * I + amort * (0 if p == (2023, 12) else k)))
+    # a joint venture's holder carries its cost from the formation period: an asset swap, Dr 1142 / Cr cash 1241
+    # (cash is the balancing line of every later period; P&L and retained earnings do not move)
+    for jv, holders in JV_HOLDERS.items():
+        if code in dict(holders) and p >= ENT[jv]["first"]:
+            inv_assoc += jv_stake_cents(jv, dict(holders)[code], models)
     put("1141", inv_sub)
     put("1142", inv_assoc)
     put("1144", base * 0.003)

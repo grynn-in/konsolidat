@@ -104,6 +104,27 @@ class Rules(unittest.TestCase):
             self.assertAlmostEqual(r["group"], r["translated"], places=9, msg=r)
             self.assertAlmostEqual(r["nci"], r["translated"] * 0.3, places=6, msg=r)
 
+    # (e) the holders carry their stake ----------------------------------------------------------------
+    def test_holders_carry_30pct_of_abjv_opening_equity_and_their_pnl_is_unchanged(self):
+        d = ab.load_inputs()
+        bal = {}
+        for e, y, p, a, partner, c in d["tb_cents"]:
+            bal[(e, (y, p), a)] = bal.get((e, (y, p), a), 0) + c
+        equity = -(bal[("ABJV", (2024, 1), "3100")] + bal[("ABJV", (2024, 1), "3200")])
+        self.assertGreater(equity, 0)
+        for holder in ("ABDE", "ABFR"):
+            self.assertEqual(bal.get((holder, (2023, 12), "1142"), 0), 0)
+            self.assertEqual(bal[(holder, (2024, 1), "1142")], round(equity * 0.3), holder)
+            self.assertEqual(bal[(holder, (2024, 12), "1142")], round(equity * 0.3), holder)
+        # P&L as at the previous commit (before the swap), kept as a fixture of the unchanged figures
+        with open(os.path.join(HERE, "holder_pnl_before_swap.json")) as f:
+            before = json.load(f)
+        for holder in ("ABDE", "ABFR"):
+            for p in ((2024, 1), (2024, 6), (2024, 12)):
+                pnl = sum(c for (e, y, per, a, partner, c) in d["tb_cents"] if e == holder and (y, per) == p and a[0] in "45678")
+                self.assertEqual(pnl, before["%s-%d-%d" % (holder, *p)])
+            self.assertEqual(bal[(holder, (2024, 12), "3300")], before["%s-3300" % holder])
+
     # whole example -------------------------------------------------------------------------------
     def test_every_period_nets_to_zero(self):
         _periods, _pnl, _bs, check = self.o.statements()
