@@ -1,9 +1,11 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances gold_consolidated_cash_flow assert_consolidated_cf_reconciles assert_cash_flow_excludes_nci_attribution
 -- gate: expect assert_nci_attribution_balances pass
 -- gate: expect assert_nci_attribution_equals_minority_result pass
 -- gate: expect assert_all_layers_present pass
 -- gate: expect assert_nci_account_declared_for_partial_subs pass
 -- gate: expect assert_end_to_end_bs_balances pass
+-- gate: expect assert_consolidated_cf_reconciles pass
+-- gate: expect assert_cash_flow_excludes_nci_attribution pass
 -- konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's share of a subsidiary's result and
 -- CTA is one NCI journal per (group, entity, FY, period). ZZP (USD, root) holds 70% of ZZC (SEK, method full).
 -- FY2026 P3 in SEK: receivables +600, cost +400, revenue -1,000 (a local profit of 600). Governed SEK->USD P3:
@@ -71,6 +73,12 @@ INSERT INTO epm_staging.fiscal_periods
 VALUES
   (2026, 3, 'FY2026-P03', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q1', 'Open'),
   (2026, 13, 'FY2026-P13', 'FY2026 closing', 'Closing', '2026-12-31', '2026-12-31', 'Q4', 'Open');
+-- Finding 6: the NCI account maps to a Financing line; only the attribution layer touches it, so a
+-- cash-flow row for that line would be the attribution shown as a cash flow.
+INSERT INTO epm_staging.cash_flow_categories
+  (main_account, cf_category, cf_line_item, is_cash, status)
+VALUES
+  ('ZZ3400', 'Financing', 'ZZ non-controlling interest', 0, 'Published');
 INSERT INTO epm_gold.currencies
   (currency_code, currency_name, symbol, minor_unit, usd_log10)
 VALUES
