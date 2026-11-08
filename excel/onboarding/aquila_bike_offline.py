@@ -198,6 +198,15 @@ class Offline:
     def pct(self, e, p):
         return self.resolve(e, p)["eff"]
 
+    def ic_share(self, e, p):
+        """Elimination share of one side: the operator's share for a proportional entity, else 1.0 (as the warehouse)."""
+        res = self.resolve(e, p)
+        return res["eff"] if res["method"] == "proportional" else 1.0
+
+    def ic_factor(self, ea, eb, p):
+        """One factor per pair: least(share_a, share_b) (gold_ic_eliminations, konsol#117 pair 3)."""
+        return min(self.ic_share(ea, p), self.ic_share(eb, p))
+
     # ---- 3. gold_consolidated_trial_balance -----------------------------------------------------
     def translate(self, mov):
         """rows: dicts with entity, period, account, partner, local, rate, retranslation, close_adj,
@@ -257,8 +266,13 @@ class Offline:
                     adj = r["retranslation"] + r["close_adj"]
                     pct = self.pct(e, p)
                     r["translated"] = r["local"] * r["rate"] + adj
-                    r["group"] = r["translated"]                      # K1: 100%, whatever the group's share
-                    r["nci"] = r["translated"] * (1 - pct)            # the attribution amount, not the complement
+                    if self.resolve(e, p)["method"] == "proportional":
+                        # konsol#117 pair 3 (IFRS 11 joint operation): the operator's share of each line, no NCI
+                        r["group"] = r["translated"] * pct
+                        r["nci"] = 0.0
+                    else:
+                        r["group"] = r["translated"]                  # K1: 100%, whatever the group's share
+                        r["nci"] = r["translated"] * (1 - pct)        # the attribution amount, not the complement
                     rows.append(r)
         return rows
 
@@ -338,7 +352,8 @@ class Offline:
                     cause = "fx"
                 full_a, full_b = -sgn(ta) * matched, -sgn(tb_) * matched
                 # K3: in full - the matched amount on each side and the full residual; no NCI leg
-                comp = {"m_a": full_a, "m_b": full_b, "d_a": -res_a, "d_b": -res_b}
+                f = self.ic_factor(ea, eb, p)       # 1.0 unless a side is a joint operation (pair 3)
+                comp = {"m_a": full_a * f, "m_b": full_b * f, "d_a": -res_a * f, "d_b": -res_b * f}
                 post = {c: comp[c] - (prev_post[c] if (pair_is_bs and prev_post) else 0.0) for c in comp}
                 prev_post = comp
                 tol = self.policy["ic_difference_tolerance"]
