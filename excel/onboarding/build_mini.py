@@ -7,8 +7,8 @@
 
     uv run build_mini.py
 
-The smallest consolidation that still has a story: one parent, one company
-bought, one company sold. No financial dimensions, no currencies other than
+The smallest consolidation that still has a story: one holding company with
+two companies held throughout, one bought, one sold. No financial dimensions, no currencies other than
 EUR, no intercompany. Three periods only — Start, Activity, Close.
 
 Numbers are whole euros and are written out in examples/mini/README.md.
@@ -86,15 +86,27 @@ ACCOUNT_NAME = {c: n for c, n, *_ in A}
 # P&L. Close has moved that result into retained earnings.
 BOOKS = {
     "HOLD": {
-        "START": {1100: 2_000_000, 1300: 500_000, 3100: -1_500_000, 3300: -1_000_000},
-        "ACT": {1100: 1_670_000, 1300: 1_700_000, 1500: -950_000, 3100: -1_500_000, 3300: -1_000_000, 6100: 80_000},
-        "CLS": {1100: 1_670_000, 1300: 1_700_000, 1500: -950_000, 3100: -1_500_000, 3300: -920_000},
+        "START": {1100: 1_700_000, 1300: 800_000, 3100: -1_500_000, 3300: -1_000_000},
+        "ACT": {1100: 1_370_000, 1300: 2_000_000, 1500: -950_000, 3100: -1_500_000, 3300: -1_000_000, 6100: 80_000},
+        "CLS": {1100: 1_370_000, 1300: 2_000_000, 1500: -950_000, 3100: -1_500_000, 3300: -920_000},
     },
     "DSP": {
         "START": {1100: 200_000, 1200: 800_000, 1210: -200_000, 1600: 100_000, 2100: -150_000, 3100: -500_000, 3300: -250_000},
         "ACT": {1100: 320_000, 1200: 800_000, 1210: -230_000, 1600: 100_000, 2100: -150_000,
                 3100: -500_000, 3300: -250_000, 4100: -400_000, 5100: 180_000, 6100: 70_000, 6600: 30_000, 8100: 30_000},
         "CLS": {1100: 320_000, 1200: 800_000, 1210: -230_000, 1600: 100_000, 2100: -150_000, 3100: -500_000, 3300: -340_000},
+    },
+    "SVC": {
+        "START": {1100: 300_000, 1600: 100_000, 2100: -120_000, 3100: -100_000, 3300: -180_000},
+        "ACT": {1100: 360_000, 1600: 100_000, 2100: -120_000, 3100: -100_000, 3300: -180_000,
+                4100: -300_000, 5100: 120_000, 6100: 90_000, 8100: 30_000},
+        "CLS": {1100: 360_000, 1600: 100_000, 2100: -120_000, 3100: -100_000, 3300: -240_000},
+    },
+    "PRT": {
+        "START": {1100: 150_000, 1200: 400_000, 1210: -100_000, 1600: 60_000, 2100: -90_000, 3100: -200_000, 3300: -220_000},
+        "ACT": {1100: 210_000, 1200: 400_000, 1210: -120_000, 1600: 60_000, 2100: -90_000,
+                3100: -200_000, 3300: -220_000, 4100: -220_000, 5100: 100_000, 6100: 40_000, 6600: 20_000, 8100: 20_000},
+        "CLS": {1100: 210_000, 1200: 400_000, 1210: -120_000, 1600: 60_000, 2100: -90_000, 3100: -200_000, 3300: -260_000},
     },
     "ACQ": {
         "START": {1100: 300_000, 1200: 700_000, 1210: -100_000, 1600: 80_000, 2100: -80_000, 3100: -400_000, 3300: -500_000},
@@ -106,17 +118,19 @@ BOOKS = {
 
 ENTITIES = {
     "HOLD": ("Mini Holding AG", "NL", "Active"),
+    "SVC": ("Mini Services B.V.", "NL", "Active"),
+    "PRT": ("Mini Parts GmbH", "DE", "Active"),
     "DSP": ("Mini Disposed GmbH", "DE", "Disposed"),
     "ACQ": ("Mini Acquired GmbH", "DE", "Active"),
 }
 
-# Which entities have a file in each period. All three do: ACQ's Start file is
+# Which entities have a file in each period. All five do: ACQ's Start file is
 # the balance sheet the acquisition reads, and DSP's Close file is its own
 # books after the sale (the group no longer owns it).
 PERIODS = (
-    ("START", 1, "Regular", "Q1", "2025-01-01", "2025-01-31", "Start", ("HOLD", "DSP", "ACQ")),
-    ("ACT", 2, "Regular", "", "2025-02-01", "2025-12-31", "Activity", ("HOLD", "DSP", "ACQ")),
-    ("CLS", 13, "Closing", "", "2025-12-31", "2025-12-31", "Close", ("HOLD", "DSP", "ACQ")),
+    ("START", 1, "Regular", "Q1", "2025-01-01", "2025-01-31", "Start", ("HOLD", "SVC", "PRT", "DSP", "ACQ")),
+    ("ACT", 2, "Regular", "", "2025-02-01", "2025-12-31", "Activity", ("HOLD", "SVC", "PRT", "DSP", "ACQ")),
+    ("CLS", 13, "Closing", "", "2025-12-31", "2025-12-31", "Close", ("HOLD", "SVC", "PRT", "DSP", "ACQ")),
 )
 PERIOD_NO = {code: n for code, n, *_ in PERIODS}
 
@@ -205,22 +219,25 @@ def master_rows(sample):
         groups.append({"consolidation_group": GROUP, "data_area_id": code, "entity_name": name,
                        "parent_group": GROUP, "is_group": 0})
     # ACQ's ownership is created when the Business Combination is approved.
+    # HOLD is held by the group root (blank owner = its tree parent, MINI); the companies it holds name it.
     ownership = [
-        {"consolidation_group": GROUP, "data_area_id": "HOLD", "effective_date": "2020-01-01", "end_date": "",
-         "ownership_pct": 100, "consolidation_method": "full"},
-        {"consolidation_group": GROUP, "data_area_id": "DSP", "effective_date": "2020-01-01", "end_date": "",
-         "ownership_pct": 100, "consolidation_method": "full"},
+        {"consolidation_group": GROUP, "data_area_id": code, "effective_date": "2020-01-01", "end_date": "",
+         "ownership_pct": 100, "consolidation_method": "full", "owner_entity": "" if code == "HOLD" else "HOLD"}
+        for code in ("HOLD", "DSP", "SVC", "PRT")
     ]
     journal = [{"journal_ref": "CJ-OPEN-2025", "consolidation_group": GROUP, "adjustment_type": "topside",
                 "fiscal_year": FY, "fiscal_period": PERIOD_NO["START"], "currency": CURRENCY,
-                "description": "Opening consolidation: investment in DSP eliminated against its share capital",
+                "description": "Opening consolidation: HOLD's investments in DSP, SVC and PRT eliminated against their share capital",
                 "reverse_fiscal_year": "", "reverse_fiscal_period": ""}]
-    journal_lines = [
-        {"journal_ref": "CJ-OPEN-2025", "data_area_id": "DSP", "main_account": "3100",
-         "debit_amount": 500_000, "credit_amount": "", "description": "DSP share capital"},
-        {"journal_ref": "CJ-OPEN-2025", "data_area_id": "HOLD", "main_account": "1300",
-         "debit_amount": "", "credit_amount": 500_000, "description": "HOLD cost of DSP"},
-    ]
+    journal_lines = []
+    for code in ("DSP", "SVC", "PRT"):
+        cost = -BOOKS[code]["START"][3100]
+        journal_lines += [
+            {"journal_ref": "CJ-OPEN-2025", "data_area_id": code, "main_account": "3100",
+             "debit_amount": cost, "credit_amount": "", "description": "%s share capital" % code},
+            {"journal_ref": "CJ-OPEN-2025", "data_area_id": "HOLD", "main_account": "1300",
+             "debit_amount": "", "credit_amount": cost, "description": "HOLD cost of %s" % code},
+        ]
     rows = {
         "Settings": [{"setting": "default_amount_basis", "value": BASIS},
                      {"setting": "tb_accepts_opening", "value": "0"},
@@ -236,7 +253,7 @@ def master_rows(sample):
         "Consolidation_Journals": journal, "CJ_Lines": journal_lines,
         "Business_Combinations": [{
             "deal_ref": "ACQ-ACQ-2025", "consolidation_group": GROUP, "acquired_entity": "ACQ",
-            "acquisition_date": ACQ_DATE, "share_acquired_pct": 100, "consideration_currency": CURRENCY,
+            "acquirer_entity": "HOLD", "acquisition_date": ACQ_DATE, "share_acquired_pct": 100, "consideration_currency": CURRENCY,
             "nci_measurement_override": "", "nci_fair_value": "", "fair_value_adjustment_total": FVA,
             "description": "100% of Mini Acquired GmbH bought for cash on the first day of Activity; plant stepped up"}],
         "BC_Consideration": [{"deal_ref": "ACQ-ACQ-2025", "component": "Cash", "amount": CONSIDERATION,
@@ -245,7 +262,7 @@ def master_rows(sample):
         "BC_Costs": [{"deal_ref": "ACQ-ACQ-2025", "kind": "Legal", "amount": ACQ_COSTS, "currency": CURRENCY,
                       "description": "Legal fees, expensed"}],
         "Business_Disposals": [{
-            "deal_ref": "DSP-DSP-2025", "consolidation_group": GROUP, "disposed_entity": "DSP",
+            "deal_ref": "DSP-DSP-2025", "consolidation_group": GROUP, "disposed_entity": "DSP", "disposer_entity": "HOLD",
             "disposal_date": DSP_DATE, "share_disposed_pct": 100, "retained_interest_pct": 0,
             "proceeds_currency": CURRENCY,
             "description": "100% of Mini Disposed GmbH sold for cash on the last day of Activity"}],
@@ -313,13 +330,13 @@ def build():
     rows = master_rows(sample)
     path = os.path.join(EXAMPLE_DIR, "Mini_Master_Data.xlsx")
     intro = (
-        "Filled onboarding workbook for the Mini Group: three legal entities, all in EUR, no financial dimensions, "
-        "no intercompany. A flat consolidation tree under MINI. One acquisition and one disposal.",
+        "Filled onboarding workbook for the Mini Group: five legal entities, all in EUR, no financial dimensions, "
+        "no intercompany. A flat consolidation tree under MINI. HOLD holds SVC, PRT and DSP throughout and acquires ACQ; one acquisition and one disposal, both by HOLD.",
         "Three periods only, on a Custom calendar: Start (FY2025 P01, opening balance sheets), Activity (P02, the year's "
         "trading, the acquisition on its first day and the disposal on its last day), Close (P13, the result moved into "
         "retained earnings). Trial balances are in tb/.",
-        "Consolidation_Journals holds the opening elimination of the holding's investment in DSP. Business_Combinations "
-        "and Business_Disposals hold the two deals. There is no Ownership_Periods row for ACQ: approving the combination creates it.",
+        "Consolidation_Journals holds the opening elimination of the holding's investments in DSP, SVC and PRT. Business_Combinations "
+        "and Business_Disposals hold the two deals. Ownership_Periods names HOLD as the owner of DSP, SVC and PRT. There is no row for ACQ: approving the combination creates it.",
         "Load with: uv run konsol_load.py examples/mini/Mini_Master_Data.xlsx --tb-dir examples/mini/tb -s <frappectl profile>.",
         "The Trial_Balance sheet is HOLD's Activity file, as a format reference. It is not loaded from here. See README.md.",
     )
