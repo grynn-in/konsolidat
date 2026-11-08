@@ -56,3 +56,5 @@ VALUES
   ('ZZA', 2026, 12, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 1000, -1000, 1),
   ('ZZA', 2026, 13, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, 500, 0, 500, 1),
   ('ZZA', 2026, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 500, -500, 1);
+-- konsolidat#279 defect 3: the model reads gold_trial_balance_by_partner for the year-end close marker; no close rows here.
+ALTER TABLE epm_gold.gold_trial_balance_by_partner ADD COLUMN IF NOT EXISTS is_year_end_close UInt8 DEFAULT 0;
