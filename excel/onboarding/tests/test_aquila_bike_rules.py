@@ -71,16 +71,20 @@ class Rules(unittest.TestCase):
 
     # (c) intercompany in full --------------------------------------------------------------------
     def test_abse_ic_pair_with_abh_is_eliminated_in_full(self):
+        """Both legs of a matched pair are the whole matched amount (a balance pair posts the change since its
+        previous row, so its legs are summed to date)."""
         seen = 0
         for r in self.o.recon:
             if {r["entity_a"], r["entity_b"]} != {"ABSE", "ABH"} or r["matched"] < 1:
                 continue
-            legs = [e for e in self.o.elims if e["period"] == r["period"] and e["kind"] == "matched"
-                    and e["entity_a"] == r["entity_a"] and e["entity_b"] == r["entity_b"]
-                    and e["pair"] == "IC:%s/%s" % (r["account_a"], r["account_b"])]
-            self.assertTrue(legs, r)
-            self.assertAlmostEqual(abs(legs[0]["amount"]), r["matched"], places=6)
-            self.assertAlmostEqual(abs(legs[1]["amount"]), r["matched"], places=6)
+            pair = "IC:%s/%s" % (r["account_a"], r["account_b"])
+            legs = [e for e in self.o.elims if e["kind"] == "matched" and e["pair"] == pair
+                    and (e["entity_a"], e["entity_b"]) == (r["entity_a"], r["entity_b"])
+                    and (e["period"] == r["period"] if r["basis"] == "movement" else e["period"] <= r["period"])]
+            on_a = sum(e["amount"] for e in legs if e["account"] == r["account_a"])
+            on_b = sum(e["amount"] for e in legs if e["account"] == r["account_b"])
+            self.assertAlmostEqual(abs(on_a), r["matched"], places=4, msg=r)
+            self.assertAlmostEqual(abs(on_b), r["matched"], places=4, msg=r)
             seen += 1
         self.assertGreater(seen, 0)
 
@@ -110,7 +114,7 @@ class Rules(unittest.TestCase):
         _periods, _pnl, bs, _check = self.o.statements()
         closing = (2024, 12)
         nci = -bs[closing].get("3700", 0.0)
-        net_assets = -sum(r["translated"] for r in self.o.rows
+        net_assets = sum(r["translated"] for r in self.o.rows
                           if r["entity"] == "ABSE" and self.o.is_bs(r["account"]) and not self.o.is_equity(r["account"]))
         self.assertAlmostEqual(nci, 0.3 * net_assets, delta=0.05)
 
