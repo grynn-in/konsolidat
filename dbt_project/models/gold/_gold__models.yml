@@ -386,6 +386,29 @@ models:
       - name: owner_group
         description: "The consolidation_group of the entity's own tree node (its Historical Equity Rates are declared under it); the same on every path, unchanged by konsol#117. Whether the rate join needs a group at all is open on konsol#117."
 
+  - name: gold_nci_attribution_journal
+    description: >
+      konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's
+      share of a full-method subsidiary's result and CTA, one balanced journal per
+      (group, entity, FY, period) for a subsidiary held below 100%. Lines: retained
+      earnings (minus the result share), 'CTA' (minus the CTA share) and the group's
+      nci_account (their sum). Year-end close rows are excluded from the result.
+      A chart without a retained-earnings account, or a group without nci_account,
+      gets no journal. Layer 'nci_attribution' of gold_fully_consolidated_tb.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+      - name: journal_id
+        tests:
+          - not_null
+
   - name: gold_equity_method_associates
     description: >
       PRD-14: the equity-method journal for associates (20-50% ownership): one

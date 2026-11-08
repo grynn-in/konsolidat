@@ -3,6 +3,9 @@
 -- gold_ic_reconciliation matches 0, so gold_ic_eliminations has no rows, and the fully consolidated
 -- TB rightly has no ic_elimination layer. Whether it should have been eliminated is
 -- gold_ic_unmatched's question, not this test's.
+-- konsol#117 pair 2 K2: the test also reads gold_nci_attribution_journal, a model table a live stack gets from its first dbt run.
+-- No-op where it exists; seeded empty here: no group has an nci_attribution layer unless a fixture inserts one.
+CREATE TABLE IF NOT EXISTS epm_gold.gold_nci_attribution_journal (consolidation_group String, data_area_id String, fiscal_year UInt16, fiscal_period UInt16, main_account String, account_name String, reporting_currency String, amount Float64, adjustment_type String, journal_id String, account_role String) ENGINE = MergeTree ORDER BY tuple();
 INSERT INTO epm_staging.intercompany_accounts (main_account, counterpart_account, description, status)
 VALUES ('ZZ1500', 'ZZ2500', 'ZZ intercompany', 'Published');
 INSERT INTO epm_gold.gold_consolidated_trial_balance
