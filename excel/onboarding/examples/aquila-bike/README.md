@@ -222,6 +222,20 @@ the Excel agree with each other, not yet with the warehouse.
   **1,512 cells compared with `expected.json`, 0 differences of 0.01 or more.** The warehouse's own per-period
   nets are within ±0.07 (Float64 sums of 20,244 rows); the replica's are exactly 0.
 
+**Reloading the example on a stack that already holds it.** Do not load the regenerated workbook over an old copy.
+The opening journal (CJ-OPEN-2023) and the ABDE and ABFR trial balances changed on this branch. The loader keys a
+journal on its `journal_ref`, but a copy loaded before that key existed carries no `[CJ-OPEN-2023]` prefix, so the
+loader would not recognise it and would post a second opening journal beside the old 70% one (1141 credited twice,
+ABSE's equity eliminated at 170%). A stack that holds the old example takes the new golden copy from a FRESH site:
+load the regenerated workbook and the 13 trial-balance files into an empty site, then compare with `expected.json`.
+
+**Uploading a trial-balance period that is already submitted** (read from `konsol_load.py` and
+`konsol/tb_bulk_model.py:check_group`): the period is neither replaced nor superseded. `konsol.tb_bulk.check_file`
+marks that entity-period not ready ("already submitted as <name>; cancel or amend it first"), the loader prints it
+under "not ready", and `konsol.tb_bulk.load(skip_invalid=1)` loads only the ready entity-periods of the file, so the
+submitted figures stay as they were. To change a submitted period, cancel (period open) or amend it first. This is
+why a re-upload of changed ABDE and ABFR files onto an old stack silently keeps the OLD trial balances.
+
 What the live run found (all recorded in `../../HANDOFF.md`): historical equity rates are kept with 6 decimals;
 `Dimension.source_column` must repeat the dimension name on an upload-only site; a draft journal left in
 Pending Approval must not be sent for approval again; `konsol.tb_bulk.get_upload` is GET-only; back-to-back

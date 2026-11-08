@@ -579,7 +579,7 @@ def build():
     put(ws, 1, 1, "NCI attribution: the minority's share of ABSE's result and CTA, one journal per period (konsolidat#204 option (a))", F_TITLE)
     notes_nci = [
         "ABSE is carried at 100%% line by line. The minority (30%%) is one line, account %s, and it is fed by two things only." % nci_acct,
-        "1. The opening NCI: the opening consolidation journal CJ-OPEN-2023 credits %s with 30%% of ABSE's equity at the FY2023 P12 closing rate (sheet Topside; for an acquired subsidiary the acquisition journal does it)." % nci_acct,
+        "1. The opening NCI: the opening consolidation journal CJ-OPEN-2023 credits %s with 30%% of ABSE's equity (share capital and premium at the historical rate; the legal reserve and the opening retained earnings 3300 at the FY2023 P12 closing rate) (sheet Topside; for an acquired subsidiary the acquisition journal does it)." % nci_acct,
         "2. A per-period journal NCI-<group>-<entity>-<year>-P<n>: Dr retained earnings %s for the minority's share of the period's result (30%% x the translated P&L accounts, without close rows); Dr CTA for 30%% of the entity's CTA movement; Cr %s for the sum. It nets to zero." % (re_acct, nci_acct),
         "So the closing NCI is the opening NCI plus the attributions, and it equals the minority's share of ABSE's net assets at the closing rate (the check below). A dividend would reduce it; this example pays none.",
     ]
@@ -741,7 +741,7 @@ def build():
     # ------------------------------------------------------------------ Topside
     ws = wb.create_sheet("Topside")
     head(ws, 1, ["journal", "period", "entity", "account", "debit (EUR)", "credit (EUR)", "amount (Dr +)", "description", "diff to inputs.json (must be 0)"], [14, 9, 8, 9, 14, 14, 14, 60, 16],
-         {"journal": "Consolidation Journal CJ-OPEN-2023 (Consolidation_Journals / CJ_Lines in the master workbook), approved: the first consolidation's elimination of the parent's investments in its founded subsidiaries against their share capital and premium at the historical rate, and the opening NCI of ABSE (30% of its equity at the FY2023 P12 closing rate, Cr 3700, with the minority's share of retained earnings Dr 3300).",
+         {"journal": "Consolidation Journal CJ-OPEN-2023 (Consolidation_Journals / CJ_Lines in the master workbook), approved: the first consolidation's elimination of the parent's investments in its founded subsidiaries against their share capital and premium at the historical rate, and the opening NCI of ABSE (30% of its equity: share capital and premium at the historical rate, the legal reserve and the opening retained earnings 3300 at the FY2023 P12 closing rate; Cr 3700, with the minority's share of retained earnings Dr 3300).",
           "amount (Dr +)": "Read from expected.json topside: the replica's rows of the opening journal.",
           "diff to inputs.json (must be 0)": "The same line in inputs.json opening_journal (debit - credit)."})
     desc = {(l["data_area_id"], l["main_account"]): l["description"] for l in d["opening_journal"]}
