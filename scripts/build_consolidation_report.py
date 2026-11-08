@@ -2,7 +2,7 @@
 
 Produces a multi-sheet Excel workbook:
   1. P&L Entity        — Before consolidation (entity × quarter)
-  2. P&L Consolidated  — Waterfall: Entity → IC → CTA → Topside → Consolidated
+  2. P&L Consolidated  — Waterfall: Entity → IC → CTA → Topside → NCI attribution → Consolidated
   3. BS Entity         — Before consolidation (cumulative balances)
   4. BS Consolidated   — Waterfall
   5. Bridge            — High-level summary waterfall
@@ -362,7 +362,7 @@ def fetch_consolidated_data(cfg):
     # {adjustment_type: {account: {quarter: amount}}}
     result = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for r in rows:
-        result[_layer(r["adjustment_type"])][r["main_account"]][r["quarter"]] += float(r["total_amount"])
+        result[r["adjustment_type"]][r["main_account"]][r["quarter"]] += float(r["total_amount"])
     return result
 
 
@@ -388,7 +388,7 @@ def fetch_consolidated_bs(cfg):
     # Build period-level data first
     period_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for r in rows:
-        period_data[_layer(r["adjustment_type"])][r["main_account"]][int(r["fiscal_period"])] += float(r["total_amount"])
+        period_data[r["adjustment_type"]][r["main_account"]][int(r["fiscal_period"])] += float(r["total_amount"])
 
     # Cumulate to quarter-end
     result = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
@@ -405,122 +405,6 @@ def fetch_consolidated_bs(cfg):
                     result[adj_type][acct]["Q3"] = cumul
                 elif p == 12:
                     result[adj_type][acct]["Q4"] = cumul
-    return result
-
-
-def _layer(adjustment_type):
-    """The report's block for a gold_fully_consolidated_tb layer.
-
-    ic_elimination_nci (konsolidat#148, decision 12) is the group view's
-    share of an intragroup balance moved to the NCI line; it belongs with the
-    other intercompany eliminations."""
-    return "ic_elimination" if adjustment_type == "ic_elimination_nci" else adjustment_type
-
-
-def _nci_view_legs(cfg):
-    """The NCI view's intercompany eliminations, one row per leg on a chart account.
-
-    The Consolidated column is the group view plus the NCI block, so the NCI
-    block must eliminate the minority's share of each intragroup balance too
-    (#175 re-review H1). Without it, 1000/-1000 between a 100% and an 80% entity
-    left -200 on the payable at 100%. gold_ic_eliminations holds those entries
-    (elimination_view = 'nci'), against the NCI line. The NCI line is not a
-    chart account, so the join drops it, as it drops the group view's.
-    """
-    return f"""
-        SELECT e.leg_account AS main_account, ma.is_pnl AS is_pnl, ma.is_balance_sheet AS is_balance_sheet,
-               e.fiscal_period AS fiscal_period, e.leg_amount AS amount
-        FROM (
-            SELECT debit_account AS leg_account, fiscal_period, debit_elimination AS leg_amount
-            FROM epm_gold.gold_ic_eliminations
-            WHERE consolidation_group = '{cfg.group}' AND fiscal_year = {cfg.year} AND elimination_view = 'nci'
-            UNION ALL
-            SELECT credit_account, fiscal_period, credit_elimination
-            FROM epm_gold.gold_ic_eliminations
-            WHERE consolidation_group = '{cfg.group}' AND fiscal_year = {cfg.year} AND elimination_view = 'nci'
-        ) AS e
-        INNER JOIN epm_silver.silver_main_accounts AS ma ON ma.main_account_id = e.leg_account
-    """
-
-
-def fetch_nci_data(cfg):
-    """Fetch NCI amounts: gold_consolidated_trial_balance's nci_amount plus
-    the NCI view's intercompany eliminations (_nci_view_legs)."""
-    rows = ch_query(f"""
-        SELECT
-            main_account,
-            is_pnl,
-            is_balance_sheet,
-            multiIf(
-                fiscal_period IN (1,2,3), 'Q1',
-                fiscal_period IN (4,5,6), 'Q2',
-                fiscal_period IN (7,8,9), 'Q3',
-                'Q4'
-            ) as quarter,
-            sum(amount) AS nci_total
-        FROM (
-            SELECT main_account, is_pnl, is_balance_sheet, fiscal_period, nci_amount AS amount
-            FROM epm_gold.gold_consolidated_trial_balance
-            WHERE consolidation_group = '{cfg.group}'
-              AND fiscal_year = {cfg.year}
-            UNION ALL
-            {_nci_view_legs(cfg)}
-        )
-        GROUP BY main_account, is_pnl, is_balance_sheet, quarter
-        FORMAT JSON
-    """)
-    pnl_nci = defaultdict(lambda: defaultdict(float))
-    bs_nci = defaultdict(lambda: defaultdict(float))
-    for r in rows:
-        acct = r["main_account"]
-        q = r["quarter"]
-        nci = float(r["nci_total"])
-        if int(r["is_pnl"]):
-            pnl_nci[acct][q] += nci
-        if int(r["is_balance_sheet"]):
-            bs_nci[acct][q] += nci
-    return pnl_nci, bs_nci
-
-
-def fetch_nci_bs_cumulative(cfg):
-    """Fetch NCI for BS — needs cumulative amounts at quarter-end."""
-    rows = ch_query(f"""
-        SELECT
-            main_account,
-            fiscal_period,
-            sum(amount) AS nci_total
-        FROM (
-            SELECT main_account, fiscal_period, nci_amount AS amount
-            FROM epm_gold.gold_consolidated_trial_balance
-            WHERE consolidation_group = '{cfg.group}'
-              AND fiscal_year = {cfg.year}
-              AND is_balance_sheet = 1
-            UNION ALL
-            SELECT main_account, fiscal_period, amount
-            FROM ({_nci_view_legs(cfg)})
-            WHERE is_balance_sheet = 1
-        )
-        GROUP BY main_account, fiscal_period
-        ORDER BY main_account, fiscal_period
-        FORMAT JSON
-    """)
-    period_data = defaultdict(lambda: defaultdict(float))
-    for r in rows:
-        period_data[r["main_account"]][int(r["fiscal_period"])] += float(r["nci_total"])
-
-    result = defaultdict(lambda: defaultdict(float))
-    for acct in period_data:
-        cumul = 0.0
-        for p in range(1, 13):
-            cumul += period_data[acct].get(p, 0.0)
-            if p == 3:
-                result[acct]["Q1"] = cumul
-            elif p == 6:
-                result[acct]["Q2"] = cumul
-            elif p == 9:
-                result[acct]["Q3"] = cumul
-            elif p == 12:
-                result[acct]["Q4"] = cumul
     return result
 
 
@@ -810,11 +694,13 @@ WATERFALL_BLOCKS = [
     ("IC Elim", "ic_elimination"),
     ("CTA", "cta"),
     ("Topside", "topside"),
+    # konsol#117 pair 2 K2: the minority's share of result and CTA, one NCI journal per entity-period.
+    ("NCI attribution", "nci_attribution"),
     ("Consolidated", None),  # computed
 ]
 
 
-def build_consolidated_sheet(ws, cfg, section_def, consol_data, nci_data,
+def build_consolidated_sheet(ws, cfg, section_def, consol_data,
                              theme, is_bs=False, sign_flip=True):
     """Build consolidated waterfall sheet.
 
@@ -827,18 +713,11 @@ def build_consolidated_sheet(ws, cfg, section_def, consol_data, nci_data,
     for label, adj_type in WATERFALL_BLOCKS:
         if adj_type is None or adj_type in consol_data:
             active_blocks.append((label, adj_type))
-    # Always include Entity, NCI if relevant, and Consolidated
-    has_nci = any(
-        nci_data.get(acct, {}).get(q, 0) != 0
-        for acct in nci_data for q in quarters
-    )
-    # Build final block list: Entity, IC, CTA, Topside, NCI, Consolidated
-    blocks = []
-    for label, adj_type in active_blocks:
-        if adj_type is not None:
-            blocks.append((label, adj_type))
-    if has_nci:
-        blocks.append(("NCI", "_nci"))
+    # Consolidated is the sum of the gold_fully_consolidated_tb layers and nothing else (konsol#117
+    # pair 2 review): the subsidiary is in the entity layer at 100% and the minority's share is its
+    # own 'nci_attribution' layer. The TB's nci_amount (a 30% memo) is NOT a block: adding it showed
+    # a 70% subsidiary's lines at 130%.
+    blocks = [(label, adj_type) for label, adj_type in active_blocks if adj_type is not None]
     blocks.append(("Consolidated", None))
 
     n_blocks = len(blocks)
@@ -915,9 +794,6 @@ def build_consolidated_sheet(ws, cfg, section_def, consol_data, nci_data,
                             if bl2 != "Consolidated":
                                 parts.append(f"{get_column_letter(block_starts[bl2] + qi)}{row}")
                         c.value = "=" + "+".join(parts)
-                    elif adj_type == "_nci":
-                        val = nci_data.get(main_acct, {}).get(q, 0) * sign
-                        c.value = round(val)
                     else:
                         val = consol_data.get(adj_type, {}).get(main_acct, {}).get(q, 0) * sign
                         c.value = round(val)
@@ -980,7 +856,7 @@ def build_consolidated_sheet(ws, cfg, section_def, consol_data, nci_data,
 
 # ── Bridge sheet builder ─────────────────────────────────────
 
-def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol, pnl_nci, bs_nci):
+def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol):
     """Build high-level consolidation bridge summary."""
     t = THEME_BRIDGE
     quarters = cfg.quarters
@@ -990,19 +866,11 @@ def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol, pnl_nci, bs_nci):
     for data in (pnl_consol, bs_consol):
         all_adj_types.update(data.keys())
     adj_types_ordered = []
-    for adj in ["entity", "ic_elimination", "cta", "topside", "reclassification"]:
+    for adj in ["entity", "ic_elimination", "cta", "topside", "nci_attribution", "reclassification"]:
         if adj in all_adj_types:
             adj_types_ordered.append(adj)
 
-    has_nci = any(
-        pnl_nci.get(a, {}).get(q, 0) != 0 or bs_nci.get(a, {}).get(q, 0) != 0
-        for a in set(list(pnl_nci.keys()) + list(bs_nci.keys()))
-        for q in quarters
-    )
-
     blocks = [(adj.replace("_", " ").title(), adj) for adj in adj_types_ordered]
-    if has_nci:
-        blocks.append(("NCI", "_nci"))
     blocks.append(("Consolidated", None))
 
     n_q = len(quarters)
@@ -1037,12 +905,9 @@ def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol, pnl_nci, bs_nci):
         c.alignment = Alignment(horizontal="center")
 
     # Bridge metrics — derived from section subtotals
-    def sum_adj(consol_data, nci_data, accounts, adj_type, quarter):
+    def sum_adj(consol_data, accounts, adj_type, quarter):
         total = 0
-        if adj_type == "_nci":
-            for a in accounts:
-                total += nci_data.get(a, {}).get(quarter, 0)
-        elif adj_type is not None:
+        if adj_type is not None:
             for a in accounts:
                 total += consol_data.get(adj_type, {}).get(a, {}).get(quarter, 0)
         return total
@@ -1066,20 +931,20 @@ def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol, pnl_nci, bs_nci):
     equity_accts = accounts_for(bs_sections, ["Shareholders' Equity"])
 
     metrics = [
-        ("Total Revenue", rev_accts, pnl_consol, pnl_nci, True),
-        ("Total COGS", cogs_accts, pnl_consol, pnl_nci, True),
-        ("Gross Profit", None, None, None, True),
-        ("Total OpEx", opex_accts, pnl_consol, pnl_nci, True),
-        ("Operating Income", None, None, None, True),
-        ("_BLANK", None, None, None, None),
-        ("Total Assets", asset_accts, bs_consol, bs_nci, True),
-        ("Total Liabilities", liab_accts, bs_consol, bs_nci, True),
-        ("Total Equity", equity_accts, bs_consol, bs_nci, True),
+        ("Total Revenue", rev_accts, pnl_consol, True),
+        ("Total COGS", cogs_accts, pnl_consol, True),
+        ("Gross Profit", None, None, True),
+        ("Total OpEx", opex_accts, pnl_consol, True),
+        ("Operating Income", None, None, True),
+        ("_BLANK", None, None, None),
+        ("Total Assets", asset_accts, bs_consol, True),
+        ("Total Liabilities", liab_accts, bs_consol, True),
+        ("Total Equity", equity_accts, bs_consol, True),
     ]
 
     row = 7
     metric_rows = {}
-    for name, accts, consol_data_ref, nci_ref, do_sign_flip in metrics:
+    for name, accts, consol_data_ref, do_sign_flip in metrics:
         if name == "_BLANK":
             row += 1
             continue
@@ -1116,7 +981,7 @@ def build_bridge_sheet(ws, cfg, pnl_consol, bs_consol, pnl_nci, bs_nci):
                             parts.append(f"{get_column_letter(block_starts[bl2] + qi)}{row}")
                     c.value = "=" + "+".join(parts)
                 else:
-                    val = sum_adj(consol_data_ref, nci_ref, accts, adj_type, q) * sign
+                    val = sum_adj(consol_data_ref, accts, adj_type, q) * sign
                     c.value = round(val)
         row += 1
 
@@ -1629,10 +1494,6 @@ def main():
     print("Fetching consolidated BS waterfall...")
     consol_bs = fetch_consolidated_bs(cfg)
 
-    print("Fetching NCI data...")
-    pnl_nci, _ = fetch_nci_data(cfg)
-    bs_nci = fetch_nci_bs_cumulative(cfg)
-
     # Build workbook
     wb = Workbook()
     wb.remove(wb.active)
@@ -1646,7 +1507,7 @@ def main():
     # Sheet 2: P&L Consolidated
     print("Building P&L Consolidated...")
     ws = wb.create_sheet("P&L Consolidated")
-    build_consolidated_sheet(ws, cfg, cfg.pnl_sections, consol_pnl, pnl_nci,
+    build_consolidated_sheet(ws, cfg, cfg.pnl_sections, consol_pnl,
                             THEME_CONSOL, is_bs=False, sign_flip=True)
 
     # Sheet 3: BS Entity
@@ -1658,13 +1519,13 @@ def main():
     # Sheet 4: BS Consolidated
     print("Building BS Consolidated...")
     ws = wb.create_sheet("BS Consolidated")
-    build_consolidated_sheet(ws, cfg, cfg.bs_sections, consol_bs, bs_nci,
+    build_consolidated_sheet(ws, cfg, cfg.bs_sections, consol_bs,
                             THEME_CONSOL, is_bs=True, sign_flip=True)
 
     # Sheet 5: Bridge
     print("Building Bridge...")
     ws = wb.create_sheet("Bridge")
-    build_bridge_sheet(ws, cfg, consol_pnl, consol_bs, pnl_nci, bs_nci)
+    build_bridge_sheet(ws, cfg, consol_pnl, consol_bs)
 
     # Sheet 6: Diagnostics
     print("Building Diagnostics...")

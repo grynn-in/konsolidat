@@ -32,10 +32,12 @@ net_income as (
         tb.fiscal_year as fiscal_year,
         tb.fiscal_period as fiscal_period,
         sum(tb.period_net_amount) as net_income
-    from {{ ref('gold_trial_balance') }} as tb
+    from {{ ref('gold_trial_balance_by_partner') }} as tb
     inner join {{ ref('silver_main_accounts') }} as ma
         on tb.main_account = ma.main_account_id
+    {# konsolidat#279 defect 3: the result excludes the synthesized year-end close #}
     where ma.is_pnl = 1
+      and tb.is_year_end_close = 0
     group by tb.data_area_id, tb.fiscal_year, tb.fiscal_period
 ),
 

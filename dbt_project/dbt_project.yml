@@ -222,6 +222,8 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_fully_consolidated_tb:
         +tags: ['gold', 'domain:consolidation']
+      gold_nci_attribution_journal:
+        +tags: ['gold', 'domain:consolidation']
       gold_goodwill_amortisation_journal:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_eliminations:

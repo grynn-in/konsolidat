@@ -59,6 +59,18 @@
    cast-to-UInt8 trick governed_rate_guard() uses), and the test labels the
    same rows `no_reporting_currency`, never `missing`.
 
+   Year-end close rows (konsolidat#279 defect 3). The result of a period is the
+   associate's own activity in it. The year-end close silver_tb_movements
+   synthesizes in a Closing period (konsolidat#259) moves the year's P&L into
+   retained earnings, so summed as "net income of P13" it posted an entry equal
+   and opposite to the year's result. `entity_net_income` subtracts the P&L rows
+   marked is_year_end_close = 1 in gold_trial_balance_by_partner (the marker
+   gold_consolidated_trial_balance reads); the Closing period then carries the
+   share of its own activity, or no journal when it has none.
+   assert_equity_method_ignores_close_rows pins it. A close an ERP posts itself
+   carries no mark and still reads as activity (assert_year_end_close_carries_no_cta
+   names it). Fixed in the PR that closes #279.
+
    A translated share of 0.01 or less in group currency posts no journal
    (`equity_entries`, abs(equity_income_amount) > 0.01): the rounding
    threshold, so a result that rounds to nothing is not a two-line entry. #}
@@ -88,8 +100,25 @@ with equity_entities as (
       and eo.has_complete_chain = 1
 ),
 
-{# Net income per entity per period (P&L accounts only), in the associate's
-   own accounting currency, with the period whose governed rate translates it. #}
+{# The P&L the synthesized year-end close moved, per entity and period
+   (konsolidat#279 defect 3). Debit minus credit, like net_income. #}
+close_pnl as (
+    select
+        bp.data_area_id as data_area_id,
+        bp.fiscal_year as fiscal_year,
+        bp.fiscal_period as fiscal_period,
+        sum(bp.period_net_amount) as close_amount
+    from {{ ref('gold_trial_balance_by_partner') }} as bp
+    inner join {{ ref('silver_main_accounts') }} as bma
+        on bp.main_account = bma.main_account_id
+    where bma.is_pnl = 1
+      and bp.is_year_end_close = 1
+    group by bp.data_area_id, bp.fiscal_year, bp.fiscal_period
+),
+
+{# Net income per entity per period (P&L accounts only, year-end close rows
+   excluded), in the associate's own accounting currency, with the period
+   whose governed rate translates it. #}
 entity_net_income as (
     select
         ee.consolidation_group as consolidation_group,
@@ -107,7 +136,8 @@ entity_net_income as (
            legitimately numbered). #}
         if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
-        sum(tb.period_net_amount) as net_income
+        {# join_use_nulls=0: no close row reads close_amount = 0 #}
+        sum(tb.period_net_amount) - any(cl.close_amount) as net_income
     from {{ ref('gold_trial_balance') }} as tb
     {# period-keyed since F2: equity_entities is one row per entity PER PERIOD,
        so without it every period's net income would pair with every period's
@@ -130,6 +160,10 @@ entity_net_income as (
     left join {{ rate_period_map() }} as rpm
         on rpm.fiscal_year = tb.fiscal_year
         and rpm.fiscal_period = tb.fiscal_period
+    left join close_pnl as cl
+        on cl.data_area_id = tb.data_area_id
+        and cl.fiscal_year = tb.fiscal_year
+        and cl.fiscal_period = tb.fiscal_period
     where ma.is_pnl = 1
     group by ee.consolidation_group, tb.data_area_id, tb.fiscal_year, tb.fiscal_period,
              ee.reporting_currency, ec.accounting_currency, ee.ownership_pct,
@@ -137,7 +171,7 @@ entity_net_income as (
     {# A zero result is not translated (0 x any rate is 0), so it needs no
        rate: it is kept out here so the rate throwIf below and
        assert_equity_associate_has_average_rate look at the same rows. #}
-    having sum(tb.period_net_amount) != 0
+    having sum(tb.period_net_amount) - any(cl.close_amount) != 0
 ),
 
 {# konsolidat#279: a group with no root row in consolidation_groups

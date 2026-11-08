@@ -84,37 +84,54 @@ def test_windowed_rows_still_aggregate_by_quarter(monkeypatch):
     assert dict(bs["ZZOP"]["1010"]) == {"Q3": 45000.0}
 
 
-# --- konsolidat#148 / #175 re-review H1: the NCI view's eliminations ---------
+# --- konsol#117 pair 2 K3: eliminations are in full, the NCI block carries none -------
 
-@pytest.mark.parametrize("fetch", [report.fetch_nci_data, report.fetch_nci_bs_cumulative])
-def test_the_nci_block_eliminates_the_minoritys_share_of_intragroup_balances(fetch, monkeypatch):
-    """The Consolidated column is the group view plus the NCI block. The NCI
-    block adds the NCI view's eliminations to nci_amount, so an intragroup
-    balance with an 80%-owned side nets to zero at 100%."""
-    seen = []
-    monkeypatch.setattr(report, "ch_query", lambda sql, cfg=None: seen.append(sql) or [])
-    fetch(_cfg())
-    sql = _flat(seen[0])
-    assert "FROM epm_gold.gold_consolidated_trial_balance" in sql
-    assert "FROM epm_gold.gold_ic_eliminations" in sql and "elimination_view = 'nci'" in sql
-    # both legs of each entry, and only chart accounts (the NCI line is not one)
-    assert "debit_elimination AS leg_amount" in sql and "credit_elimination" in sql
-    assert "INNER JOIN epm_silver.silver_main_accounts" in sql
-    assert "sum(amount) AS nci_total" in sql
+def test_the_report_reads_no_nci_amount_block():
+    """Review fix: Consolidated is the FCTB layers only; the TB's nci_amount memo is not fetched."""
+    assert not hasattr(report, "fetch_nci_data") and not hasattr(report, "fetch_nci_bs_cumulative")
 
 
-def test_a_payable_at_an_80pct_entity_nets_to_zero_at_100pct(monkeypatch):
-    """B (80%) owes A (100%) 1000. Group view: payable -800 + 800 matched = 0.
-    NCI block: nci_amount -200 plus the NCI view's +200 = 0. The rows come
-    back already summed by the query, as ClickHouse returns them."""
-    monkeypatch.setattr(report, "ch_query", lambda sql, cfg=None: [
-        {"main_account": "2010", "is_pnl": 0, "is_balance_sheet": 1, "quarter": "Q1", "nci_total": -200.0 + 200.0},
-    ])
-    pnl, bs = report.fetch_nci_data(_cfg())
-    assert bs["2010"]["Q1"] == 0.0 and not pnl
+def test_the_report_has_no_nci_elimination_layer():
+    assert not hasattr(report, "_layer") and not hasattr(report, "_nci_view_legs")
 
 
-def test_nci_entries_are_reported_with_the_ic_eliminations():
-    assert report._layer("ic_elimination_nci") == "ic_elimination"
-    assert report._layer("ic_elimination") == "ic_elimination"
-    assert report._layer("cta") == "cta"
+# --- konsol#117 pair 2 review, finding 1: the minority is counted once ----------------
+
+def _evaluate(ws, ref, depth=0):
+    """Evaluate a cell of the form 'N' or '=A1+B1+...' (the only formulas the sheet writes here)."""
+    import re
+    v = ws[ref].value
+    if isinstance(v, str) and v.startswith("="):
+        return sum(_evaluate(ws, r) for r in re.findall(r"[A-Z]+\d+", v))
+    return v or 0
+
+
+def test_consolidated_is_the_sum_of_the_fctb_layers_with_a_70pct_entity():
+    """Since K1 the entity layer is the subsidiary at 100% and K2 posts the minority's share as the
+    'nci_attribution' layer. The Consolidated column is the sum of the layers of
+    gold_fully_consolidated_tb and nothing else: a 30% 'NCI' block read from
+    gold_consolidated_trial_balance.nci_amount on top shows a 70% subsidiary at 130%."""
+    from openpyxl import Workbook
+    from collections import defaultdict
+
+    def tree():
+        return defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+
+    consol = tree()
+    consol["entity"]["ZZ4000"]["Q1"] = -1000.0       # revenue, credit, the subsidiary at 100%
+    consol["entity"]["ZZ3400"]["Q1"] = 0.0
+    consol["nci_attribution"]["ZZ3400"]["Q1"] = -300.0  # the minority's share, in the NCI equity line
+    sections = {"sections": [("Revenue", [("ZZ4000", "ZZ revenue")]),
+                             ("Equity", [("ZZ3400", "ZZ NCI")])], "formulas": []}
+    cfg = report.ConsolidationConfig(group="ZZGRP", year=2099)
+    cfg.quarters = ["Q1"]
+    ws = Workbook().active
+    report.build_consolidated_sheet(ws, cfg, sections, consol, report.THEME_CONSOL, sign_flip=False)
+    labels = {ws.cell(row=6, column=c).value: c for c in range(3, 12) if ws.cell(row=6, column=c).value}
+    row = next(r for r in range(8, 20) if ws.cell(row=r, column=1).value == "ZZ4000")
+    consolidated = _evaluate(ws, ws.cell(row=row, column=labels["Consolidated"]).coordinate)
+    assert consolidated == -1000.0     # not -1300
+    assert "NCI" not in labels
+    assert "NCI attribution" in labels
+    row = next(r for r in range(8, 20) if ws.cell(row=r, column=1).value == "ZZ3400")
+    assert _evaluate(ws, ws.cell(row=row, column=labels["Consolidated"]).coordinate) == -300.0

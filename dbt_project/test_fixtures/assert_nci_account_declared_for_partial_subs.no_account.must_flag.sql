@@ -1,18 +1,9 @@
--- gate: build +gold_ic_eliminations assert_ic_nci_account_declared
--- gate: expect assert_ic_nci_account_declared pass
--- konsolidat#208: the intercompany NCI line posts to the group's declared NCI account.
--- `+gold_ic_eliminations assert_ic_nci_account_declared` must BUILD and PASS on these rows, and every NCI line in
--- zzg_gold.gold_ic_eliminations must be on ZZ3400, the account the ZZG root row declares (nci_account), never on
--- the 'NCI' placeholder.
---
--- Group ZZG (USD): parent ZZP held 100%, subsidiary ZZS held 80%, both full from 2026-01-01, both USD (no rates).
--- ZZ1100 (receivable) <-> ZZ2100 (payable) is a Published intercompany pair. FY2026 P1 (period movement):
---   ZZP ZZ1100 +1000 (partner ZZS) | ZZP ZZ3000 -1000
---   ZZS ZZ1000 +1000               | ZZS ZZ2100 -1000 (partner ZZP)
--- Matched 1000 at 100%. Group view: 800 eliminated from both sides, and ZZP's 200 above ZZS's share goes to the
--- NCI line, attributed to ZZS (elimination_kind 'nci'). NCI view: ZZS's minority share, 200 of the payable, goes
--- to the NCI line (elimination_view 'nci', kind 'matched'). Both NCI lines are on ZZ3400 and net to zero.
---
+-- konsol#117 pair 2 K3: a group with a full-method entity held below 100% must declare nci_account on its root
+-- (the NCI line K2 posts and the deal journals use). Replaces ic_nci_account_declared (konsolidat#208).
+-- Group ZZG (USD): ZZP held 100%, ZZS held 80%, both full from 2026-01-01, both USD (no rates).
+-- The root row declares NO nci_account: ZZG is flagged once.
+-- gate: build +gold_entity_ownership silver_main_accounts assert_nci_account_declared_for_partial_subs
+-- gate: expect assert_nci_account_declared_for_partial_subs flag 1
 -- The live consolidation_groups may predate its IC and policy columns, and the submission tables their partner
 -- and basis columns: add them first. The lineage of gold_consolidated_trial_balance reads these tables too, empty
 -- here, so they are named to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
@@ -22,6 +13,8 @@
 -- epm_staging.ic_elimination_rules.
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
+ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
+ALTER TABLE epm_staging.ownership_periods ADD COLUMN IF NOT EXISTS owner_group String, ADD COLUMN IF NOT EXISTS owner_data_area_id String, MODIFY ORDER BY (consolidation_group, data_area_id, effective_date, owner_group, owner_data_area_id);
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS ic_difference_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS ic_difference_tolerance Float64 DEFAULT 0;
@@ -56,19 +49,19 @@ VALUES
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency, ic_difference_account, ic_difference_tolerance, nci_account)
 VALUES
-  ('ZZG', '', 'ZZ Group', 'USD', '', 0, 'ZZ3400'),
+  ('ZZG', '', 'ZZ Group', 'USD', '', 0, ''),
   ('ZZG', 'ZZP', 'ZZ Parent', 'USD', '', 0, ''),
   ('ZZG', 'ZZS', 'ZZ Subsidiary', 'USD', '', 0, '');
 INSERT INTO epm_staging.consolidation_ancestry
-  (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path)
+  (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id)
 VALUES
-  ('ZZG', 'ZZP', 'ZZG', 'ZZP', 1, 1, 'ZZG/ZZP'),
-  ('ZZG', 'ZZS', 'ZZG', 'ZZS', 1, 1, 'ZZG/ZZS');
+  ('ZZG', 'ZZP', 'ZZG', 'ZZP', 1, 1, 'ZZG/ZZP', 'ZZG/ZZP', 'ZZG', ''),
+  ('ZZG', 'ZZS', 'ZZG', 'ZZS', 1, 1, 'ZZG/ZZS', 'ZZG/ZZS', 'ZZG', '');
 INSERT INTO epm_staging.ownership_periods
-  (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method)
+  (consolidation_group, data_area_id, effective_date, end_date, ownership_pct, consolidation_method, owner_group, owner_data_area_id)
 VALUES
-  ('ZZG', 'ZZP', '2026-01-01', 100, 'full'),
-  ('ZZG', 'ZZS', '2026-01-01', 80, 'full');
+  ('ZZG', 'ZZP', '2026-01-01', '2149-06-06', 100, 'full', 'ZZG', ''),
+  ('ZZG', 'ZZS', '2026-01-01', '2149-06-06', 80, 'full', 'ZZG', '');
 INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
 VALUES

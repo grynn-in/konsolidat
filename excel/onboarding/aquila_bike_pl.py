@@ -9,8 +9,10 @@ disposal of ABDK (P11, P12).
 Every figure is read from examples/aquila-bike/model/expected.json (the Python replica of the warehouse,
 which the live build matches to the cent; see README "Verification"): the `fctb` layers for the
 consolidated columns and the bridge, the `translation` rows for the entities at 100%. Nothing is typed in.
-Presentation is credit-positive (revenue and profit positive, costs negative), the tool view (subsidiaries at
-the group's share, no NCI line). Every P&L account of the chart must fall into a line, or this script stops.
+Presentation is credit-positive (revenue and profit positive, costs negative). Since konsolidat#204 option (a) a
+controlled subsidiary is carried at 100% (ABSE contributes every line in full) and the minority is the NCI line (3700):
+its share of the result is shown beneath the net result as "attributable to NCI", not taken out of the lines.
+Every P&L account of the chart must fall into a line, or this script stops.
 """
 from __future__ import annotations
 
@@ -40,9 +42,9 @@ LINES = [
      lambda a: a in ("6730", "6760", "6770")),
     ("operating_profit", "**Operating profit**", None),
     ("fin", "Financial items, net, incl. intercompany interest (71xx, 72xx)", lambda a: a[0] == "7"),
-    ("associate", "Share of result of the associate ABPT, 30% (EQ_INCOME)", lambda a: a == "EQ_INCOME"),
+    ("associate", "Share of result of the associate ABPT, 30%, and the joint venture ABJV, 60% (EQ_INCOME)", lambda a: a == "EQ_INCOME"),
     ("tax", "Income taxes (8xxx)", lambda a: a[0] == "8"),
-    ("net_result", "**Net result for the period (group share)**", None),
+    ("net_result", "**Net result for the period (100%)**", None),
 ]
 SUBTOTALS = {
     "gross_profit": ("revenue", "ic_revenue", "cos"),
@@ -85,17 +87,15 @@ def columns(expected: dict) -> dict[str, dict[str, dict[str, float]]]:
     """Three tables: {table: {column: {line: value}}}."""
     f, t = expected["fctb"], expected["translation"]
     # 1. FY2024, before and after consolidation. The bridge columns are the warehouse's own layers; the first
-    #    column is the ten entities at 100% (translation.translated), the second takes the minority's 30% of
-    #    ABSE out (translation.nci), which is how the entity layer of the tool reaches the group's share.
+    #    column is the ten entities at 100% (translation.group = translated: konsolidat#204 option (a)).
     consolidation = {
-        "Ten entities summed, 100%": statement(sum_rows(t, PERIODS_FY, field="translated")),
-        "Minority's 30% of ABSE": {k: -v for k, v in statement(sum_rows(t, PERIODS_FY, field="nci")).items()},
-        "Intercompany eliminations": statement(sum_rows(f, PERIODS_FY, {"ic_elimination", "ic_elimination_nci"})),
+        "Entities at 100%": statement(sum_rows(t, PERIODS_FY, field="group")),
+        "Intercompany eliminations": statement(sum_rows(f, PERIODS_FY, {"ic_elimination"})),
         "Deal journals": statement(sum_rows(f, PERIODS_FY, {"acquisition", "disposal"})),
-        "Equity method": statement(sum_rows(f, PERIODS_FY, {"equity_method"})),
+        "Equity method (ABPT, ABJV)": statement(sum_rows(f, PERIODS_FY, {"equity_method"})),
         "Consolidated FY2024": statement(sum_rows(f, PERIODS_FY)),
     }
-    for layer in ("cta", "topside"):
+    for layer in ("cta", "topside", "nci_attribution"):
         assert not any(is_pnl(a) for a in sum_rows(f, PERIODS_FY, {layer})), layer + " layer hit a P&L account"
     # 2. and 3. one consolidated month before, the deal month, and what the deal month owes to the deal
     acquisition = {
@@ -122,18 +122,16 @@ def check(tables: dict) -> None:
 
 
 def notes(tables: dict, expected: dict) -> dict[str, float]:
-    """The reconciliation a reader of IFRS 10 will ask for: the tool's result vs the owners' result at 100%.
+    """The split a reader of IFRS 10 asks for: the total result at 100% and who it is attributable to.
 
-    The ic_elimination_nci rows are the minority's 30% of the group's sales, fees and interest to ABSE; the tool
-    removes them from the P&L and books them to NCI equity (3700, decision 12), so its result is lower than the
-    owners' result of an IFRS statement by exactly that amount (Statements sheet of the walkthrough, reconciliation line)."""
+    The minority's share is 30% of ABSE's translated P&L (translation.nci); the attribution journal posts the same
+    amount to 3700 (Dr retained earnings 3300), so it is read from both and they must agree."""
     c = tables["consolidation"]
-    # the legs are debits to revenue and interest income (Dr +): what the tool's P&L lost to equity, so added back
-    nci_legs = sum(v for a, v in sum_rows(expected["fctb"], PERIODS_FY, {"ic_elimination_nci"}).items() if is_pnl(a))
-    tool = c["Consolidated FY2024"]["net_result"]
-    minority = -c["Minority's 30% of ABSE"]["net_result"]
-    return {"tool_result": tool, "nci_legs_to_equity": nci_legs, "owners_result_ifrs": tool + nci_legs,
-            "minority_share_of_result": minority, "total_result_100pct": tool + nci_legs + minority}
+    total = c["Consolidated FY2024"]["net_result"]
+    nci = statement(sum_rows(expected["translation"], PERIODS_FY, field="nci"))["net_result"]
+    booked = sum(r["amount"] for r in expected["nci_attribution"] if r["period"] in PERIODS_FY and r["role"] == "retained_earnings")
+    assert abs(nci - booked) < 0.01, ("attribution journal vs translation.nci", nci, booked)
+    return {"total_result_100pct": total, "minority_share_of_result": nci, "owners_result": total - nci}
 
 
 def fmt(v: float, unit: int) -> str:
@@ -160,11 +158,10 @@ def markdown(tables: dict, unit: int, notes_: dict | None = None) -> str:
             out.append("| %s | %s |" % (label, " | ".join(cells)))
         out.append("")
         if notes_ and table is tables["consolidation"]:
-            out.append("IFRS 10 view of the same year: total result at 100%% %s, of which non-controlling interests %s and "
-                       "owners of the parent %s. The owners' result is %s above the tool's: the minority's 30%% of the "
-                       "group's sales, fees and interest to ABSE, which the tool takes out of the P&L and books to NCI "
-                       "equity (3700, decision 12)." % tuple(fmt(notes_[k], unit) for k in
-                       ("total_result_100pct", "minority_share_of_result", "owners_result_ifrs", "nci_legs_to_equity")))
+            out.append("Attributable to: non-controlling interests %s and owners of the parent %s, of a total result of %s at 100%%. "
+                       "The NCI amount is 30%% of ABSE's own result, posted to 3700 by the attribution journal "
+                       "(intercompany eliminations are in full, so no NCI leg is taken out of any line)." % tuple(
+                           fmt(notes_[k], unit) for k in ("minority_share_of_result", "owners_result", "total_result_100pct")))
             out.append("")
     return "\n".join(out)
 
