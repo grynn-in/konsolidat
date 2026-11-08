@@ -6,7 +6,7 @@
 -- must give `FAIL 1 assert_goodwill_calculated` and no other failure (the deal is priced but now unmeasured, so
 -- that guard names it: intended), and zzg_gold.gold_business_combination_journal must hold 0 rows for
 -- BC-ZZH-ZZT-2026-03-15. (assert_acquisition_accounts_declared is selected out on purpose: it FAILs on these rows —
--- the J12 share refusal, konsolidat#204, and the J7 row naming nci_fair_value — and, reading only the sources, would
+-- the J7 row naming nci_fair_value (the 80% share itself is accepted since konsolidat#204 (a)) — and, reading only the sources, would
 -- SKIP the journal.)
 -- Why: nci_fair_value_rated translates the declared figure at the consideration_currency Closing rate. Before row
 -- M4 a partial-share 'full' deal with nci_fair_value <= 0 and a RATED currency found its row there (0 x rate = 0),

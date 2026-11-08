@@ -19,14 +19,11 @@
 -- A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal
 -- would otherwise post to a code the chart does not know.
 --
--- Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1):
---   share_disposed_pct < 100 or retained_interest_pct > 0
---                                  layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the
---                                  parent's share, while the disposal template derecognises 100% of the balance
---                                  sheet against an NCI line, so a partial disposal (or one leaving a retained
---                                  interest) would count the minority twice. One row per such disposal, whatever
---                                  the root row declares; the disposal journal posts nothing for it either
---                                  (design §5/§7), which assert_disposal_gain_loss_exists also names.
+-- Refused by name (row J12): share_disposed_pct < 100 or retained_interest_pct > 0
+--   partial disposals and retained interests are not implemented: the disposal journal posts nothing for them
+--   (konsolidat#310; design §5/§7), which assert_disposal_gain_loss_exists also names. Layer 1 now carries a
+--   controlled subsidiary at 100% (konsolidat#204 (a)), so the blocker is the journal, not the layer. One row per
+--   such disposal, whatever the root row declares.
 --
 -- Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 with root as (
@@ -129,7 +126,7 @@ checks as (
          1, 1,
          1, 1, 1,
          0] as is_account,
-        -- the partial-share refusal (row J12): the value is present, the disposal is still refused
+        -- the partial-disposal refusal (row J12): the value is present, the disposal is still refused
         [0, 0,
          0, 0,
          0, 0, 0,
@@ -146,7 +143,7 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
-            c.is_refusal = 1, 'partial-share deals wait for konsolidat#204: layer 1 carries the entity at its share',
+            c.is_refusal = 1, 'partial disposals and retained interests are not implemented: the disposal journal posts nothing for them (konsolidat#310)',
             c.value = '', 'missing',
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',
             ''

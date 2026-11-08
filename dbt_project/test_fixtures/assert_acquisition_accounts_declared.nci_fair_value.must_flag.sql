@@ -1,15 +1,15 @@
 -- gate: build +gold_business_combination_journal assert_acquisition_accounts_declared
--- gate: expect assert_acquisition_accounts_declared flag 2
+-- gate: expect assert_acquisition_accounts_declared flag 1
 -- Must-flag fixture for assert_acquisition_accounts_declared, the full-method NCI fair value (konsol#204):
 -- `+gold_business_combination_journal assert_acquisition_accounts_declared` must BUILD and the test must
--- FAIL with `Got 2 results` on these rows.
+-- FAIL with `Got 1 result` on these rows.
 --
 -- business_combination_80pct.sql's full-method deal alone (group ZZH, US GAAP, root row fully declared), except
 -- that the deal declares nci_measurement 'full' and NO nci_fair_value (0, the column default). Under full the
 -- journal credits NCI with the minority's declared fair value translated at the consideration currency's
 -- Closing rate, so an undeclared figure would post NCI 0 and understate goodwill by the minority's share:
 --   nci_fair_value       0 (undeclared)   -> missing (one row)
---   share_acquired_pct   80               -> the row J12 refusal, which stays until konsolidat#204 (one row)
+-- share_acquired_pct 80 is accepted since konsolidat#204 (a) (konsol#117 pair 2): it is not flagged.
 -- Nothing else is flagged: the root row declares every policy and account the deal needs.
 --
 -- The deal tables do not exist live yet: the fixture creates the four the journal reads (the costs table is
