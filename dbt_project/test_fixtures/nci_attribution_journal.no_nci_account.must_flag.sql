@@ -1,9 +1,9 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_nci_account_declared_for_partial_subs
--- gate: expect assert_nci_attribution_balances pass
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_equals_minority_result
 -- gate: expect assert_nci_attribution_equals_minority_result flag 1
--- gate: expect assert_nci_account_declared_for_partial_subs flag 1
 -- MUST FLAG: the root row declares no nci_account, so no journal is posted and the minority's share (-18.00 in P3)
--- has no home: the equality test flags the one (group, entity, period), the K3 warning flags the group.
+-- has no home: the equality test flags the one (group, entity, period). assert_nci_account_declared_for_partial_subs (error)
+-- names the same cause per group, but as an error it SKIPs everything downstream of gold_entity_ownership in a build, so
+-- it is not in this build line: its own fixtures (.no_account / .no_retained_earnings) cover it.
 -- konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's share of a subsidiary's result and
 -- CTA is one NCI journal per (group, entity, FY, period). ZZP (USD, root) holds 70% of ZZC (SEK, method full).
 -- FY2026 P3 in SEK: receivables +600, cost +400, revenue -1,000 (a local profit of 600). Governed SEK->USD P3:

@@ -14,7 +14,20 @@
    the result and CTA to the group's nci_account. This schedule's closing
    balance is the minority's share of net assets at closing; under full-goodwill
    measurement it differs from the fully consolidated TB's nci_account balance
-   by the acquisition-date premium (follow-up F1). No logic change. #}
+   by the acquisition-date premium (follow-up F1).
+
+   Review fix (konsol#117 pair 2, finding 5), so the schedule agrees with that header:
+     share_of_profit    the sum of nci_amount over the entity-period's P&L rows,
+                        the synthesized year-end close left out (is_year_end_close, by
+                        entity / FY / period / account) exactly as the attribution
+                        journal leaves it out: the close moves the year's result to
+                        retained earnings and is no profit of its period, so P13
+                        shows 0 where it used to show -(the year);
+     nci_closing_balance the minority's share of net assets at the closing rate:
+                        the CUMULATIVE sum of nci_amount over the entity's
+                        balance-sheet rows that are not equity, every period up to
+                        and including this one. It used to be the period's
+                        MOVEMENT over all balance-sheet rows, equity included. #}
 
 {# F2: ownership comes from gold_entity_ownership — dated, chain-multiplied and
    resolved once. This read the consolidation_groups seed, so an entity's NCI was
@@ -49,6 +62,13 @@ with nci_entities as (
       and eo.consolidation_method = 'full'
 ),
 
+{# The synthesized year-end close: rows of these keys are no profit of the period. #}
+close_keys as (
+    select distinct data_area_id, fiscal_year, fiscal_period, main_account
+    from {{ ref('gold_trial_balance_by_partner') }}
+    where is_year_end_close = 1
+),
+
 {# NCI share of profit per period #}
 nci_profit as (
     select
@@ -64,25 +84,44 @@ nci_profit as (
         and ctb.fiscal_year = ne.fiscal_year
         and ctb.fiscal_period = ne.fiscal_period
     where ctb.is_pnl = 1
+      and (ctb.data_area_id, ctb.fiscal_year, ctb.fiscal_period, ctb.main_account)
+          not in (select data_area_id, fiscal_year, fiscal_period, main_account from close_keys)
     group by ctb.consolidation_group, ctb.data_area_id, ctb.fiscal_year, ctb.fiscal_period
 ),
 
-{# NCI opening balance: cumulative BS NCI at period start #}
-nci_bs_balance as (
+{# The minority's share of net assets at the closing rate, per period: the NCI
+   amount of the non-equity balance-sheet rows is the period's movement of the
+   entity's net assets (translated at the closing rate, retranslation included).
+   Summed over EVERY period of the entity in the group (not only the periods the
+   entity is partly owned in: the figure is a running balance), then accumulated
+   below. #}
+nci_bs_movement as (
     select
-        ctb.consolidation_group,
-        ctb.data_area_id,
-        ctb.fiscal_year,
-        ctb.fiscal_period,
+        ctb.consolidation_group as consolidation_group,
+        ctb.data_area_id as data_area_id,
+        ctb.fiscal_year as fiscal_year,
+        ctb.fiscal_period as fiscal_period,
         sum(ctb.nci_amount) as nci_bs_total
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
-    inner join nci_entities as ne
-        on ctb.consolidation_group = ne.consolidation_group
-        and ctb.data_area_id = ne.data_area_id
-        and ctb.fiscal_year = ne.fiscal_year
-        and ctb.fiscal_period = ne.fiscal_period
     where ctb.is_balance_sheet = 1
+      and ctb.is_equity = 0
+      and (ctb.consolidation_group, ctb.data_area_id) in
+          (select consolidation_group, data_area_id from nci_entities)
     group by ctb.consolidation_group, ctb.data_area_id, ctb.fiscal_year, ctb.fiscal_period
+),
+
+nci_bs_balance as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        sum(nci_bs_total) over (
+            partition by consolidation_group, data_area_id
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and current row
+        ) as nci_bs_total
+    from nci_bs_movement
 ),
 
 {# Build movement schedule per entity per period #}

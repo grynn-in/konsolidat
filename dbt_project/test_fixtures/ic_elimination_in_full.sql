@@ -5,11 +5,15 @@
 --   ZZS ZZ1000 +1000               | ZZS ZZ2100 -1000 (partner ZZP)
 -- IFRS 10.B86(c): both sides are eliminated at 100% (-1000 on ZZP's receivable, +1000 on ZZS's payable), nothing is
 -- sent to an NCI leg. Before the change the 70% side was eliminated at 700 and 300 went to the NCI line.
--- Layer 1 is not yet at 100% on this branch (konsolidat#204 K1 runs in parallel), so the group balance of ZZS is 70%
--- here; the test reads the FULL (translated) matched amount and so flags before the model change and passes after it.
+-- Layer 1 (the entity layer) carries ZZS at 100% since K1; the test reads the FULL (translated) matched amount.
+-- Review fix (finding 8b): the group declares an intercompany-difference account ZZ5900 and the pair carries a residual
+-- (ZZP's receivable is 1000, ZZS's payable is 990: 10 left), and ZZS has a P&L row (revenue ZZ4000, 300 against cash).
+-- The residual is booked to ZZ5900 in full, the P&L row stays in the entity layer at 100%, the eliminations still net to
+-- zero and the fully consolidated TB still balances.
 -- gate: build +gold_fully_consolidated_tb assert_ic_eliminated_in_full assert_ic_elimination_nets_zero assert_ic_pair_left_is_reversed assert_end_to_end_bs_balances
 -- gate: expect assert_ic_eliminated_in_full pass
 -- gate: expect assert_ic_elimination_nets_zero pass
+-- gate: expect assert_end_to_end_bs_balances pass
 -- The live consolidation_groups may predate its IC and policy columns, and the submission tables their partner
 -- and basis columns: add them first. The lineage of gold_consolidated_trial_balance reads these tables too, empty
 -- here, so they are named to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
@@ -60,7 +64,9 @@ VALUES
   ('ZZ2100', 'ZZ intercompany payables', 'ZZCOA', '', 0, 'Liability', 'Balance Sheet', 'Current Liabilities', 'Credit', 'Balance', 'closing', 1, 0, 1, '', '', 0, 'PAYABLES', 'Published', 0),
   ('ZZ3000', 'ZZ share capital', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0),
   ('ZZ3100', 'ZZ retained earnings', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 1),
-  ('ZZ3400', 'ZZ non-controlling interest', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0);
+  ('ZZ3400', 'ZZ non-controlling interest', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0),
+  ('ZZ4000', 'ZZ revenue', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published', 0),
+  ('ZZ5900', 'ZZ intercompany differences', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0);
 INSERT INTO epm_staging.intercompany_accounts
   (main_account, counterpart_account, description, status)
 VALUES
@@ -82,7 +88,7 @@ VALUES
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency, ic_difference_account, ic_difference_tolerance, nci_account)
 VALUES
-  ('ZZG', '', 'ZZ Group', 'EUR', '', 0, 'ZZ3400'),
+  ('ZZG', '', 'ZZ Group', 'EUR', 'ZZ5900', 0, 'ZZ3400'),
   ('ZZG', 'ZZP', 'ZZ Parent', 'EUR', '', 0, ''),
   ('ZZG', 'ZZS', 'ZZ Subsidiary', 'EUR', '', 0, '');
 INSERT INTO epm_staging.consolidation_ancestry
@@ -100,10 +106,11 @@ INSERT INTO epm_raw.trial_balance_submissions
 VALUES
   ('ZZBP1', 'ZZP', 2026, 1, 'ZZ1100', 1000, 0, '', 'ZZ-TBS-P1', '2026-02-05 09:00:00', 'ZZS'),
   ('ZZBP1', 'ZZP', 2026, 1, 'ZZ3000', 0, 1000, '', 'ZZ-TBS-P1', '2026-02-05 09:00:00', ''),
-  ('ZZBS1', 'ZZS', 2026, 1, 'ZZ1000', 1000, 0, '', 'ZZ-TBS-S1', '2026-02-05 09:00:00', ''),
-  ('ZZBS1', 'ZZS', 2026, 1, 'ZZ2100', 0, 1000, '', 'ZZ-TBS-S1', '2026-02-05 09:00:00', 'ZZP');
+  ('ZZBS1', 'ZZS', 2026, 1, 'ZZ1000', 1290, 0, '', 'ZZ-TBS-S1', '2026-02-05 09:00:00', ''),
+  ('ZZBS1', 'ZZS', 2026, 1, 'ZZ2100', 0, 990, '', 'ZZ-TBS-S1', '2026-02-05 09:00:00', 'ZZP'),
+  ('ZZBS1', 'ZZS', 2026, 1, 'ZZ4000', 0, 300, '', 'ZZ-TBS-S1', '2026-02-05 09:00:00', '');
 INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
   ('ZZBP1', 'ZZ-TBS-P1', 'ZZP', 2026, 1, 2, '2026-02-05 09:00:00', 'Period movement'),
-  ('ZZBS1', 'ZZ-TBS-S1', 'ZZS', 2026, 1, 2, '2026-02-05 09:00:00', 'Period movement');
+  ('ZZBS1', 'ZZ-TBS-S1', 'ZZS', 2026, 1, 3, '2026-02-05 09:00:00', 'Period movement');

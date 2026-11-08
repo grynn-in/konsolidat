@@ -2,7 +2,7 @@
 -- (the NCI line K2 posts and the deal journals use). Replaces ic_nci_account_declared (konsolidat#208).
 -- Group ZZG (USD): ZZP held 100%, ZZS held 80%, both full from 2026-01-01, both USD (no rates).
 -- The root row declares ZZ3400: nothing is flagged.
--- gate: build +gold_entity_ownership assert_nci_account_declared_for_partial_subs
+-- gate: build +gold_entity_ownership silver_main_accounts assert_nci_account_declared_for_partial_subs
 -- gate: expect assert_nci_account_declared_for_partial_subs pass
 -- The live consolidation_groups may predate its IC and policy columns, and the submission tables their partner
 -- and basis columns: add them first. The lineage of gold_consolidated_trial_balance reads these tables too, empty

@@ -19,11 +19,18 @@
 -- A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal
 -- would otherwise post to a code the chart does not know.
 --
--- Refused by name (row J12): share_disposed_pct < 100 or retained_interest_pct > 0
---   partial disposals and retained interests are not implemented: the disposal journal posts nothing for them
---   (konsolidat#310; design §5/§7), which assert_disposal_gain_loss_exists also names. Layer 1 now carries a
---   controlled subsidiary at 100% (konsolidat#204 (a)), so the blocker is the journal, not the layer. One row per
---   such disposal, whatever the root row declares.
+-- Refused by name (row J12; reworded in the konsol#117 pair 2 review, finding 2): a disposal of a partly owned
+-- subsidiary, a partial disposal or a retained interest. Refused when the entity is HELD below 100%
+-- (gold_entity_ownership.effective_ownership_pct x 100 at the disposal period, the latest row at or before it)
+-- OR share_disposed_pct is below that holding OR retained_interest_pct > 0:
+--   disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the
+--   disposal journal derecognises the deal's opening NCI only and recycles the whole CTA (konsolidat#310)
+-- Why a full sale of a 70% holding (konsol requires Share Disposed = the current holding, 70) is refused too: the
+-- journal would derecognise only the deal journal's NCI, not the attribution layer's (nci_attribution), and would
+-- recycle 100% of the CTA where IAS 21.48B recycles only the parent's share. The old test compared share_disposed_pct
+-- with 100 and so refused that sale under a misleading reason, and let share 100 against a 70% holding through.
+-- An entity with no ownership row at all is taken as held at 100%. One row per such disposal, whatever the root row
+-- declares. Fixtures: .partial_share, .partly_owned, .held_below_100 (.must_flag).
 --
 -- Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 with root as (
@@ -53,6 +60,23 @@ deal_period as (
     group by bd.name
 ),
 
+-- the entity's holding at the disposal period: the latest gold_entity_ownership row at or before it, in percent
+deal_holding as (
+    select
+        bd.name as deal,
+        argMax(eo.effective_ownership_pct, toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) * 100.0 as holding_pct
+    from {{ source('epm_staging', 'business_disposals') }} as bd
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    inner join {{ ref('gold_entity_ownership') }} as eo
+        on eo.consolidation_group = bd.consolidation_group
+        and eo.data_area_id = bd.disposed_entity
+    where fp.start_date <= bd.disposal_date
+      and fp.end_date >= bd.disposal_date
+      and fp.period_type != 'Closing'
+      and toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period <= toUInt32(fp.fiscal_year) * 1000 + fp.fiscal_period
+    group by bd.name
+),
+
 deals_base as (
     select
         bd.name as deal,
@@ -61,10 +85,14 @@ deals_base as (
         bd.disposal_date as disposal_date,
         toFloat64(bd.share_disposed_pct) as share_disposed_pct,
         toFloat64(bd.retained_interest_pct) as retained_interest_pct,
-        toUInt64(coalesce(dp.n_periods, 0)) as n_periods
+        toUInt64(coalesce(dp.n_periods, 0)) as n_periods,
+        -- no ownership row: taken as held at 100%, so a share below 100 is still refused
+        if(dh.deal = '', 100.0, dh.holding_pct) as holding_pct
     from {{ source('epm_staging', 'business_disposals') }} as bd
     left join deal_period as dp
         on dp.deal = bd.name
+    left join deal_holding as dh
+        on dh.deal = bd.name
 ),
 
 chart as (
@@ -84,6 +112,10 @@ deals as (
         d.share_disposed_pct as share_disposed_pct,
         d.retained_interest_pct as retained_interest_pct,
         d.n_periods as n_periods,
+        toUInt8(d.holding_pct < 100.0 - 0.000001
+                or d.share_disposed_pct < d.holding_pct - 0.000001
+                or d.retained_interest_pct > 0.0) as is_refused,
+        d.holding_pct as holding_pct,
         toUInt8(coalesce(r.n_root, 0) > 0) as has_root,
         coalesce(r.goodwill_account, '') as goodwill_account,
         coalesce(r.fair_value_adjustment_account, '') as fair_value_adjustment_account,
@@ -116,17 +148,17 @@ checks as (
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          disposal_gain_loss_account, disposal_proceeds_account,
          goodwill_account, fair_value_adjustment_account, nci_account,
-         concat(toString(share_disposed_pct), ' disposed, ', toString(retained_interest_pct), ' retained')] as value,
+         concat(toString(share_disposed_pct), ' disposed of a holding of ', toString(round(holding_pct, 4)), ', ', toString(retained_interest_pct), ' retained')] as value,
         [toUInt8(1), toUInt8(1),
          has_root, has_root,
          has_root, has_root,
-         toUInt8(has_root = 1 and (retained_interest_pct > 0.0 or share_disposed_pct < 100.0)),
-         toUInt8(retained_interest_pct > 0.0 or share_disposed_pct < 100.0)] as required,
+         toUInt8(has_root = 1 and is_refused = 1),
+         is_refused] as required,
         [0, 0,
          1, 1,
          1, 1, 1,
          0] as is_account,
-        -- the partial-disposal refusal (row J12): the value is present, the disposal is still refused
+        -- the partly-owned / partial-disposal refusal (row J12): the value is present, the disposal is still refused
         [0, 0,
          0, 0,
          0, 0, 0,
@@ -143,7 +175,7 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
-            c.is_refusal = 1, 'partial disposals and retained interests are not implemented: the disposal journal posts nothing for them (konsolidat#310)',
+            c.is_refusal = 1, 'disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the disposal journal derecognises the deal''s opening NCI only and recycles the whole CTA (konsolidat#310)',
             c.value = '', 'missing',
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',
             ''

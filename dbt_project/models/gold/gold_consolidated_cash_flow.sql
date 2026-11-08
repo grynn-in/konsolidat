@@ -50,6 +50,11 @@ with fctb as (
         journal_id
     from {{ ref('gold_fully_consolidated_tb') }}
     where fiscal_period > 0
+      -- The NCI attribution journal (konsol#117 pair 2 K2) moves the minority's share of result and
+      -- CTA between equity lines (RE / CTA / the NCI account) and sums to zero: an equity
+      -- reclassification, no cash. Left in, it shows as a Financing/non-cash line. Excluding a
+      -- zero-sum layer leaves the tie to the cash movement untouched.
+      and adjustment_type != 'nci_attribution'
 ),
 
 classified as (

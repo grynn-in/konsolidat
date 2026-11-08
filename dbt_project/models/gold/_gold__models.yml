@@ -79,8 +79,8 @@ models:
       intercompany-difference account. Unrealized-profit rows come from IC
       Elimination Rules. Eliminations are posted in full (IFRS 10.B86(c);
       konsol#117 pair 2 K3, konsolidat#204 (a)): both sides at 100%, whatever
-      the holding. The minority's share is the NCI line of the NCI movement
-      schedule, not part of an elimination. This supersedes decision 12.
+      the holding. The minority's share is the NCI line of the NCI attribution
+      journal (K2), not part of an elimination. This supersedes decision 12.
     columns:
       - name: rule_id
         tests:
@@ -566,7 +566,7 @@ models:
       konsolidat#198 (design §5): the balanced disposal journal per submitted
       Business Disposal (epm_staging.business_disposals and its proceeds lines),
       journal_id DSP-<group>-<entity>-<date>, group currency, posted once in the
-      disposal period; full disposals only (retained_interest_pct = 0). Lines: (0)
+      disposal period; full disposals of wholly owned subsidiaries only (refused otherwise, see below). Lines: (0)
       every non-equity balance-sheet account of the entity derecognised at
       -(cumulative balance at the disposal period-end) x 100% (from
       gold_trial_balance, at the period's Closing rate; the equity accounts stay,
@@ -582,8 +582,12 @@ models:
       governed Closing rate for its period posts nothing, and
       assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
       stops the build on a disposal whose group has not declared an account this journal
-      posts to, and refuses a partial share by name (retained_interest_pct > 0 or
-      share_disposed_pct < 100: partial disposals and retained interests are not implemented, konsolidat#310, row J12);
+      posts to, and refuses by name a disposal of a partly owned subsidiary, a partial
+      disposal and a retained interest (the entity is held below 100% in
+      gold_entity_ownership at the disposal period, or share_disposed_pct is below the
+      holding, or retained_interest_pct > 0: the journal derecognises the deal's opening
+      NCI only, not the nci_attribution layer's, and recycles the whole CTA where IAS 21.48B
+      recycles the parent's share; not implemented, konsolidat#310, row J12);
       assert_disposal_has_balances warns on a disposal whose entity has no
       trial-balance row through the disposal period (nothing to derecognise); the root
       row is read with any() per column and assert_consolidation_group_root_unique stops
@@ -654,7 +658,7 @@ models:
       - name: difference
         description: "balance_a + balance_b: booked to ic_difference_account when the group has one"
       - name: balance_a
-        description: "Side a at 100% (translated_amount), decision 12: pairs match on this, never on group_balance_a"
+        description: "Side a at 100% (translated_amount): pairs match on this (past decision 12). group_balance_a/b and share_a/b are kept for compatibility: since konsol#117 pair 2 they equal the translated balance and 1.0"
       - name: basis
         description: "balance (balance-sheet pair: to date) or movement (P&L pair: the period), decision 14"
         tests:
