@@ -71,6 +71,20 @@ class Walkthrough(unittest.TestCase):
         self.assertAlmostEqual(self.result["figures"]["nci_opening"], 1197277.20, places=2)
 
 
+class TwelveLines(unittest.TestCase):
+    def test_readme_section_is_the_script_output(self):
+        import aquila_bike_pl as pl
+        with open(pl.EXPECTED) as f:
+            exp = json.load(f)
+        tables = pl.columns(exp)
+        pl.check(tables)
+        self.assertEqual(len(pl.LINES), 12 + 0 * len(pl.SUBTOTALS))
+        text = pl.markdown(tables, 1000, pl.notes(tables, exp))
+        with open(os.path.join(ONB, "examples", "aquila-bike", "README.md")) as f:
+            readme = f.read()
+        self.assertIn(text.strip(), readme)
+
+
 @unittest.skipUnless(shutil.which("soffice"), "LibreOffice not installed")
 class Recalculated(unittest.TestCase):
     """Every check cell the builder wrote reads zero after LibreOffice recalculates the formulas."""
