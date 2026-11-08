@@ -4,7 +4,8 @@
     ending_inventory_from_ic x margin_pct / 100 x least(share_seller, share_buyer), share = effective_ownership_pct
     where the entity is `proportional` in that group and period, else 1.0 (an entity with no ownership row there
     keeps 1.0; join_use_nulls=0 fills a miss with method '', which is not 'proportional'). The oracle reads the
-    staging inputs and gold_entity_ownership, not the model's own factor. Returns the rows that differ.
+    staging inputs and gold_entity_ownership, not the model's own factor. Returns the rows that differ. A LEFT JOIN from `expected`: a missing model row fills
+    elimination_amount with 0 (join_use_nulls=0) and is flagged whenever expected > 0.
 #}
 
 with expected as (
@@ -43,9 +44,9 @@ select
     e.consolidation_group, e.fiscal_year, e.fiscal_period, e.selling_entity, e.buying_entity,
     e.expected_amount, toFloat64(m.elimination_amount) as elimination_amount
 from expected as e
-inner join {{ ref('gold_ic_eliminations') }} as m
+left join {{ ref('gold_ic_eliminations') }} as m
     on m.rule_id = e.rule_id and m.consolidation_group = e.consolidation_group
     and m.fiscal_year = e.fiscal_year and m.fiscal_period = e.fiscal_period
     and m.debit_entity = e.selling_entity and m.credit_entity = e.buying_entity
-where m.rule_type = 'unrealized_profit'
-  and abs(toFloat64(m.elimination_amount) - e.expected_amount) > 0.01
+    and m.rule_type = 'unrealized_profit'
+where abs(toFloat64(m.elimination_amount) - e.expected_amount) > 0.01

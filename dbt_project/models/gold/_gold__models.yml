@@ -86,6 +86,7 @@ models:
       (IFRS 11.B34-B37; konsol#117 pair 3): matched legs, difference legs and
       unrealized profit are scaled by least(share_a, share_b), share being
       effective_ownership_pct for a proportional side and 1.0 otherwise.
+      The difference legs are scaled by the same factor: for S receivable 100 against J (joint operation, 50%) payable 90, the matched 45 is eliminated on both sides, S's residual 10 x 0.5 = 5 goes to the difference account, and S keeps 50, the co-operator's share of the receivable, which from the group's view is the external claim whatever J's books say.
     columns:
       - name: rule_id
         tests:
