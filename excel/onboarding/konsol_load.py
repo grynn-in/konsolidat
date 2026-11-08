@@ -502,8 +502,8 @@ class Loader:
                     raise Failed("%s: %s is empty" % (where, col))
             if not str(r.get("reason") or "").strip():
                 raise Failed("%s: reason is required (the arrangement, the holders and the standard)" % where)
-            if r["consolidation_method"] not in ("full", "equity", "none"):
-                raise Failed("%s: method %s is refused (full, equity or none; proportional waits for konsol#117 pair 3)" % (where, r["consolidation_method"]))
+            if r["consolidation_method"] not in ("full", "proportional", "equity", "none"):
+                raise Failed("%s: method %s is refused (full, proportional, equity or none)" % (where, r["consolidation_method"]))
             if r.get("end_date") and r["end_date"] < r["effective_date"]:
                 raise Failed("%s: end_date %s is before effective_date %s" % (where, r["end_date"], r["effective_date"]))
 

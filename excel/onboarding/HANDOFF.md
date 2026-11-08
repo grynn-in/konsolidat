@@ -148,8 +148,9 @@ Python ≥ 3.10 and `openpyxl` (PEP 723 header: `uv run <script>` works). No Lib
   if konsol insists on Draft-then-publish, create Draft and call the `publish` doctype method instead.
 - Dimension Mapping rows for US01 are `Draft` (connector-only; the example is upload-only) — fine, just noise.
 - Group Exchange Rate create then submit: submit is the approval; period must be declared (fiscal years load first) and open.
-- Equity-method associate (ES03, 40 %) and proportional JV (DE04, 50 %) upload full trial balances; check what the warehouse does with
-  `consolidation_method = equity / proportional` — it may be unimplemented and those two may need `none` or exclusion.
+- Equity-method associate (ES03, 40 %) and the 50 % proportional joint operation (DE04) upload full trial balances. Since
+  konsol#117 pair 3 (8 Nov 2026) the warehouse computes both: `equity` as a one-line share of result
+  (gold_equity_method_associates), `proportional` as the operator's share of each line with no NCI (IFRS 11.20).
 - FY2025 has no trial balances for P1–P11; `assert_year_end_close_declared` needs a Closing period after the last claimed period (P12 < CLS 13) — satisfied.
 
 ## Reading the konsol source
