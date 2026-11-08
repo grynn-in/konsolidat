@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **141** |
-| carrying their reasoning | 123 |
-| citing the issue that caused them | 107 |
-| severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 119 |
+| assertions | **143** |
+| carrying their reasoning | 122 |
+| citing the issue that caused them | 110 |
+| severity `warn` (reports, does not stop a build) | 21 |
+| severity `error` (stops the build, and its children) | 122 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,7 +26,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 19
 - [Currency and translation](#currency-and-translation) — 23
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 21
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
@@ -34,7 +34,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 4
+- [Calendar and periods](#calendar-and-periods) — 5
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 3
 
@@ -360,6 +360,10 @@ Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severi
 
 <sub>`error (default)` · `tests/assert_all_layers_present.sql` · konsol#117 konsolidat#204 konsolidat#238 konsolidat#249 konsolidat#261</sub>
 
+### `cash_flow_excludes_nci_attribution`
+
+<sub>`error` · `tests/assert_cash_flow_excludes_nci_attribution.sql` · konsol#117</sub>
+
 ### `consolidated_cf_reconciles`
 
 **Phase 6.1 Test (AC#5): at group grain, per consolidation_group / fiscal_year / fiscal_period, the sum of Operating + Investing + Financing cash flows must equal the net change in (translated) cash — the movement of is_cash = 1 accounts across all consolidation layers — within +/- 0.01.**
@@ -438,35 +442,33 @@ Each pair's two sides are recomputed from gold_consolidated_trial_balance at 100
 
 ### `nci_account_declared_for_partial_subs`
 
-<sub>`warn` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
-
-### `nci_attribution_balances`
-
-**konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): every NCI attribution journal sums to zero.**
-
-Retained earnings, CTA and the NCI account take the result and CTA the minority owns out of the group's equity lines and into the NCI line, so no journal may leave a residual. Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql.
-
-<sub>`error` · `tests/assert_nci_attribution_balances.sql` · konsol#117 konsolidat#204</sub>
+<sub>`error` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
 
 ### `nci_attribution_equals_minority_result`
 
-**konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the NCI line posted for a partly owned full-method subsidiary equals the minority's share of its result and CTA.**
+**konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): each line of the NCI attribution journal posted for a partly owned full-method subsidiary equals the minority's share of its result and CTA.**
 
-Oracle, built from the consolidated TB rows and never from the journal's own CTEs or from gold_fx_revaluation: per (group, entity, FY, period), expected = (1 - effective_ownership_pct) x (sum of translated P&L, year-end close rows excluded + the CTA plug) where the CTA plug is minus the sum of translated amounts of ALL the entity's rows (the plug restores the entity to zero). The year-end close (konsolidat#259, gold_trial_balance_by_partner. is_year_end_close) is excluded by account, as gold_equity_method_associates does: a key's close rows are never mixed with activity in one period. A missing journal where the expected figure is non-zero flags too: that is how a chart without a retained-earnings account, or a group whose root declares no nci_account, is named. Rows the model does not attribute (method other than full, ownership 1, incomplete chain) are not expected. Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql (+ .no_nci_account.must_flag).
+Oracle, built from the consolidated TB rows and never from the journal's own CTEs or from gold_fx_revaluation. Per (group, entity, FY, period), with m = 1 - effective_ownership_pct: P   = sum of translated P&L, year-end close rows excluded (gold_trial_balance_by_partner. is_year_end_close, by account, as gold_equity_method_associates does) A   = sum of translated amounts of ALL the entity's rows (the CTA plug restores the entity to zero, so plug = -A) retained-earnings line  expected = -m x P CTA line                expected = +m x A          (= -m x plug) NCI line                expected = -(RE line + CTA line) = m x (P - A), on the declared nci_account Each line is compared on its own (konsol#117 pair 2 review, finding 8a): the former assert_nci_attribution_balances could not fail, because the NCI line is built as the sum of the other two. Here a wrong RE line or a wrong CTA line fails even when the journal still sums to zero. One row per entity-period, naming the lines that differ. A missing journal where an expected figure is non-zero flags too: that is how a chart without a retained-earnings account, or a group whose root declares no nci_account, is named. That cause is ALSO named, once per group, by assert_nci_account_declared_for_partial_subs (error): the same cause twice is accepted, the group row says why, this row says which entity-period and how much. Rows the model does not attribute (method other than full, ownership 1, incomplete chain) are not expected. Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql (+ .no_nci_account.must_flag).
 
-<sub>`error` · `tests/assert_nci_attribution_equals_minority_result.sql` · konsol#117 konsolidat#204 konsolidat#259</sub>
+<sub>`error` · `tests/assert_nci_attribution_equals_minority_result.sql` · konsol#117 konsolidat#204</sub>
 
 ### `nci_movement_reconciles`
 
-**PRD-13 Test: NCI movement — share of profit must be consistent with the NCI amount from consolidated TB P&L entries**
+**PRD-13 Test: NCI movement.**
 
-<sub>`error (default)` · `tests/assert_nci_movement_reconciles.sql`</sub>
+Two checks, one row each per entity-period that breaks them: share_of_profit   equals the sum of nci_amount over the consolidated TB's P&L rows with the synthesized year-end close left out, exactly as gold_nci_attribution_journal excludes it (konsol#117 pair 2 review, finding 5): the close moves the year's result to retained earnings and is no profit of the period; closing_balance   equals the minority's share of net assets at the closing rate: the sum of nci_amount over the entity's balance-sheet rows that are not equity, for every period up to and including this one (a self-join, not the model's window). Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql.
+
+<sub>`error (default)` · `tests/assert_nci_movement_reconciles.sql` · konsol#117</sub>
 
 ### `nci_zero_for_full_ownership`
 
 **PRD-4 Test: NCI amount must be zero for fully-owned entities**
 
 <sub>`error (default)` · `tests/assert_nci_zero_for_full_ownership.sql`</sub>
+
+### `no_ownership_step_on_partial_full_subsidiary`
+
+<sub>`error` · `tests/assert_no_ownership_step_on_partial_full_subsidiary.sql` · konsol#117 konsolidat#318</sub>
 
 ### `ownership_chain_complete`
 
@@ -544,9 +546,9 @@ Both are the same deal's figure in group currency (_staging__sources.yml: "the h
 
 **konsolidat#198 (design §1/§5, row J10;**
 
-PR #203 review 2): a submitted Business Disposal whose group has not declared an account the disposal journal posts to. gold_business_disposal_journal never assumes an account code (design §1: "dbt never assumes a code"), so an undeclared account either drops the disposal (no root row, no calendar period) or posts to main_account ''. Both are silent; this test stops the build and names them: one row per disposal and field, with the value found and why it is not acceptable. It mirrors assert_acquisition_accounts_declared for the acquisition journal. Fixture: dbt_project/test_fixtures/assert_disposal_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "there are no defaults"): root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts; without it nothing else of the group is checked (one line says it all) disposal_period                a non-Closing epm_staging.fiscal_periods row spanning disposal_date disposal_gain_loss_account     always: the balancing line of every disposal journal disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through) goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal fair_value_adjustment_account  with none posts a zero, but the account must still be known) nci_account                    when a minority exists: retained_interest_pct > 0 or share_disposed_pct < 100 A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Refused by name (row J12): share_disposed_pct < 100 or retained_interest_pct > 0 partial disposals and retained interests are not implemented: the disposal journal posts nothing for them (konsolidat#310; design §5/§7), which assert_disposal_gain_loss_exists also names. Layer 1 now carries a controlled subsidiary at 100% (konsolidat#204 (a)), so the blocker is the journal, not the layer. One row per such disposal, whatever the root row declares. Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
+PR #203 review 2): a submitted Business Disposal whose group has not declared an account the disposal journal posts to. gold_business_disposal_journal never assumes an account code (design §1: "dbt never assumes a code"), so an undeclared account either drops the disposal (no root row, no calendar period) or posts to main_account ''. Both are silent; this test stops the build and names them: one row per disposal and field, with the value found and why it is not acceptable. It mirrors assert_acquisition_accounts_declared for the acquisition journal. Fixture: dbt_project/test_fixtures/assert_disposal_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "there are no defaults"): root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts; without it nothing else of the group is checked (one line says it all) disposal_period                a non-Closing epm_staging.fiscal_periods row spanning disposal_date disposal_gain_loss_account     always: the balancing line of every disposal journal disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through) goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal fair_value_adjustment_account  with none posts a zero, but the account must still be known) nci_account                    when a minority exists: retained_interest_pct > 0 or share_disposed_pct < 100 A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Refused by name (row J12; reworded in the konsol#117 pair 2 review, finding 2): a disposal of a partly owned subsidiary, a partial disposal or a retained interest. Refused when the entity is HELD below 100% (gold_entity_ownership.effective_ownership_pct x 100 at the disposal period, the latest row at or before it) OR share_disposed_pct is below that holding OR retained_interest_pct > 0: disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the disposal journal derecognises the deal's opening NCI only and recycles the whole CTA (konsolidat#310) Why a full sale of a 70% holding (konsol requires Share Disposed = the current holding, 70) is refused too: the journal would derecognise only the deal journal's NCI, not the attribution layer's (nci_attribution), and would recycle 100% of the CTA where IAS 21.48B recycles only the parent's share. The old test compared share_disposed_pct with 100 and so refused that sale under a misleading reason, and let share 100 against a 70% holding through. An entity with no ownership row at all is taken as held at 100%. One row per such disposal, whatever the root row declares. Fixtures: .partial_share, .partly_owned, .held_below_100 (.must_flag). Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 
-<sub>`error (default)` · `tests/assert_disposal_accounts_declared.sql` · konsolidat#198 konsolidat#203 konsolidat#204 konsolidat#310</sub>
+<sub>`error (default)` · `tests/assert_disposal_accounts_declared.sql` · konsol#117 konsolidat#198 konsolidat#203 konsolidat#310</sub>
 
 ### `disposal_gain_loss_exists`
 
@@ -951,6 +953,10 @@ appear
 konsol checks this when the journal is approved; this catches a calendar changed afterwards.
 
 <sub>`error (default)` · `tests/assert_auto_reversal_period_declared.sql` · konsol#305</sub>
+
+### `closing_period_activity_on_partial_subsidiary`
+
+<sub>`error` · `tests/assert_closing_period_activity_on_partial_subsidiary.sql` · konsol#117 konsolidat#204 konsolidat#259</sub>
 
 ### `fiscal_calendar_is_loaded`
 

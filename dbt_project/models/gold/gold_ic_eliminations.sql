@@ -19,8 +19,8 @@
    balances, transactions, income and expenses IN FULL, and layer 1 now
    carries a full-method subsidiary at 100% (konsolidat#204 option (a)), so
    both sides of a pair are eliminated at 100% whatever the holding. The
-   minority's share of a subsidiary is one NCI line, posted from nci_amount
-   (gold_nci_movement_schedule), not a part of the elimination. This
+   minority's share of a subsidiary is one NCI line, posted by the attribution
+   journal (gold_nci_attribution_journal, K2), not a part of the elimination. This
    supersedes decision 12 (13 Sep 2026: eliminate at the share both sides
    hold, the rest to an NCI leg, and a second 'nci' view for the 100%
    column) by Deepak Pai's decision of 8 Nov 2026 (konsol#117). Every row is

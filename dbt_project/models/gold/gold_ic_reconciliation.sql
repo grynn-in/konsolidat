@@ -18,13 +18,16 @@
    Decided 13 Sep 2026:
    - Decisions 1 and 2: the counterparty is the partner on each row, never
      guessed. A row with no partner is not paired; gold_ic_unmatched lists it.
-   - Decision 12: pairs match on the FULL translated amount (balance_a,
+   - Decision 12 (past): pairs match on the FULL translated amount (balance_a,
      balance_b = translated_amount at 100%), never the ownership-weighted
      group_amount, so a difference is a real mismatch and never ownership.
-     group_balance_* and share_* say what the group view holds of each side;
-     gold_ic_eliminations eliminates each side at that share, sends the
-     minority owners' portion to the NCI line, and eliminates the NCI view's
-     share of the same balance there.
+     Since konsol#117 pair 2 (K1, K3; Deepak Pai, 8 Nov 2026) a full-method
+     subsidiary is in the group view at 100% too, and gold_ic_eliminations
+     eliminates each side IN FULL (IFRS 10.B86(c)). group_balance_a/b and
+     share_a/b are RETAINED FOR COMPATIBILITY (the contract is unchanged) and
+     carry no policy any more: since pair 2 share_a = share_b = 1.0 and
+     group_balance_* equal balance_*, the translated balance, for every
+     full-method side (an equity-method side is not in the pair set at all).
    - Decision 13: one intercompany-difference account per group, and each
      difference is labelled by cause (difference_cause). The rule:
        * 'none'    when |difference| < materiality_floor();
@@ -397,12 +400,13 @@ select
     currency_b,
     local_a,
     local_b,
-    {# decision 12: matched and compared at 100% #}
+    {# matched and compared at 100% (past decision 12, still true) #}
     translated_a as balance_a,
     translated_b as balance_b,
     group_a as group_balance_a,
     group_b as group_balance_b,
-    {# the share of each side the group view holds (ownership) #}
+    {# retained for compatibility: since pair 2 the group view holds every full-method side at 100%,
+       so share_a = share_b = 1.0 and group_balance_* = balance_* #}
     if(abs(translated_a) >= {{ materiality_floor() }}, group_a / translated_a, 1.0) as share_a,
     if(abs(translated_b) >= {{ materiality_floor() }}, group_b / translated_b, 1.0) as share_b,
     {# offsetting sides only: two debits (or two credits) match nothing #}
