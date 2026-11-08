@@ -1,5 +1,8 @@
 -- assert_all_layers_present: must PASS (konsolidat#238-4). Every source has rows for ZZG and every layer is
--- present, including the minority owners' share of a matched pair as ic_elimination_nci.
+-- present.
+-- konsol#117 pair 2 K2: the test also reads gold_nci_attribution_journal, a model table a live stack gets from its first dbt run.
+-- No-op where it exists; seeded empty here: no group has an nci_attribution layer unless a fixture inserts one.
+CREATE TABLE IF NOT EXISTS epm_gold.gold_nci_attribution_journal (consolidation_group String, data_area_id String, fiscal_year UInt16, fiscal_period UInt16, main_account String, account_name String, reporting_currency String, amount Float64, adjustment_type String, journal_id String, account_role String) ENGINE = MergeTree ORDER BY tuple();
 INSERT INTO epm_gold.gold_consolidated_trial_balance
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name,
    is_balance_sheet, is_pnl, is_equity, dim_business_unit, dim_cost_center, dim_department, local_amount,
@@ -15,13 +18,6 @@ INSERT INTO epm_gold.gold_ic_eliminations
 VALUES
   ('IC:ZZ1500/ZZ2500', 'Intercompany: matched', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
    'matched', '', 'balance', 'group', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
-INSERT INTO epm_gold.gold_ic_eliminations
-  (rule_id, rule_name, rule_type, consolidation_group, fiscal_year, fiscal_period, debit_account, credit_account,
-   debit_entity, credit_entity, elimination_amount, debit_elimination, credit_elimination, elimination_kind,
-   difference_cause, basis, elimination_view, entity_a, account_a, entity_b, account_b)
-VALUES
-  ('IC:ZZ1500/ZZ2500', 'Intercompany: nci', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
-   'nci', '', 'balance', 'group', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
 INSERT INTO epm_gold.gold_consolidation_adjustments
   (consolidation_group, adjustment_type, journal_id, data_area_id, fiscal_year, fiscal_period, main_account,
    debit_amount, credit_amount, net_amount, description, status)
@@ -36,6 +32,5 @@ INSERT INTO epm_gold.gold_fully_consolidated_tb
 VALUES
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', ''),
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'ic_elimination', ''),
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'ic_elimination_nci', ''),
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'topside', ''),
   ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'cta', '');
