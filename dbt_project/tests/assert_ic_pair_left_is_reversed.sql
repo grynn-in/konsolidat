@@ -14,7 +14,7 @@
     For every balance-sheet pair, and every period the warehouse holds from
     the pair's first reconciliation row to the group's latest period, in
     which either side is not a member: the pair's eliminations to date, per
-    view, account and entity, are 0. That covers the periods before a pair
+    account and entity, are 0. That covers the periods before a pair
     joins (nothing posted yet) and every period after it left (all reversed).
 #}
 
@@ -90,12 +90,12 @@ not_live as (
 
 legs as (
     select consolidation_group, entity_a, account_a, entity_b, account_b, fiscal_year, fiscal_period,
-           elimination_view, debit_account as account, debit_entity as entity, debit_elimination as amount
+           debit_account as account, debit_entity as entity, debit_elimination as amount
     from {{ ref('gold_ic_eliminations') }}
     where rule_type = 'balance' and basis = 'balance'
     union all
     select consolidation_group, entity_a, account_a, entity_b, account_b, fiscal_year, fiscal_period,
-           elimination_view, credit_account, credit_entity, credit_elimination
+           credit_account, credit_entity, credit_elimination
     from {{ ref('gold_ic_eliminations') }}
     where rule_type = 'balance' and basis = 'balance'
 )
@@ -105,7 +105,6 @@ select
     concat(n.entity_a, '/', n.account_a, ' <> ', n.entity_b, '/', n.account_b) as pair,
     n.fiscal_year as fiscal_year,
     n.fiscal_period as fiscal_period,
-    l.elimination_view as elimination_view,
     l.account as account,
     l.entity as entity,
     sum(l.amount) as eliminated_to_date
@@ -116,5 +115,5 @@ inner join legs as l
     and l.entity_b = n.entity_b and l.account_b = n.account_b
 where tuple(l.fiscal_year, l.fiscal_period) <= tuple(n.fiscal_year, n.fiscal_period)
 group by n.consolidation_group, n.entity_a, n.account_a, n.entity_b, n.account_b,
-         n.fiscal_year, n.fiscal_period, l.elimination_view, l.account, l.entity
+         n.fiscal_year, n.fiscal_period, l.account, l.entity
 having abs(sum(l.amount)) >= 0.01
