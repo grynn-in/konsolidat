@@ -143,6 +143,26 @@ joint_operation as (
     group by bc.name
 ),
 
+-- plus the RESOLVED method (konsol#117 pair 3 review, finding J): a group can DECLARE an entity proportional in
+-- consolidation_method_declarations while its links say full/equity, so ownership_periods hold no proportional row. The
+-- method of the earliest gold_entity_ownership row at or after the deal period that holds the entity
+-- (effective_ownership_pct > 0) catches that case; the ownership_periods checks above catch the cases this table misses.
+joint_operation_resolved as (
+    select
+        dp.deal as deal,
+        argMin(toUInt8(eo.consolidation_method = 'proportional'),
+               toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) as is_joint_operation
+    from deal_period as dp
+    inner join {{ source('epm_staging', 'business_combinations') }} as bc
+        on bc.name = dp.deal
+    inner join {{ ref('gold_entity_ownership') }} as eo
+        on eo.consolidation_group = bc.consolidation_group
+        and eo.data_area_id = bc.acquired_entity
+    where toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period >= toUInt32(dp.fiscal_year) * 1000 + dp.fiscal_period
+      and eo.effective_ownership_pct > 0
+    group by dp.deal
+),
+
 balance_fva as (
     select parent, sum(abs(toFloat64(fair_value_adjustment))) as fva_abs
     from {{ source('epm_staging', 'business_combination_acquired_balances') }}
@@ -171,12 +191,14 @@ deals_base as (
         toUInt64(coalesce(dp.n_periods, 0)) as n_periods,
         toUInt16(coalesce(dp.fiscal_year, 0)) as fiscal_year,
         toUInt16(coalesce(dp.fiscal_period, 0)) as fiscal_period,
-        toUInt8(coalesce(jo.is_joint_operation, 0)) as is_joint_operation
+        toUInt8(greatest(coalesce(jo.is_joint_operation, 0), coalesce(jr.is_joint_operation, 0))) as is_joint_operation
     from {{ source('epm_staging', 'business_combinations') }} as bc
     left join deal_period as dp
         on dp.deal = bc.name
     left join joint_operation as jo
         on jo.deal = bc.name
+    left join joint_operation_resolved as jr
+        on jr.deal = bc.name
 ),
 
 -- trial-balance rows of the entity before the acquisition period: line (0) will be posted

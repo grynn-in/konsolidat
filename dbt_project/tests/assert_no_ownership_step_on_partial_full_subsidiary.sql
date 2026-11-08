@@ -65,6 +65,26 @@ deal_lines as (
     union distinct
     select distinct consolidation_group, data_area_id, fiscal_year, fiscal_period
     from {{ ref('gold_business_disposal_journal') }}
+),
+
+-- fiscal periods strictly between a row and the previous row of its entity (konsol#117 pair 3 review, finding K): the
+-- window runs over the rows gold_entity_ownership HAS (full/proportional, complete chain), so after a gap of whole
+-- periods the previous row is the one before the gap. A step needs ADJACENT fiscal periods; across a gap the entity
+-- left the group and re-enters (a deal), which is not a step.
+gap_periods as (
+    select
+        o.consolidation_group as consolidation_group,
+        o.data_area_id as data_area_id,
+        o.fiscal_year as fiscal_year,
+        o.fiscal_period as fiscal_period,
+        count() as n_between
+    from owned as o
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    where o.prev_year != 0
+      and fp.period_type != 'Closing'
+      and (toUInt32(fp.fiscal_year), toUInt32(fp.fiscal_period)) > (toUInt32(o.prev_year), toUInt32(o.prev_period))
+      and (toUInt32(fp.fiscal_year), toUInt32(fp.fiscal_period)) < (toUInt32(o.fiscal_year), toUInt32(o.fiscal_period))
+    group by o.consolidation_group, o.data_area_id, o.fiscal_year, o.fiscal_period
 )
 
 select
@@ -88,12 +108,18 @@ select
               'an ownership step on a joint operation (consolidation_method proportional) is not implemented: the CTB is movement-grained, so earlier movements stay at the old share and later ones take the new one (IFRS 11.20)',
               'an ownership step on a controlled subsidiary is not rebalanced against NCI yet (IFRS 10.23/B96, konsolidat#318); the NCI balance keeps the old share''s net assets'))) as problem
 from owned as o
+left join gap_periods as b
+    on b.consolidation_group = o.consolidation_group
+    and b.data_area_id = o.data_area_id
+    and b.fiscal_year = o.fiscal_year
+    and b.fiscal_period = o.fiscal_period
 left join deal_lines as d
     on d.consolidation_group = o.consolidation_group
     and d.data_area_id = o.data_area_id
     and d.fiscal_year = o.fiscal_year
     and d.fiscal_period = o.fiscal_period
 where o.prev_year != 0
+  and b.n_between = 0
   and (
         (abs(o.pct - o.prev_pct) > 0.000001 and (o.pct < 1 - 0.000001 or o.prev_pct < 1 - 0.000001))
         or (o.prev_method != '' and o.consolidation_method != o.prev_method)
