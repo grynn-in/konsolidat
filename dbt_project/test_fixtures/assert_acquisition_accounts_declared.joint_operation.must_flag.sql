@@ -7,7 +7,9 @@
 -- nci_fair_value.must_flag.sql's deal (group ZZH, root row fully declared) with the acquired entity ZZT held 50%
 -- under consolidation_method proportional from the acquisition date (gold_entity_ownership resolves it from the
 -- seeded ancestry and ownership period), and the deal otherwise complete and valid: nci_measurement 'partial',
--- so no nci_fair_value is required, and nci_account is declared for the 50% share. Nothing but the refusal fires.
+-- so no nci_fair_value is required (the entity also has a trial balance for the deal period and the next, so gold_entity_ownership
+-- has rows for them; the first period at or after the deal that holds ZZT is FY2026 P4, a mid-month deal being
+-- unowned at the first day of its own period), and nci_account is declared for the 50% share. Nothing but the refusal fires.
 -- On main (no joint-operation check) the test flags 0 rows and this fixture fails (red).
 --
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
@@ -124,3 +126,29 @@ VALUES
   ('BC-ZZH-ZZT-2026-03-15', 3, 'ZZ2100', -150, 0, 'Payables'),
   ('BC-ZZH-ZZT-2026-03-15', 4, 'ZZ3000', -100, 0, 'Share capital'),
   ('BC-ZZH-ZZT-2026-03-15', 5, 'ZZ3100', -550, 0, 'Retained earnings at acquisition');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ1000', 100, 0, 'Cash', 'ZZ-TBS-J1', now(), ''),
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ1100', 200, 0, 'Receivables', 'ZZ-TBS-J1', now(), ''),
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ1420', 600, 0, 'Plant', 'ZZ-TBS-J1', now(), ''),
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ2100', 0, 150, 'Payables', 'ZZ-TBS-J1', now(), ''),
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ3000', 0, 100, 'Share capital', 'ZZ-TBS-J1', now(), ''),
+  ('ZZJ1', 'ZZT', 2026, 3, 'ZZ3100', 0, 650, 'Retained earnings', 'ZZ-TBS-J1', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZJ1', 'ZZ-TBS-J1', 'ZZT', 2026, 3, 6, now(), 'Period-end balance');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ1000', 100, 0, 'Cash', 'ZZ-TBS-J2', now(), ''),
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ1100', 200, 0, 'Receivables', 'ZZ-TBS-J2', now(), ''),
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ1420', 600, 0, 'Plant', 'ZZ-TBS-J2', now(), ''),
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ2100', 0, 150, 'Payables', 'ZZ-TBS-J2', now(), ''),
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ3000', 0, 100, 'Share capital', 'ZZ-TBS-J2', now(), ''),
+  ('ZZJ2', 'ZZT', 2026, 4, 'ZZ3100', 0, 650, 'Retained earnings', 'ZZ-TBS-J2', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZJ2', 'ZZ-TBS-J2', 'ZZT', 2026, 4, 6, now(), 'Period-end balance');

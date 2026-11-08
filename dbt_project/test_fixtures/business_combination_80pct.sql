@@ -1,4 +1,4 @@
--- gate: build +gold_business_combination_journal assert_acquisition_journal_balances assert_acquisition_accounts_declared
+-- gate: build gold_entity_ownership +gold_business_combination_journal assert_acquisition_journal_balances assert_acquisition_accounts_declared
 -- gate: expect assert_acquisition_journal_balances pass
 -- gate: expect assert_acquisition_accounts_declared pass
 -- Acquisition journal, the 80% case: NCI under PARTIAL and under FULL measurement (konsolidat#198 row J3, design §4 lines 3 and 5):
