@@ -55,9 +55,9 @@ models:
       - name: translated_amount
         description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
-        description: "Equals translated_amount for every consolidated row: a controlled subsidiary is carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2). The minority is the single NCI line in equity, not a share of each line."
+        description: "consolidation_method 'full': equals translated_amount, a controlled subsidiary carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2); the minority is the single NCI line in equity. 'proportional': translated_amount * ownership_pct, the operator's share of a joint operation (IFRS 11.20, konsol#117 pair 3)."
       - name: nci_amount
-        description: "Attribution amount: translated_amount * (1 - ownership_pct), the minority share of the line. Not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2)."
+        description: "consolidation_method 'full': attribution amount, translated_amount * (1 - ownership_pct), the minority share of the line; not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2). 'proportional': 0, a joint operation has no minority (IFRS 11.20, konsol#117 pair 3)."
       - name: retranslation_amount
         description: >
           konsolidat#257: the retranslation of the key's balance brought forward,
@@ -373,7 +373,11 @@ models:
           One path: the weakest method on it (full < proportional < equity <
           none). Several paths: the links' agreed method, or the group's
           declaration where the rule requires one; 'none' when a required
-          declaration is missing (method_source 'undeclared').
+          declaration is missing (method_source 'undeclared'). 'full' is
+          consolidated at 100% with the minority as nci_amount (IFRS 10.B86);
+          'proportional' is a joint operation (IFRS 11.20), consolidated at the
+          operator's share with nci_amount 0 (konsol#117 pair 3); 'equity' and
+          'none' are not line-consolidated.
       - name: method_source
         description: "'link' (derived from the links), 'declared' (read from consolidation_method_declarations), 'undeclared' (required and absent: nothing consolidates)."
         tests:
