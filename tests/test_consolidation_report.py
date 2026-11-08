@@ -101,3 +101,47 @@ def test_the_nci_block_is_the_trial_balances_nci_amount_only(fetch, monkeypatch)
 
 def test_the_report_has_no_nci_elimination_layer():
     assert not hasattr(report, "_layer") and not hasattr(report, "_nci_view_legs")
+
+
+# --- konsol#117 pair 2 review, finding 1: the minority is counted once ----------------
+
+def _evaluate(ws, ref, depth=0):
+    """Evaluate a cell of the form 'N' or '=A1+B1+...' (the only formulas the sheet writes here)."""
+    import re
+    v = ws[ref].value
+    if isinstance(v, str) and v.startswith("="):
+        return sum(_evaluate(ws, r) for r in re.findall(r"[A-Z]+\d+", v))
+    return v or 0
+
+
+def test_consolidated_is_the_sum_of_the_fctb_layers_with_a_70pct_entity():
+    """Since K1 the entity layer is the subsidiary at 100% and K2 posts the minority's share as the
+    'nci_attribution' layer. The Consolidated column is the sum of the layers of
+    gold_fully_consolidated_tb and nothing else: a 30% 'NCI' block read from
+    gold_consolidated_trial_balance.nci_amount on top shows a 70% subsidiary at 130%."""
+    from openpyxl import Workbook
+    from collections import defaultdict
+
+    def tree():
+        return defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+
+    consol = tree()
+    consol["entity"]["ZZ4000"]["Q1"] = -1000.0       # revenue, credit, the subsidiary at 100%
+    consol["entity"]["ZZ3400"]["Q1"] = 0.0
+    consol["nci_attribution"]["ZZ3400"]["Q1"] = -300.0  # the minority's share, in the NCI equity line
+    sections = {"sections": [("Revenue", [("ZZ4000", "ZZ revenue")]),
+                             ("Equity", [("ZZ3400", "ZZ NCI")])], "formulas": []}
+    cfg = report.ConsolidationConfig(group="ZZGRP", year=2099)
+    cfg.quarters = ["Q1"]
+    ws = Workbook().active
+    # the pre-fix call passed the TB's nci_amount (30% of every line) as the fifth argument
+    nci = {"ZZ4000": {"Q1": -300.0}}
+    report.build_consolidated_sheet(ws, cfg, sections, consol, nci, report.THEME_CONSOL, sign_flip=False)
+    labels = {ws.cell(row=6, column=c).value: c for c in range(3, 12) if ws.cell(row=6, column=c).value}
+    row = next(r for r in range(8, 20) if ws.cell(row=r, column=1).value == "ZZ4000")
+    consolidated = _evaluate(ws, ws.cell(row=row, column=labels["Consolidated"]).coordinate)
+    assert consolidated == -1000.0     # not -1300
+    assert "NCI" not in labels
+    assert "NCI attribution" in labels
+    row = next(r for r in range(8, 20) if ws.cell(row=r, column=1).value == "ZZ3400")
+    assert _evaluate(ws, ws.cell(row=row, column=labels["Consolidated"]).coordinate) == -300.0
