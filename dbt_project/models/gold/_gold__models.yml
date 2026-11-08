@@ -392,6 +392,8 @@ models:
         description: "How many paths from the group reach the entity (resolved or not)."
       - name: direct_owner_count
         description: "How many distinct nodes hold a link into the entity's own node."
+      - name: has_partial_full_link
+        description: "1 when any resolved path from the group carries a full link below 100%. With consolidation_method 'proportional' that is a joint operation behind a partly owned subsidiary: refused by name (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3 finding A)."
       - name: owner_group
         description: "The consolidation_group of the entity's own tree node (its Historical Equity Rates are declared under it); the same on every path, unchanged by konsol#117. Whether the rate join needs a group at all is open on konsol#117."
 
