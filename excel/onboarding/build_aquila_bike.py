@@ -10,7 +10,8 @@
 
 A small, fully worked consolidation case (decided with Deepak Pai, 7 Nov 2026):
 ten consolidated legal entities in ten EU countries and five currencies, plus a
-30% associate; a 70% subsidiary (the NCI case); one acquisition on 1 June 2024
+30% associate; a joint venture (ABJV) held 30% by ABDE and 30% by ABFR that the group declares
+equity-accounted (konsol#117 pair 2); a 70% subsidiary carried at 100% with the minority as the NCI line; one acquisition on 1 June 2024
 (goodwill, fair value adjustment, expensed costs); one full disposal on
 31 December 2024 (CTA recycled); intercompany trade, fees, loans and interest
 on declared account pairs with the partner on both sides; governed monthly
@@ -320,6 +321,9 @@ def member_rows():
 # code, name, country, currency, management node, kind, business-line mix, size (EUR m revenue; holding: cost base),
 # ownership %, method, owned since, first TB period (None = FY2023 P12)
 # ---------------------------------------------------------------------------
+JV_SINCE = "2024-01-01"
+JV_HOLDERS = {"ABJV": (("ABDE", 30), ("ABFR", 30))}      # entity -> ((holder entity, share %), ...): one Ownership Period each
+JV_REASON = "joint control under the shareholders' agreement (IFRS 11.7); 60% does not give control"
 E = [
     ("ABH", "Aquila Bike Holding N.V.", "NL", "EUR", "AQBIKE", "holding", {"CORP": 1}, 2.4, 100, "full", "2005-01-01", None),
     ("ABDE", "Aquila Bikes Deutschland GmbH", "DE", "EUR", "EBIKES", "ops", {"BIK_EBIKE": .55, "BIK_CLASSIC": .30, "PAS_COMP": .10, "PAS_SVC": .05}, 48, 100, "full", "2008-01-01", None),
@@ -332,6 +336,9 @@ E = [
     ("ABCZ", "Aquila Kola s.r.o.", "CZ", "CZK", "CLASSIC", "ops", {"BIK_CLASSIC": .55, "BIK_EBIKE": .25, "PAS_COMP": .20}, 14, 100, "full", ACQ_DATE, PRE_ACQ_PERIOD),
     ("ABDK", "Aquila Cykler Danmark A/S", "DK", "DKK", "SERVICE", "ops", {"PAS_SVC": .40, "BIK_EBIKE": .35, "BIK_CLASSIC": .25}, 10, 100, "full", "2015-01-01", None),
     ("ABPT", "Aquila Bicicletas Portugal Lda", "PT", "EUR", "SERVICE", "ops", {"PAS_SVC": .50, "BIK_CLASSIC": .50}, 6, 30, "equity", "2019-01-01", None),
+    # konsol#117 pair 2: a joint venture held 30% by ABDE and 30% by ABFR (60% in all, 40% outside); first TB FY2024 P1.
+    # "own" is the SUM of the holders' shares; the links are in JV_HOLDERS.
+    ("ABJV", "Aquila Shared Mobility B.V.", "NL", "EUR", "SERVICE", "ops", {"PAS_SVC": .70, "BIK_EBIKE": .30}, 4, 60, "equity", JV_SINCE, (2024, 1)),
 ]
 ENT = {e[0]: dict(zip(("code", "name", "country", "cur", "node", "kind", "lines", "size", "own", "method", "since", "first"), e)) for e in E}
 CONSOLIDATED = [c for c, e in ENT.items() if e["method"] == "full"]
@@ -595,6 +602,12 @@ def equity_of(code, m):
     return sc, sp, lr
 
 
+def jv_stake_cents(jv, pct, models):
+    """A holder's cost of its stake in a joint venture, EUR cents: pct of the JV's share capital + premium (EUR)."""
+    sc, sp, _lr = equity_of(jv, models[jv])
+    return R((sc + sp) * pct / 100)
+
+
 def investment_lines(models):
     """The holding's cost of each legacy subsidiary and of the associate, EUR cents, line by line
     (share capital and share premium x ownership x the historical rate) - the figures the opening
@@ -699,6 +712,11 @@ def entity_rows(code, p, m, ic_rows, models, state):
     put("1119", -(0.40 * G + dep * (0 if p == (2023, 12) else k)))
     put("1122", I)
     put("1129", -(0.30 * I + amort * (0 if p == (2023, 12) else k)))
+    # a joint venture's holder carries its cost from the formation period: an asset swap, Dr 1142 / Cr cash 1241
+    # (cash is the balancing line of every later period; P&L and retained earnings do not move)
+    for jv, holders in JV_HOLDERS.items():
+        if code in dict(holders) and p >= ENT[jv]["first"]:
+            inv_assoc += jv_stake_cents(jv, dict(holders)[code], models)
     put("1141", inv_sub)
     put("1142", inv_assoc)
     put("1144", base * 0.003)
@@ -857,14 +875,29 @@ def consolidation_rows():
     return rows
 
 
-def ownership_rows():
-    rows = []
+def ownership_links(with_deals=False):
+    """One link per Ownership Period: (entity, holder, pct, method, from). holder '' = the group's own node.
+    with_deals adds the link the Business Combination creates on approval (ABCZ), for the offline replica."""
+    links = []
     for code, e in ENT.items():
-        if code == "ABCZ":
+        if code == "ABCZ" and not with_deals:
             continue   # created by the Business Combination on approval
-        rows.append({"consolidation_group": GROUP, "data_area_id": code, "effective_date": e["since"], "end_date": "",
-                     "ownership_pct": e["own"], "consolidation_method": e["method"]})
-    return rows
+        if code in JV_HOLDERS:
+            links += [(code, holder, pct, e["method"], e["since"]) for holder, pct in JV_HOLDERS[code]]
+        else:
+            links.append((code, "", e["own"], e["method"], e["since"]))
+    return links
+
+
+def ownership_rows():
+    return [{"consolidation_group": GROUP, "data_area_id": code, "owner_entity": holder, "effective_date": since, "end_date": "",
+             "ownership_pct": pct, "consolidation_method": method} for code, holder, pct, method, since in ownership_links()]
+
+
+def declaration_rows():
+    """The method AQBIKE applies to an entity its ownership links reach by more than one path (pair 1 rule)."""
+    return [{"consolidation_group": GROUP, "data_area_id": code, "consolidation_method": "equity", "effective_date": JV_SINCE,
+             "end_date": "", "reason": JV_REASON} for code in JV_HOLDERS]
 
 
 def historical_rate_rows():
@@ -883,21 +916,56 @@ def ic_account_rows():
              "description": "%s <-> %s" % (ACCOUNT_NAME[a], ACCOUNT_NAME[b])} for a, b in IC_PAIRS]
 
 
-def opening_journal_rows(models):
+def nci_opening_cents(code, balances, models):
+    """The minority's opening interest in a partly owned legacy subsidiary, in EUR cents, by equity line:
+    share capital and premium at the historical rate (the part of the 100% the holding's investment does not
+    cover), legal reserve and opening retained earnings at the FY2023 P12 closing rate. Each line is the
+    minority's share (1 - own) of the entity's own translated equity row."""
+    e = ENT[code]
+    sc, sp, lr = equity_of(code, models[code])
+    h = hist_rate(code)
+    close = RATES[(2023, 12)]["Closing"][e["cur"]]
+    re_cents = -balances[(code, (2023, 12))].get(("3300", "", "", "", ""), 0)      # credit balance, local cents
+    own = e["own"] / 100
+    return {"3100": R(sc * h) - R(sc * own * h), "3200": R(sp * h) - R(sp * own * h),
+            "3310": R(lr * (1 - own) * close), "3300": R(re_cents * (1 - own) * close)}
+
+
+def opening_journal_rows(models, balances):
     """First consolidation (FY2023 P12): the holding's investments in its greenfield subsidiaries against
-    their share capital and premium, each at the group's share and the historical rate, to the cent."""
+    their share capital and premium at the historical rate, to the cent. A partly owned subsidiary is carried
+    at 100% (konsolidat#204 option (a)): its whole share capital and premium are eliminated against the
+    holding's investment (the group's share) and the non-controlling interests (the rest), and the minority's
+    share of its legal reserve and opening retained earnings moves to the NCI line."""
     ref = "CJ-OPEN-2023"
     header = [{"journal_ref": ref, "consolidation_group": GROUP, "adjustment_type": "topside", "fiscal_year": 2023, "fiscal_period": 12,
-               "currency": GROUP_CUR, "description": "Opening consolidation: investments in subsidiaries eliminated against their share capital and premium",
+               "currency": GROUP_CUR, "description": "Opening consolidation: investments in subsidiaries eliminated against their share capital and premium; the minority's interest to the NCI line",
                "reverse_fiscal_year": "", "reverse_fiscal_period": ""}]
     lines, total = [], 0
+
+    def line(code, acct_code, cents, desc):
+        """cents > 0 debit, < 0 credit."""
+        lines.append({"journal_ref": ref, "data_area_id": code, "main_account": acct_code,
+                      "debit_amount": cents / 100 if cents > 0 else "", "credit_amount": -cents / 100 if cents < 0 else "", "description": desc})
+
     for code, by_acct in investment_lines(models).items():
         if code == "ABPT":
             continue
+        own = ENT[code]["own"]
+        if own == 100:
+            for acct_code, cents in by_acct.items():
+                line(code, acct_code, cents, "%s %s x %d%% at the historical rate" % (code, ACCOUNT_NAME[acct_code], own))
+                total += cents
+            continue
+        nci = nci_opening_cents(code, balances, models)
         for acct_code, cents in by_acct.items():
-            lines.append({"journal_ref": ref, "data_area_id": code, "main_account": acct_code, "debit_amount": cents / 100, "credit_amount": "",
-                          "description": "%s %s x %d%% at the historical rate" % (code, ACCOUNT_NAME[acct_code], ENT[code]["own"])})
+            line(code, acct_code, cents + nci[acct_code], "%s %s eliminated at 100%% at the historical rate" % (code, ACCOUNT_NAME[acct_code]))
             total += cents
+        for acct_code in ("3310", "3300"):
+            if not nci[acct_code]:
+                continue
+            line(code, acct_code, nci[acct_code], "%s %s: the %d%% minority's share at the FY2023 P12 closing rate" % (code, ACCOUNT_NAME[acct_code], 100 - own))
+        line(code, "3700", -sum(nci.values()), "%s non-controlling interests: %d%% of its equity at the opening" % (code, 100 - own))
     lines.append({"journal_ref": ref, "data_area_id": "ABH", "main_account": "1141", "debit_amount": "", "credit_amount": total / 100,
                   "description": "ABH cost of the subsidiaries"})
     return header, lines
@@ -946,7 +1014,7 @@ def deal_rows(balances):
 
 def master_rows(tb_sample, models, balances):
     years, periods = fiscal_rows()
-    cj_header, cj_lines = opening_journal_rows(models)
+    cj_header, cj_lines = opening_journal_rows(models, balances)
     rows = {
         "Settings": [{"setting": "default_amount_basis", "value": BASIS}, {"setting": "tb_accepts_opening", "value": "0"},
                      {"setting": "tb_accepts_closing", "value": "0"}, {"setting": "tb_accepts_adjustment", "value": "0"},
@@ -959,6 +1027,7 @@ def master_rows(tb_sample, models, balances):
         "IC_Elimination_Rules": [],
         "Scenarios": [{"scenario_id": "ACTUAL", "scenario_name": "Actual", "scenario_type": "actual", "is_active": 1}],
         "Consolidation_Groups": consolidation_rows(), "Ownership_Periods": ownership_rows(),
+        "Method_Declarations": declaration_rows(),
         "FX_Rates": fx_rows(), "Historical_Equity_Rates": historical_rate_rows(),
         "Consolidation_Journals": cj_header, "CJ_Lines": cj_lines,
         "Trial_Balance": tb_sample,
@@ -1034,10 +1103,13 @@ def write_expected(files, models, balances):
         "rates": {"%d-%d" % p: {rt: RATES[p][rt] for rt in ("Closing", "Average")} for p in PERIODS},
         "hist_rates": {c: hist_rate(c) for c in ENT if ENT[c]["cur"] != GROUP_CUR},
         "ic_pairs": IC_PAIRS, "policy": POLICY,
+        "ownership_links": [{"entity": c, "owner": h, "pct": pct, "method": m, "since": since} for c, h, pct, m, since in ownership_links(with_deals=True)],
+        "declarations": [{"group": r["consolidation_group"], "entity": r["data_area_id"], "method": r["consolidation_method"],
+                          "from": r["effective_date"], "to": r["end_date"], "reason": r["reason"]} for r in declaration_rows()],
         "acquisition": {"entity": "ABCZ", "date": ACQ_DATE, "period": ACQ_PERIOD, "pre_period": PRE_ACQ_PERIOD, "consideration_eur": CONSIDERATION_EUR,
                         "costs_eur": ACQ_COSTS_EUR, "fva_czk": FVA_CZK, "acquired_balances": acquired_balance_sheet(balances)},
         "disposal": {"entity": "ABDK", "date": DSP_DATE, "period": DSP_PERIOD, "proceeds_eur": PROCEEDS_EUR},
-        "opening_journal": opening_journal_rows(models)[1],
+        "opening_journal": opening_journal_rows(models, balances)[1],
         "tb_cents": tb,
     }
     with open(os.path.join(out_dir, "inputs.json"), "w") as f:
@@ -1059,8 +1131,8 @@ def build_example():
     path = os.path.join(EXAMPLE_DIR, "Aquila_Bike_Master_Data.xlsx")
     intro = (
         "Filled onboarding workbook for the fictional Aquila Bike Group: %d legal entities in %d EU countries and %d currencies "
-        "(ten consolidated, one 30%% associate), a %d-row group chart, %d trial-balance dimensions with %d reporting hierarchies, a flat "
-        "consolidation tree under AQBIKE (EUR), a 70%% subsidiary (ABSE), an acquisition on %s (ABCZ, 100%%, goodwill and a fair value "
+        "(ten consolidated, a 30%% associate, and a joint venture held 30%% by ABDE and 30%% by ABFR that AQBIKE declares equity-accounted), a %d-row group chart, %d trial-balance dimensions with %d reporting hierarchies, a flat "
+        "consolidation tree under AQBIKE (EUR), a 70%% subsidiary (ABSE, carried at 100%% with the minority as the NCI line), an acquisition on %s (ABCZ, 100%%, goodwill and a fair value "
         "step-up), a full disposal on %s (ABDK), governed monthly FX rates and IAS 21 historical equity rates." % (
             len(ENT), len({e["country"] for e in ENT.values()}), len(BASE_RATE), len(A), len(DIMENSIONS), len(HIERARCHIES), ACQ_DATE, DSP_DATE),
         "Trial balances are in tb/: TB_FY2023_P12.xlsx holds the opening year-end balances (FY2023 P&L still in its accounts, closed to 3300 "

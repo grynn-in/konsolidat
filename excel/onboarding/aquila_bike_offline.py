@@ -3,12 +3,17 @@
 warehouse computes, written from the dbt models (silver_tb_movements, gold_consolidated_trial_balance,
 gold_fx_revaluation, gold_entity_ownership, gold_ic_reconciliation / gold_ic_eliminations,
 gold_business_combination_journal, gold_business_disposal_journal, gold_equity_method_associates,
-gold_consolidation_adjustments, gold_fully_consolidated_tb), so the Excel walkthrough and the live
+gold_consolidation_adjustments, gold_nci_attribution_journal, gold_fully_consolidated_tb, and the pair 1
+ownership_resolution macro), so the Excel walkthrough and the live
 build can both be compared with it to the cent.
 
     uv run aquila_bike_offline.py          -> examples/aquila-bike/model/expected.json + a summary
 
-It reads model/inputs.json written by build_aquila_bike.py. Where the warehouse's rule is a product
+It reads model/inputs.json written by build_aquila_bike.py. Rules followed (konsol#117 pair 2, konsolidat#204
+option (a), decided by Deepak Pai 7-8 Nov 2026): a full subsidiary is consolidated at 100% (group_amount =
+translated_amount); intercompany is eliminated in full; the minority is one NCI line, posted per period by the
+attribution journal (result share + CTA share); ownership is the sum of the paths and a multi-path entity takes the
+group's declared method; an associate's pickup ignores the year-end close rows. Where the warehouse's rule is a product
 gap, this file says so in a comment and follows the warehouse (never a "better" rule).
 """
 from __future__ import annotations
@@ -47,6 +52,9 @@ class Offline:
         self.acq["pre_period"] = tuple(self.acq["pre_period"])
         self.dsp["period"] = tuple(self.dsp["period"])
         self.close_period = (2023, 13)
+        self.links = d["ownership_links"]
+        self.declarations = d["declarations"]
+        self._resolved = {}
         # balances (period-end, local cents) per entity, key (account, partner), period
         self.bal = defaultdict(lambda: defaultdict(dict))
         for e, y, p, a, partner, c in d["tb_cents"]:
@@ -130,18 +138,65 @@ class Offline:
         return out
 
     # ---- 2. ownership window --------------------------------------------------------------------
+    # DECLARATION_TRIGGER_PCT in macros/ownership_resolution.sql: above it, several paths with no all-full path need a declaration.
+    DECLARATION_TRIGGER_PCT = 50
+    RANK = {"full": 1, "proportional": 2, "equity": 3, "none": 4}
+    NAME = {1: "full", 2: "proportional", 3: "equity", 4: "none"}
+
+    def _link_live(self, link, d):
+        if d < dt.date.fromisoformat(link["since"]):
+            return False
+        # the disposal closes the disposed entity's links on its date (Business Disposal)
+        return not (link["entity"] == self.dsp["entity"] and d > dt.date.fromisoformat(self.dsp["date"]))
+
+    def _paths(self, e, d):
+        """[(product of link pcts, weakest-method rank)] per path from the group to `e` at date d."""
+        out = []
+        for link in self.links:
+            if link["entity"] != e or not self._link_live(link, d):
+                continue
+            rank = self.RANK.get(link["method"], 4)
+            if link["owner"] == "":
+                out.append((link["pct"] / 100.0, rank))
+            else:
+                out += [(link["pct"] / 100.0 * pp, max(rank, rr)) for pp, rr in self._paths(link["owner"], d)]
+        return out
+
+    def resolve(self, e, p):
+        """Effective ownership and method of `e` in period p (the pair 1 ownership_resolution macro):
+        eff = sum over paths of the product of link pcts; the method is the weakest link of the path(s), or, when
+        several paths disagree or add past the trigger without an all-full path, the group's declaration for the
+        date (undeclared -> none)."""
+        key = (e, p)
+        if key in self._resolved:
+            return self._resolved[key]
+        d = self.period_date(p)
+        paths = self._paths(e, d)
+        eff = sum(pp for pp, _ in paths)
+        ranks = {rr for _, rr in paths}
+        needs = len(paths) > 1 and (len(ranks) > 1 or (1 not in ranks and eff * 100 > self.DECLARATION_TRIGGER_PCT))
+        if not paths:
+            out = {"eff": 0.0, "method": "none", "source": "outside", "paths": 0}
+        elif not needs:
+            out = {"eff": eff, "method": self.NAME[max(ranks)], "source": "link", "paths": len(paths)}
+        else:
+            decl = [x for x in self.declarations if x["group"] == self.group and x["entity"] == e
+                    and dt.date.fromisoformat(x["from"]) <= d and (not x["to"] or dt.date.fromisoformat(x["to"]) > d)]
+            if decl:
+                out = {"eff": eff, "method": decl[-1]["method"], "source": "declared", "paths": len(paths)}
+            else:
+                out = {"eff": eff, "method": "none", "source": "undeclared", "paths": len(paths)}
+        self._resolved[key] = out
+        return out
+
     def in_window(self, e, p):
-        info = self.ent[e]
-        since = dt.date.fromisoformat(info["since"])
-        end = dt.date.fromisoformat(self.dsp["date"]) if e == self.dsp["entity"] else dt.date(9999, 12, 31)
-        pd = self.period_date(p)
-        return since <= pd <= end
+        return bool(self._paths(e, self.period_date(p)))
 
     def consolidated(self, e, p):
-        return self.in_window(e, p) and self.ent[e]["method"] not in ("equity", "none")
+        return self.resolve(e, p)["method"] in ("full", "proportional")
 
-    def pct(self, e):
-        return self.ent[e]["own"] / 100.0
+    def pct(self, e, p):
+        return self.resolve(e, p)["eff"]
 
     # ---- 3. gold_consolidated_trial_balance -----------------------------------------------------
     def translate(self, mov):
@@ -150,7 +205,6 @@ class Offline:
         rows = []
         for e in sorted(mov):
             cur = self.ent[e]["currency"]
-            pct = self.pct(e)
             periods = [p for p in sorted(mov[e]) if self.consolidated(e, p)]      # the entity's spine in this group
             if not periods:
                 continue
@@ -201,9 +255,10 @@ class Offline:
             for k, byp in rated.items():
                 for p, r in byp.items():
                     adj = r["retranslation"] + r["close_adj"]
+                    pct = self.pct(e, p)
                     r["translated"] = r["local"] * r["rate"] + adj
-                    r["group"] = r["translated"] * pct
-                    r["nci"] = r["translated"] * (1 - pct)
+                    r["group"] = r["translated"]                      # K1: 100%, whatever the group's share
+                    r["nci"] = r["translated"] * (1 - pct)            # the attribution amount, not the complement
                     rows.append(r)
         return rows
 
@@ -282,10 +337,8 @@ class Offline:
                 else:
                     cause = "fx"
                 full_a, full_b = -sgn(ta) * matched, -sgn(tb_) * matched
-                comp = {"m_a": full_a * min(share_a, share_b), "m_b": full_b * min(share_a, share_b),
-                        "n_a": full_a * (share_a - share_b) if share_a > share_b else 0.0,
-                        "n_b": full_b * (share_b - share_a) if share_b > share_a else 0.0,
-                        "d_a": -res_a * share_a, "d_b": -res_b * share_b}
+                # K3: in full - the matched amount on each side and the full residual; no NCI leg
+                comp = {"m_a": full_a, "m_b": full_b, "d_a": -res_a, "d_b": -res_b}
                 post = {c: comp[c] - (prev_post[c] if (pair_is_bs and prev_post) else 0.0) for c in comp}
                 prev_post = comp
                 tol = self.policy["ic_difference_tolerance"]
@@ -296,20 +349,16 @@ class Offline:
                               "basis": "balance" if pair_is_bs else "movement", "event": event, "local_a": la, "local_b": lb,
                               "translated_a": ta, "translated_b": tb_, "share_a": share_a, "share_b": share_b, "matched": matched,
                               "difference": ta + tb_, "cause": cause, "status": status})
-                nci_acct, diff_acct = self.policy["nci_account"], self.policy["ic_difference_account"]
-                legs = [("matched", aa, "", post["m_a"], ab, ""),
-                        ("nci", aa, "", post["n_a"], nci_acct, eb),
-                        ("nci", ab, "", post["n_b"], nci_acct, ea),
-                        ("difference", aa, "", post["d_a"], diff_acct, eb),
-                        ("difference", ab, "", post["d_b"], diff_acct, ea)]
-                for kind, acc1, ent1, v1, acc2, ent2 in legs:
+                diff_acct = self.policy["ic_difference_account"]
+                legs = [("matched", aa, post["m_a"], ab),
+                        ("difference", aa, post["d_a"], diff_acct),
+                        ("difference", ab, post["d_b"], diff_acct)]
+                for kind, acc1, v1, acc2 in legs:
                     if abs(v1) < FLOOR:
                         continue
-                    typ = "ic_elimination_nci" if kind == "nci" else "ic_elimination"
-                    elims.append({"period": p, "kind": kind, "pair": "IC:%s/%s" % (aa, ab), "account": acc1,
-                                  "entity": ent1 if kind == "nci" else "", "amount": v1, "type": typ})
-                    elims.append({"period": p, "kind": kind, "pair": "IC:%s/%s" % (aa, ab), "account": acc2,
-                                  "entity": ent2 if kind == "nci" else "", "amount": -v1, "type": typ})
+                    for acc, amt in ((acc1, v1), (acc2, -v1)):
+                        elims.append({"period": p, "kind": kind, "pair": "IC:%s/%s" % (aa, ab), "account": acc, "entity": "",
+                                      "amount": amt, "type": "ic_elimination", "entity_a": ea, "entity_b": eb})
         return recon, elims
 
     # ---- 6. deal journals -----------------------------------------------------------------------
@@ -392,18 +441,47 @@ class Offline:
     def equity_method(self, mov):
         lines = []
         for e, info in self.ent.items():
-            if info["method"] != "equity":
-                continue
             for p in sorted(mov[e]):
-                if not self.in_window(e, p):
+                if self.resolve(e, p)["method"] != "equity":
                     continue
-                net = sum(c for (a, _), (c, *_r) in mov[e][p].items() if self.is_pnl(a)) / 100.0
-                amount = net * self.pct(e) * self.average(info["currency"], p)
+                # the period's own activity: the synthesized year-end close rows are left out (konsolidat#279)
+                net = sum(c for (a, _), (c, _src, is_close) in mov[e][p].items() if self.is_pnl(a) and not is_close) / 100.0
+                amount = net * self.pct(e, p) * self.average(info["currency"], p)
                 if abs(amount) <= 0.01:
                     continue
                 jid = "EQ_%s_%s_%d_P%d" % (self.group, e, p[0], p[1])
                 lines.append({"entity": e, "period": p, "account": "EQ_INCOME", "amount": amount, "type": "equity_method", "journal": jid})
                 lines.append({"entity": e, "period": p, "account": "EQ_INVEST", "amount": -amount, "type": "equity_method", "journal": jid})
+        return lines
+
+    # ---- 7b. NCI attribution (gold_nci_attribution_journal, K2): the minority's share of a full subsidiary's
+    #          result and CTA, per entity and period, from retained earnings and CTA to the NCI line ----
+    def nci_attribution(self, rows, cta):
+        re_accounts = sorted(a for a, v in self.chart.items() if "RE" in v["flags"].split())
+        if not re_accounts:
+            return []
+        re_account, nci_account = re_accounts[0], self.policy["nci_account"]
+        result = defaultdict(float)
+        present = set()
+        for r in rows:
+            present.add((r["entity"], r["period"]))
+            if self.is_pnl(r["account"]) and not r["is_close"]:
+                result[(r["entity"], r["period"])] += r["nci"]
+        lines = []
+        for (e, p) in sorted(present):
+            res = self.resolve(e, p)
+            if res["method"] != "full" or res["eff"] >= 1 - 0.000001:
+                continue
+            result_share = result.get((e, p), 0.0)
+            cta_share = (1 - res["eff"]) * cta.get((e, p), 0.0)
+            if abs(result_share) <= 0.000001 and abs(cta_share) <= 0.000001:
+                continue
+            jid = "NCI-%s-%s-%d-P%d" % (self.group, e, p[0], p[1])
+            for acct, amt, role in ((re_account, -result_share, "retained_earnings"), ("CTA", -cta_share, "cta"),
+                                    (nci_account, result_share + cta_share, "nci")):
+                if abs(amt) > 0.000001:
+                    lines.append({"entity": e, "period": p, "account": acct, "amount": amt, "type": "nci_attribution",
+                                  "journal": jid, "role": role})
         return lines
 
     # ---- 8. topside journals ---------------------------------------------------------------------
@@ -424,6 +502,7 @@ class Offline:
         acq = self.acquisition_journal(mov)
         dsp = self.disposal_journal(mov, cta, acq)
         eq = self.equity_method(mov)
+        nci = self.nci_attribution(rows, cta)
         top = self.topside()
         fctb = defaultdict(float)   # (period, entity, account, type) -> amount
         for r in rows:
@@ -433,10 +512,11 @@ class Offline:
                 fctb[(p, e, "CTA", "cta")] += v
         for l in elims:
             fctb[(l["period"], l["entity"], l["account"], l["type"])] += l["amount"]
-        for l in acq + dsp + eq + top:
+        for l in acq + dsp + eq + nci + top:
             fctb[(l["period"], l["entity"], l["account"], l["type"])] += l["amount"]
         self.mov, self.rows, self.cta_by, self.recon, self.elims, self.acq_lines, self.dsp_lines, self.eq_lines, self.top_lines, self.fctb = \
             mov, rows, cta, recon, elims, acq, dsp, eq, top, fctb
+        self.nci_lines = nci
         return self
 
     def statements(self):
@@ -469,6 +549,9 @@ class Offline:
             "disposal_journal": [dict(l, period=pk(l["period"])) for l in self.dsp_lines],
             "disposal_result": self.dsp_result,
             "equity_method": [dict(l, period=pk(l["period"])) for l in self.eq_lines],
+            "nci_attribution": [dict(l, period=pk(l["period"])) for l in self.nci_lines],
+            "ownership": [dict(entity=e, period=pk(p), **self.resolve(e, p)) for e in sorted(self.ent) for p in self.periods
+                          if self.resolve(e, p)["paths"]],
             "topside": [dict(l, period=pk(l["period"])) for l in self.top_lines],
             "pnl_period": {pk(p): v for p, v in pnl.items()},
             "bs_cumulative": {pk(p): v for p, v in bs.items()},
@@ -508,6 +591,22 @@ def main():
         print("balance sheet %d-%02d: assets %14.2f liabilities %14.2f equity+CTA %14.2f open P&L %14.2f goodwill %12.2f CTA %12.2f NCI(3700) %12.2f" % (
             p[0], p[1], assets, liab, eq, -sum(v for q, pp in pnl.items() if q[0] == p[0] and q <= p for v in pp.values()),
             b.get("1121", 0), -b.get("CTA", 0), -b.get("3700", 0)))
+    # NCI (3700): the opening journal's 30% of ABSE's equity + every period's attribution = 30% of ABSE's net assets
+    last = max(periods)
+    opening_nci = -sum(l["amount"] for l in o.top_lines if l["account"] == "3700")
+    attributed = -sum(l["amount"] for l in o.nci_lines if l["account"] == "3700")
+    net_assets = sum(r["translated"] for r in o.rows if r["entity"] == "ABSE" and o.is_bs(r["account"]) and not o.is_equity(r["account"]))
+    minority = 1 - o.resolve("ABSE", last)["eff"]
+    print("\nNCI(3700) %d-%02d: opening journal %.2f + attribution %.2f = %.2f ; %.0f%% x ABSE net assets (closing rate) %.2f ; difference %.4f" % (
+        last[0], last[1], opening_nci, attributed, -bs[last].get("3700", 0.0), minority * 100, minority * net_assets,
+        -bs[last].get("3700", 0.0) - minority * net_assets))
+    ex = [l for l in o.nci_lines if l["entity"] == "ABSE" and l["period"] == (2024, 6)]
+    print("attribution journal %s:" % (ex[0]["journal"] if ex else "-"), [(l["account"], round(l["amount"], 2)) for l in ex])
+    for p in ((2024, 6), (2024, 12)):
+        eq = [l for l in o.eq_lines if l["entity"] == "ABJV" and l["period"] == p]
+        print("ABJV pickup %d-%02d (%.0f%% of its result, %s):" % (p[0], p[1], o.resolve("ABJV", p)["eff"] * 100, o.resolve("ABJV", p)["source"]),
+              [(l["account"], round(l["amount"], 2)) for l in eq])
+    print("ABPT pickup in the Closing period 2023-13:", [l for l in o.eq_lines if l["entity"] == "ABPT" and l["period"] == (2023, 13)] or "none (close rows excluded)")
     print("\nacquisition:", {k: round(v, 2) for k, v in o.acq_result.items()})
     print("disposal:", {k: round(v, 2) for k, v in o.dsp_result.items()},
           "gain(+)/loss(-) %.2f" % -sum(l["amount"] for l in o.dsp_lines if l["role"] == "gain_loss"))
