@@ -1,5 +1,7 @@
--- gate: build +gold_business_disposal_journal assert_disposal_journal_balances
+-- gate: build +gold_business_disposal_journal assert_disposal_journal_balances assert_disposal_accounts_declared
 -- gate: expect assert_disposal_journal_balances pass
+-- gate: expect assert_disposal_accounts_declared pass
+-- (a wholly owned entity sold in full is not refused; the refusal's fixtures are .partial_share, .partly_owned, .held_below_100)
 -- Disposal journal, the full-disposal case (konsolidat#198 row J6, design §5):
 -- `+gold_business_disposal_journal assert_disposal_journal_balances` must BUILD and PASS on these rows,
 -- and so must `+gold_fully_consolidated_tb assert_journal_grain_unique assert_disposal_journal_balances`

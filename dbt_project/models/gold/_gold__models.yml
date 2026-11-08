@@ -566,7 +566,7 @@ models:
       konsolidat#198 (design §5): the balanced disposal journal per submitted
       Business Disposal (epm_staging.business_disposals and its proceeds lines),
       journal_id DSP-<group>-<entity>-<date>, group currency, posted once in the
-      disposal period; full disposals only (retained_interest_pct = 0). Lines: (0)
+      disposal period; full disposals of wholly owned subsidiaries only (refused otherwise, see below). Lines: (0)
       every non-equity balance-sheet account of the entity derecognised at
       -(cumulative balance at the disposal period-end) x 100% (from
       gold_trial_balance, at the period's Closing rate; the equity accounts stay,
@@ -582,8 +582,12 @@ models:
       governed Closing rate for its period posts nothing, and
       assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
       stops the build on a disposal whose group has not declared an account this journal
-      posts to, and refuses a partial share by name (retained_interest_pct > 0 or
-      share_disposed_pct < 100: partial disposals and retained interests are not implemented, konsolidat#310, row J12);
+      posts to, and refuses by name a disposal of a partly owned subsidiary, a partial
+      disposal and a retained interest (the entity is held below 100% in
+      gold_entity_ownership at the disposal period, or share_disposed_pct is below the
+      holding, or retained_interest_pct > 0: the journal derecognises the deal's opening
+      NCI only, not the nci_attribution layer's, and recycles the whole CTA where IAS 21.48B
+      recycles the parent's share; not implemented, konsolidat#310, row J12);
       assert_disposal_has_balances warns on a disposal whose entity has no
       trial-balance row through the disposal period (nothing to derecognise); the root
       row is read with any() per column and assert_consolidation_group_root_unique stops
