@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances gold_consolidated_cash_flow assert_consolidated_cf_reconciles assert_cash_flow_excludes_nci_attribution assert_closing_period_activity_on_partial_subsidiary
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances gold_consolidated_cash_flow assert_consolidated_cf_reconciles assert_cash_flow_excludes_nci_attribution assert_closing_period_activity_on_partial_subsidiary gold_nci_movement_schedule assert_nci_movement_reconciles
 -- gate: expect assert_nci_attribution_balances pass
 -- gate: expect assert_nci_attribution_equals_minority_result pass
 -- gate: expect assert_all_layers_present pass
@@ -7,6 +7,7 @@
 -- gate: expect assert_consolidated_cf_reconciles pass
 -- gate: expect assert_cash_flow_excludes_nci_attribution pass
 -- gate: expect assert_closing_period_activity_on_partial_subsidiary pass
+-- gate: expect assert_nci_movement_reconciles pass
 -- konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's share of a subsidiary's result and
 -- CTA is one NCI journal per (group, entity, FY, period). ZZP (USD, root) holds 70% of ZZC (SEK, method full).
 -- FY2026 P3 in SEK: receivables +600, cost +400, revenue -1,000 (a local profit of 600). Governed SEK->USD P3:
@@ -17,6 +18,9 @@
 -- into retained earnings: ZZ4000 +1,000, ZZ5000 -400, ZZ3100 -600 SEK, all is_year_end_close = 1. Read as P13
 -- activity it reverses the year (NCI +18.00 style entry, result_share +16.20). Expected: NO journal in P13: the
 -- close is excluded from result_share and the close period's CTA plug is 0.
+-- The NCI movement schedule agrees (finding 5): share_of_profit is 0 in P13 (the close rows are left out as the
+-- journal leaves them out) and -16.20 in P3; its closing balance in P3 is the minority's share of net assets at
+-- the closing rate, 0.30 x 600 x 0.10 = 18.00, and it stays 18.00 in P13 (the close moves only equity).
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';
