@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **138** |
-| carrying their reasoning | 120 |
-| citing the issue that caused them | 102 |
+| assertions | **139** |
+| carrying their reasoning | 121 |
+| citing the issue that caused them | 105 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 116 |
+| severity `error` (stops the build, and its children) | 117 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,11 +25,11 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 19
-- [Currency and translation](#currency-and-translation) — 22
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 19
+- [Currency and translation](#currency-and-translation) — 23
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 18
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
-- [Equity method](#equity-method) — 4
+- [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
@@ -304,6 +304,14 @@ The SAME case table runs through konsol's konsol.group_rates.magnitude_problem, 
 
 <sub>`warn` · `tests/assert_governed_rate_sane.sql` · konsol#103 konsolidat#138 konsolidat#174</sub>
 
+### `group_equals_translated_for_full`
+
+**konsolidat#204 option (a), konsol#117 pair 2 (IFRS 10.B86): layer 1 carries a controlled subsidiary line by line at 100%.**
+
+group_amount therefore equals translated_amount on every row the model emits; the minority is not a share of each line but the one NCI line in equity that konsol#117 pair 2 task K2 posts from nci_amount. 'proportional' rides along until pair 3 gives it its own rule: the model emits it today and this test does not exempt it.
+
+<sub>`error (default)` · `tests/assert_group_equals_translated_for_full.sql` · konsol#117 konsolidat#204</sub>
+
 ### `historical_is_equity_only`
 
 **konsolidat#92, finding 4 — the half the warehouse owns.**
@@ -312,11 +320,13 @@ konsol translates and does not remeasure. fx_method = 'historical' is therefore 
 
 <sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsolidat#213 konsolidat#92</sub>
 
-### `nci_plus_group_equals_translated`
+### `nci_equals_translated_times_minority`
 
-**PRD-4 Test: group_amount + nci_amount must equal translated_amount**
+**konsolidat#204 option (a), konsol#117 pair 2: nci_amount is the attribution amount, the minority's share of each translated line: translated_amount x (1 - ownership_pct).**
 
-<sub>`error (default)` · `tests/assert_nci_plus_group_equals_translated.sql`</sub>
+It is no longer the complement of group_amount (group_amount is 100% of translated_amount for a controlled subsidiary); task K2 posts the sum of it as the single NCI line in equity.
+
+<sub>`error (default)` · `tests/assert_nci_equals_translated_times_minority.sql` · konsol#117 konsolidat#204</sub>
 
 ### `translated_amount_formula`
 
@@ -403,12 +413,6 @@ This sums every account, not just balance-sheet ones. gold_fully_consolidated_tb
 Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG-GROUP_CORP-DEMF and CG-GROUP_EMEA-DEMF could coexist — and the live stack had exactly that shape after a stray `dbt seed`. Before F2 each node simply fed its own group. Now the ancestry closure emits a full chain per (ancestor, entity) pair for BOTH nodes, so any shared ancestor consolidates the entity twice, and gold_entity_ownership — which groups on (group, entity, period) — merges the two chains' links into a single meaningless product. konsol refuses this at save time (ConsolidationGroup._validate_entity_in_one_node); this catches data that predates the guard or arrived another way.
 
 <sub>`error (default)` · `tests/assert_entity_in_one_consolidation_node.sql`</sub>
-
-### `group_amount_formula`
-
-**PRD-1 Test: group_amount must equal translated_amount × ownership_pct**
-
-<sub>`error (default)` · `tests/assert_group_amount_formula.sql`</sub>
 
 ### `hierarchy_rollup_ties`
 
@@ -688,7 +692,15 @@ Why a sibling test and not the model's own stop. gold_equity_method_associates r
 
 The EQ_INCOME entry should match the formula. 7 Nov 2026: the oracle translates, as the model does since the same day. It compared the entry with net_income × ownership_pct in the associate's OWN currency, so it passed on a SEK associate in a EUR group whose figure had never been translated (the defect it should have caught). A Closing-type period reads its year's last Regular period's rate (rate_period_map(), konsolidat#199 row D9), the same rule the model applies. join_use_nulls=0: an entry whose rate key has no Average rate reads 0 here, so its expected value is 0 and the entry (never 0 itself, the model drops |amount| <= 0.01) is flagged rather than excused. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql.
 
-<sub>`error (default)` · `tests/assert_equity_income_formula.sql` · konsolidat#199</sub>
+<sub>`error (default)` · `tests/assert_equity_income_formula.sql` · konsolidat#199 konsolidat#279</sub>
+
+### `equity_method_ignores_close_rows`
+
+**PRD-14 / konsolidat#279 defect 3: an associate's result for a period is its OWN activity there, never the year-end close silver_tb_movements synthesizes in the Closing period (konsolidat#259).**
+
+The close moves the year's P&L into retained earnings, so read as "net income of P13" it posts an equity-method entry equal and opposite to the year's result. The marker is gold_trial_balance_by_partner.is_year_end_close (posting_layer 'Year-end close' in silver_gl_entries), the one gold_consolidated_trial_balance reads. Oracle: for every equity associate period, EQ_INCOME must equal the PRE-CLOSE P&L movement (close rows excluded) x effective ownership x the governed Average rate (1.0 in the same currency; a Closing-type period reads its year's last Regular period, rate_period_map()). A share of 0.01 or less posts no journal, so it is expected as 0. A Closing period with no activity of its own is therefore expected as no journal at all. Built from the model's inputs, never from its CTEs. Fixture: dbt_project/test_fixtures/assert_equity_method_ignores_close_rows.sql.
+
+<sub>`error` · `tests/assert_equity_method_ignores_close_rows.sql` · konsolidat#259 konsolidat#279</sub>
 
 ### `equity_method_journal_balances`
 

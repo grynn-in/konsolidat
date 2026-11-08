@@ -55,9 +55,9 @@ models:
       - name: translated_amount
         description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
-        description: "translated_amount * ownership_pct"
+        description: "Equals translated_amount for every consolidated row: a controlled subsidiary is carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2). The minority is the single NCI line in equity, not a share of each line."
       - name: nci_amount
-        description: "translated_amount * (1 - ownership_pct)"
+        description: "Attribution amount: translated_amount * (1 - ownership_pct), the minority share of the line. Not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2)."
       - name: retranslation_amount
         description: >
           konsolidat#257: the retranslation of the key's balance brought forward,
