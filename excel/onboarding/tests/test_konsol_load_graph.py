@@ -196,11 +196,14 @@ class MethodDeclarations(unittest.TestCase):
         stored = site.docs["Consolidation Group"]["CG-G"]["method_declarations"]
         self.assertEqual(stored[0]["consolidation_method"], "none")
 
-    def test_proportional_stays_refused(self):
+    def test_proportional_is_accepted_since_pair_3(self):
+        """konsol#117 pair 3: the warehouse computes proportional (IFRS 11.20), so the loader no
+        longer refuses it; it reaches the server like the other three methods."""
         site = FakeSite(groups())
         code, out = run_loader(site, {"Method_Declarations": [dict(DECL, consolidation_method="proportional")]})
-        self.assertNotEqual(code, 0)
-        self.assertEqual(site.writes, [])
+        self.assertEqual(code, 0, out)
+        stored = site.docs["Consolidation Group"]["CG-G"]["method_declarations"]
+        self.assertEqual(stored[0]["consolidation_method"], "proportional")
 
     def test_blank_reason_is_refused_before_anything_is_sent(self):
         site = FakeSite(groups())
