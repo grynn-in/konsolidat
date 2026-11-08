@@ -81,12 +81,17 @@ models:
       konsol#117 pair 2 K3, konsolidat#204 (a)): both sides at 100%, whatever
       the holding. The minority's share is the NCI line of the NCI attribution
       journal (K2), not part of an elimination. This supersedes decision 12.
+      Where a side is a joint operation (consolidation_method proportional,
+      IFRS 11), the pair is eliminated at the operator's share instead
+      (IFRS 11.B34-B37; konsol#117 pair 3): matched legs, difference legs and
+      unrealized profit are scaled by least(share_a, share_b), share being
+      effective_ownership_pct for a proportional side and 1.0 otherwise.
     columns:
       - name: rule_id
         tests:
           - not_null
       - name: elimination_amount
-        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
+        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit. In full, except at the operator's share (least of the two sides' shares) where a side is a joint operation (IFRS 11.B34-B37)"
       - name: elimination_kind
         description: "matched, difference or unrealized_profit (the 'nci' kind of decision 12 is retired: eliminations are in full)"
         tests:
