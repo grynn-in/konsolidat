@@ -3,7 +3,7 @@
 -- konsol#117 pair 3 review finding A (IFRS 11.20): ZZP holds ZZS at 80% (full), ZZS holds the joint operation ZZJ at
 -- 50% (proportional). One path ZZP/ZZS/ZZJ: effective ownership 0.40, weakest link proportional so method proportional,
 -- has_partial_full_link 1, has_complete_chain 1. Layer 1 would post 40% of ZZJ's lines with nci 0, where the group
--- should carry 50% with NCI 10%. Expected: the refusal flags 1 row (ZZP, ZZJ, FY2026 P1).
+-- should carry 50% with NCI 10%. The sentence is general (finding P): the flag is entity-wide, so it also fires when the partial full link sits on a different path from the proportional one. Expected: the refusal flags 1 row (ZZP, ZZJ, FY2026 P1).
 -- The live tables may predate konsol#117's graph columns: bring the scratch clones to the shape the macro reads.
 -- The owner joins the sorting key (konsol#117); this is the live upgrade statement, a no-op on an upgraded table.
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
