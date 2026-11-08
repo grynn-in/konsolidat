@@ -34,8 +34,8 @@ Custom calendar, FY2025. Nothing else is declared.
 | Period | Code | Type | Dates | What the file is |
 |---|---|---|---|---|
 | 1 | START | Regular | 1–31 January 2025 | Balance sheets only. The position at the start. |
-| 2 | ACT | Regular | 1 February – 30 December 2025 | Period-end balances, with the year's result still in the P&L accounts. |
-| 13 | CLS | Closing | 31 December 2025 | The same balance sheets, result closed into 3300. |
+| 2 | ACT | Regular | 1 February – 31 December 2025 | Period-end balances, with the year's result still in the P&L accounts. |
+| 13 | CLS | Closing | 31 December 2025 (the same day as Activity's last; konsol requires the last Regular period to end on the year end and the Closing period to be that one day) | The same balance sheets, result closed into 3300. |
 
 `tb_accepts_closing = 1` because Close is a real upload, not a period the warehouse has to invent. There is no later year, and each entity already has a file in the Closing period, so nothing is synthesised on top.
 

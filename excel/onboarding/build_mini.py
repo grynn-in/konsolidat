@@ -31,9 +31,11 @@ CHART = "MINI_GROUP"
 BASIS = "Period-end balance"
 FY = 2025
 
-# Activity is 1 Feb–30 Dec so the acquisition (its first day) and the disposal
-# (its last day) both land in that Regular period. Close is the next day, so
-# the company sold on 30 Dec is already out of the group when the books close.
+# Activity is 1 Feb–31 Dec: konsol requires the last Regular period to end on
+# the year end, and the Closing period is that same single day (31 Dec). The
+# acquisition (1 Feb, the period's first day) and the disposal (30 Dec, inside
+# it) both land in Activity; ownership ends on 30 Dec, so the company sold is
+# out of the group when the books close on 31 Dec.
 ACQ_DATE = "2025-02-01"
 DSP_DATE = "2025-12-30"
 CONSIDERATION = 1_200_000
@@ -113,7 +115,7 @@ ENTITIES = {
 # books after the sale (the group no longer owns it).
 PERIODS = (
     ("START", 1, "Regular", "Q1", "2025-01-01", "2025-01-31", "Start", ("HOLD", "DSP", "ACQ")),
-    ("ACT", 2, "Regular", "", "2025-02-01", "2025-12-30", "Activity", ("HOLD", "DSP", "ACQ")),
+    ("ACT", 2, "Regular", "", "2025-02-01", "2025-12-31", "Activity", ("HOLD", "DSP", "ACQ")),
     ("CLS", 13, "Closing", "", "2025-12-31", "2025-12-31", "Close", ("HOLD", "DSP", "ACQ")),
 )
 PERIOD_NO = {code: n for code, n, *_ in PERIODS}
