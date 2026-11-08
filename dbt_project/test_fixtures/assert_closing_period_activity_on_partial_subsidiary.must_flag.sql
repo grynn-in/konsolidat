@@ -10,9 +10,18 @@
 --   result_share = 0.30 x (36 - 90) = -16.20 | cta_share = 0.30 x -6 = -1.80
 --   Journal NCI-ZZP-ZZC-2026-P3 (USD): ZZ3100 +16.20 (Dr RE) | CTA +1.80 | ZZ3400 -18.00 (Cr NCI) -> sums to 0.
 -- FY2026 P13 (Closing): the year-end close silver_tb_movements synthesizes (konsolidat#259) moves the year's P&L
--- into retained earnings: ZZ4000 +1,000, ZZ5000 -400, ZZ3100 -600 SEK, all is_year_end_close = 1. Read as P13
+-- into retained earnings: ZZ4000 +1,300, ZZ5000 -500, ZZ3100 -800 SEK (the whole year, P3 + P4), all is_year_end_close = 1. Read as P13
 -- activity it reverses the year (NCI +18.00 style entry, result_share +16.20). Expected: NO journal in P13: the
 -- close is excluded from result_share and the close period's CTA plug is 0.
+-- FY2026 P4 (review fix, finding 8c): a second activity period at a DIFFERENT Closing rate, so the CTA attribution is
+-- exercised twice. SEK->USD P4: Closing 0.12, Average 0.11. Local: receivables +200, cost +100, revenue -300 (profit 200).
+-- The receivable's opening 600 is retranslated from 0.10 to 0.12 and the P&L translates at 0.11, so the entity's CTA
+-- plug of P4 differs from P3's; the journal NCI-ZZP-ZZC-2026-P4 carries 30% of that period's result and of that plug,
+-- and the oracle in assert_nci_attribution_equals_minority_result checks every line of it separately.
+-- The NCI movement schedule agrees (finding 5): share_of_profit is 0 in P13 (the close rows are left out as the
+-- journal leaves them out) and -16.20 in P3; its closing balance in P3 is the minority's share of net assets at
+-- the closing rate, 0.30 x 600 x 0.10 = 18.00; P4 adds the P4 movement and the retranslation (0.30 x 800 x 0.12 = 28.80 in all);
+-- P13 adds nothing (the close moves only equity).
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';
@@ -69,6 +78,7 @@ INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
   (2026, 3, 'FY2026-P03', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q1', 'Open'),
+  (2026, 4, 'FY2026-P04', 'Apr 2026', 'Regular', '2026-04-01', '2026-04-30', 'Q2', 'Open'),
   (2026, 13, 'FY2026-P13', 'FY2026 closing', 'Closing', '2026-12-31', '2026-12-31', 'Q4', 'Open');
 -- Finding 6: the NCI account maps to a Financing line; only the attribution layer touches it, so a
 -- cash-flow row for that line would be the attribution shown as a cash flow.
@@ -99,16 +109,30 @@ INSERT INTO epm_staging.group_exchange_rates
   (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
 VALUES
   ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03'),
-  ('USD', 'SEK', 2026, 3, 'Average', 0.09, 'ZZ-GER-2026-03');
+  ('USD', 'SEK', 2026, 3, 'Average', 0.09, 'ZZ-GER-2026-03'),
+  ('USD', 'SEK', 2026, 4, 'Closing', 0.12, 'ZZ-GER-2026-04'),
+  ('USD', 'SEK', 2026, 4, 'Average', 0.11, 'ZZ-GER-2026-04');
 INSERT INTO epm_gold.gold_trial_balance_by_partner
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count, is_year_end_close)
 VALUES
-  ('ZZC', 2026, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 1000, 0, 1000, 1, 0),
-  ('ZZC', 2026, 13, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, '', 0, 400, -400, 1, 0),
-  ('ZZC', 2026, 13, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, '', 0, 600, -600, 1, 0);
+  ('ZZC', 2026, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 1300, 0, 1300, 1, 0),
+  ('ZZC', 2026, 13, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, '', 0, 500, -500, 1, 0),
+  ('ZZC', 2026, 13, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, '', 0, 800, -800, 1, 0);
 INSERT INTO epm_gold.gold_trial_balance
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES
-  ('ZZC', 2026, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 1000, 0, 1000, 1),
-  ('ZZC', 2026, 13, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 0, 400, -400, 1),
-  ('ZZC', 2026, 13, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, 0, 600, -600, 1);
+  ('ZZC', 2026, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 1300, 0, 1300, 1),
+  ('ZZC', 2026, 13, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 0, 500, -500, 1),
+  ('ZZC', 2026, 13, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, 0, 800, -800, 1);
+INSERT INTO epm_gold.gold_trial_balance_by_partner
+  (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count)
+VALUES
+  ('ZZC', 2026, 4, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 200, 0, 200, 1),
+  ('ZZC', 2026, 4, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, '', 100, 0, 100, 1),
+  ('ZZC', 2026, 4, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 300, -300, 1);
+INSERT INTO epm_gold.gold_trial_balance
+  (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
+VALUES
+  ('ZZC', 2026, 4, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 200, 0, 200, 1),
+  ('ZZC', 2026, 4, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 100, 0, 100, 1),
+  ('ZZC', 2026, 4, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 300, -300, 1);
