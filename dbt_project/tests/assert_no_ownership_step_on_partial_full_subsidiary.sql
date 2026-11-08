@@ -27,6 +27,12 @@
     problem sentence names the method. The name keeps "full_subsidiary" so the
     test stays one test.
 
+    konsol#117 pair 3 review, finding C: a change of METHOD at the same share (full 50% -> proportional 50%, or the
+    reverse) is a step too: layer 1 carries the earlier movements at 100% with NCI and the later ones at the share
+    with none. The trigger is a changed share OR a changed method (prev_method '' is the first row). And a deal line
+    no longer exempts a step whose method is or was proportional: the deal journals handle controlled-subsidiary
+    NCI only, nothing restates a joint operation's earlier movements.
+
     Fixtures: test_fixtures/assert_no_ownership_step_on_partial_full_subsidiary
     (.must_flag.sql: 70% then 80%; nci_attribution_journal.sql is the passing
     case, an unchanged share).
@@ -41,7 +47,8 @@ with owned as (
         toFloat64(effective_ownership_pct) as pct,
         lagInFrame(fiscal_year, 1, 0) over w as prev_year,
         lagInFrame(fiscal_period, 1, 0) over w as prev_period,
-        lagInFrame(toFloat64(effective_ownership_pct), 1, 0) over w as prev_pct
+        lagInFrame(toFloat64(effective_ownership_pct), 1, 0) over w as prev_pct,
+        lagInFrame(consolidation_method, 1, '') over w as prev_method
     from {{ ref('gold_entity_ownership') }}
     where consolidation_method in ('full', 'proportional')
       and has_complete_chain = 1
@@ -70,13 +77,16 @@ select
     o.prev_pct as old_pct,
     o.pct as new_pct,
     o.consolidation_method as consolidation_method,
+    o.prev_method as prev_method,
     concat('entity ', o.data_area_id, ' in group ', o.consolidation_group, ' steps from ',
            toString(round(o.prev_pct * 100, 4)), '% (FY', toString(o.prev_year), ' P', toString(o.prev_period),
            ') to ', toString(round(o.pct * 100, 4)), '% (FY', toString(o.fiscal_year), ' P', toString(o.fiscal_period),
            '): ',
+           if(o.prev_method != o.consolidation_method,
+              concat('a change of consolidation method from ', o.prev_method, ' to ', o.consolidation_method, ' at the same or a different share is not implemented: the CTB is movement-grained, so earlier movements stay under ', o.prev_method, ' and later ones follow ', o.consolidation_method),
            if(o.consolidation_method = 'proportional',
               'an ownership step on a joint operation (consolidation_method proportional) is not implemented: the CTB is movement-grained, so earlier movements stay at the old share and later ones take the new one (IFRS 11.20)',
-              'an ownership step on a controlled subsidiary is not rebalanced against NCI yet (IFRS 10.23/B96, konsolidat#318); the NCI balance keeps the old share''s net assets')) as problem
+              'an ownership step on a controlled subsidiary is not rebalanced against NCI yet (IFRS 10.23/B96, konsolidat#318); the NCI balance keeps the old share''s net assets'))) as problem
 from owned as o
 left join deal_lines as d
     on d.consolidation_group = o.consolidation_group
@@ -84,6 +94,8 @@ left join deal_lines as d
     and d.fiscal_year = o.fiscal_year
     and d.fiscal_period = o.fiscal_period
 where o.prev_year != 0
-  and abs(o.pct - o.prev_pct) > 0.000001
-  and (o.pct < 1 - 0.000001 or o.prev_pct < 1 - 0.000001)
-  and d.data_area_id = ''
+  and (
+        (abs(o.pct - o.prev_pct) > 0.000001 and (o.pct < 1 - 0.000001 or o.prev_pct < 1 - 0.000001))
+        or (o.prev_method != '' and o.consolidation_method != o.prev_method)
+      )
+  and (d.data_area_id = '' or o.consolidation_method = 'proportional' or o.prev_method = 'proportional')

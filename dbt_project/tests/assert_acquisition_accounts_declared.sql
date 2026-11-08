@@ -48,13 +48,13 @@
 -- share needs is declared above (nci_account, and nci_fair_value for a 'full' deal).
 --
 -- Refused by name (konsol#117 pair 3, row K3): a business combination into a joint operation, i.e. an acquired
--- entity whose gold_entity_ownership.consolidation_method at the deal period is 'proportional'. One row, field
+-- entity whose ownership_periods say 'proportional' at the deal (its own link, or a step from one). One row, field
 -- consolidation_method, whatever else the deal declares:
 --   a business combination into a joint operation (consolidation_method proportional) is not implemented (IFRS 11.21A): record the interest as an Ownership Period
 -- The acquisition journal builds goodwill and an NCI line for a controlled subsidiary; IFRS 11.21A (an interest in
 -- a joint operation that is a business) is a different accounting, and a joint operation carries no NCI at all.
--- An entity with no ownership row at the deal period is not a joint operation here. Fixture:
--- .joint_operation.must_flag.
+-- An entity with no ownership period is not a joint operation here. Fixtures: .joint_operation.must_flag,
+-- .joint_operation_step.must_flag (a step on a period's first day), .joint_operation_gap (a whole period between: passes).
 --
 -- Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local ->
 -- framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal
@@ -98,26 +98,29 @@ deal_period as (
     group by bc.name
 ),
 
--- the acquired entity's method from the deal period on (konsol#117 pair 3): the method of the earliest
--- gold_entity_ownership row at or after the deal period that holds the entity (effective_ownership_pct > 0).
--- Not an exact-period match: gold_entity_ownership resolves each period at its FIRST day, so a mid-month
--- acquisition is not yet held in its own period and the holding the deal creates first shows in the next one;
--- and it has rows only for periods with trial-balance data. An entity never held from the deal period on has no
--- row here and is not a joint operation.
+-- the acquired entity's method, read from epm_staging.ownership_periods (konsol#117 pair 3 review, finding B), not
+-- from gold_entity_ownership: that table resolves each period at its FIRST day, has rows only for periods with
+-- trial-balance data, and resolves a sub-group held at equity at the root, so it misses a step dated on a period's
+-- first day, an entity with no trial balance yet, and a joint operation inside an equity-held sub-group.
+-- A deal is into a joint operation when
+--   (a) its own link is proportional: a period of the acquired entity in the group that starts on the acquisition
+--       date (ownership_periods carries no document name; business_combinations.ownership_period names the
+--       konsol document, so the match is group + entity + effective_date, any owner), or
+--   (b) it is a STEP from a joint operation: a proportional period of the entity, any owner, that starts before the
+--       acquisition date and still runs on the day before it. A whole period between the joint operation's end and
+--       the deal means the entity left the group and re-enters by a deal: not a step, not refused.
 joint_operation as (
     select
-        dp.deal as deal,
-        argMin(toUInt8(eo.consolidation_method = 'proportional'),
-               toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) as is_joint_operation
-    from deal_period as dp
-    inner join {{ source('epm_staging', 'business_combinations') }} as bc
-        on bc.name = dp.deal
-    inner join {{ ref('gold_entity_ownership') }} as eo
-        on eo.consolidation_group = bc.consolidation_group
-        and eo.data_area_id = bc.acquired_entity
-    where toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period >= toUInt32(dp.fiscal_year) * 1000 + dp.fiscal_period
-      and eo.effective_ownership_pct > 0
-    group by dp.deal
+        bc.name as deal,
+        toUInt8(countIf(op.consolidation_method = 'proportional' and op.effective_date = bc.acquisition_date) > 0
+                or countIf(op.consolidation_method = 'proportional'
+                           and op.effective_date < bc.acquisition_date
+                           and op.end_date >= subtractDays(bc.acquisition_date, 1)) > 0) as is_joint_operation
+    from {{ source('epm_staging', 'business_combinations') }} as bc
+    inner join {{ source('epm_staging', 'ownership_periods') }} as op
+        on op.consolidation_group = bc.consolidation_group
+        and op.data_area_id = bc.acquired_entity
+    group by bc.name
 ),
 
 balance_fva as (
