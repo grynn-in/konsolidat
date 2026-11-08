@@ -907,7 +907,7 @@ def historical_rate_rows():
             continue
         for acct_code in ("3100", "3200"):
             rows.append({"consolidation_group": GROUP, "data_area_id": code, "main_account": acct_code,
-                         "rate_date": e["since"], "historical_rate": hist_rate(code)})
+                         "to_currency": GROUP_CUR, "rate_date": e["since"], "historical_rate": hist_rate(code)})
     return rows
 
 

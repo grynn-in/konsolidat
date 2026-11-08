@@ -346,6 +346,7 @@ SHEETS: tuple[Sheet, ...] = (
             Col("consolidation_group", "Group code whose translation the rate applies to (the group whose reporting currency differs from the entity's).", True, width=14),
             Col("data_area_id", "entity_code.", True, width=12),
             Col("main_account", "Equity account with fx_method = historical.", True, width=12),
+            Col("to_currency", "Presentation currency the rate converts INTO: the reporting currency of consolidation_group. Required (konsol#374); the rate is keyed by it.", True, width=12),
             Col("rate_date", "Date the equity was contributed or acquired.", True, "date", width=12),
             Col("historical_rate", "TRUE rate: units of group currency per 1 unit of entity currency on that date.", True, "float", width=12),
         ),
