@@ -84,9 +84,25 @@ deal_holding as (
 ),
 
 -- the disposed holding's method from epm_staging.ownership_periods (konsol#117 pair 3 review, finding B): a
--- proportional period of the entity, any owner, that has started by the disposal date and runs to it or to the day
--- before (the period the disposal ends or links). gold_entity_ownership's argMax alone misses an entity with no
+-- proportional period of the entity, any owner, that has started by the disposal date and still runs at the first day of the
+-- fiscal period before the disposal's (the period the disposal ends or links, or one ended within the previous period). gold_entity_ownership's argMax alone misses an entity with no
 -- trial-balance row yet and a joint operation inside a sub-group held at equity.
+disposal_window as (
+    select
+        d.name as deal,
+        min(cur.start_date) as cur_start,
+        countIf(prev.period_type != 'Closing' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type != 'Closing') as prev_start
+    from {{ source('epm_staging', 'business_disposals') }} as d
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
+    left join {{ source('epm_staging', 'fiscal_periods') }} as prev
+        on prev.end_date = subtractDays(cur.start_date, 1)
+    where cur.start_date <= d.disposal_date
+      and cur.end_date >= d.disposal_date
+      and cur.period_type != 'Closing'
+    group by d.name
+),
+
 disposal_joint as (
     select
         bd.name as deal,
@@ -95,9 +111,11 @@ disposal_joint as (
     inner join {{ source('epm_staging', 'ownership_periods') }} as op
         on op.consolidation_group = bd.consolidation_group
         and op.data_area_id = bd.disposed_entity
+    inner join disposal_window as w
+        on w.deal = bd.name
     where op.consolidation_method = 'proportional'
       and op.effective_date <= bd.disposal_date
-      and op.end_date >= subtractDays(bd.disposal_date, 1)
+      and op.end_date >= if(w.n_prev > 0, w.prev_start, w.cur_start)
     group by bd.name
 ),
 

@@ -107,19 +107,39 @@ deal_period as (
 --       date (ownership_periods carries no document name; business_combinations.ownership_period names the
 --       konsol document, so the match is group + entity + effective_date, any owner), or
 --   (b) it is a STEP from a joint operation: a proportional period of the entity, any owner, that starts before the
---       acquisition date and still runs on the day before it. A whole period between the joint operation's end and
+--       acquisition date and whose window reaches back to the first day of the fiscal period BEFORE the deal's
+--       period (gold_entity_ownership resolves a period at its first day, so a joint operation ending 15 March
+--       leaves March proportional and April full: the mixed-share step). A whole period between the joint operation's end and
 --       the deal means the entity left the group and re-enters by a deal: not a step, not refused.
+deal_window as (
+    select
+        d.name as deal,
+        min(cur.start_date) as cur_start,
+        countIf(prev.period_type != 'Closing' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type != 'Closing') as prev_start
+    from {{ source('epm_staging', 'business_combinations') }} as d
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
+    left join {{ source('epm_staging', 'fiscal_periods') }} as prev
+        on prev.end_date = subtractDays(cur.start_date, 1)
+    where cur.start_date <= d.acquisition_date
+      and cur.end_date >= d.acquisition_date
+      and cur.period_type != 'Closing'
+    group by d.name
+),
+
 joint_operation as (
     select
         bc.name as deal,
         toUInt8(countIf(op.consolidation_method = 'proportional' and op.effective_date = bc.acquisition_date) > 0
                 or countIf(op.consolidation_method = 'proportional'
                            and op.effective_date < bc.acquisition_date
-                           and op.end_date >= subtractDays(bc.acquisition_date, 1)) > 0) as is_joint_operation
+                           and op.end_date >= if(w.n_prev > 0, w.prev_start, w.cur_start)) > 0) as is_joint_operation
     from {{ source('epm_staging', 'business_combinations') }} as bc
     inner join {{ source('epm_staging', 'ownership_periods') }} as op
         on op.consolidation_group = bc.consolidation_group
         and op.data_area_id = bc.acquired_entity
+    inner join deal_window as w
+        on w.deal = bc.name
     group by bc.name
 ),
 
