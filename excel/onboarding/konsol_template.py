@@ -313,7 +313,7 @@ SHEETS: tuple[Sheet, ...] = (
         (
             Col("consolidation_group", "The group whose node carries the declaration.", True, width=14),
             Col("data_area_id", "The entity the declaration is for.", True, width=12),
-            Col("consolidation_method", "full or equity (proportional is refused until konsol#117 pair 3).", True, "select", ("full", "equity"), width=12),
+            Col("consolidation_method", "full, proportional (IFRS 11 joint operation: the operator's share of each line, no NCI), equity or none.", True, "select", ("full", "proportional", "equity", "none"), width=12),
             Col("effective_date", "First day this method applies.", True, "date", width=12),
             Col("end_date", "Last day; blank = open.", False, "date", width=12),
             Col("reason", "Required: the arrangement, the holders and the standard, e.g. joint control, IFRS 11.7.", True, width=40),

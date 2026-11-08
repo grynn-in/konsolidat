@@ -1193,7 +1193,7 @@ def build_example():
     intro = (
         "Filled onboarding workbook for the fictional Aquila Group: %d legal entities in %d countries and %d currencies, "
         "a %d-row group chart, %d dimensions, %d reporting hierarchies, a 3-level consolidation tree (root, four regional sub-groups) "
-        "with minority (51%%-80%%), joint-venture (50%% proportional) and associate (40%% equity) holdings, governed FX rates and "
+        "with minority (51%%-80%%), joint-operation (50%% proportional) and associate (40%% equity) holdings, governed FX rates and "
         "IAS 21 historical equity rates." % (len(ENT), len({e["country"] for e in ENT.values()}), len(BASE_RATE), len(A),
                                               len(DIMENSIONS), len(HIERARCHIES)),
         "Trial balances are in tb/: TB_FY2025_P12.xlsx holds the opening year-end balances (FY2025 P&L still in its accounts, "
