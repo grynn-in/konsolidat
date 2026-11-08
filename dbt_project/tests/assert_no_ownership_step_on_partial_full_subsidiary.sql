@@ -19,6 +19,14 @@
     which post their own NCI). A step to or from 0 is a deal and is not in
     gold_entity_ownership at all.
 
+    konsol#117 pair 3 (row K3): a joint operation (consolidation_method
+    proportional, IFRS 11) is refused too. Layer 1 carries it at the
+    operator's share, and the CTB is movement-grained: movements before the
+    step sit at the old share, later ones at the new one, so no balance sheet
+    is at either share, and nothing restates the earlier movements. The
+    problem sentence names the method. The name keeps "full_subsidiary" so the
+    test stays one test.
+
     Fixtures: test_fixtures/assert_no_ownership_step_on_partial_full_subsidiary
     (.must_flag.sql: 70% then 80%; nci_attribution_journal.sql is the passing
     case, an unchanged share).
@@ -29,12 +37,13 @@ with owned as (
         data_area_id,
         fiscal_year,
         fiscal_period,
+        consolidation_method,
         toFloat64(effective_ownership_pct) as pct,
         lagInFrame(fiscal_year, 1, 0) over w as prev_year,
         lagInFrame(fiscal_period, 1, 0) over w as prev_period,
         lagInFrame(toFloat64(effective_ownership_pct), 1, 0) over w as prev_pct
     from {{ ref('gold_entity_ownership') }}
-    where consolidation_method = 'full'
+    where consolidation_method in ('full', 'proportional')
       and has_complete_chain = 1
     window w as (
         partition by consolidation_group, data_area_id
@@ -60,11 +69,14 @@ select
     o.fiscal_period as to_fiscal_period,
     o.prev_pct as old_pct,
     o.pct as new_pct,
+    o.consolidation_method as consolidation_method,
     concat('entity ', o.data_area_id, ' in group ', o.consolidation_group, ' steps from ',
            toString(round(o.prev_pct * 100, 4)), '% (FY', toString(o.prev_year), ' P', toString(o.prev_period),
            ') to ', toString(round(o.pct * 100, 4)), '% (FY', toString(o.fiscal_year), ' P', toString(o.fiscal_period),
-           '): an ownership step on a controlled subsidiary is not rebalanced against NCI yet ',
-           '(IFRS 10.23/B96, konsolidat#318); the NCI balance keeps the old share''s net assets') as problem
+           '): ',
+           if(o.consolidation_method = 'proportional',
+              'an ownership step on a joint operation (consolidation_method proportional) is not implemented: the CTB is movement-grained, so earlier movements stay at the old share and later ones take the new one (IFRS 11.20)',
+              'an ownership step on a controlled subsidiary is not rebalanced against NCI yet (IFRS 10.23/B96, konsolidat#318); the NCI balance keeps the old share''s net assets')) as problem
 from owned as o
 left join deal_lines as d
     on d.consolidation_group = o.consolidation_group
