@@ -15,7 +15,9 @@
    lesser balance for each: 2.61M eliminated against a 2.56M intercompany
    revenue balance. It had no counterparty to pair on.
 
-   Posted in full (konsol#117 pair 2 K3). IFRS 10.B86(c) eliminates intragroup
+   Posted in full for subsidiaries (IFRS 10.B86(c)), at the operator's share
+   where a side is a joint operation (IFRS 11.B34-B37, konsol#117 pair 3).
+   Pair 2 K3: IFRS 10.B86(c) eliminates intragroup
    balances, transactions, income and expenses IN FULL, and layer 1 now
    carries a full-method subsidiary at 100% (konsolidat#204 option (a)), so
    both sides of a pair are eliminated at 100% whatever the holding. The
@@ -26,6 +28,15 @@
    column) by Deepak Pai's decision of 8 Nov 2026 (konsol#117). Every row is
    now in one view, elimination_view = 'group', a column kept for the readers
    that filter on it. assert_ic_eliminated_in_full pins it.
+
+   Pair 3: layer 1 carries a `proportional` entity (an IFRS 11 joint operation)
+   at the operator's share, so a transaction with it is eliminated to the
+   extent of that interest. One factor per pair, least(share_a, share_b), with
+   share = effective_ownership_pct for a `proportional` side and 1.0 otherwise
+   (an entity with no ownership row in the group and period keeps 1.0), scales
+   the matched legs, the difference legs and the unrealised profit (buyer and
+   seller). Pinned by assert_ic_eliminated_in_full and
+   assert_unrealized_profit_at_operator_share.
 
    Balance eliminations come from gold_ic_reconciliation, one row per pair and
    period (decided 13 Sep 2026):
@@ -64,18 +75,45 @@ with ic_rules as (
     from {{ source('epm_staging', 'ic_elimination_rules') }}
 ),
 
+{# the pair's factor, IFRS 11.B34-B37. join_use_nulls=0: a miss fills method ''
+   and share 0; '' is not 'proportional', so an entity with no ownership row in
+   the group and period keeps share 1.0 (today's behaviour) #}
+pair_factors as (
+    select
+        r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
+        r.fiscal_period as fiscal_period, r.entity_a as entity_a, r.account_a as account_a,
+        r.entity_b as entity_b, r.account_b as account_b,
+        least(
+            if(oa.consolidation_method = 'proportional', toFloat64(oa.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)
+        ) as factor
+    from {{ ref('gold_ic_reconciliation') }} as r
+    left join {{ ref('gold_entity_ownership') }} as oa
+        on oa.consolidation_group = r.consolidation_group and oa.data_area_id = r.entity_a
+        and oa.fiscal_year = r.fiscal_year and oa.fiscal_period = r.fiscal_period
+    left join {{ ref('gold_entity_ownership') }} as ob
+        on ob.consolidation_group = r.consolidation_group and ob.data_area_id = r.entity_b
+        and ob.fiscal_year = r.fiscal_year and ob.fiscal_period = r.fiscal_period
+),
+
 pairs as (
     select
         r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
         r.fiscal_period as fiscal_period, r.basis as basis,
         r.entity_a as entity_a, r.account_a as account_a, r.entity_b as entity_b, r.account_b as account_b,
         r.ic_difference_account as ic_difference_account, r.difference_cause as difference_cause,
-        {# each side's full (100%) elimination: it takes the side to its residual #}
-        -sign(r.balance_a) * r.matched_amount as full_a,
-        -sign(r.balance_b) * r.matched_amount as full_b,
+        {# each side's elimination at the pair's factor (1.0 unless a side is a
+           joint operation): at 100% it takes the side to its residual #}
+        -sign(r.balance_a) * r.matched_amount * f.factor as full_a,
+        -sign(r.balance_b) * r.matched_amount * f.factor as full_b,
         r.residual_a as residual_a,
-        r.residual_b as residual_b
+        r.residual_b as residual_b,
+        f.factor as factor
     from {{ ref('gold_ic_reconciliation') }} as r
+    inner join pair_factors as f
+        on f.consolidation_group = r.consolidation_group and f.fiscal_year = r.fiscal_year
+        and f.fiscal_period = r.fiscal_period and f.entity_a = r.entity_a and f.account_a = r.account_a
+        and f.entity_b = r.entity_b and f.account_b = r.account_b
 ),
 
 {# every leg on the pair's basis: to date (balance) or for the period (movement) #}
@@ -84,8 +122,8 @@ at_basis as (
         *,
         full_a as m_a,
         full_b as m_b,
-        if(ic_difference_account != '', -residual_a, 0) as d_a,
-        if(ic_difference_account != '', -residual_b, 0) as d_b
+        if(ic_difference_account != '', -residual_a * factor, 0) as d_a,
+        if(ic_difference_account != '', -residual_b * factor, 0) as d_b
     from pairs
 ),
 
@@ -172,9 +210,15 @@ unrealized_profit_eliminations as (
         icr.asset_account as credit_account,
         icb.selling_entity as debit_entity,
         icb.buying_entity as credit_entity,
-        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as elimination_amount,
-        -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
-        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination,
+        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)) as elimination_amount,
+        -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0))) as debit_elimination,
+        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)) as credit_elimination,
         'unrealized_profit' as elimination_kind,
         '' as difference_cause,
         '' as basis,
@@ -196,6 +240,15 @@ unrealized_profit_eliminations as (
         where has_complete_chain = 1 and consolidation_method != 'equity'
     ) as cg
         on icb.buying_entity = cg.data_area_id
+    {# the seller's and the buyer's share in this group and period: a joint
+       operation on either side limits the elimination to the operator's
+       interest (IFRS 11.B34-B37); a miss keeps 1.0 (join_use_nulls=0) #}
+    left join {{ ref('gold_entity_ownership') }} as os
+        on os.consolidation_group = cg.consolidation_group and os.data_area_id = icb.selling_entity
+        and os.fiscal_year = icb.fiscal_year and os.fiscal_period = icb.fiscal_period
+    left join {{ ref('gold_entity_ownership') }} as ob
+        on ob.consolidation_group = cg.consolidation_group and ob.data_area_id = icb.buying_entity
+        and ob.fiscal_year = icb.fiscal_year and ob.fiscal_period = icb.fiscal_period
     where icr.rule_type = 'unrealized_profit'
       and icb.ending_inventory_from_ic > 0
       and icr.margin_pct > 0
