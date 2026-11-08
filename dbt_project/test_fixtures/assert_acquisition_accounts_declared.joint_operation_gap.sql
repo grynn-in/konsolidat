@@ -1,10 +1,13 @@
--- gate: build gold_entity_ownership +gold_business_combination_journal assert_acquisition_accounts_declared
+-- gate: build +gold_business_combination_journal +gold_business_disposal_journal gold_entity_ownership assert_no_ownership_step_on_partial_full_subsidiary assert_acquisition_accounts_declared
 -- gate: expect assert_acquisition_accounts_declared pass
+-- gate: expect assert_no_ownership_step_on_partial_full_subsidiary pass
 -- Passing fixture (konsol#117 pair 3 review, finding B; decision on the gap case). ZZJ was a joint operation until
 -- 2025-12-31 and is acquired on 2026-04-01 with a full 100% Ownership Period: a whole period (Jan-Mar 2026) lies between.
 -- The entity left the group and re-enters by a deal; that is not a step, so it is NOT refused. The refusal looks only at
 -- a proportional period covering the day before the deal (end_date >= acquisition_date - 1) or the deal's own period.
--- Expect the test to pass (0 rows).
+-- Expect the test to pass (0 rows). ZZJ also has a FY2025 P12 trial balance, so gold_entity_ownership holds a proportional row
+-- there and a full one in P4 with nothing between them but the calendar's P3: assert_no_ownership_step_on_partial_full_subsidiary
+-- must read that as a re-entry (non-adjacent periods), not a step (review finding K).
 --
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 -- The owner joins the sorting key (konsol#117): two owners of one node from one date are two rows, not one
@@ -58,6 +61,7 @@ INSERT INTO epm_staging.fiscal_periods
 VALUES
   (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'),
   (2026, 2, 'FY2026-P02', 'Feb 2026', 'Regular', '2026-02-01', '2026-02-28', 'Q1', 'Open'),
+  (2025, 12, 'FY2025-P12', 'Dec 2025', 'Regular', '2025-12-01', '2025-12-31', 'Q4', 'Open'),
   (2026, 3, 'FY2026-P03', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q1', 'Open'),
   (2026, 4, 'FY2026-P04', 'Apr 2026', 'Regular', '2026-04-01', '2026-04-30', 'Q2', 'Open'),
   (2026, 5, 'FY2026-P05', 'May 2026', 'Regular', '2026-05-01', '2026-05-31', 'Q2', 'Open'),
@@ -103,12 +107,16 @@ VALUES
 INSERT INTO epm_staging.group_exchange_rates
   (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
 VALUES
+  ('USD', 'EUR', 2025, 12, 'Closing', 1.0, 'ZZ-GER-2025-12'),
+  ('USD', 'EUR', 2025, 12, 'Average', 1.0, 'ZZ-GER-2025-12'),
+  ('USD', 'EUR', 2026, 4, 'Closing', 1.0, 'ZZ-GER-2026-04'),
+  ('USD', 'EUR', 2026, 4, 'Average', 1.0, 'ZZ-GER-2026-04'),
   ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03'),
   ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03');
 INSERT INTO epm_staging.business_combinations
   (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement)
 VALUES
-  ('BC-ZZH-ZZJ-2026-04-01', 'ZZH', 'ZZJ', '2026-04-01', 50, 'USD', 8300, 650, 930, 6720, 0, 0, 'ZZ-OP-ZZJ-1', 'partial');
+  ('BC-ZZH-ZZJ-2026-04-01', 'ZZH', 'ZZJ', '2026-04-01', 100, 'USD', 8300, 650, 930, 6720, 0, 0, 'ZZ-OP-ZZJ-1', 'partial');
 INSERT INTO epm_staging.business_combination_consideration
   (parent, idx, component, amount, currency, settlement_date, description)
 VALUES
@@ -121,6 +129,19 @@ VALUES
   ('BC-ZZH-ZZJ-2026-04-01', 3, 'ZZ2100', -150, 0, 'Payables'),
   ('BC-ZZH-ZZJ-2026-04-01', 4, 'ZZ3000', -100, 0, 'Share capital'),
   ('BC-ZZH-ZZJ-2026-04-01', 5, 'ZZ3100', -550, 0, 'Retained earnings at acquisition');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ1000', 100, 0, 'Cash', 'ZZ-TBS-J0', now(), ''),
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ1100', 200, 0, 'Receivables', 'ZZ-TBS-J0', now(), ''),
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ1420', 600, 0, 'Plant', 'ZZ-TBS-J0', now(), ''),
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ2100', 0, 150, 'Payables', 'ZZ-TBS-J0', now(), ''),
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ3000', 0, 100, 'Share capital', 'ZZ-TBS-J0', now(), ''),
+  ('ZZJ0', 'ZZJ', 2025, 12, 'ZZ3100', 0, 650, 'Retained earnings', 'ZZ-TBS-J0', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZJ0', 'ZZ-TBS-J0', 'ZZJ', 2025, 12, 6, now(), 'Period-end balance');
 INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
 VALUES
