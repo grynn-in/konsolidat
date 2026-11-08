@@ -142,6 +142,25 @@ equity_method as (
     from {{ ref('gold_equity_method_associates') }}
 ),
 
+{# Layer 7: NCI attribution (konsol#117 pair 2 K2, konsolidat#204 (a)): the minority's
+   share of a full-method subsidiary's result and CTA, one balanced journal per
+   (group, entity, period). #}
+nci_attribution as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings(trailing=true) }}
+        reporting_currency,
+        amount,
+        adjustment_type,
+        journal_id
+    from {{ ref('gold_nci_attribution_journal') }}
+),
+
 {# Layer 6: Acquisition & disposal adjustments (PRD-11/12).
    #175 re-review F3: the pnl_proration rows are one per consolidated row,
    and gold_consolidated_trial_balance has a row per intercompany partner,
@@ -259,6 +278,8 @@ all_layers as (
     select * from equity_method
     union all
     select * from acquisition_disposal
+    union all
+    select * from nci_attribution
 )
 
 select * from all_layers

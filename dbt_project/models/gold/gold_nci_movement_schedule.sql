@@ -7,7 +7,14 @@
 
 {# PRD-13: NCI Movement Schedule
    Reconciliation: opening → share_of_profit → OCI → dividends → acquisition → disposal → closing
-   Supports full vs partial goodwill methods #}
+   Supports full vs partial goodwill methods
+
+   konsol#117 pair 2 K2: share_of_profit is the P&L leg of the NCI attribution
+   journal (gold_nci_attribution_journal), which posts the minority's share of
+   the result and CTA to the group's nci_account. This schedule's closing
+   balance is the minority's share of net assets at closing; under full-goodwill
+   measurement it differs from the fully consolidated TB's nci_account balance
+   by the acquisition-date premium (follow-up F1). No logic change. #}
 
 {# F2: ownership comes from gold_entity_ownership — dated, chain-multiplied and
    resolved once. This read the consolidation_groups seed, so an entity's NCI was

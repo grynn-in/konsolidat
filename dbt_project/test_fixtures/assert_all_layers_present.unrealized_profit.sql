@@ -1,6 +1,9 @@
 -- assert_all_layers_present: must PASS (konsolidat#238-4). An unrealized_profit elimination (from
 -- ic_elimination_rules) lands in the fully consolidated TB as ic_elimination, not under its own type.
 -- An NCI-view row never enters the consolidated TB, so it expects nothing there.
+-- konsol#117 pair 2 K2: the test also reads gold_nci_attribution_journal, a model table a live stack gets from its first dbt run.
+-- No-op where it exists; seeded empty here: no group has an nci_attribution layer unless a fixture inserts one.
+CREATE TABLE IF NOT EXISTS epm_gold.gold_nci_attribution_journal (consolidation_group String, data_area_id String, fiscal_year UInt16, fiscal_period UInt16, main_account String, account_name String, reporting_currency String, amount Float64, adjustment_type String, journal_id String, account_role String) ENGINE = MergeTree ORDER BY tuple();
 INSERT INTO epm_gold.gold_consolidated_trial_balance
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name,
    is_balance_sheet, is_pnl, is_equity, dim_business_unit, dim_cost_center, dim_department, local_amount,

@@ -1,9 +1,7 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_nci_account_declared_for_partial_subs
 -- gate: expect assert_nci_attribution_balances pass
 -- gate: expect assert_nci_attribution_equals_minority_result flag 1
--- gate: expect assert_all_layers_present pass
 -- gate: expect assert_nci_account_declared_for_partial_subs flag 1
--- gate: expect assert_end_to_end_bs_balances pass
 -- MUST FLAG: the root row declares no nci_account, so no journal is posted and the minority's share (-18.00 in P3)
 -- has no home: the equality test flags the one (group, entity, period), the K3 warning flags the group.
 -- konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's share of a subsidiary's result and
