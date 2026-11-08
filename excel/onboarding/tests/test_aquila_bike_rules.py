@@ -102,7 +102,7 @@ class Rules(unittest.TestCase):
         self.assertTrue(rows)
         for r in rows:
             self.assertAlmostEqual(r["group"], r["translated"], places=9, msg=r)
-            self.assertAlmostEqual(r["nci"], r["translated"] * 0.3, places=6, msg=r)
+            self.assertAlmostEqual(r["nci"], r["translated"] * 0.3, places=5, msg=r)   # expected.json is quantised to 6 places
 
     # (e) the holders carry their stake ----------------------------------------------------------------
     def test_holders_carry_30pct_of_abjv_opening_equity_and_their_pnl_is_unchanged(self):
