@@ -5,10 +5,12 @@
 --   ZZJ ZZ1000 +1000               | ZZJ ZZ2100 -1000 (partner ZZP)
 -- The balances agree, so there is no difference leg. Layer 1 carries ZZJ at 50%, so the matched legs are 500 on each side
 -- (not 1000). Unrealised profit: ZZP sells to ZZJ, ending inventory 1000, margin 20%: 200 x least(1.0, 0.5) = 100.
--- gate: build +gold_ic_eliminations assert_ic_eliminated_in_full assert_ic_full_view_nets_zero assert_unrealized_profit_at_operator_share
+-- gate: build +gold_fully_consolidated_tb assert_ic_eliminated_in_full assert_ic_full_view_nets_zero assert_unrealized_profit_at_operator_share assert_ic_elimination_nets_zero assert_end_to_end_bs_balances
 -- gate: expect assert_ic_eliminated_in_full pass
 -- gate: expect assert_ic_full_view_nets_zero pass
 -- gate: expect assert_unrealized_profit_at_operator_share pass
+-- gate: expect assert_ic_elimination_nets_zero pass
+-- gate: expect assert_end_to_end_bs_balances pass
 -- The live consolidation_groups may predate its IC and policy columns, and the submission tables their partner
 -- and basis columns: add them first. The lineage of gold_consolidated_trial_balance reads these tables too, empty
 -- here, so they are named to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
