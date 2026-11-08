@@ -78,7 +78,7 @@ class TwelveLines(unittest.TestCase):
             exp = json.load(f)
         tables = pl.columns(exp)
         pl.check(tables)
-        self.assertEqual(len(pl.LINES), 12 + 0 * len(pl.SUBTOTALS))
+        self.assertEqual(len(pl.LINES), 12)
         text = pl.markdown(tables, 1000, pl.notes(tables, exp))
         with open(os.path.join(ONB, "examples", "aquila-bike", "README.md")) as f:
             readme = f.read()
