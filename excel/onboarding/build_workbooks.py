@@ -999,7 +999,7 @@ def historical_rate_rows():
         accounts = ["3100", "3200"] + (["3310"] if e["country"] in RESERVE_COUNTRIES else [])
         for acct_code in accounts:
             rows.append({"consolidation_group": "AQUILA", "data_area_id": code, "main_account": acct_code,
-                         "rate_date": e["since"], "historical_rate": hist_rate(e["cur"], e["since"])})
+                         "to_currency": GROUP_CUR, "rate_date": e["since"], "historical_rate": hist_rate(e["cur"], e["since"])})
     return rows
 
 
@@ -1095,7 +1095,7 @@ def template_examples():
                      {"to_currency": "EUR", "from_currency": "INR", "fiscal_year": 2026, "fiscal_period": 1, "rate_type": "Average",
                       "quote": 0.9550, "quoted_per": "100", "change_reason": "Monthly average of ECB reference rates"}],
         "Historical_Equity_Rates": [{"consolidation_group": "EXAMPLE_GRP", "data_area_id": "EXAMPLE_US01", "main_account": "EXAMPLE_3100",
-                                     "rate_date": "2015-01-01", "historical_rate": 0.8237}],
+                                     "to_currency": "EUR", "rate_date": "2015-01-01", "historical_rate": 0.8237}],
         # first consolidation: eliminate the parent's investment in EXAMPLE_DE01 against its share capital
         "Consolidation_Journals": [{"journal_ref": "EXAMPLE_CJ-2026-01-INV", "consolidation_group": "EXAMPLE_GRP", "adjustment_type": "topside",
                                     "fiscal_year": 2026, "fiscal_period": 1, "currency": "EUR",
