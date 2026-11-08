@@ -67,24 +67,54 @@ deal_lines as (
     from {{ ref('gold_business_disposal_journal') }}
 ),
 
--- fiscal periods strictly between a row and the previous row of its entity (konsol#117 pair 3 review, finding K): the
--- window runs over the rows gold_entity_ownership HAS (full/proportional, complete chain), so after a gap of whole
--- periods the previous row is the one before the gap. A step needs ADJACENT fiscal periods; across a gap the entity
--- left the group and re-enters (a deal), which is not a step.
-gap_periods as (
+-- GAP periods between a row and the previous row of its entity (konsol#117 pair 3 review, findings K, R, S). A step needs
+-- the entity in the group throughout; after a real gap it left and re-enters by a deal, which is not a step. gold_entity_ownership
+-- has rows only for periods with a trial balance, so absent rows prove nothing. A Regular fiscal period strictly between the two
+-- rows (Opening and Closing periods are not periods of activity) is a gap only if NO ownership period of the entity in the
+-- group (any owner, ownership_pct > 0) covers its start_date.
+gap_candidates as (
     select
         o.consolidation_group as consolidation_group,
         o.data_area_id as data_area_id,
         o.fiscal_year as fiscal_year,
         o.fiscal_period as fiscal_period,
-        count() as n_between
+        fp.fiscal_year as gap_year,
+        fp.fiscal_period as gap_period,
+        fp.start_date as gap_start
     from owned as o
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where o.prev_year != 0
-      and fp.period_type != 'Closing'
+      and fp.period_type = 'Regular'
       and (toUInt32(fp.fiscal_year), toUInt32(fp.fiscal_period)) > (toUInt32(o.prev_year), toUInt32(o.prev_period))
       and (toUInt32(fp.fiscal_year), toUInt32(fp.fiscal_period)) < (toUInt32(o.fiscal_year), toUInt32(o.fiscal_period))
-    group by o.consolidation_group, o.data_area_id, o.fiscal_year, o.fiscal_period
+),
+
+gap_covered as (
+    select distinct
+        g.consolidation_group as consolidation_group,
+        g.data_area_id as data_area_id,
+        g.gap_year as gap_year,
+        g.gap_period as gap_period
+    from gap_candidates as g
+    cross join {{ source('epm_staging', 'ownership_periods') }} as op
+    where op.consolidation_group = g.consolidation_group
+      and op.data_area_id = g.data_area_id
+      and op.ownership_pct > 0
+      and op.effective_date <= g.gap_start
+      and op.end_date >= g.gap_start
+),
+
+gap_periods as (
+    select
+        g.consolidation_group as consolidation_group,
+        g.data_area_id as data_area_id,
+        g.fiscal_year as fiscal_year,
+        g.fiscal_period as fiscal_period,
+        count() as n_between
+    from gap_candidates as g
+    where (g.consolidation_group, g.data_area_id, g.gap_year, g.gap_period)
+        not in (select consolidation_group, data_area_id, gap_year, gap_period from gap_covered)
+    group by g.consolidation_group, g.data_area_id, g.fiscal_year, g.fiscal_period
 )
 
 select
@@ -119,7 +149,7 @@ left join deal_lines as d
     and d.fiscal_year = o.fiscal_year
     and d.fiscal_period = o.fiscal_period
 where o.prev_year != 0
-  and b.n_between = 0
+  and coalesce(b.n_between, 0) = 0
   and (
         (abs(o.pct - o.prev_pct) > 0.000001 and (o.pct < 1 - 0.000001 or o.prev_pct < 1 - 0.000001))
         or (o.prev_method != '' and o.consolidation_method != o.prev_method)
