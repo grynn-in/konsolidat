@@ -78,6 +78,10 @@ Why `frappectl` and not konsol-cli: since konsol#379, konsol-cli moves only the 
 datasets, connectors) as a GitOps bundle and applies the schema. Entities, charts, groups, rates and trial balances
 are ordinary documents, which is what `frappectl doc create/update/submit`, `file upload` and `method call` do.
 
+## The Mini Group example
+
+`examples/mini/`: the same workbook with the story cut to the bone. Three legal entities, all in EUR: the parent, one company bought on the first day of Activity, one company sold on the last day of Activity. No financial dimensions, no intercompany, no other currency. The calendar is three periods — Start, Activity, Close. Rebuild: `uv run build_mini.py`. Its README is the arithmetic.
+
 ## The Aquila Bike Group example
 
 `examples/aquila-bike/`: the small, fully worked case (10 consolidated EU entities + a 30% associate, five currencies, a 70%
