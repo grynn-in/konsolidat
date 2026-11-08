@@ -19,6 +19,13 @@ class HistoricalRateToCurrency(unittest.TestCase):
         self.assertIn("to_currency", cols)
         self.assertTrue(cols["to_currency"].required)
 
+    def test_sheet_key_identifies_a_rate_as_konsol_does(self):
+        # konsol names a rate by (group, entity, account, rate_date, to_currency): a second currency or tranche
+        # for the same account is a new document, so the loader's lookup must see it as one
+        key = BY_NAME["Historical_Equity_Rates"].key
+        self.assertIn("to_currency", key)
+        self.assertIn("rate_date", key)
+
     def test_aquila_bike_rates_convert_into_the_group_currency(self):
         rows = bab.historical_rate_rows()
         self.assertTrue(rows)
