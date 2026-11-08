@@ -28,6 +28,10 @@
    computed on the GROUP's share (group_amount) and left to the NCI schedule. A same-currency entity translates at 1.0, so its residual — and
    therefore its CTA — is zero.
 
+   Proportional (konsol#117 pair 3, IFRS 11.20): for a joint operation group_amount
+   is the operator's share, so the plug -sum(group_amount) is the operator's share
+   of the CTA. No attribution row follows: a joint operation has no minority.
+
    CTA is a WHOLE-ENTITY residual, never a per-account figure. This model emits
    one plug row per entity/period carrying the literal 'CTA' in main_account —
    no account code ever appears in that column — and the residual is

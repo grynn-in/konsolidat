@@ -55,9 +55,9 @@ models:
       - name: translated_amount
         description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
-        description: "Equals translated_amount for every consolidated row: a controlled subsidiary is carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2). The minority is the single NCI line in equity, not a share of each line."
+        description: "consolidation_method 'full': equals translated_amount, a controlled subsidiary carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2); the minority is the single NCI line in equity. 'proportional': translated_amount * ownership_pct, the operator's share of a joint operation (IFRS 11.20, konsol#117 pair 3)."
       - name: nci_amount
-        description: "Attribution amount: translated_amount * (1 - ownership_pct), the minority share of the line. Not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2)."
+        description: "consolidation_method 'full': attribution amount, translated_amount * (1 - ownership_pct), the minority share of the line; not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2). 'proportional': 0, a joint operation has no minority (IFRS 11.20, konsol#117 pair 3)."
       - name: retranslation_amount
         description: >
           konsolidat#257: the retranslation of the key's balance brought forward,
@@ -81,12 +81,18 @@ models:
       konsol#117 pair 2 K3, konsolidat#204 (a)): both sides at 100%, whatever
       the holding. The minority's share is the NCI line of the NCI attribution
       journal (K2), not part of an elimination. This supersedes decision 12.
+      Where a side is a joint operation (consolidation_method proportional,
+      IFRS 11), the pair is eliminated at the operator's share instead
+      (IFRS 11.B34-B37; konsol#117 pair 3): matched legs, difference legs and
+      unrealized profit are scaled by least(share_a, share_b), share being
+      effective_ownership_pct for a proportional side and 1.0 otherwise.
+      The difference legs are scaled by the same factor: for S receivable 100 against J (joint operation, 50%) payable 90, the matched 45 is eliminated on both sides, S's residual 10 x 0.5 = 5 goes to the difference account, and S keeps 50, the co-operator's share of the receivable, which from the group's view is the external claim whatever J's books say.
     columns:
       - name: rule_id
         tests:
           - not_null
       - name: elimination_amount
-        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
+        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit. In full, except at the operator's share (least of the two sides' shares) where a side is a joint operation (IFRS 11.B34-B37)"
       - name: elimination_kind
         description: "matched, difference or unrealized_profit (the 'nci' kind of decision 12 is retired: eliminations are in full)"
         tests:
@@ -373,7 +379,11 @@ models:
           One path: the weakest method on it (full < proportional < equity <
           none). Several paths: the links' agreed method, or the group's
           declaration where the rule requires one; 'none' when a required
-          declaration is missing (method_source 'undeclared').
+          declaration is missing (method_source 'undeclared'). 'full' is
+          consolidated at 100% with the minority as nci_amount (IFRS 10.B86);
+          'proportional' is a joint operation (IFRS 11.20), consolidated at the
+          operator's share with nci_amount 0 (konsol#117 pair 3); 'equity' and
+          'none' are not line-consolidated.
       - name: method_source
         description: "'link' (derived from the links), 'declared' (read from consolidation_method_declarations), 'undeclared' (required and absent: nothing consolidates)."
         tests:
@@ -383,6 +393,8 @@ models:
         description: "How many paths from the group reach the entity (resolved or not)."
       - name: direct_owner_count
         description: "How many distinct nodes hold a link into the entity's own node."
+      - name: has_partial_full_link
+        description: "1 when any resolved path from the group carries a full link below 100%. With consolidation_method 'proportional' that is a full link below 100% mixed with a proportional holding, not necessarily on the same path: refused by name (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3 finding A)."
       - name: owner_group
         description: "The consolidation_group of the entity's own tree node (its Historical Equity Rates are declared under it); the same on every path, unchanged by konsol#117. Whether the rate join needs a group at all is open on konsol#117."
 
