@@ -33,7 +33,7 @@ G = "consolidation_group = 'ZZGRP' AND fiscal_year = 2095"
 # below must stay explicit for the same reason: ZZCOA also holds ZZ1000,
 # ZZ3000, ZZ3100 and ZZ4000, which are not ours to remove.
 FIXTURE_ENTITIES = ("ZZ7", "ZZA", "ZZB", "ZZC", "ZZD", "ZZE", "ZZH", "ZZQ", "ZZS")
-FIXTURE_ACCOUNTS = ("ZZ1010", "ZZ1100", "ZZ2010", "ZZ2100", "ZZ3010", "ZZ4030", "ZZ5030")
+FIXTURE_ACCOUNTS = ("ZZ1010", "ZZ1100", "ZZ2010", "ZZ2100", "ZZ3010", "ZZ3400", "ZZ4030", "ZZ5030")
 
 _ENTITY_LIST = ", ".join(f"'{e}'" for e in FIXTURE_ENTITIES)
 _ACCOUNT_LIST = ", ".join(f"'{a}'" for a in FIXTURE_ACCOUNTS)
