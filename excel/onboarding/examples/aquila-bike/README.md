@@ -200,7 +200,7 @@ Said plainly, because a client who knows IFRS 10 will ask.
 ## Verification
 
 Done 7 Nov 2026; the Excel bullet re-run 8 Nov 2026 on the new rules. Four independent computations of the same group agreed to the cent on the
-rules of 7 Nov. The **live** run below has not been repeated on the rules of 7-8 Nov (option (a), ABJV): until it is, the replica and
+rules of 7 Nov. The warehouse run below has not been repeated on the rules of 7-8 Nov (option (a), ABJV): until it is, the replica and
 the Excel agree with each other, not yet with the warehouse.
 
 - **Generator** (`build_aquila_bike.py`): every entity-period balances to the cent (asserted); 138 entity-periods,
@@ -213,20 +213,13 @@ the Excel agree with each other, not yet with the warehouse.
   374,217 formulas, 0 errors; 0 cells differ from the replica by 0.01 or more; the balance sheet balances in every
   period; the NCI closing equals 30% of ABSE's net assets; the opening journal equals `inputs.json`; the ABJV pickup
   and the holders' cost agree. `tests/test_aquila_bike_walkthrough.py` runs the builder and reads every check cell.
-- **Live** (`demo-ext.konsolidat.com`, a fresh konsol v16 site, second stack on the demo server): master data,
-  deals and the opening journal loaded with `konsol_load.py` (Close Settings `self_approval = Allowed with reason`,
-  approvals through konsol's approval API with a reason), the 13 trial-balance files uploaded through the bulk
-  loader (138 entity-periods, 0 failed), the Build Approvals approved, dbt built by konsol's own pipeline
-  (61 s, 0 errors, 1 warning: `assert_declared_historical_has_a_rate` names the six EUR entities, which need no
-  historical rate). `gold_fully_consolidated_tb` for AQBIKE, summed per (fiscal year, period, account, layer):
-  **1,512 cells compared with `expected.json`, 0 differences of 0.01 or more.** The warehouse's own per-period
-  nets are within ±0.07 (Float64 sums of 20,244 rows); the replica's are exactly 0.
+- **Warehouse** (aquila-bike, loaded 7 Nov 2026, rules of that day — not re-run on the 7–8 Nov rules, option (a) and ABJV): master data, deals and the opening journal loaded with `konsol_load.py` (Close Settings `self_approval = Allowed with reason`, approvals through konsol's approval API with a reason), the 13 trial-balance files uploaded through the bulk loader (138 entity-periods, 0 failed), the Build Approvals approved, dbt built by konsol's own pipeline (61 s, 0 errors, 1 warning: `assert_declared_historical_has_a_rate` names the six EUR entities, which need no historical rate). `gold_fully_consolidated_tb` for AQBIKE, summed per (fiscal year, period, account, layer): **1,512 cells compared with `expected.json`, 0 differences of 0.01 or more.** The warehouse's own per-period nets are within ±0.07 (Float64 sums of 20,244 rows); the replica's are exactly 0.
 
-**Reloading the example on a stack that already holds it.** Do not load the regenerated workbook over an old copy.
+**Reloading the example onto a site that already holds it.** Do not load the regenerated workbook over an old copy.
 The opening journal (CJ-OPEN-2023) and the ABDE and ABFR trial balances changed on this branch. The loader keys a
 journal on its `journal_ref`, but a copy loaded before that key existed carries no `[CJ-OPEN-2023]` prefix, so the
 loader would not recognise it and would post a second opening journal beside the old 70% one (1141 credited twice,
-ABSE's equity eliminated at 170%). A stack that holds the old example takes the new golden copy from a FRESH site:
+ABSE's equity eliminated at 170%). A site that holds the old example takes the new copy from an empty site:
 load the regenerated workbook and the 13 trial-balance files into an empty site, then compare with `expected.json`.
 
 **Uploading a trial-balance period that is already submitted** (read from `konsol_load.py` and
@@ -234,9 +227,9 @@ load the regenerated workbook and the 13 trial-balance files into an empty site,
 marks that entity-period not ready ("already submitted as <name>; cancel or amend it first"), the loader prints it
 under "not ready", and `konsol.tb_bulk.load(skip_invalid=1)` loads only the ready entity-periods of the file, so the
 submitted figures stay as they were. To change a submitted period, cancel (period open) or amend it first. This is
-why a re-upload of changed ABDE and ABFR files onto an old stack silently keeps the OLD trial balances.
+why a re-upload of changed ABDE and ABFR files onto an old site silently keeps the OLD trial balances.
 
-What the live run found (all recorded in `../../HANDOFF.md`): historical equity rates are kept with 6 decimals;
+What the warehouse run found (all recorded in `../../HANDOFF.md`): historical equity rates are kept with 6 decimals;
 `Dimension.source_column` must repeat the dimension name on an upload-only site; a draft journal left in
 Pending Approval must not be sent for approval again; `konsol.tb_bulk.get_upload` is GET-only; back-to-back
 bulk loads can deadlock (MariaDB 1213) and are retried once; the acquired balance sheet is the last

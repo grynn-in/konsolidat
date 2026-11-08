@@ -1,19 +1,13 @@
 # =============================================================================
-# Second, independent stack next to the live demo (demo-ext.konsolidat.com)
-# =============================================================================
-# Approved by Deepak Pai, 7 Nov 2026, for the aquila-bike example. Same pattern
-# as docker-compose.v16.yml: renames every fixed container name, moves the
-# network to its own subnet, and keeps caddy and backup under profiles
-# so they do not start. The live Caddy (project `konsolidat`) will later proxy
-# demo-ext.konsolidat.com to FRAPPE_PORT (172.30.0.1:8169, the open_epm
-# gateway on the host, so the port is not public).
+# Compose override so a second project can run beside another one.
+# Renames every fixed container name, moves the network to its own subnet,
+# and keeps caddy and backup under profiles so they do not start.
+# Host, ports and credentials come from the operator's environment, not from here.
 #
-#   cd /root/konsolidat-ext
-#   docker compose -p konsolidat-ext --env-file .env \
+#   docker compose -p <project> --env-file .env \
 #     -f docker-compose.yml -f docker-compose.ext.yml up -d --no-build
 #
-# The image is a tag of the live one: konsolidat-frappe:latest ->
-# konsolidat-ext-frappe:latest (compose expects ${COMPOSE_PROJECT_NAME}-frappe).
+# The image is a tag of an already-built one (${COMPOSE_PROJECT_NAME}-frappe).
 # Never run deploy.sh here; never build here.
 # =============================================================================
 

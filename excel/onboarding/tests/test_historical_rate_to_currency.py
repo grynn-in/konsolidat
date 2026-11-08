@@ -1,6 +1,6 @@
 """konsol#374 (b): a Historical Equity Rate carries its presentation currency (`to_currency`, required).
 The template, the aquila-bike generator and the template's example rows must all supply it, or the loader's
-create is refused ("To Currency is required"), as happened on demo-ext on 8 Nov 2026."""
+create is refused ("To Currency is required"), as happened loading aquila-bike on 8 Nov 2026."""
 import os
 import sys
 import unittest

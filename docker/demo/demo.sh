@@ -1,6 +1,6 @@
 #!/bin/bash
-# demo.sh — switch the public trial ("demo mode") of the second stack on or off,
-# take its golden snapshot, and reset it to that snapshot.
+# demo.sh — switch public demo mode on or off, take its golden snapshot, and reset to that snapshot.
+# EXT_DIR (the compose project directory) and SITE come from the environment. This file does not name a host.
 #
 #   demo.sh status              what is on, when the last reset ran (or failed), how old the golden copy is
 #   demo.sh snapshot [--force]  take the golden copy of the site as it is NOW (deliberate, never automatic;
@@ -11,16 +11,16 @@
 #
 # Decided 7 Nov 2026 by Deepak Pai: the demo is switchable, resets hourly, the demo user holds
 # EPM Analyst + Entity Accountant. konsol reads exactly one key, site_config `demo_user`
-# (konsol/demo_mode.py); everything else lives here. Runs as root on the demo server.
-# Never touches the live stack (/root/konsolidat, containers konsolidat_*).
+# (konsol/demo_mode.py); everything else lives here.
 #
 # Failure policy of `reset`: the restore is tried twice; if it still fails the web tier stays STOPPED
-# (Caddy answers 503 with the maintenance page; a half-restored site answering 500s would be worse),
+# (the vhost answers 503 with the maintenance page; a half-restored site answering 500s would be worse),
 # `reset FAILED` is logged and shown by `status`, and the next hour (or a manual `reset`) tries again.
+
 set -euo pipefail
 
-EXT_DIR=${EXT_DIR:-/root/konsolidat-ext}
-SITE=${SITE:-demo-ext.konsolidat.com}
+: "${EXT_DIR:?EXT_DIR is not set}"
+: "${SITE:?SITE is not set}"
 DEMO_USER=${DEMO_USER:-demo@konsolidat.com}
 GOLDEN=$EXT_DIR/golden
 LOG=$EXT_DIR/reset.log
@@ -126,7 +126,10 @@ cmd_snapshot() {
 
 install_timer() {
   local here; here=$(cd "$(dirname "$0")" && pwd)
-  install -m 644 "$here/$SERVICE" /etc/systemd/system/
+  # The committed unit has @DEMO_SH@; fill this copy's path so the unit file
+  # in the repo does not name a directory.
+  sed "s|@DEMO_SH@|$here/demo.sh|g" "$here/$SERVICE" > "/etc/systemd/system/$SERVICE"
+  chmod 644 "/etc/systemd/system/$SERVICE"
   install -m 644 "$here/$TIMER" /etc/systemd/system/
   systemctl daemon-reload
 }

@@ -1,13 +1,11 @@
-# Appended to the LIVE stack's Caddyfile (/root/konsolidat/docker/caddy/Caddyfile) and reloaded
-# with `docker exec konsolidat_caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
-# Second stack (konsolidat-ext, aquila-bike example). Frappe of that stack listens on the docker
-# bridge gateway, 172.30.0.1:8169 (not public). While `demo.sh reset` runs, the backend is stopped
-# and the proxy error becomes the maintenance page below.
-https://demo-ext.konsolidat.com {
+# Template. DEMO_SITE and UPSTREAM come from the Caddy process environment.
+# Do not commit a host name or an address. While `demo.sh reset` runs, the
+# backend is stopped and the proxy error becomes the maintenance page below.
+https://{$DEMO_SITE} {
 	encode gzip
 	handle {
-		reverse_proxy 172.30.0.1:8169 {
-			header_up Host demo-ext.konsolidat.com
+		reverse_proxy {$UPSTREAM} {
+			header_up Host {$DEMO_SITE}
 		}
 	}
 	handle_errors {

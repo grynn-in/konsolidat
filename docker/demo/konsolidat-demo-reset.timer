@@ -1,5 +1,5 @@
 [Unit]
-Description=Konsolidat demo (demo-ext): hourly reset
+Description=Konsolidat demo: hourly reset
 
 [Timer]
 OnCalendar=hourly
