@@ -6,7 +6,7 @@
 -- The entity left the group and re-enters by a deal; that is not a step, so it is NOT refused. The refusal looks only at
 -- a proportional period covering the day before the deal (end_date >= acquisition_date - 1) or the deal's own period.
 -- Expect the test to pass (0 rows). ZZJ also has a FY2025 P12 trial balance, so gold_entity_ownership holds a proportional row
--- there and a full one in P4 with nothing between them but the calendar's P3: assert_no_ownership_step_on_partial_full_subsidiary
+-- there and a full one in P4 with the calendar's 2026 P1, P2 and P3 between them, none covered by an ownership period: assert_no_ownership_step_on_partial_full_subsidiary
 -- must read that as a re-entry (non-adjacent periods), not a step (review finding K).
 --
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
@@ -62,6 +62,8 @@ VALUES
   (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'),
   (2026, 2, 'FY2026-P02', 'Feb 2026', 'Regular', '2026-02-01', '2026-02-28', 'Q1', 'Open'),
   (2025, 12, 'FY2025-P12', 'Dec 2025', 'Regular', '2025-12-01', '2025-12-31', 'Q4', 'Open'),
+  (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'),
+  (2026, 2, 'FY2026-P02', 'Feb 2026', 'Regular', '2026-02-01', '2026-02-28', 'Q1', 'Open'),
   (2026, 3, 'FY2026-P03', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q1', 'Open'),
   (2026, 4, 'FY2026-P04', 'Apr 2026', 'Regular', '2026-04-01', '2026-04-30', 'Q2', 'Open'),
   (2026, 5, 'FY2026-P05', 'May 2026', 'Regular', '2026-05-01', '2026-05-31', 'Q2', 'Open'),
