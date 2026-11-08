@@ -57,7 +57,8 @@ rates and Historical Equity Rates are submitted directly.
 | `IC_Elimination_Rules` | IC Elimination Rule | Optional: unrealised profit in inventory. |
 | `Scenarios` | Scenario | Created only when missing (konsol ships defaults). |
 | `Consolidation_Groups` | Consolidation Group | Group nodes (blank `data_area_id`, a reporting currency) and entity nodes. Policy and journal accounts on the root only. |
-| `Ownership_Periods` | Ownership Period | Dated ownership of every non-root node. Submitted. |
+| `Ownership_Periods` | Ownership Period | Dated ownership of every non-root node. Submitted. Optional `owner_entity`: the entity whose node holds the share (blank = the group's own node, the tree parent). Two holders of one entity are two rows. |
+| `Method_Declarations` | Consolidation Group (`method_declarations` table) | Optional: the method (`full` or `equity`) for an entity reached by more than one ownership path, with a required `reason`. Merged into the group's own node. |
 | `FX_Rates` | Group Exchange Rate | Closing and Average per period, from each entity currency into each group currency. Submitted. |
 | `Historical_Equity_Rates` | Historical Equity Rate | Frozen equity rates per foreign entity and equity account. Submitted. |
 | `Consolidation_Journals` | Consolidation Journal | Manual consolidation entries the templates do not produce (e.g. the opening elimination of the parent's investments against subsidiaries' share capital). Lines in the group currency, debits = credits; posts as a movement in its period and stays in the balance sheet from then on. `journal_ref` is loader-only and joins `CJ_Lines`. Approved on load through the workflow. |
@@ -69,6 +70,16 @@ rates and Historical Equity Rates are submitted directly.
 | `Business_Disposals` | Business Disposal | One row per disposal: root group, disposed entity, disposal date (the Ownership Period's last day), share (full disposals only), currency. `deal_ref` joins `BD_Proceeds`. Submitted; approval ends the Ownership Period on that date. |
 | `BD_Proceeds` | Business Disposal Proceeds | The proceeds by component (`proceeds` table). At least one row per deal. |
 | trial-balance files | Trial Balance Upload → Trial Balance Submission | `data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency[, description][, partner_data_area_id][, amount_basis][, dim_*…]`. Debits equal credits per entity-period, in the currency's minor unit. |
+
+`owner_entity` (konsol#117) names who holds a share. The loader resolves it to the Consolidation Group node of
+(`consolidation_group`, `owner_entity`) and sends `owner_node`; blank sends nothing and konsol fills the tree parent, so
+an existing workbook loads unchanged. A period is identified by group, entity, owner and `effective_date`.
+
+`Method_Declarations` is needed only when an entity is reached by more than one ownership path, or the paths' sum
+exceeds 50% without an all-full path: until it is declared the build names the entity in
+`assert_method_declared_for_multi_path`. The loader adds each missing (`data_area_id`, `effective_date`) row to the
+group's own node in one update, leaves matching rows alone and never deletes. A blank `reason`, `proportional`, or a
+group without its own node is refused by name; a blank `reason` or `proportional` stops the run before anything is sent.
 
 The loader is idempotent in the way a person would be: a row whose natural key exists is updated, a submittable row
 that already has a live document is left alone, and an entity-period konsol already holds is reported and skipped.
