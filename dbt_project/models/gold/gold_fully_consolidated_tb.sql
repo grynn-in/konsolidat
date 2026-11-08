@@ -47,17 +47,14 @@ with entity_balances as (
         reporting_currency
 ),
 
-{# Layer 2: IC eliminations, the group view (gold_ic_eliminations also holds
-   the NCI view's entries, which the consolidation report adds for its 100%
-   column). The 'nci' entries (decision 12) are tagged ic_elimination_nci and
-   carry the entity on each leg: the NCI line's leg is the partly owned
-   entity whose minority holds that share (#175 re-review L2). The cash flow
-   statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
-   (third review L1). #}
+{# Layer 2: IC eliminations. Posted in full (IFRS 10.B86(c); konsol#117
+   pair 2 K3), so every entry is an ic_elimination with no entity on its legs:
+   the minority's share is the NCI line of the NCI movement schedule, not part
+   of the elimination. #}
 ic_elims as (
     select
         consolidation_group,
-        if(elimination_kind = 'nci', debit_entity, '') as data_area_id,
+        '' as data_area_id,
         fiscal_year,
         fiscal_period,
         debit_account as main_account,
@@ -65,16 +62,15 @@ ic_elims as (
         {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         debit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        'ic_elimination' as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
 
     union all
 
     select
         consolidation_group,
-        if(elimination_kind = 'nci', credit_entity, '') as data_area_id,
+        '' as data_area_id,
         fiscal_year,
         fiscal_period,
         credit_account as main_account,
@@ -82,10 +78,9 @@ ic_elims as (
         {{ dim_empty_strings(trailing=true) }}
         '' as reporting_currency,
         credit_elimination as amount,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        'ic_elimination' as adjustment_type,
         rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}

@@ -84,37 +84,20 @@ def test_windowed_rows_still_aggregate_by_quarter(monkeypatch):
     assert dict(bs["ZZOP"]["1010"]) == {"Q3": 45000.0}
 
 
-# --- konsolidat#148 / #175 re-review H1: the NCI view's eliminations ---------
+# --- konsol#117 pair 2 K3: eliminations are in full, the NCI block carries none -------
 
 @pytest.mark.parametrize("fetch", [report.fetch_nci_data, report.fetch_nci_bs_cumulative])
-def test_the_nci_block_eliminates_the_minoritys_share_of_intragroup_balances(fetch, monkeypatch):
-    """The Consolidated column is the group view plus the NCI block. The NCI
-    block adds the NCI view's eliminations to nci_amount, so an intragroup
-    balance with an 80%-owned side nets to zero at 100%."""
+def test_the_nci_block_is_the_trial_balances_nci_amount_only(fetch, monkeypatch):
+    """The Consolidated column is the group view plus the NCI block. Intercompany
+    eliminations are posted in full in the group view, so the NCI block adds no
+    elimination of its own (it used to add the NCI view's, decision 12)."""
     seen = []
     monkeypatch.setattr(report, "ch_query", lambda sql, cfg=None: seen.append(sql) or [])
     fetch(_cfg())
     sql = _flat(seen[0])
     assert "FROM epm_gold.gold_consolidated_trial_balance" in sql
-    assert "FROM epm_gold.gold_ic_eliminations" in sql and "elimination_view = 'nci'" in sql
-    # both legs of each entry, and only chart accounts (the NCI line is not one)
-    assert "debit_elimination AS leg_amount" in sql and "credit_elimination" in sql
-    assert "INNER JOIN epm_silver.silver_main_accounts" in sql
-    assert "sum(amount) AS nci_total" in sql
+    assert "gold_ic_eliminations" not in sql and "elimination_view" not in sql
 
 
-def test_a_payable_at_an_80pct_entity_nets_to_zero_at_100pct(monkeypatch):
-    """B (80%) owes A (100%) 1000. Group view: payable -800 + 800 matched = 0.
-    NCI block: nci_amount -200 plus the NCI view's +200 = 0. The rows come
-    back already summed by the query, as ClickHouse returns them."""
-    monkeypatch.setattr(report, "ch_query", lambda sql, cfg=None: [
-        {"main_account": "2010", "is_pnl": 0, "is_balance_sheet": 1, "quarter": "Q1", "nci_total": -200.0 + 200.0},
-    ])
-    pnl, bs = report.fetch_nci_data(_cfg())
-    assert bs["2010"]["Q1"] == 0.0 and not pnl
-
-
-def test_nci_entries_are_reported_with_the_ic_eliminations():
-    assert report._layer("ic_elimination_nci") == "ic_elimination"
-    assert report._layer("ic_elimination") == "ic_elimination"
-    assert report._layer("cta") == "cta"
+def test_the_report_has_no_nci_elimination_layer():
+    assert not hasattr(report, "_layer") and not hasattr(report, "_nci_view_legs")
