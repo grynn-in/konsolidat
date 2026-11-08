@@ -24,7 +24,10 @@
                              pair 2 K3, konsolidat#204 (a));
       - topside:             gold_consolidation_adjustments, adjustment_type
                              'topside' (layer 4 passes adjustment_type through);
-      - cta:                 gold_fx_revaluation (layer 3).
+      - cta:                 gold_fx_revaluation (layer 3);
+      - nci_attribution:     gold_nci_attribution_journal (the minority's share of a
+                             full-method subsidiary's result and CTA, konsol#117 pair 2
+                             K2, konsolidat#204 (a)).
     Every model carries the group in consolidation_group.
 
     Two directions, one row per (group, layer):
@@ -60,12 +63,17 @@ with expected as (
     select distinct consolidation_group, 'cta' as layer
     from {{ ref('gold_fx_revaluation') }}
 
+    union all
+
+    select distinct consolidation_group, 'nci_attribution' as layer
+    from {{ ref('gold_nci_attribution_journal') }}
+
 ),
 
 actual as (
     select distinct consolidation_group, adjustment_type as layer
     from {{ ref('gold_fully_consolidated_tb') }}
-    where adjustment_type in ('entity', 'ic_elimination', 'topside', 'cta')
+    where adjustment_type in ('entity', 'ic_elimination', 'topside', 'cta', 'nci_attribution')
 )
 
 select 'missing_layer' as error, consolidation_group, layer
