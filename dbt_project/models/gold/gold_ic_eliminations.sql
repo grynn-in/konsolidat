@@ -38,6 +38,10 @@
    seller). Pinned by assert_ic_eliminated_in_full and
    assert_unrealized_profit_at_operator_share.
 
+   The difference legs are scaled by the same factor: for S receivable 100 against J (joint operation, 50%) payable 90, the matched 45 is eliminated on both sides,
+   S's residual 10 x 0.5 = 5 goes to the difference account, and S keeps 50, 
+   the co-operator's share of the receivable, which from the group's view is the external claim whatever J's books say.
+
    Balance eliminations come from gold_ic_reconciliation, one row per pair and
    period (decided 13 Sep 2026):
    - 'matched': the matched amount (the smaller side, at 100%), eliminated
