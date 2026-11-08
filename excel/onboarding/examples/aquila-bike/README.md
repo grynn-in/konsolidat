@@ -1,12 +1,17 @@
 # Aquila Bike Group — a small, fully worked consolidation
 
 A fictional bicycle group built to show the core of consolidation on one screen: ten consolidated legal
-entities in ten EU countries and five currencies, a 30% associate, a 70% subsidiary, one acquisition in
-June, one disposal at the year end, intercompany trade, fees, loans and interest on declared account
+entities in ten EU countries and five currencies (nine at 1 January: ABCZ joins in June, ABDK leaves on
+31 December), a 30% associate, a joint venture held 30% + 30% through two group entities, a 70% subsidiary,
+one acquisition in June, one disposal at the year end, intercompany trade, fees, loans and interest on declared account
 pairs, governed monthly rates and IAS 21 historical rates, three reporting dimensions. Every number is
 deterministic and every number can be traced: the same consolidation is done offline in Excel with live
 formulas, replicated in Python from the warehouse's rules, and loaded into a konsol site and built by the
 warehouse, and the three agree to the cent (see *Verification* below).
+
+Standards the example exercises: IFRS 3 (acquisition method, goodwill, costs expensed, 3.53), IFRS 10 (consolidation,
+non-controlling interests, the presumption of control B35, disposal B98), IFRS 11.7 (joint control), IAS 28 (equity
+method), IAS 21 (translation, CTA, recycling on disposal, 21.48).
 
 | File | What it is |
 |---|---|
@@ -26,11 +31,15 @@ warehouse, and the three agree to the cent (see *Verification* below).
 | ABFR | Aquila Velo France SAS | FR | EUR | Sales, service and rental |
 | ABAT | Aquila Bikes Austria GmbH | AT | EUR | Sales |
 | ABES | Aquila Bicicletas Espana S.L. | ES | EUR | Service and rental |
-| ABSE | Aquila Cykel Sverige AB | SE | SEK | Sales. **Owned 70%**: the non-controlling-interest case |
+| ABSE | Aquila Cykel Sverige AB | SE | SEK | Sales. **Owned 70%**, carried at 100% with the minority as one NCI line: the non-controlling-interest case |
 | ABPL | Aquila Rowery Polska Sp. z o.o. | PL | PLN | Components factory; sells to ABDE, ABIT and (from June) ABCZ |
 | ABCZ | Aquila Kola s.r.o. | CZ | CZK | **Acquired 100% on 1 June 2024** for EUR 11.0m: goodwill, fair value step-up on plant, costs expensed |
 | ABDK | Aquila Cykler Danmark A/S | DK | DKK | Owned since 2015, **sold 100% on 31 December 2024** for EUR 7.0m: CTA recycled, gain on disposal |
 | ABPT | Aquila Bicicletas Portugal Lda | PT | EUR | **30% associate**, equity method |
+| ABJV | Aquila Shared Mobility B.V. | NL | EUR | **Joint venture**: 30% held by ABDE and 30% by ABFR (60% in all), equity method on the group's declaration (IFRS 11.7); first trial balance FY2024 P1 |
+
+That is twelve entities: ten consolidated line by line (ABH ... ABDK, ABCZ and ABDK for part of the year), one associate
+(ABPT) and one joint venture (ABJV).
 
 Divisions (dimension `dim_business_line`, hierarchy DIVISIONS): Bikes (e-bikes, classic bikes), Components and
 services (components and accessories, service and rental), Corporate (the holding's own costs). Also on every
@@ -56,7 +65,8 @@ every pair matches to the cent and the difference account stays empty.
    at 1 January: Statements sheet, column 2023-13.
 2. **P1–P5.** A month at a time: balance sheets at the month's closing rate (balances restated, difference in CTA),
    P&L at the month's average rate, share capital at historical rates. Intercompany pairs matched and eliminated;
-   ABSE at 70% with the 30% visible per row. Show one pair in sheet IC and the CTA grid.
+   ABSE at 100% and its minority attributed by a journal each month (sheet NCI attribution); the joint venture ABJV
+   picked up at 60% (sheet Joint venture ABJV). Show one pair in sheet IC (eliminated in full) and the CTA grid.
 3. **P6, the acquisition.** Sheet Acquisition: the 31 May balance sheet comes in through the journal (line 0), the
    acquired equity is eliminated, the step-up on plant posts, goodwill = consideration − (net assets + step-up), the
    parent's investment is credited, the costs are expensed. ABCZ's own June movements come through the entity layer.
@@ -65,7 +75,8 @@ every pair matches to the cent and the difference account stays empty.
 5. **P12, the disposal.** Sheet Disposal: ABDK's net assets leave at the December closing rate, its accumulated CTA
    is recycled, the proceeds land on the settlement account, the balancing line is the gain. ABDK's full-year
    result stays in the group result (IFRS 10.B98).
-6. **Year end.** Statements sheet: FY2024 P&L and the balance sheet at 31 December, tool view and IFRS view.
+6. **Year end.** Statements sheet: FY2024 P&L and the balance sheet at 31 December, one view: every subsidiary
+   at 100%, the NCI line, and the note on how the tool computes it.
 7. **Go back to P6, P7.** Every period's movements are kept. In this workbook change the column; in Excel with the
    add-in, `=K.EPM("AQBIKE", 2024, 7, "4110", "consolidated_amount", "consolidated")` reads the live figure
    (sheet LiveCheck).
@@ -74,69 +85,71 @@ every pair matches to the cent and the difference account stays empty.
 
 Three views of the same year, each from `../../aquila_bike_pl.py`, which reads `model/expected.json` (nothing is
 typed in; `uv run aquila_bike_pl.py --unit 1` gives the EUR figures). Credit-positive: revenue and profit positive,
-costs in brackets. Tool view: subsidiaries at the group's share, so ABSE contributes 70% of every line. The same
-168 cells computed from the live warehouse on `demo-ext.konsolidat.com` (`gold_fully_consolidated_tb`, AQBIKE)
-agree with these to the cent (7 Nov 2026).
+costs in brackets. Subsidiaries are at 100%, so ABSE contributes every line in full; the minority's 30% of its result
+is shown beneath the net result as "attributable to non-controlling interests", not taken out of the lines. The twelve
+lines are unchanged in number; their figures moved when the rules changed (7-8 Nov 2026, konsolidat#204 option (a)).
+The figures below come from the replica; the live warehouse has not been re-run on the new rules (see *Verification*).
 
 **Before and after consolidation, FY2024** (EUR thousand; costs in brackets)
 
-| Line | Ten entities summed, 100% | Minority's 30% of ABSE | Intercompany eliminations | Deal journals | Equity method | Consolidated FY2024 |
-|---|---:|---:|---:|---:|---:|---:|
-| Revenue, net of dealer discounts (4110-4220, 4910) | 202,428 | (5,497) | – | – | – | 196,931 |
-| Intercompany revenue: goods and management fees (4310, 4340) | 24,493 | – | (24,493) | – | – | – |
-| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (127,289) | 2,921 | 23,848 | – | – | (100,520) |
-| **Gross profit** | **99,632** | **(2,576)** | **(645)** | **–** | **–** | **96,411** |
-| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (49,436) | 1,349 | – | – | – | (48,087) |
-| Depreciation, amortisation, impairment (66xx) | (6,728) | 163 | – | – | – | (6,565) |
-| Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | – | – | 1,925 | – | 1,925 |
-| **Operating profit** | **43,468** | **(1,064)** | **(645)** | **1,925** | **–** | **43,684** |
-| Financial items, net, incl. intercompany interest (71xx, 72xx) | (2,374) | 48 | (27) | – | – | (2,353) |
-| Share of result of the associate ABPT, 30% (EQ_INCOME) | – | – | – | – | 211 | 211 |
-| Income taxes (8xxx) | (9,800) | 209 | – | – | – | (9,590) |
-| **Net result for the period (group share)** | **31,294** | **(807)** | **(672)** | **1,925** | **211** | **31,952** |
+| Line | Entities at 100% | Intercompany eliminations | Deal journals | Equity method (ABPT, ABJV) | Consolidated FY2024 |
+|---|---:|---:|---:|---:|---:|
+| Revenue, net of dealer discounts (4110-4220, 4910) | 202,428 | – | – | – | 202,428 |
+| Intercompany revenue: goods and management fees (4310, 4340) | 24,493 | (24,493) | – | – | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (127,289) | 24,493 | – | – | (102,796) |
+| **Gross profit** | **99,632** | **–** | **–** | **–** | **99,632** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (49,436) | – | – | – | (49,436) |
+| Depreciation, amortisation, impairment (66xx) | (6,728) | – | – | – | (6,728) |
+| Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | – | 1,925 | – | 1,925 |
+| **Operating profit** | **43,468** | **–** | **1,925** | **–** | **45,393** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (2,374) | – | – | – | (2,374) |
+| Share of result of the associate ABPT, 30%, and the joint venture ABJV, 60% (EQ_INCOME) | – | – | – | 650 | 650 |
+| Income taxes (8xxx) | (9,800) | – | – | – | (9,800) |
+| **Net result for the period (100%)** | **31,294** | **–** | **1,925** | **650** | **33,869** |
 
-IFRS 10 view of the same year: total result at 100% 33,430, of which non-controlling interests 807 and owners of the parent 32,623. The owners' result is 672 above the tool's: the minority's 30% of the group's sales, fees and interest to ABSE, which the tool takes out of the P&L and books to NCI equity (3700, decision 12).
+Attributable to: non-controlling interests 807 and owners of the parent 33,063, of a total result of 33,869 at 100%. The NCI amount is 30% of ABSE's own result, posted to 3700 by the attribution journal (intercompany eliminations are in full, so no NCI leg is taken out of any line).
 
 **Before and after the acquisition of ABCZ (1 June 2024)** (EUR thousand; costs in brackets)
 
 | Line | P5 (May) consolidated | P6 (June) consolidated | of which ABCZ's own June (entity layer) | of which the acquisition journal |
 |---|---:|---:|---:|---:|
-| Revenue, net of dealer discounts (4110-4220, 4910) | 21,163 | 23,208 | 1,674 | – |
+| Revenue, net of dealer discounts (4110-4220, 4910) | 21,797 | 23,851 | 1,674 | – |
 | Intercompany revenue: goods and management fees (4310, 4340) | – | – | – | – |
-| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (10,721) | (11,992) | (862) | – |
-| **Gross profit** | **10,442** | **11,216** | **812** | **–** |
-| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (5,074) | (5,605) | (413) | – |
-| Depreciation, amortisation, impairment (66xx) | (526) | (562) | (37) | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (10,988) | (12,255) | (862) | – |
+| **Gross profit** | **10,809** | **11,596** | **812** | **–** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (5,228) | (5,763) | (413) | – |
+| Depreciation, amortisation, impairment (66xx) | (539) | (576) | (37) | – |
 | Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | (300) | – | (300) |
-| **Operating profit** | **4,842** | **4,748** | **362** | **(300)** |
-| Financial items, net, incl. intercompany interest (71xx, 72xx) | (161) | (428) | (7) | – |
-| Share of result of the associate ABPT, 30% (EQ_INCOME) | 26 | 25 | – | – |
-| Income taxes (8xxx) | (1,152) | (1,123) | (75) | – |
-| **Net result for the period (group share)** | **3,554** | **3,223** | **280** | **(300)** |
+| **Operating profit** | **5,042** | **4,957** | **362** | **(300)** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (163) | (430) | (7) | – |
+| Share of result of the associate ABPT, 30%, and the joint venture ABJV, 60% (EQ_INCOME) | 64 | 73 | – | – |
+| Income taxes (8xxx) | (1,177) | (1,150) | (75) | – |
+| **Net result for the period (100%)** | **3,766** | **3,451** | **280** | **(300)** |
 
 **Before and after the disposal of ABDK (31 December 2024)** (EUR thousand; costs in brackets)
 
 | Line | P11 (Nov) consolidated | P12 (Dec) consolidated | of which ABDK's own December (entity layer) | of which the disposal journal |
 |---|---:|---:|---:|---:|
-| Revenue, net of dealer discounts (4110-4220, 4910) | 12,394 | 13,958 | 701 | – |
+| Revenue, net of dealer discounts (4110-4220, 4910) | 12,713 | 14,328 | 701 | – |
 | Intercompany revenue: goods and management fees (4310, 4340) | – | – | – | – |
-| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (5,873) | (7,400) | (337) | – |
-| **Gross profit** | **6,521** | **6,558** | **364** | **–** |
-| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (3,080) | (3,484) | (180) | – |
-| Depreciation, amortisation, impairment (66xx) | (562) | (562) | (27) | – |
+| Cost of sales, incl. intercompany purchases and fees (51xx-55xx) | (5,984) | (7,576) | (337) | – |
+| **Gross profit** | **6,730** | **6,752** | **364** | **–** |
+| Operating expenses net of other income: staff, selling, admin, R&D (61xx-65xx, 67x0 except deals) | (3,164) | (3,571) | (180) | – |
+| Depreciation, amortisation, impairment (66xx) | (576) | (575) | (27) | – |
 | Deal items: acquisition costs (6770), gain on disposal (6730), bargain purchase (6760) | – | 2,225 | – | 2,225 |
-| **Operating profit** | **2,879** | **4,737** | **157** | **2,225** |
-| Financial items, net, incl. intercompany interest (71xx, 72xx) | (179) | (200) | (10) | – |
-| Share of result of the associate ABPT, 30% (EQ_INCOME) | 18 | 11 | – | – |
-| Income taxes (8xxx) | (661) | (559) | (32) | – |
-| **Net result for the period (group share)** | **2,056** | **3,989** | **115** | **2,225** |
+| **Operating profit** | **2,990** | **4,830** | **157** | **2,225** |
+| Financial items, net, incl. intercompany interest (71xx, 72xx) | (181) | (202) | (10) | – |
+| Share of result of the associate ABPT, 30%, and the joint venture ABJV, 60% (EQ_INCOME) | 49 | 46 | – | – |
+| Income taxes (8xxx) | (676) | (568) | (32) | – |
+| **Net result for the period (100%)** | **2,182** | **4,105** | **115** | **2,225** |
 
 Reading the three tables:
 
 - **Consolidation** removes the EUR 24.5m the group sold to itself (goods from ABIT and ABPL, management fees from
-  ABH) and the matching purchases, takes the minority's 30% of ABSE out of every line, expenses the acquisition
-  costs, books the gain on the sale of ABDK and picks up 30% of ABPT's result. The group's revenue to the outside
-  world is unchanged by consolidation: the 5.5m drop is ABSE's minority share, not an elimination.
+  ABH) and the matching purchases, in full: ABSE's trade with the group is eliminated at 100%, so gross profit is the
+  same before and after. It then expenses the acquisition costs, books the gain on the sale of ABDK, and picks up
+  30% of ABPT's result and 60% of ABJV's (EUR 0.65m together). Revenue to the outside world is the full 202.4m:
+  nothing is taken out for the minority.
 - **Acquisition.** June is the first month ABCZ's own P&L is in the group (its 31 May balance sheet came in through
   the journal, with no P&L). ABCZ adds 1.7m revenue and 0.3m result; the 0.3m of legal and due-diligence costs are
   expensed in the same month (IFRS 3.53), so the group result for June is below May's although revenue is higher.
@@ -149,9 +162,25 @@ Reading the three tables:
 
 Said plainly, because a client who knows IFRS 10 will ask.
 
-- **Subsidiaries are carried at the group's share.** ABSE contributes 70% of every line; the minority's 30% is
-  computed per row (`nci_amount`) but the tool's statements have no NCI line (konsolidat#204, open). The
-  walkthrough's Statements sheet shows both views and reconciles them; owners' equity is the same in both.
+- **Non-controlling interests are one line, computed by a journal.** ABSE is carried at 100% line by line
+  (konsolidat#204 option (a)). The minority's 30% is account 3700. It is opened by the opening consolidation journal
+  (Cr 3700 1,197,277.20 and Dr 3300 216,000.00, the minority's share of opening retained earnings at the FY2023 P12
+  closing rate) and fed each period by the attribution journal NCI-AQBIKE-ABSE-<year>-P<n>: Dr retained earnings
+  for 30% of ABSE's result, Dr CTA for 30% of its CTA movement, Cr 3700. At 2024-12 the NCI is 1,197,277.20 +
+  1,555,383.38 = 2,752,660.58, which is 30% of ABSE's net assets at the closing rate. Intercompany eliminations are in
+  full, with no NCI leg. The walkthrough's Statements sheet shows one view and a note on this; the NCI attribution sheet
+  lists the journals.
+- **A joint venture is declared, not inferred.** ABJV is reached along two paths (ABDE 30% and ABFR 30%) that add to
+  60% with no all-full path, past the 50% presumption of control (IFRS 10.B35). The percentage decides nothing: the
+  group declares the method for ABJV (`Method_Declarations`: equity from 2024-01-01, "joint control under the
+  shareholders' agreement (IFRS 11.7); 60% does not give control"). Without that row the build fails
+  `assert_method_declared_for_multi_path` naming AQBIKE and ABJV, and the method resolves to `none`: nothing is
+  consolidated and nothing is picked up. ABDE and ABFR each carry their stake at cost, Dr 1142 / Cr 1241 210,000.00
+  in FY2024 P1; the group's pickup is 60% of ABJV's result (EUR 0.44m for FY2024).
+- **Year-end close of journal-layer P&L is not done yet** (konsolidat#316). The warehouse closes entity P&L to retained
+  earnings in the Closing period, but not the P&L that journals post, such as the equity-method pickup. An associate's
+  pickup excludes the year-end close rows, so ABPT has no pickup in 2023-13, and its FY2023 pickup (EUR 0.20m) stays
+  in the P&L accounts. The Statements sheet carries it on the line "Result not yet closed".
 - **Deals are dated on the first day of a period** (konsolidat#278: the ownership window tests the period's first
   day) and the acquired balance sheet is the last period-end before the acquisition period (konsol#406: konsol's
   "Get Balances" reads one period too far). The example does both; the opening balances it enters are frozen at
@@ -163,14 +192,16 @@ Said plainly, because a client who knows IFRS 10 will ask.
   brings the balance sheet in as a whole). The example settles the pre-acquisition trade between ABPL and ABCZ on
   completion, as completion accounts usually do, so no artificial difference appears.
 - **The equity method** entry is shown as it must be (share of result at the average rate, debit investment /
-  credit income). The warehouse model posted both legs with one sign and untranslated when this was written; the
-  fix is on branch `fix-equity-method-journal` and the verification below ran with it.
+  credit income), for the associate ABPT and the joint venture ABJV. The warehouse model posted both legs with one
+  sign and untranslated when this was written; the fix is on branch `fix-equity-method-journal`.
 - **"Yearly rates"** are not a rate type: Group Exchange Rate has Closing and Average per period. The only
   year-wide rate here is the 2023 annual average on FY2023 P12, because the whole FY2023 result sits in that period.
 
 ## Verification
 
-Done 7 Nov 2026. Four independent computations of the same group agree to the cent.
+Done 7 Nov 2026; the Excel bullet re-run 8 Nov 2026 on the new rules. Four independent computations of the same group agreed to the cent on the
+rules of 7 Nov. The **live** run below has not been repeated on the rules of 7-8 Nov (option (a), ABJV): until it is, the replica and
+the Excel agree with each other, not yet with the warehouse.
 
 - **Generator** (`build_aquila_bike.py`): every entity-period balances to the cent (asserted); 138 entity-periods,
   19,918 rows, 144 accounts, 2 fiscal years pass konsol's own frappe-free intake, chart, calendar and policy rules
@@ -178,9 +209,10 @@ Done 7 Nov 2026. Four independent computations of the same group agree to the ce
   equity rates 6): declare more and the replica and the warehouse differ by cents on equity.
 - **Python replica** (`aquila_bike_offline.py` → `model/expected.json`): every layer of every period nets to zero;
   every intercompany pair matched (472 pairs, 4 cent-level fx differences, nothing in 6750).
-- **Excel walkthrough** (`Aquila_Bike_Walkthrough.xlsx`): recalculated in LibreOffice: 357,270 formulas, 0 errors;
-  0 cells differ from the replica by 0.01 or more; the tool-view and IFRS-view balance sheets balance in every
-  period; the owners'-result reconciliation to the NCI legs is 0 in every period.
+- **Excel walkthrough** (`Aquila_Bike_Walkthrough.xlsx`): recalculated in LibreOffice (8 Nov 2026, rules of 7-8 Nov):
+  374,217 formulas, 0 errors; 0 cells differ from the replica by 0.01 or more; the balance sheet balances in every
+  period; the NCI closing equals 30% of ABSE's net assets; the opening journal equals `inputs.json`; the ABJV pickup
+  and the holders' cost agree. `tests/test_aquila_bike_walkthrough.py` runs the builder and reads every check cell.
 - **Live** (`demo-ext.konsolidat.com`, a fresh konsol v16 site, second stack on the demo server): master data,
   deals and the opening journal loaded with `konsol_load.py` (Close Settings `self_approval = Allowed with reason`,
   approvals through konsol's approval API with a reason), the 13 trial-balance files uploaded through the bulk
@@ -189,6 +221,20 @@ Done 7 Nov 2026. Four independent computations of the same group agree to the ce
   historical rate). `gold_fully_consolidated_tb` for AQBIKE, summed per (fiscal year, period, account, layer):
   **1,512 cells compared with `expected.json`, 0 differences of 0.01 or more.** The warehouse's own per-period
   nets are within ±0.07 (Float64 sums of 20,244 rows); the replica's are exactly 0.
+
+**Reloading the example on a stack that already holds it.** Do not load the regenerated workbook over an old copy.
+The opening journal (CJ-OPEN-2023) and the ABDE and ABFR trial balances changed on this branch. The loader keys a
+journal on its `journal_ref`, but a copy loaded before that key existed carries no `[CJ-OPEN-2023]` prefix, so the
+loader would not recognise it and would post a second opening journal beside the old 70% one (1141 credited twice,
+ABSE's equity eliminated at 170%). A stack that holds the old example takes the new golden copy from a FRESH site:
+load the regenerated workbook and the 13 trial-balance files into an empty site, then compare with `expected.json`.
+
+**Uploading a trial-balance period that is already submitted** (read from `konsol_load.py` and
+`konsol/tb_bulk_model.py:check_group`): the period is neither replaced nor superseded. `konsol.tb_bulk.check_file`
+marks that entity-period not ready ("already submitted as <name>; cancel or amend it first"), the loader prints it
+under "not ready", and `konsol.tb_bulk.load(skip_invalid=1)` loads only the ready entity-periods of the file, so the
+submitted figures stay as they were. To change a submitted period, cancel (period open) or amend it first. This is
+why a re-upload of changed ABDE and ABFR files onto an old stack silently keeps the OLD trial balances.
 
 What the live run found (all recorded in `../../HANDOFF.md`): historical equity rates are kept with 6 decimals;
 `Dimension.source_column` must repeat the dimension name on an upload-only site; a draft journal left in

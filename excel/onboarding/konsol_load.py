@@ -83,7 +83,9 @@ class Frappectl:
         args = ["doc", "list", doctype, "--fields", ",".join(fields), "--limit", str(limit)]
         # always JSON: frappectl's `-f k=v` parser splits on any operator inside a value, so a free-text key such
         # as a journal description containing ">= 50%" or " like " would become a different filter
-        fj = [[k, "=", v] if v is not None else [k, "is", "not set"] for k, v in filters.items()]
+        # a ("like", pattern) value is a prefix match; anything else is equality
+        fj = [[k, v[0], v[1]] if isinstance(v, tuple) else [k, "=", v] if v is not None else [k, "is", "not set"]
+              for k, v in filters.items()]
         args += ["--filters-json", json.dumps(fj)]
         if self.dry_run:
             return []
@@ -235,6 +237,7 @@ class Loader:
         self.cg_names = {}      # consolidation group code -> group node name
         self.member_names = {}  # (hierarchy, code) -> member name
         self.node_names = {}    # (group, entity or '') -> Consolidation Group node name
+        self.sheet_nodes = {}   # (group, entity or '') -> parent_group code, from the workbook's Consolidation_Groups
 
     def note(self, sheet, what):
         self.counts.setdefault(sheet, OrderedDict())
@@ -418,6 +421,8 @@ class Loader:
             self.member_names[(h, code)] = nm
 
     def load_groups(self, sheet, rows):
+        for r in rows:
+            self.sheet_nodes[(r["consolidation_group"], r.get("data_area_id") or "")] = r.get("parent_group") or ""
         groups = [r for r in rows if r.get("is_group") or not r.get("data_area_id")]
         entities = [r for r in rows if r not in groups]
         groups = tree_order(groups, "consolidation_group", "parent_group")
@@ -440,14 +445,28 @@ class Loader:
                 self.cg_names[r["consolidation_group"]] = nm
 
     def find_node(self, group, entity=""):
-        """Name of the Consolidation Group node (group, entity); blank entity = the group's own node. None if absent
-        (in a dry run a placeholder, since nothing was created)."""
+        """Name of the Consolidation Group node (group, entity); blank entity = the group's own node. None if absent.
+        In a dry run nothing is read from the site: the node is looked up in the workbook's own Consolidation_Groups
+        rows (a placeholder name when they exist, None when they do not name it)."""
         k = (group, entity or "")
         if k not in self.node_names:
-            found = [] if self.fc.dry_run else self.fc.list(
-                "Consolidation Group", {"consolidation_group": group, "data_area_id": entity or None})
-            self.node_names[k] = found[0]["name"] if found else ("<%s/%s>" % k if self.fc.dry_run else None)
+            if self.fc.dry_run:
+                known = k in self.sheet_nodes or not self.sheet_nodes   # no Consolidation_Groups rows: cannot tell
+                self.node_names[k] = "<%s/%s>" % k if known else None
+            else:
+                found = self.fc.list("Consolidation Group", {"consolidation_group": group, "data_area_id": entity or None})
+                self.node_names[k] = found[0]["name"] if found else None
         return self.node_names[k]
+
+    def tree_parent_node(self, group, entity=""):
+        """Name of the tree parent of the node (group, entity): the node's parent_consolidation_group (the
+        workbook's parent_group in a dry run). It is the group's own node only for a node directly under it."""
+        if self.fc.dry_run:
+            parent = self.sheet_nodes.get((group, entity or ""))
+            return self.find_node(parent) if parent else None
+        found = self.fc.list("Consolidation Group", {"consolidation_group": group, "data_area_id": entity or None},
+                             fields=("name", "parent_consolidation_group"))
+        return (found[0].get("parent_consolidation_group") or None) if found else None
 
     def load_ownership(self, sheet, rows):
         for r in rows:
@@ -457,13 +476,21 @@ class Loader:
             doc = doc_fields(sheet, r)
             key = {"consolidation_group": r["consolidation_group"], "data_area_id": r.get("data_area_id") or None,
                    "effective_date": r["effective_date"]}
-            if owner:
-                # a blank owner is pre-filled by the server from the tree parent, so it is not part of the key then
-                node = self.find_node(r["consolidation_group"], owner)
-                if node is None:
-                    self.fail(sheet.name, label, "owner_entity %s has no node in group %s (Consolidation_Groups)" % (owner, r["consolidation_group"]))
-                    continue
-                doc["owner_node"] = key["owner_node"] = node
+            try:
+                if owner:
+                    node = self.find_node(r["consolidation_group"], owner)
+                    if node is None:
+                        raise Failed("owner_entity %s has no node in group %s (Consolidation_Groups)" % (owner, r["consolidation_group"]))
+                else:
+                    # a blank owner is the owned node's tree parent; always part of the key, so a blank row
+                    # is never mistaken for a row of another holder
+                    node = self.tree_parent_node(r["consolidation_group"], r.get("data_area_id") or "")
+                    if node is None:
+                        raise Failed("no owner_entity, and %s has no parent node in Consolidation_Groups to take as the owner" % where)
+            except Failed as e:
+                self.fail(sheet.name, label, e)
+                continue
+            doc["owner_node"] = key["owner_node"] = node
             self.submit_once(sheet, key, doc, label)
 
     def check_declarations(self, rows):
@@ -475,8 +502,8 @@ class Loader:
                     raise Failed("%s: %s is empty" % (where, col))
             if not str(r.get("reason") or "").strip():
                 raise Failed("%s: reason is required (the arrangement, the holders and the standard)" % where)
-            if r["consolidation_method"] not in ("full", "equity"):
-                raise Failed("%s: method %s is refused (full or equity; proportional waits for konsol#117 pair 3)" % (where, r["consolidation_method"]))
+            if r["consolidation_method"] not in ("full", "equity", "none"):
+                raise Failed("%s: method %s is refused (full, equity or none; proportional waits for konsol#117 pair 3)" % (where, r["consolidation_method"]))
             if r.get("end_date") and r["end_date"] < r["effective_date"]:
                 raise Failed("%s: end_date %s is before effective_date %s" % (where, r["end_date"], r["effective_date"]))
 
@@ -529,6 +556,13 @@ class Loader:
                 link = links[child]
                 doc[child.table_field] = [doc_fields(child, c) for c in crows if c.get(link) == r.get(link)]
             key = {k: _key_value(r.get(k)) for k in sheet.key}
+            if sheet.name == "Consolidation_Journals":
+                # the server holds no journal_ref, so the reference is stored as a leading "[ref] " on the
+                # description, and the journal is found by that prefix; the rest of the description is free text
+                tag = "[%s] " % r["journal_ref"]
+                doc["description"] = tag + doc["description"] if doc.get("description") else tag.strip()
+                key.pop("journal_ref", None)
+                key["description"] = ("like", tag.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_").rstrip() + "%")
             ref = next((r.get(l) for l in links.values() if r.get(l)), None)
             label = "%s (%s)" % (ref, "/".join(str(v) for v in key.values() if v is not None))
             self.submit_once(sheet, key, doc, label)

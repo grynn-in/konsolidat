@@ -520,19 +520,21 @@ class Offline:
         return self
 
     def statements(self):
+        # quantise once (6 places, the precision expected.json carries) so every later sum adds the same numbers
+        self.fctb = {k: round(v, 6) + 0.0 for k, v in self.fctb.items()}
         periods = sorted({k[0] for k in self.fctb})
         pnl_period, bs_cum, check = {}, {}, {}
         cum = defaultdict(float)
         for p in periods:
             pl = defaultdict(float)
-            for (q, e, a, t), v in self.fctb.items():
+            for (q, e, a, t), v in sorted(self.fctb.items()):    # sorted: float sums must not depend on insertion order
                 if q == p:
                     cum[a] += v
                     if self.is_pnl(a) or a in ("EQ_INCOME",):
                         pl[a] += v
             pnl_period[p] = dict(pl)
             bs_cum[p] = {a: v for a, v in cum.items() if not (self.is_pnl(a) or a == "EQ_INCOME")}
-            check[p] = sum(v for (q, *_), v in self.fctb.items() if q == p)
+            check[p] = sum(v for (q, *_), v in sorted(self.fctb.items()) if q == p)
         return periods, pnl_period, bs_cum, check
 
     def dump(self):
@@ -557,9 +559,27 @@ class Offline:
             "bs_cumulative": {pk(p): v for p, v in bs.items()},
             "net_check": {pk(p): v for p, v in check.items()},
         }
+        out = canonical(out)
+        # a row that rounds to zero says nothing; dropping it AFTER rounding keeps float noise from deciding the row count
+        for k in ("fctb", "cta"):
+            out[k] = [r for r in out[k] if r["amount"] != 0]
         with open(os.path.join(MODEL_DIR, "expected.json"), "w") as f:
-            json.dump(out, f, indent=1)
+            json.dump(out, f, indent=1, sort_keys=True)
+            f.write("\n")
         return out
+
+
+def canonical(x):
+    """expected.json is a pure function of inputs.json: floats rounded to 6 places (the precision of the warehouse's amounts, and coarse enough that float-summation noise cannot move a byte) with -0.0 as 0.0 (so a different
+    summation order cannot change a byte), every list in its rows' sorted order, dict keys sorted at write time."""
+    if isinstance(x, float):
+        return round(x, 6) + 0.0
+    if isinstance(x, dict):
+        return {k: canonical(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        rows = [canonical(v) for v in x]
+        return sorted(rows, key=lambda r: json.dumps(r, sort_keys=True))
+    return x
 
 
 def main():

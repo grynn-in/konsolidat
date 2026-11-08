@@ -57,8 +57,8 @@ rates and Historical Equity Rates are submitted directly.
 | `IC_Elimination_Rules` | IC Elimination Rule | Optional: unrealised profit in inventory. |
 | `Scenarios` | Scenario | Created only when missing (konsol ships defaults). |
 | `Consolidation_Groups` | Consolidation Group | Group nodes (blank `data_area_id`, a reporting currency) and entity nodes. Policy and journal accounts on the root only. |
-| `Ownership_Periods` | Ownership Period | Dated ownership of every non-root node. Submitted. Optional `owner_entity`: the entity whose node holds the share (blank = the group's own node, the tree parent). Two holders of one entity are two rows. |
-| `Method_Declarations` | Consolidation Group (`method_declarations` table) | Optional: the method (`full` or `equity`) for an entity reached by more than one ownership path, with a required `reason`. Merged into the group's own node. |
+| `Ownership_Periods` | Ownership Period | Dated ownership of every non-root node. Submitted. Optional `owner_entity`: the entity whose node holds the share (blank = the owned node's tree parent, which is the group's own node only for a node directly under it). Two holders of one entity are two rows. |
+| `Method_Declarations` | Consolidation Group (`method_declarations` table) | Optional: the method (`full`, `equity` or `none`) for an entity reached by more than one ownership path, with a required `reason`. Merged into the group's own node. |
 | `FX_Rates` | Group Exchange Rate | Closing and Average per period, from each entity currency into each group currency. Submitted. |
 | `Historical_Equity_Rates` | Historical Equity Rate | Frozen equity rates per foreign entity and equity account. Submitted. |
 | `Consolidation_Journals` | Consolidation Journal | Manual consolidation entries the templates do not produce (e.g. the opening elimination of the parent's investments against subsidiaries' share capital). Lines in the group currency, debits = credits; posts as a movement in its period and stays in the balance sheet from then on. `journal_ref` is loader-only and joins `CJ_Lines`. Approved on load through the workflow. |
@@ -72,8 +72,13 @@ rates and Historical Equity Rates are submitted directly.
 | trial-balance files | Trial Balance Upload → Trial Balance Submission | `data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency[, description][, partner_data_area_id][, amount_basis][, dim_*…]`. Debits equal credits per entity-period, in the currency's minor unit. |
 
 `owner_entity` (konsol#117) names who holds a share. The loader resolves it to the Consolidation Group node of
-(`consolidation_group`, `owner_entity`) and sends `owner_node`; blank sends nothing and konsol fills the tree parent, so
-an existing workbook loads unchanged. A period is identified by group, entity, owner and `effective_date`.
+(`consolidation_group`, `owner_entity`) and sends `owner_node`; a blank owner is resolved by the loader to the owned
+node's tree parent (its `parent_group`; the group's own node only for a node directly under it) and sent the same way.
+A period is identified by group, entity, owner node and `effective_date`, so a blank row never matches another holder's
+row. A dry run checks `owner_entity` against the workbook's own `Consolidation_Groups` rows and names a missing node.
+A journal on `Consolidation_Journals` is identified by group, fiscal year, period and `journal_ref`; the server holds no
+reference field, so the loader writes the description as `[journal_ref] text` and finds the journal by that prefix.
+The description is free text: rewording it never creates a second journal.
 
 `Method_Declarations` is needed only when an entity is reached by more than one ownership path, or the paths' sum
 exceeds 50% without an all-full path: until it is declared the build names the entity in
