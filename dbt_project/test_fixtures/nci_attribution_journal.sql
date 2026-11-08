@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances gold_consolidated_cash_flow assert_consolidated_cf_reconciles assert_cash_flow_excludes_nci_attribution
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_balances assert_nci_attribution_equals_minority_result assert_all_layers_present assert_nci_account_declared_for_partial_subs assert_end_to_end_bs_balances gold_consolidated_cash_flow assert_consolidated_cf_reconciles assert_cash_flow_excludes_nci_attribution assert_closing_period_activity_on_partial_subsidiary
 -- gate: expect assert_nci_attribution_balances pass
 -- gate: expect assert_nci_attribution_equals_minority_result pass
 -- gate: expect assert_all_layers_present pass
@@ -6,6 +6,7 @@
 -- gate: expect assert_end_to_end_bs_balances pass
 -- gate: expect assert_consolidated_cf_reconciles pass
 -- gate: expect assert_cash_flow_excludes_nci_attribution pass
+-- gate: expect assert_closing_period_activity_on_partial_subsidiary pass
 -- konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's share of a subsidiary's result and
 -- CTA is one NCI journal per (group, entity, FY, period). ZZP (USD, root) holds 70% of ZZC (SEK, method full).
 -- FY2026 P3 in SEK: receivables +600, cost +400, revenue -1,000 (a local profit of 600). Governed SEK->USD P3:
