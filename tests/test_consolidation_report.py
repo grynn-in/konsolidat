@@ -86,17 +86,9 @@ def test_windowed_rows_still_aggregate_by_quarter(monkeypatch):
 
 # --- konsol#117 pair 2 K3: eliminations are in full, the NCI block carries none -------
 
-@pytest.mark.parametrize("fetch", [report.fetch_nci_data, report.fetch_nci_bs_cumulative])
-def test_the_nci_block_is_the_trial_balances_nci_amount_only(fetch, monkeypatch):
-    """The Consolidated column is the group view plus the NCI block. Intercompany
-    eliminations are posted in full in the group view, so the NCI block adds no
-    elimination of its own (it used to add the NCI view's, decision 12)."""
-    seen = []
-    monkeypatch.setattr(report, "ch_query", lambda sql, cfg=None: seen.append(sql) or [])
-    fetch(_cfg())
-    sql = _flat(seen[0])
-    assert "FROM epm_gold.gold_consolidated_trial_balance" in sql
-    assert "gold_ic_eliminations" not in sql and "elimination_view" not in sql
+def test_the_report_reads_no_nci_amount_block():
+    """Review fix: Consolidated is the FCTB layers only; the TB's nci_amount memo is not fetched."""
+    assert not hasattr(report, "fetch_nci_data") and not hasattr(report, "fetch_nci_bs_cumulative")
 
 
 def test_the_report_has_no_nci_elimination_layer():
@@ -134,9 +126,7 @@ def test_consolidated_is_the_sum_of_the_fctb_layers_with_a_70pct_entity():
     cfg = report.ConsolidationConfig(group="ZZGRP", year=2099)
     cfg.quarters = ["Q1"]
     ws = Workbook().active
-    # the pre-fix call passed the TB's nci_amount (30% of every line) as the fifth argument
-    nci = {"ZZ4000": {"Q1": -300.0}}
-    report.build_consolidated_sheet(ws, cfg, sections, consol, nci, report.THEME_CONSOL, sign_flip=False)
+    report.build_consolidated_sheet(ws, cfg, sections, consol, report.THEME_CONSOL, sign_flip=False)
     labels = {ws.cell(row=6, column=c).value: c for c in range(3, 12) if ws.cell(row=6, column=c).value}
     row = next(r for r in range(8, 20) if ws.cell(row=r, column=1).value == "ZZ4000")
     consolidated = _evaluate(ws, ws.cell(row=row, column=labels["Consolidated"]).coordinate)
