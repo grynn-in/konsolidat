@@ -552,6 +552,17 @@ class Loader:
                               "no %s row has this %s" % (sheet.name, link))
         for r in rows:
             doc = doc_fields(sheet, r)
+            # who acquires / sells: an entity code on the sheet, a Consolidation Group node on the document;
+            # blank posts nothing and the server takes the node's tree parent
+            side = {"Business_Combinations": ("acquirer_entity", "acquirer_node"),
+                    "Business_Disposals": ("disposer_entity", "disposer_node")}.get(sheet.name)
+            if side and r.get(side[0]):
+                node = self.find_node(r["consolidation_group"], r[side[0]])
+                if node is None:
+                    self.fail(sheet.name, str(r.get("deal_ref") or ""),
+                              "%s %s has no node in group %s (Consolidation_Groups)" % (side[0], r[side[0]], r["consolidation_group"]))
+                    continue
+                doc[side[1]] = node
             for child, crows in children_by_sheet.items():
                 link = links[child]
                 doc[child.table_field] = [doc_fields(child, c) for c in crows if c.get(link) == r.get(link)]
