@@ -15,7 +15,7 @@
     Also (#175 re-review L3, konsolidat#208): the NCI Account a group declares
     on its root, which its intercompany NCI line posts to, is in the chart.
     A group that declares none posts to the placeholder, which
-    assert_ic_nci_account_declared reports.
+    assert_nci_account_declared_for_partial_subs reports.
 #}
 
 {% set has_column = false %}

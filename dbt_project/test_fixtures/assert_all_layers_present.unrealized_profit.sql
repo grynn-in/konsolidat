@@ -16,13 +16,6 @@ INSERT INTO epm_gold.gold_ic_eliminations
 VALUES
   ('IC:ZZ1500/ZZ2500', 'Intercompany: unrealized_profit', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
    'unrealized_profit', '', 'balance', 'group', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
-INSERT INTO epm_gold.gold_ic_eliminations
-  (rule_id, rule_name, rule_type, consolidation_group, fiscal_year, fiscal_period, debit_account, credit_account,
-   debit_entity, credit_entity, elimination_amount, debit_elimination, credit_elimination, elimination_kind,
-   difference_cause, basis, elimination_view, entity_a, account_a, entity_b, account_b)
-VALUES
-  ('IC:ZZ1500/ZZ2500', 'Intercompany: matched', 'balance', 'ZZG', 2026, 1, 'ZZ2500', 'ZZ1500', 'ZZE2', 'ZZE1', 100, -100, 100,
-   'matched', '', 'balance', 'nci', 'ZZE1', 'ZZ1500', 'ZZE2', 'ZZ2500');
 INSERT INTO epm_gold.gold_consolidation_adjustments
   (consolidation_group, adjustment_type, journal_id, data_area_id, fiscal_year, fiscal_period, main_account,
    debit_amount, credit_amount, net_amount, description, status)

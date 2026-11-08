@@ -15,6 +15,11 @@
     )
 }}
 
+{# konsolidat#204 (a), konsol#117 pair 2 (IFRS 10.B86): group_amount is 100% of
+   translated_amount for every consolidated row; nci_amount is the minority's
+   attribution (translated x (1 - ownership_pct)) that the NCI line in equity
+   will carry. Pinned by assert_group_equals_translated_for_full and
+   assert_nci_equals_translated_times_minority. #}
 {# The query_settings line (konsolidat PR "Fix the TB-only first build after
    #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
    one over the other. With ClickHouse's default
@@ -666,9 +671,16 @@ consolidated as (
            retranslation (konsolidat#257; 0 on every row that is not
            retranslated) #}
         local_amount * translation_rate + translation_adjustment as translated_amount,
-        {# PRD-4: Group amount = translated x ownership_pct #}
-        (local_amount * translation_rate + translation_adjustment) * ownership_pct as group_amount,
-        {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
+        {# konsolidat#204 option (a), konsol#117 pair 2 (IFRS 10.B86): a controlled
+           subsidiary is consolidated line by line at 100%, whatever the group's
+           share. group_amount = translated_amount for every row this CTE emits
+           (the where above drops equity and none; proportional rides along until
+           pair 3). It was translated x ownership_pct (PRD-4). #}
+        local_amount * translation_rate + translation_adjustment as group_amount,
+        {# PRD-4, kept: nci_amount = translated x (1 - ownership_pct) is the
+           ATTRIBUTION amount, the minority's share of each line. It is no longer
+           the complement of group_amount: the minority is one NCI line in equity,
+           which konsol#117 pair 2 task K2 posts from this column. #}
         (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct) as nci_amount
     from adjusted
     {# konsolidat#93: a missing governed rate fails the build loudly, never a

@@ -1,13 +1,13 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance assert_method_declared_for_multi_path assert_effective_ownership_is_path_sum assert_effective_ownership_in_range assert_nci_plus_group_equals_translated
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance assert_method_declared_for_multi_path assert_effective_ownership_is_path_sum assert_effective_ownership_in_range assert_group_equals_translated_for_full
 -- gate: expect assert_method_declared_for_multi_path pass
 -- gate: expect assert_effective_ownership_is_path_sum pass
 -- gate: expect assert_effective_ownership_in_range pass
--- gate: expect assert_nci_plus_group_equals_translated pass
+-- gate: expect assert_group_equals_translated_for_full pass
 -- konsol#117 shape 2, declared FULL: the same graph as the .undeclared fixture (P holds 100% of A
 -- and B; A and B hold 30% of D each, at equity; eff(P, D) = 0.60 along two equity paths), and P
 -- declares that it controls D (consolidation_method_declarations: ZZP, ZZD, full, from
 -- 2020-01-01). gold_entity_ownership (P, D): 'declared', full, 0.60, NCI 0.40; D's profit of
--- 1,000 line-consolidates into P at group 600 / NCI 400 on each row (nci = 1 - eff downstream),
+-- 1,000 line-consolidates into P at group 1,000 (100%, konsolidat#204 (a)) / NCI 400 on each row (nci = 1 - eff downstream),
 -- and nothing flags. At A and B, D stays an associate (one path, equity, 'link').
 --
 -- gold_consolidated_trial_balance is built from its direct inputs; D books in P's currency, so

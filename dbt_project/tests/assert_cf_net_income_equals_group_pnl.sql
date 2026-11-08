@@ -9,9 +9,10 @@
     reported there. So those accounts are left out of both sides.
 
     It fails when the statement drops a P&L entry. The case it was written
-    for: the minority's part of a P&L pair's elimination (decision 12, the
-    group view's 'nci' entries, ic_elimination_nci) is in the P&L, and the
-    statement once left it out with the balance-sheet pairs' ones.
+    for: a P&L pair's elimination is in the P&L, and the statement once left
+    it out with the balance-sheet pairs' ones. (The minority's part of a P&L
+    pair used to be a separate ic_elimination_nci entry, decision 12; it is
+    retired, konsol#117 pair 2 K3.)
 #}
 
 with mapped_lines as (

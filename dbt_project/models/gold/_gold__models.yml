@@ -55,9 +55,9 @@ models:
       - name: translated_amount
         description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
-        description: "translated_amount * ownership_pct"
+        description: "Equals translated_amount for every consolidated row: a controlled subsidiary is carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2). The minority is the single NCI line in equity, not a share of each line."
       - name: nci_amount
-        description: "translated_amount * (1 - ownership_pct)"
+        description: "Attribution amount: translated_amount * (1 - ownership_pct), the minority share of the line. Not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2)."
       - name: retranslation_amount
         description: >
           konsolidat#257: the retranslation of the key's balance brought forward,
@@ -77,10 +77,10 @@ models:
       net to zero. Balance rows come from gold_ic_reconciliation (konsolidat#148):
       the matched amount of each pair, and the difference moved to the group's
       intercompany-difference account. Unrealized-profit rows come from IC
-      Elimination Rules. The minority owners' portion (decision 12) posts to
-      the NCI Account the group declares on its Consolidation Group root
-      (konsolidat#208), or to the 'NCI' placeholder (ic_nci_placeholder())
-      until it declares one; assert_ic_nci_account_declared names such a group.
+      Elimination Rules. Eliminations are posted in full (IFRS 10.B86(c);
+      konsol#117 pair 2 K3, konsolidat#204 (a)): both sides at 100%, whatever
+      the holding. The minority's share is the NCI line of the NCI movement
+      schedule, not part of an elimination. This supersedes decision 12.
     columns:
       - name: rule_id
         tests:
@@ -88,19 +88,19 @@ models:
       - name: elimination_amount
         description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
       - name: elimination_kind
-        description: "matched, nci (decision 12: the minority owners' portion, to the NCI line), difference or unrealized_profit"
+        description: "matched, difference or unrealized_profit (the 'nci' kind of decision 12 is retired: eliminations are in full)"
         tests:
           - accepted_values:
               arguments:
-                values: ['matched', 'nci', 'difference', 'unrealized_profit']
+                values: ['matched', 'difference', 'unrealized_profit']
       - name: difference_cause
         description: "On difference rows, the pair's cause (booking or fx, decision 13); '' otherwise"
       - name: elimination_view
-        description: "group (the group view, booked by gold_fully_consolidated_tb) or nci (the minority's share, added by the consolidation report for its 100% column)"
+        description: "Always 'group'. The column is kept for readers that filter on it; the NCI view of decision 12 is retired (konsol#117 pair 2 K3)"
         tests:
           - accepted_values:
               arguments:
-                values: ['group', 'nci']
+                values: ['group']
       - name: basis
         description: "balance (balance-sheet pair, eliminations posted as the change to date) or movement (P&L pair), decision 14; '' for unrealized profit"
       - name: debit_entity
@@ -180,7 +180,7 @@ models:
           - not_null
       - name: adjustment_type
         description: >
-          Layer: entity, ic_elimination, ic_elimination_nci, cta, equity_method,
+          Layer: entity, ic_elimination, cta, equity_method,
           pnl_proration, acquisition, goodwill_amortisation, disposal, or the
           topside adjustment type
         tests:

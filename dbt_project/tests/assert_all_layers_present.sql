@@ -16,11 +16,12 @@
     that group. Each source is mapped to the adjustment_type
     gold_fully_consolidated_tb gives it:
       - entity:              gold_consolidated_trial_balance (layer 1);
-      - ic_elimination:      gold_ic_eliminations, elimination_view 'group' (layer 2).
-                             The 'nci' kind lands as ic_elimination_nci. Every
-                             other kind, including unrealized_profit from
+      - ic_elimination:      gold_ic_eliminations (layer 2). Every kind,
+                             including unrealized_profit from
                              ic_elimination_rules, lands as ic_elimination.
-                             NCI-view rows never enter the consolidated TB;
+                             There is no ic_elimination_nci layer any more
+                             (eliminations are posted in full: konsol#117
+                             pair 2 K3, konsolidat#204 (a));
       - topside:             gold_consolidation_adjustments, adjustment_type
                              'topside' (layer 4 passes adjustment_type through);
       - cta:                 gold_fx_revaluation (layer 3).
@@ -45,11 +46,8 @@ with expected as (
 
     union all
 
-    select distinct
-        consolidation_group,
-        if(elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as layer
+    select distinct consolidation_group, 'ic_elimination' as layer
     from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
 
     union all
 
@@ -67,7 +65,7 @@ with expected as (
 actual as (
     select distinct consolidation_group, adjustment_type as layer
     from {{ ref('gold_fully_consolidated_tb') }}
-    where adjustment_type in ('entity', 'ic_elimination', 'ic_elimination_nci', 'topside', 'cta')
+    where adjustment_type in ('entity', 'ic_elimination', 'topside', 'cta')
 )
 
 select 'missing_layer' as error, consolidation_group, layer
