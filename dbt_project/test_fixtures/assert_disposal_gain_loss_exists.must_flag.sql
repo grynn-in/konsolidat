@@ -7,7 +7,7 @@
 -- BUILD, and assert_disposal_gain_loss_exists must FAIL with exactly `Got 1 result` on these rows;
 -- assert_cta_recycled_on_disposal PASSes (the entity's accumulated CTA is 0 at rate 1.0, so no recycling is owed).
 -- Since row J12 the disposal guard assert_disposal_accounts_declared refuses this disposal by name first
--- (retained_interest_pct > 0: partial-share deals wait for konsolidat#204; `Got 1 result` there too), and it reads
+-- (retained_interest_pct > 0: partial disposals are not implemented, konsolidat#310; `Got 1 result` there too), and it reads
 -- only sources + chart, so dbt runs it before the journal and its FAIL would SKIP the journal and the gain/loss
 -- test — the `--exclude` selects the guard out so the gate reaches assert_disposal_gain_loss_exists (row J12b).
 -- Both refusals name the same deal; this fixture proves the gain/loss one.

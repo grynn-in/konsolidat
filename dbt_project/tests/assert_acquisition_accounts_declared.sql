@@ -42,13 +42,10 @@
 -- A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal
 -- would otherwise post to a code the chart does not know.
 --
--- Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1):
---   share_acquired_pct < 100      layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the
---                                  parent's share, while the IFRS 3 template posts 100% of the net assets plus
---                                  an NCI line, so a partial-share deal would count the minority twice. One row
---                                  per such deal, whatever the root row declares; the balance tests still prove
---                                  the NCI arithmetic on business_combination_80pct.sql, selected without this
---                                  guard (see that fixture's header).
+-- Partial-share deals (share_acquired_pct < 100) are accepted since konsolidat#204 (a) (konsol#117 pair 2,
+-- 8 Nov 2026): layer 1 carries a controlled subsidiary at 100% and the NCI attribution layer carries the
+-- minority's share of its result, so the IFRS 3 template's NCI line is no longer counted twice. What a partial
+-- share needs is declared above (nci_account, and nci_fair_value for a 'full' deal).
 --
 -- Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local ->
 -- framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal
@@ -199,8 +196,7 @@ checks as (
         value,
         required,
         options,
-        is_account,
-        is_refusal
+        is_account
     from deals
     array join
         ['root_row', 'acquisition_period',
@@ -210,7 +206,7 @@ checks as (
          'goodwill_account', 'investment_account', 'fair_value_adjustment_account', 'nci_account',
          'bargain_purchase_gain_account', 'disposal_proceeds_account', 'acquisition_costs_account',
          'is_retained_earnings',
-         'share_acquired_pct', 'nci_fair_value'] as field,
+         'nci_fair_value'] as field,
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          accounting_framework, nci_measurement, goodwill_treatment, acquisition_costs_treatment,
          measurement_period, bargain_purchase,
@@ -218,7 +214,7 @@ checks as (
          goodwill_account, investment_account, fair_value_adjustment_account, nci_account,
          bargain_purchase_gain_account, disposal_proceeds_account, acquisition_costs_account,
          retained_account,
-         toString(share_acquired_pct), if(nci_fair_value > 0.0, toString(nci_fair_value), '')] as value,
+         if(nci_fair_value > 0.0, toString(nci_fair_value), '')] as value,
         -- nci_measurement and nci_fair_value are the deal's own columns (konsol#204/#205), required whatever
         -- the root row declares
         [toUInt8(1), toUInt8(1),
@@ -232,7 +228,7 @@ checks as (
          toUInt8(has_root = 1 and n_costs > 0),
          toUInt8(has_root = 1 and n_costs > 0 and acquisition_costs_treatment = 'Expense'),
          toUInt8(has_root = 1 and n_history > 0),
-         toUInt8(share_acquired_pct < 100.0), toUInt8(share_acquired_pct < 100.0 and nci_measurement = 'full')] as required,
+         toUInt8(share_acquired_pct < 100.0 and nci_measurement = 'full')] as required,
         [emptyArrayString(), emptyArrayString(),
          ['IFRS', 'US GAAP', 'Local'], ['partial', 'full'], ['Impairment only', 'Amortise'], ['Expense', 'Capitalise'],
          ['Off', '12 months'], ['Recognise gain', 'Refuse'],
@@ -240,7 +236,7 @@ checks as (
          emptyArrayString(), emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(),
-         emptyArrayString(), emptyArrayString()] as options,
+         emptyArrayString()] as options,
         [0, 0,
          0, 0, 0, 0,
          0, 0,
@@ -248,16 +244,7 @@ checks as (
          1, 1, 1, 1,
          1, 1, 1,
          1,
-         0, 0] as is_account,
-        -- the partial-share refusal (row J12): the value is present and valid, the deal is still refused
-        [0, 0,
-         0, 0, 0, 0,
-         0, 0,
-         0, 0,
-         0, 0, 0, 0,
-         0, 0, 0,
-         0,
-         1, 0] as is_refusal
+         0] as is_account
 ),
 
 judged as (
@@ -270,7 +257,6 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
-            c.is_refusal = 1, 'partial-share deals wait for konsolidat#204: layer 1 carries the entity at its share',
             c.value = '', 'missing',
             length(c.options) > 0 and not has(c.options, c.value), concat('not a declared option: ', arrayStringConcat(c.options, ' | ')),
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',

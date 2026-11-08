@@ -390,7 +390,7 @@ SHEETS: tuple[Sheet, ...] = (
             Col("consolidation_group", "The acquiring group's ROOT code (as on Consolidation_Groups).", True, width=14),
             Col("acquired_entity", "entity_code of the entity acquired.", True, width=14),
             Col("acquisition_date", "The day control was obtained. Date it on the FIRST day of a declared period (konsolidat#278: the ownership window tests the period's first day).", True, "date", width=12),
-            Col("share_acquired_pct", "Share acquired, 0..100. Today only 100 is accepted by the warehouse (konsolidat#204).", True, "float", width=10),
+            Col("share_acquired_pct", "Share acquired, 0..100. Any share from 0 to 100; below 100 the minority is the NCI line (IFRS 10).", True, "float", width=10),
             Col("consideration_currency", "ISO code the consideration is measured in.", True, width=10),
             Col("nci_measurement_override", "Blank = the root's goodwill_method; partial or full overrides it for this deal.", False, "select", ("", "partial", "full"), width=12),
             Col("nci_fair_value", "Fair value of the non-controlling interest (full method only).", False, "float", width=14),

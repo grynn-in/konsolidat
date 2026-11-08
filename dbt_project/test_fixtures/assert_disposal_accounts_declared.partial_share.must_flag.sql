@@ -4,7 +4,7 @@
 -- pair 2 K4): business_disposal.sql verbatim, except the disposal sells 60% of ZZS (share_disposed_pct 60, retained 0)
 -- instead of 100%. Every account the root row declares is valid, so the one flagged row is share_disposed_pct, with the
 -- reason: partial disposals and retained interests are not implemented: the disposal journal posts nothing for them
--- (konsolidat#F2). Acquisitions below 100% are accepted; disposals are not, until the journal posts them.
+-- (konsolidat#310). Acquisitions below 100% are accepted; disposals are not, until the journal posts them.
 --
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
