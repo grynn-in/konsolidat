@@ -237,11 +237,13 @@ unrealized_profit_eliminations as (
        an unrealized-profit elimination is raised in every group that holds the
        buyer — including a parent group, which the single-level seed join never
        reached. distinct because the ownership model is period-grained and this
-       join only needs the membership. #}
+       join only needs the membership. Membership is the set the CTB
+       line-consolidates (full, proportional): a buyer resolved `none` or
+       `equity` raises no unrealised-profit elimination (#336). #}
     inner join (
         select distinct consolidation_group, data_area_id
         from {{ ref('gold_entity_ownership') }}
-        where has_complete_chain = 1 and consolidation_method != 'equity'
+        where has_complete_chain = 1 and consolidation_method in ('full', 'proportional')
     ) as cg
         on icb.buying_entity = cg.data_area_id
     {# the seller's and the buyer's share in this group and period: a joint
