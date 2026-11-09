@@ -56,8 +56,7 @@ VALUES
   ('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full');
 -- usd_log10 is required, not decorative: it defaults to nan, and a currency with no
 -- reference magnitude makes assert_governed_rate_sane warn on every rate that uses it
--- (macros/fx_magnitude.sql). USD is 0 by definition; EUR is log10(EUR units per 1 USD).
--- A 0 on anything but USD reads as unset, so EUR carries a real non-zero value.
+-- (macros/fx_magnitude.sql). USD is 0 by definition, and it is the only currency here.
 INSERT INTO epm_gold.currencies
   (currency_code, currency_name, symbol, minor_unit, usd_log10)
 VALUES
