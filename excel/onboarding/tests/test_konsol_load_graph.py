@@ -235,5 +235,61 @@ class JournalKey(unittest.TestCase):
         self.assertEqual(n, 2)
 
 
+BC = {"deal_ref": "ACQ-B-2025", "consolidation_group": "G", "acquired_entity": "B", "acquisition_date": "2025-02-01",
+      "share_acquired_pct": 100, "consideration_currency": "EUR"}
+BD = {"deal_ref": "DSP-B-2025", "consolidation_group": "G", "disposed_entity": "B", "disposal_date": "2025-12-30",
+      "share_disposed_pct": 100, "retained_interest_pct": 0, "proceeds_currency": "EUR"}
+
+
+def deal_creates(site, doctype):
+    return [w for w in site.writes if w[0] == "create" and w[1] == doctype]
+
+
+class DealCounterparty(unittest.TestCase):
+    def test_acquirer_entity_posts_the_resolved_node(self):
+        site = FakeSite(groups())
+        code, out = run_loader(site, {"Business_Combinations": [dict(BC, acquirer_entity="A")]})
+        creates = deal_creates(site, "Business Combination")
+        self.assertEqual(len(creates), 1, out)
+        self.assertEqual(creates[0][3]["acquirer_node"], "CG-A")
+        self.assertNotIn("acquirer_entity", creates[0][3])
+
+    def test_blank_acquirer_posts_none(self):
+        site = FakeSite(groups())
+        run_loader(site, {"Business_Combinations": [dict(BC)]})
+        creates = deal_creates(site, "Business Combination")
+        self.assertEqual(len(creates), 1)
+        self.assertNotIn("acquirer_node", creates[0][3])
+
+    def test_disposer_entity_posts_the_resolved_node(self):
+        site = FakeSite(groups())
+        code, out = run_loader(site, {"Business_Disposals": [dict(BD, disposer_entity="A")]})
+        creates = deal_creates(site, "Business Disposal")
+        self.assertEqual(len(creates), 1, out)
+        self.assertEqual(creates[0][3]["disposer_node"], "CG-A")
+        self.assertNotIn("disposer_entity", creates[0][3])
+
+    def test_blank_disposer_posts_none(self):
+        site = FakeSite(groups())
+        run_loader(site, {"Business_Disposals": [dict(BD)]})
+        creates = deal_creates(site, "Business Disposal")
+        self.assertEqual(len(creates), 1)
+        self.assertNotIn("disposer_node", creates[0][3])
+
+    def test_unknown_acquirer_is_named_and_nothing_posted(self):
+        site = FakeSite(groups())
+        code, out = run_loader(site, {"Business_Combinations": [dict(BC, acquirer_entity="NOPE")]})
+        self.assertEqual(code, 1)
+        self.assertIn("NOPE", out)
+        self.assertEqual([w for w in site.writes if w[1] == "Business Combination"], [])
+
+    def test_unknown_disposer_is_named_and_nothing_posted(self):
+        site = FakeSite(groups())
+        code, out = run_loader(site, {"Business_Disposals": [dict(BD, disposer_entity="NOPE")]})
+        self.assertEqual(code, 1)
+        self.assertIn("NOPE", out)
+        self.assertEqual([w for w in site.writes if w[1] == "Business Disposal"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
