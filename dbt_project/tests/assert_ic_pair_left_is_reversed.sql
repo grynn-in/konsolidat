@@ -32,10 +32,16 @@ group_last as (
     group by consolidation_group
 ),
 
+{# the periods on their declared dates, the window gold_entity_ownership judges (declared_periods(),
+   konsolidat#171 / #252): a link covers a period when it started by the period's end and had not ended
+   before the period began #}
 periods as (
-    select distinct fiscal_year, fiscal_period,
-           {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }}
+    select distinct tb.fiscal_year as fiscal_year, tb.fiscal_period as fiscal_period,
+           dp.window_start_date as period_start_date, dp.window_end_date as period_date
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
 pair_entities as (
@@ -51,7 +57,7 @@ link_cover as (
     select a.consolidation_group as consolidation_group, a.data_area_id as data_area_id,
            p.fiscal_year as fiscal_year, p.fiscal_period as fiscal_period,
            a.link_group as link_group, a.link_data_area_id as link_data_area_id,
-           max(o.effective_date <= p.period_date and o.end_date >= p.period_date
+           max(o.effective_date <= p.period_date and o.end_date >= p.period_start_date
                and o.consolidation_method in ('full', 'proportional')) as covered
     from {{ source('epm_staging', 'consolidation_ancestry') }} as a
     inner join pair_entities as pe

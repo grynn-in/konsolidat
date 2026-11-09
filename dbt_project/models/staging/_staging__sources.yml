@@ -210,9 +210,10 @@ sources:
           reaches along several paths whose links do not settle it (methods
           disagree, or no path is all-full and the paths sum past the 50%
           trigger). One row per Consolidation Method Declaration on the group
-          node, effective-dated; ownership_resolution reads it ASOF
-          (effective_date <= period_date < end_date) only when the rule asks for
-          it, and resolves method_source = 'undeclared' when it is required and
+          node, effective-dated; ownership_resolution reads it ASOF on the
+          period's declared dates (effective_date <= the period's end_date and
+          end_date >= its start_date, the window a link has) only when the rule
+          asks for it, and resolves method_source = 'undeclared' when it is required and
           absent. May be absent on a volume konsol has not upgraded yet.
         loaded_at_field: updated_at
         columns:

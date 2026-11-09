@@ -20,12 +20,20 @@
     .indirect_associate.sql, .single_chain.sql.
 #}
 
+{# The periods and their dates come from the declared calendar, as the model's do (declared_periods(),
+   konsolidat#171 / #252): this test checks the path arithmetic, not the window, so it reads the window on
+   the same declared dates rather than on a second, disagreeing date rule. The window itself is checked
+   independently by assert_ownership_window_matches_deal_period and assert_ownership_uses_effective_date. #}
 with periods_needed as (
     select distinct
-        fiscal_year,
-        fiscal_period,
-        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }}
+        tb.fiscal_year as fiscal_year,
+        tb.fiscal_period as fiscal_period,
+        dp.window_start_date as period_start_date,
+        dp.window_end_date as period_date
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
 ownership as (
@@ -51,6 +59,7 @@ ancestry_periods as (
         a.link_owner_data_area_id as link_owner_data_area_id,
         p.fiscal_year as fiscal_year,
         p.fiscal_period as fiscal_period,
+        p.period_start_date as period_start_date,
         p.period_date as period_date
     from {{ source('epm_staging', 'consolidation_ancestry') }} as a
     cross join periods_needed as p
@@ -64,9 +73,9 @@ path_oracle as (
         ap.path_id as path_id,
         ap.fiscal_year as fiscal_year,
         ap.fiscal_period as fiscal_period,
-        exp(sum(log(if(o.end_date >= ap.period_date, o.ownership_pct, null) / 100.0))) as path_pct,
-        countIf(if(o.end_date >= ap.period_date, o.ownership_pct, null) is null) as unresolved,
-        countIf(if(o.end_date >= ap.period_date, o.ownership_pct, null) = 0) as zero_links
+        exp(sum(log(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) / 100.0))) as path_pct,
+        countIf(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) is null) as unresolved,
+        countIf(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) = 0) as zero_links
     from ancestry_periods as ap
     asof left join ownership as o
         on ap.link_group = o.consolidation_group

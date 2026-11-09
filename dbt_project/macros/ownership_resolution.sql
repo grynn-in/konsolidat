@@ -30,10 +30,29 @@
    The trigger (50%, the IFRS 10.B35 presumption of control through votes)
    only REQUIRES a declaration; it never picks a method. A declaration is a row
    of epm_staging.consolidation_method_declarations for (G, E), read ASOF
-   effective_date <= period_date < end_date.
+   effective_date <= period_date and end_date >= period_start_date, the same
+   window as a link.
+
+   THE WINDOW (konsolidat#171, #252, #278): a period is judged on the dates
+   konsol's calendar DECLARES for it (macros/declared_periods.sql), never on a
+   date built from the period number. A link (or a declaration) is in the
+   window for period P when
+
+       effective_date <= period_date        (P's declared end_date: held by P's end)
+       end_date       >= period_start_date  (P's declared start_date: not ended before P began)
+
+   and the ASOF join, keyed on period_date, picks the latest link that started
+   by P's end: the holding at the period end. This is exactly the span rule the
+   deal journals post by (start_date <= deal date <= end_date): an acquisition
+   is consolidated from the period its journal posts in (line (0) brings the
+   balance sheet in up to the period before), and a full disposal up to and
+   including the period its journal posts in (line (0) derecognises the
+   cumulative balances through that period), and not after. A Closing period is
+   judged as its year's last Regular period (declared_periods()).
 
    periods_cte names a CTE with one row per (data_area_id, fiscal_year,
-   fiscal_period, period_date) to resolve. The macro emits CTEs whose names
+   fiscal_period, period_start_date, period_date) to resolve, the two dates
+   being a declared_periods() row's window_start_date and window_end_date. The macro emits CTEs whose names
    start with p, ending in {p}resolution, which holds gold_entity_ownership's
    columns. Call it after at least one CTE, as `with x as (...), {{ ... }}`.
    The commentary on each step is in gold_entity_ownership. #}
@@ -106,6 +125,7 @@
         a.depth as depth,
         pp.fiscal_year as fiscal_year,
         pp.fiscal_period as fiscal_period,
+        pp.period_start_date as period_start_date,
         pp.period_date as period_date
     from {{ p }}ancestry as a
     inner join {{ periods_cte }} as pp
@@ -119,14 +139,15 @@
         ap.path_id as path_id,
         ap.fiscal_year as fiscal_year,
         ap.fiscal_period as fiscal_period,
+        ap.period_start_date as period_start_date,
         ap.period_date as period_date,
         ap.link_group as link_group,
         ap.link_owner_group as link_owner_group,
         ap.link_owner_data_area_id as link_owner_data_area_id,
         ap.link_depth as link_depth,
         ap.depth as depth,
-        if(o.end_date >= ap.period_date, o.ownership_pct, null) as link_pct,
-        if(o.end_date >= ap.period_date, o.consolidation_method, null) as link_method,
+        if(o.end_date >= ap.period_start_date, o.ownership_pct, null) as link_pct,
+        if(o.end_date >= ap.period_start_date, o.consolidation_method, null) as link_method,
         h.has_history as link_has_history
     from {{ p }}ancestry_periods as ap
     asof left join {{ p }}ownership as o
@@ -152,6 +173,7 @@
         path_id,
         fiscal_year,
         fiscal_period,
+        period_start_date,
         period_date,
         max(depth) as path_depth,
         anyIf(link_owner_group, link_depth = depth) as direct_owner_group,
@@ -172,7 +194,7 @@
             4
         )) as path_method_rank
     from {{ p }}links
-    group by consolidation_group, data_area_id, path_id, fiscal_year, fiscal_period, period_date
+    group by consolidation_group, data_area_id, path_id, fiscal_year, fiscal_period, period_start_date, period_date
 ),
 
 {# All paths from G to E, summed. Only a path whose every link resolves counts,
@@ -184,6 +206,7 @@
         data_area_id,
         fiscal_year,
         fiscal_period,
+        period_start_date,
         period_date,
         max(path_depth) as chain_depth,
         toUInt32(uniqExact(path_id)) as path_count,
@@ -209,7 +232,7 @@
         maxIf(path_method_rank = 1, unresolved_links = 0) as any_path_all_full,
         toUInt8(maxIf(partial_full_links > 0, unresolved_links = 0)) as has_partial_full_link
     from {{ p }}paths
-    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, period_date
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, period_start_date, period_date
 ),
 
 {{ p }}ruled as (
@@ -229,6 +252,7 @@
         r.fiscal_year as fiscal_year,
         r.fiscal_period as fiscal_period,
         r.period_date as period_date,
+        r.period_start_date as period_start_date,
         r.chain_depth as chain_depth,
         r.owner_group as owner_group,
         toUInt8(r.resolved_paths > 0 and r.unrecorded_paths = 0) as has_complete_chain,
@@ -237,11 +261,11 @@
         if(r.resolved_paths > 0 and r.unrecorded_paths = 0, r.direct_sum, 0.0) as direct_ownership_pct,
         multiIf(
             r.needs_declaration = 0, 'link',
-            d.consolidation_method is not null and d.end_date > r.period_date, 'declared',
+            d.consolidation_method is not null and d.end_date >= r.period_start_date, 'declared',
             'undeclared'
         ) as method_source,
         multiIf(
-            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date > r.period_date,
+            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date >= r.period_start_date,
                 assumeNotNull(d.consolidation_method),
             r.needs_declaration = 1, 'none',
             r.resolved_paths = 0, 'none',

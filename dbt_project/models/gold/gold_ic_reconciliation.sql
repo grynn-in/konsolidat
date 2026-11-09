@@ -192,19 +192,27 @@ group_last as (
     group by consolidation_group
 ),
 
-{# the periods the warehouse holds (gold_entity_ownership resolves the same
-   dates), not the periods either side has data in #}
+{# the periods the warehouse holds, not the periods either side has data in,
+   judged on the same declared dates as gold_entity_ownership
+   (declared_periods(), konsolidat#171 / #252): the two resolve one window. A
+   period the calendar does not declare is dropped here as it is there, and
+   assert_trial_balance_period_declared refuses it. #}
 spine_periods as (
     select distinct
-        fiscal_year,
-        fiscal_period,
-        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }}
+        tb.fiscal_year as fiscal_year,
+        tb.fiscal_period as fiscal_period,
+        dp.window_start_date as period_start_date,
+        dp.window_end_date as period_date
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
 pair_entity_periods as (
     select e.data_area_id as data_area_id, sp.fiscal_year as fiscal_year,
-           sp.fiscal_period as fiscal_period, sp.period_date as period_date
+           sp.fiscal_period as fiscal_period, sp.period_start_date as period_start_date,
+           sp.period_date as period_date
     from (
         select entity_a as data_area_id from pair_keys
         union distinct
