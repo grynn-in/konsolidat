@@ -8,8 +8,8 @@ _State as of 2026-11-05, written by Claude at Deepak Pai's request. Files are on
 Deepak Pai asked for a second, smaller example (`examples/aquila-bike/`, 10 consolidated EU entities + a 30% associate,
 acquisition P6, disposal P12, 70% NCI, five currencies) with an offline Excel consolidation and a client walkthrough.
 Decisions (Deepak, 7 Nov): NCI shown both ways (tool view and IFRS view) in the Excel; associate ABPT in; findings filed;
-live verification on a second stack `demo-ext.konsolidat.com` (not a third site on the demo stack: konsol hard-codes
-`epm_staging` / `epm_gold`, so sites on one stack share one warehouse).
+live verification on a second, fresh konsol v16 site with its own warehouse (not a third site beside the existing ones: konsol
+hard-codes `epm_staging` / `epm_gold`, so sites sharing a warehouse stack would clobber each other).
 
 **Built and verified on the Mac**
 - `build_aquila_bike.py` → master workbook + 13 TB files; 138 entity-periods / 19,918 rows through konsol's pure rules: 0 problems.
@@ -18,7 +18,7 @@ live verification on a second stack `demo-ext.konsolidat.com` (not a third site 
   as FIXED, topside). Every period nets to 0; 472 IC pairs matched.
 - `aquila_bike_pl.py` → the twelve-line P&L three ways (before/after consolidation FY2024, P5/P6 acquisition, P11/P12
   disposal) from `expected.json`, printed as Markdown into the example README; 168 cells checked against the live
-  demo-ext warehouse (0 differences > 0.05) and the five IFRS-view reconciliation figures against the recalculated
+  live-site warehouse (0 differences > 0.05) and the five IFRS-view reconciliation figures against the recalculated
   walkthrough (to the cent), 7 Nov 2026.
 - `build_aquila_bike_walkthrough.py` → `Aquila_Bike_Walkthrough.xlsx`: 357,270 live formulas; recalculated with LibreOffice
   (installed via brew for this; the xlsx skill's `recalc.py`): 0 errors, 0.00 difference to the replica on every account-period,
@@ -31,25 +31,19 @@ live verification on a second stack `demo-ext.konsolidat.com` (not a third site 
   → Close Settings, drafts left by a refused run are approved instead of skipped, the upload report shape is `ok` / `errors` /
   `warnings` / `existing` (not `ready` / `problems`).
 
-**Second stack on the Hetzner server** (`/root/konsolidat-ext`, compose project `konsolidat-ext`, containers `konsolidat-ext_*`,
-network `open_epm_ext` 172.31.0.0/24, Frappe bound to the live bridge gateway `172.30.0.1:8169` so the live Caddy can proxy to it,
-ClickHouse 127.0.0.1:8223/9100/15433; credentials incl. an Administrator API key in `/root/konsolidat-ext/.credentials`; the image is
-the live `konsolidat-frappe:latest` re-tagged; ~1.4 GB RAM). Reach it from the Mac with
-`ssh -f -N -L 8169:172.30.0.1:8169 hetzner-konsolidat` and `FRAPPE_SITE=http://localhost:8169 FRAPPE_API_KEY=… FRAPPE_API_SECRET=…`
-(frappectl's headless mode). Its `dbt_project` is the live copy plus the equity-method fix from branch `fix-equity-method-journal`
-(commit 5548ff7, worktree `docker/worktrees/equity-fix`, not pushed). Not done: DNS A record `demo-ext.konsolidat.com →
-178.105.252.186` (Route 53, Deepak), the live Caddyfile vhost → `172.30.0.1:8169` + `caddy reload`, backup profile (the cube profile went with konsolidat#283).
+**Second, fresh konsol v16 site.** Its `dbt_project` is the existing copy plus the equity-method fix from branch
+`fix-equity-method-journal` (commit 5548ff7, worktree `docker/worktrees/equity-fix`, not pushed). The loader runs against it
+with frappectl's headless mode (API key and secret in the environment). The cube profile went with konsolidat#283.
 
-**First live run (loader through the tunnel):** master data created (2 years, 18 entities, 3 dims, 3 hierarchies, 144 accounts,
+**First live run (loader against the site):** master data created (2 years, 18 entities, 3 dims, 3 hierarchies, 144 accounts,
 5 IC pairs, 12 group nodes); every submit refused — the fresh site has no self-approval policy and the loader used bare submits.
-Fixed as above. **Open: declaring `self_approval = Allowed with reason` on the ext site needs Deepak's go-ahead** (asked 7 Nov);
-then re-run the loader (it will approve the drafts left behind), `dbt build` in the ext stack (`docker compose … run --rm dbt_init`,
-or `dbt build` in `konsolidat-ext_backend`), and `scripts`: compare `epm_gold.gold_fully_consolidated_tb` with `model/expected.json`
+Fixed as above. **Open: declaring `self_approval = Allowed with reason` on the site needs Deepak's go-ahead** (asked 7 Nov);
+then re-run the loader (it will approve the drafts left behind), `dbt build` on the site, and compare `epm_gold.gold_fully_consolidated_tb` with `model/expected.json`
 (`compare_ext_build.py` in the session scratchpad; recreate: group by period, account, adjustment_type, tolerance 0.01).
 
-**Warehouse findings from the stack bring-up (not yet filed):**
+**Warehouse findings from the bring-up (not yet filed):**
 - A fresh site cannot build the dbt project: `dbt_project.yml` vars regenerated by konsol with no dimensions declared removes
-  `dimensions`/`fiscal_*`, and `stg_gl_entries.sql` reads `var('dimensions')` with no default. The ext stack kept the live copy of
+  `dimensions`/`fiscal_*`, and `stg_gl_entries.sql` reads `var('dimensions')` with no default. The site kept the existing copy of
   `dbt_project.yml` (`gold_spread_budget` errors until the site's dimensions sync their columns).
 - On an empty warehouse `silver_tb_movements` fails with ClickHouse 439 (analyzer spawns ~9,200 threads reading 0 rows);
   `max_threads=1` or `allow_experimental_analyzer=0` cures it. Should vanish once TBs exist.
@@ -99,7 +93,7 @@ Python ≥ 3.10 and `openpyxl` (PEP 723 header: `uv run <script>` works). No Lib
 **Not done**
 
 - **Never loaded into a live konsol site.** No `frappectl` profile on this machine points at a konsol site (the two configured
-  profiles are the Grynn ISMS site). The real test is: `frappectl auth login` against the Hetzner demo stack as an EPM Admin,
+  profiles are the Grynn ISMS site). The real test is: `frappectl auth login` against a live konsol site as an EPM Admin,
   `uv run konsol_load.py examples/aquila/Aquila_Group_Master_Data.xlsx --tb-dir examples/aquila/tb -s <profile>`, then
   `konsol schema apply --run-dbt` and read the dbt assertions. Expect first-contact fixes in the loader (see "Likely to bite").
 - Not committed, no issue opened, no docs page under `docs/`. `excel/README.md` has a pointer paragraph.
@@ -148,8 +142,9 @@ Python ≥ 3.10 and `openpyxl` (PEP 723 header: `uv run <script>` works). No Lib
   if konsol insists on Draft-then-publish, create Draft and call the `publish` doctype method instead.
 - Dimension Mapping rows for US01 are `Draft` (connector-only; the example is upload-only) — fine, just noise.
 - Group Exchange Rate create then submit: submit is the approval; period must be declared (fiscal years load first) and open.
-- Equity-method associate (ES03, 40 %) and proportional JV (DE04, 50 %) upload full trial balances; check what the warehouse does with
-  `consolidation_method = equity / proportional` — it may be unimplemented and those two may need `none` or exclusion.
+- Equity-method associate (ES03, 40 %) and the 50 % proportional joint operation (DE04) upload full trial balances. Since
+  konsol#117 pair 3 (8 Nov 2026) the warehouse computes both: `equity` as a one-line share of result
+  (gold_equity_method_associates), `proportional` as the operator's share of each line with no NCI (IFRS 11.20).
 - FY2025 has no trial balances for P1–P11; `assert_year_end_close_declared` needs a Closing period after the last claimed period (P12 < CLS 13) — satisfied.
 
 ## Reading the konsol source
@@ -167,18 +162,7 @@ Key files: `konsol/tb_bulk_model.py`, `konsol/tb_bulk.py`, `konsol/close/tb_mode
    Period-end-balance / Closing-period convention, and link the README from the site's Initial Setup guide (konsolidat-docs `docs/user-guide/initial-setup-guide.md`, https://docs.konsolidat.com/user-guide/initial-setup-guide).
 4. Optional: trim the chart toward 200 rows, add a budget sheet example (`dim_project`, `dim_channel` are declared for it).
 
-### 7 Nov 2026, later: demo-ext.konsolidat.com is reachable
-
-Route 53 A record `demo-ext.konsolidat.com → 178.105.252.186` added by Deepak.
-A vhost block for it was appended to the LIVE Caddyfile
-`/root/konsolidat/docker/caddy/Caddyfile` (reverse_proxy 172.30.0.1:8169,
-header_up Host demo-ext.konsolidat.com) and Caddy reloaded; Let's Encrypt
-certificate obtained; both sites answer 200. The Caddyfile is a tracked file of
-the deploy checkout, so that checkout is now dirty: a redeploy must re-apply
-the block (copy kept at `Caddyfile.bak-20261107` beside it, which is the
-pre-edit version). Removing the ext stack: delete the block, `caddy reload`.
-
-### 7 Nov 2026, later: first konsol-driven build on demo-ext failed on dimension source columns
+### 7 Nov 2026, later: first konsol-driven build on the live site failed on dimension source columns
 
 `bronze_budget_transaction_lines` and `bronze_general_journal_account_entries` read
 `vars.dimensions[].source_column` from `epm_staging.stg_budget_entries` / `stg_gl_entries`,
@@ -190,7 +174,7 @@ Product finding: on an upload-only site konsol should default `source_column` to
 dimension name, or the bronze models should not depend on it when no connector exists.
 Not yet filed as an issue.
 
-### 7 Nov 2026, later: live build on demo-ext against the replica
+### 7 Nov 2026, later: live build against the replica
 
 First complete konsol-driven build (Build Approval BAPR-00003, dbt 61 s, 1 warning):
 1,512 (year, period, account, layer) cells compared with `model/expected.json`, 5
@@ -214,7 +198,7 @@ rows (Build Approval debounce or period rows); not yet filed. The loader also re
 "Not permitted" on every load call although each load runs to completion; traceback
 being captured with `frappectl --debug`.
 
-**Result (7 Nov 2026, 13:22 server time):** after the reload, `gold_fully_consolidated_tb` on demo-ext
+**Result (7 Nov 2026, 13:22):** after the reload, `gold_fully_consolidated_tb` on the live site
 matches `model/expected.json` on all 1,512 (year, period, account, layer) cells, 0 differences ≥ 0.01.
 The loader's "Not permitted" on every load was `konsol.tb_bulk.get_upload`, whitelisted `methods=["GET"]`,
 called with frappectl's default POST; the loader now passes `-X GET` for it (the loads themselves were

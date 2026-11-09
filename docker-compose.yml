@@ -164,7 +164,7 @@ services:
     volumes:
       - frappe_sites:/home/frappe/frappe-bench/sites
       - frappe_logs:/home/frappe/frappe-bench/logs
-      - ./docker/configurator/init.sh:/home/frappe/configurator/init.sh:ro
+      - ./docker/configurator:/home/frappe/configurator:ro
     restart: "no"
     profiles:
       - setup

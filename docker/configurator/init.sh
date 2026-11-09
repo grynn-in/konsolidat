@@ -5,7 +5,6 @@ set -e
 cd /home/frappe/frappe-bench
 
 SITE_NAME="${SITE_NAME:-konsolidat.local}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 DB_HOST="${DB_HOST:-mariadb}"
 DB_PORT="${DB_PORT:-3306}"
 DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-rootpassword}"
@@ -75,6 +74,8 @@ if [ -d "sites/${SITE_NAME}" ]; then
     echo "Site ${SITE_NAME} already exists. Running migrations..."
     bench --site "$SITE_NAME" migrate
 else
+    # A new site never gets a known Administrator password (check-admin-password.sh).
+    bash "$(dirname "$0")/check-admin-password.sh"
     echo "Creating new site: ${SITE_NAME}..."
     bench new-site "$SITE_NAME" \
         --db-host "$DB_HOST" \
@@ -155,4 +156,4 @@ bash /home/frappe/refresh-assets.sh || true
 echo ""
 echo "=== Configurator Complete ==="
 echo "Site: ${SITE_NAME}"
-echo "Admin: Administrator / ${ADMIN_PASSWORD}"
+echo "Admin: Administrator (password from ADMIN_PASSWORD, not printed)"

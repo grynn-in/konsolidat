@@ -213,7 +213,7 @@ the Excel agree with each other, not yet with the warehouse.
   374,217 formulas, 0 errors; 0 cells differ from the replica by 0.01 or more; the balance sheet balances in every
   period; the NCI closing equals 30% of ABSE's net assets; the opening journal equals `inputs.json`; the ABJV pickup
   and the holders' cost agree. `tests/test_aquila_bike_walkthrough.py` runs the builder and reads every check cell.
-- **Live** (`demo-ext.konsolidat.com`, a fresh konsol v16 site, second stack on the demo server): master data,
+- **Live** (a fresh konsol v16 site at the commits named in HANDOFF.md): master data,
   deals and the opening journal loaded with `konsol_load.py` (Close Settings `self_approval = Allowed with reason`,
   approvals through konsol's approval API with a reason), the 13 trial-balance files uploaded through the bulk
   loader (138 entity-periods, 0 failed), the Build Approvals approved, dbt built by konsol's own pipeline

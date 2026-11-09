@@ -96,7 +96,11 @@ with entity_periods as (
      outside_ownership_window is 1 when no path resolves but every link has
      history, i.e. we did not own it then. It distinguishes a deliberate gap
      from an unrecorded one; assert_ownership_chain_complete only fails on
-     the latter. #}
+     the latter. has_partial_full_link is 1 when any resolved path carries a
+     full link below 100%; with method proportional that is refused by name
+     (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3
+     finding A): the joint operation's share and the intermediary's minority in
+     it are not computed. #}
 {{ ownership_resolution_ctes('entity_periods') }}
 
 select * from resolution

@@ -47,6 +47,15 @@
 -- minority's share of its result, so the IFRS 3 template's NCI line is no longer counted twice. What a partial
 -- share needs is declared above (nci_account, and nci_fair_value for a 'full' deal).
 --
+-- Refused by name (konsol#117 pair 3, row K3): a business combination into a joint operation, i.e. an acquired
+-- entity whose ownership_periods say 'proportional' at the deal (its own link, or a step from one). One row, field
+-- consolidation_method, whatever else the deal declares:
+--   a business combination into a joint operation (consolidation_method proportional) is not implemented (IFRS 11.21A): record the interest as an Ownership Period
+-- The acquisition journal builds goodwill and an NCI line for a controlled subsidiary; IFRS 11.21A (an interest in
+-- a joint operation that is a business) is a different accounting, and a joint operation carries no NCI at all.
+-- An entity with no ownership period is not a joint operation here. Fixtures: .joint_operation.must_flag,
+-- .joint_operation_step.must_flag (a step on a period's first day), .joint_operation_gap (a whole period between: passes).
+--
 -- Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local ->
 -- framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal
 -- journal's accounts are assert_disposal_accounts_declared's (row J10); a duplicated root row is
@@ -89,6 +98,71 @@ deal_period as (
     group by bc.name
 ),
 
+-- the acquired entity's method, read from epm_staging.ownership_periods (konsol#117 pair 3 review, finding B), not
+-- from gold_entity_ownership: that table resolves each period at its FIRST day, has rows only for periods with
+-- trial-balance data, and resolves a sub-group held at equity at the root, so it misses a step dated on a period's
+-- first day, an entity with no trial balance yet, and a joint operation inside an equity-held sub-group.
+-- A deal is into a joint operation when
+--   (a) its own link is proportional: a period of the acquired entity in the group that starts on the acquisition
+--       date (ownership_periods carries no document name; business_combinations.ownership_period names the
+--       konsol document, so the match is group + entity + effective_date, any owner), or
+--   (b) it is a STEP from a joint operation: a proportional period of the entity, any owner, that starts before the
+--       acquisition date and whose window reaches back to the first day of the fiscal period BEFORE the deal's
+--       period (gold_entity_ownership resolves a period at its first day, so a joint operation ending 15 March
+--       leaves March proportional and April full: the mixed-share step). A whole period between the joint operation's end and
+--       the deal means the entity left the group and re-enters by a deal: not a step, not refused.
+deal_window as (
+    select
+        d.name as deal,
+        min(cur.start_date) as cur_start,
+        countIf(prev.period_type != 'Closing' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type != 'Closing') as prev_start
+    from {{ source('epm_staging', 'business_combinations') }} as d
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
+    left join {{ source('epm_staging', 'fiscal_periods') }} as prev
+        on prev.end_date = subtractDays(cur.start_date, 1)
+    where cur.start_date <= d.acquisition_date
+      and cur.end_date >= d.acquisition_date
+      and cur.period_type != 'Closing'
+    group by d.name
+),
+
+joint_operation as (
+    select
+        bc.name as deal,
+        toUInt8(countIf(op.consolidation_method = 'proportional' and op.effective_date = bc.acquisition_date) > 0
+                or countIf(op.consolidation_method = 'proportional'
+                           and op.effective_date < bc.acquisition_date
+                           and op.end_date >= if(w.n_prev > 0, w.prev_start, w.cur_start)) > 0) as is_joint_operation
+    from {{ source('epm_staging', 'business_combinations') }} as bc
+    inner join {{ source('epm_staging', 'ownership_periods') }} as op
+        on op.consolidation_group = bc.consolidation_group
+        and op.data_area_id = bc.acquired_entity
+    inner join deal_window as w
+        on w.deal = bc.name
+    group by bc.name
+),
+
+-- plus the RESOLVED method (konsol#117 pair 3 review, finding J): a group can DECLARE an entity proportional in
+-- consolidation_method_declarations while its links say full/equity, so ownership_periods hold no proportional row. The
+-- method of the earliest gold_entity_ownership row at or after the deal period that holds the entity
+-- (effective_ownership_pct > 0) catches that case; the ownership_periods checks above catch the cases this table misses.
+joint_operation_resolved as (
+    select
+        dp.deal as deal,
+        argMin(toUInt8(eo.consolidation_method = 'proportional'),
+               toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) as is_joint_operation
+    from deal_period as dp
+    inner join {{ source('epm_staging', 'business_combinations') }} as bc
+        on bc.name = dp.deal
+    inner join {{ ref('gold_entity_ownership') }} as eo
+        on eo.consolidation_group = bc.consolidation_group
+        and eo.data_area_id = bc.acquired_entity
+    where toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period >= toUInt32(dp.fiscal_year) * 1000 + dp.fiscal_period
+      and eo.effective_ownership_pct > 0
+    group by dp.deal
+),
+
 balance_fva as (
     select parent, sum(abs(toFloat64(fair_value_adjustment))) as fva_abs
     from {{ source('epm_staging', 'business_combination_acquired_balances') }}
@@ -116,10 +190,15 @@ deals_base as (
         toFloat64(bc.bargain_purchase_gain) as header_bargain_gain,
         toUInt64(coalesce(dp.n_periods, 0)) as n_periods,
         toUInt16(coalesce(dp.fiscal_year, 0)) as fiscal_year,
-        toUInt16(coalesce(dp.fiscal_period, 0)) as fiscal_period
+        toUInt16(coalesce(dp.fiscal_period, 0)) as fiscal_period,
+        toUInt8(greatest(coalesce(jo.is_joint_operation, 0), coalesce(jr.is_joint_operation, 0))) as is_joint_operation
     from {{ source('epm_staging', 'business_combinations') }} as bc
     left join deal_period as dp
         on dp.deal = bc.name
+    left join joint_operation as jo
+        on jo.deal = bc.name
+    left join joint_operation_resolved as jr
+        on jr.deal = bc.name
 ),
 
 -- trial-balance rows of the entity before the acquisition period: line (0) will be posted
@@ -157,6 +236,7 @@ deals as (
         coalesce(r.accounting_framework, '') as accounting_framework,
         d.nci_measurement as nci_measurement,
         d.nci_fair_value as nci_fair_value,
+        d.is_joint_operation as is_joint_operation,
         coalesce(r.goodwill_treatment, '') as goodwill_treatment,
         coalesce(r.goodwill_amortisation_years, 0) as goodwill_amortisation_years,
         coalesce(r.acquisition_costs_treatment, '') as acquisition_costs_treatment,
@@ -196,7 +276,8 @@ checks as (
         value,
         required,
         options,
-        is_account
+        is_account,
+        is_refusal
     from deals
     array join
         ['root_row', 'acquisition_period',
@@ -206,7 +287,7 @@ checks as (
          'goodwill_account', 'investment_account', 'fair_value_adjustment_account', 'nci_account',
          'bargain_purchase_gain_account', 'disposal_proceeds_account', 'acquisition_costs_account',
          'is_retained_earnings',
-         'nci_fair_value'] as field,
+         'nci_fair_value', 'consolidation_method'] as field,
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          accounting_framework, nci_measurement, goodwill_treatment, acquisition_costs_treatment,
          measurement_period, bargain_purchase,
@@ -214,7 +295,8 @@ checks as (
          goodwill_account, investment_account, fair_value_adjustment_account, nci_account,
          bargain_purchase_gain_account, disposal_proceeds_account, acquisition_costs_account,
          retained_account,
-         if(nci_fair_value > 0.0, toString(nci_fair_value), '')] as value,
+         if(nci_fair_value > 0.0, toString(nci_fair_value), ''),
+         if(is_joint_operation = 1, 'proportional', 'not proportional')] as value,
         -- nci_measurement and nci_fair_value are the deal's own columns (konsol#204/#205), required whatever
         -- the root row declares
         [toUInt8(1), toUInt8(1),
@@ -228,7 +310,8 @@ checks as (
          toUInt8(has_root = 1 and n_costs > 0),
          toUInt8(has_root = 1 and n_costs > 0 and acquisition_costs_treatment = 'Expense'),
          toUInt8(has_root = 1 and n_history > 0),
-         toUInt8(share_acquired_pct < 100.0 and nci_measurement = 'full')] as required,
+         toUInt8(share_acquired_pct < 100.0 and nci_measurement = 'full'),
+         is_joint_operation] as required,
         [emptyArrayString(), emptyArrayString(),
          ['IFRS', 'US GAAP', 'Local'], ['partial', 'full'], ['Impairment only', 'Amortise'], ['Expense', 'Capitalise'],
          ['Off', '12 months'], ['Recognise gain', 'Refuse'],
@@ -236,7 +319,7 @@ checks as (
          emptyArrayString(), emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(), emptyArrayString(), emptyArrayString(),
          emptyArrayString(),
-         emptyArrayString()] as options,
+         emptyArrayString(), emptyArrayString()] as options,
         [0, 0,
          0, 0, 0, 0,
          0, 0,
@@ -244,7 +327,16 @@ checks as (
          1, 1, 1, 1,
          1, 1, 1,
          1,
-         0] as is_account
+         0, 0] as is_account,
+        -- the joint-operation refusal (konsol#117 pair 3, row K3): the value is present, the deal is still refused
+        [0, 0,
+         0, 0, 0, 0,
+         0, 0,
+         0, 0,
+         0, 0, 0, 0,
+         0, 0, 0,
+         0,
+         0, 1] as is_refusal
 ),
 
 judged as (
@@ -257,6 +349,7 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
+            c.is_refusal = 1, 'a business combination into a joint operation (consolidation_method proportional) is not implemented (IFRS 11.21A): record the interest as an Ownership Period',
             c.value = '', 'missing',
             length(c.options) > 0 and not has(c.options, c.value), concat('not a declared option: ', arrayStringConcat(c.options, ' | ')),
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',

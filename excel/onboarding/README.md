@@ -83,8 +83,9 @@ The description is free text: rewording it never creates a second journal.
 `Method_Declarations` is needed only when an entity is reached by more than one ownership path, or the paths' sum
 exceeds 50% without an all-full path: until it is declared the build names the entity in
 `assert_method_declared_for_multi_path`. The loader adds each missing (`data_area_id`, `effective_date`) row to the
-group's own node in one update, leaves matching rows alone and never deletes. A blank `reason`, `proportional`, or a
-group without its own node is refused by name; a blank `reason` or `proportional` stops the run before anything is sent.
+group's own node in one update, leaves matching rows alone and never deletes. A blank `reason`, a method outside
+`full / proportional / equity / none`, or a group without its own node is refused by name; a blank `reason` or an
+unknown method stops the run before anything is sent. `proportional` is an IFRS 11 joint operation (konsol#117 pair 3).
 
 The loader is idempotent in the way a person would be: a row whose natural key exists is updated, a submittable row
 that already has a live document is left alone, and an entity-period konsol already holds is reported and skipped.
@@ -114,7 +115,7 @@ Fictional, deterministic (a rebuild reproduces it byte for byte in content), and
 |---|---|
 | Legal entities | 46 in 22 countries: 26 in the EU (NL, DE, FR, BE, ES, IT, PT, AT, IE, FI, GR, SK, LT, PL, SE, DK, CZ, HU, RO), 5 UK, 7 US, 7 India |
 | Currencies | EUR, GBP, USD, INR, PLN, SEK, DKK, CZK, HUF, RON; group reports in EUR, sub-groups in EUR / GBP / USD / INR |
-| Consolidation tree | root `AQUILA` → `AQ_EU`, `AQ_UK`, `AQ_US`, `AQ_IN` → entities; minorities at 51 %, 60 %, 74 %, 75 %, 80 %, a 50 % proportional JV, a 40 % equity-method associate |
+| Consolidation tree | root `AQUILA` → `AQ_EU`, `AQ_UK`, `AQ_US`, `AQ_IN` → entities; minorities at 51 %, 60 %, 74 %, 75 %, 80 %, a 50 % proportional joint operation, a 40 % equity-method associate |
 | Chart | 238 accounts (188 posting), 4 levels, IFRS layout, 20 intercompany accounts in 10 pairs, cash-flow categories on every balance-sheet account |
 | Dimensions | `dim_business_line`, `dim_cost_center`, `dim_product_group` on the trial balance; `dim_project`, `dim_channel` for budgets; `dim_function` for journals |
 | Hierarchies | `DIVISIONS` (Water / Chemical / Institutional / Corporate → sub-divisions), `COST_CENTERS`, `PRODUCT_GROUPS` |

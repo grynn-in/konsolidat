@@ -15,11 +15,17 @@
     )
 }}
 
-{# konsolidat#204 (a), konsol#117 pair 2 (IFRS 10.B86): group_amount is 100% of
-   translated_amount for every consolidated row; nci_amount is the minority's
-   attribution (translated x (1 - ownership_pct)) that the NCI line in equity
-   will carry. Pinned by assert_group_equals_translated_for_full and
-   assert_nci_equals_translated_times_minority. #}
+{# konsolidat#204 (a), konsol#117 pairs 2 and 3. A controlled subsidiary
+   (consolidation_method 'full', IFRS 10.B86): group_amount is 100% of
+   translated_amount; nci_amount is the minority's attribution (translated x
+   (1 - ownership_pct)) that the NCI line in equity carries. A joint operation
+   ('proportional', IFRS 11.20): group_amount is the operator's share
+   (translated x ownership_pct) and nci_amount is 0, as nobody holds a minority
+   in it. 'equity' and 'none' are not line-consolidated. Pinned by
+   assert_group_equals_translated_for_full,
+   assert_group_equals_translated_times_share_for_proportional,
+   assert_nci_equals_translated_times_minority and
+   assert_nci_zero_for_proportional. #}
 {# The query_settings line (konsolidat PR "Fix the TB-only first build after
    #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
    one over the other. With ClickHouse's default
@@ -394,7 +400,9 @@ rated as (
         and etb.main_account = hr.main_account
         and eo.reporting_currency = hr.to_currency
         and etb.period_date >= hr.rate_date
-    {# PRD-14: equity-method entities are handled in a separate model. The
+    {# Line consolidation takes 'full' (100%, pair 2) and 'proportional' (the
+       operator's share, a joint operation, IFRS 11.20, konsol#117 pair 3).
+       PRD-14: equity-method entities are handled in a separate model. The
        method is the WEAKEST link on the chain, so an entity below an
        equity-held sub-group is excluded from that group's line consolidation
        too — while still line-consolidating into the sub-group itself.
@@ -402,7 +410,8 @@ rated as (
        'none' is excluded as well: it is a real option on Ownership Period, and
        it is also gold_entity_ownership's catch-all rank for an unrecognised
        method — so a typo must not line-consolidate an entity at its full share
-       with no NCI schedule row behind it (that model filters on 'full').
+       with no NCI schedule row behind it (that model filters on 'full'; a
+       proportional row needs none, its nci_amount is 0).
 
        A chain with an unresolved link consolidates nothing rather than
        something plausible; assert_ownership_chain_complete names it. #}
@@ -672,16 +681,18 @@ consolidated as (
            retranslated) #}
         local_amount * translation_rate + translation_adjustment as translated_amount,
         {# konsolidat#204 option (a), konsol#117 pair 2 (IFRS 10.B86): a controlled
-           subsidiary is consolidated line by line at 100%, whatever the group's
-           share. group_amount = translated_amount for every row this CTE emits
-           (the where above drops equity and none; proportional rides along until
-           pair 3). It was translated x ownership_pct (PRD-4). #}
-        local_amount * translation_rate + translation_adjustment as group_amount,
-        {# PRD-4, kept: nci_amount = translated x (1 - ownership_pct) is the
-           ATTRIBUTION amount, the minority's share of each line. It is no longer
-           the complement of group_amount: the minority is one NCI line in equity,
-           which konsol#117 pair 2 task K2 posts from this column. #}
-        (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct) as nci_amount
+           subsidiary (full) is consolidated line by line at 100%, whatever the
+           group's share. konsol#117 pair 3 (IFRS 11.20): a joint operation
+           (proportional) is carried at the operator's share, translated x
+           ownership_pct. The where above drops equity and none. #}
+        (local_amount * translation_rate + translation_adjustment)
+            * if(consolidation_method = 'proportional', ownership_pct, 1.0) as group_amount,
+        {# nci_amount of a controlled subsidiary (PRD-4, kept) = translated x
+           (1 - ownership_pct), the ATTRIBUTION amount: the minority is one NCI
+           line in equity, which konsol#117 pair 2 task K2 posts from this column.
+           A joint operation has no minority (IFRS 11.20): 0, konsol#117 pair 3. #}
+        if(consolidation_method = 'proportional', 0,
+           (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct)) as nci_amount
     from adjusted
     {# konsolidat#93: a missing governed rate fails the build loudly, never a
        0 or a 1.0 translation. throwIf takes a per-row condition (a constant

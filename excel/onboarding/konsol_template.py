@@ -313,7 +313,7 @@ SHEETS: tuple[Sheet, ...] = (
         (
             Col("consolidation_group", "The group whose node carries the declaration.", True, width=14),
             Col("data_area_id", "The entity the declaration is for.", True, width=12),
-            Col("consolidation_method", "full or equity (proportional is refused until konsol#117 pair 3).", True, "select", ("full", "equity"), width=12),
+            Col("consolidation_method", "full, proportional (IFRS 11 joint operation: the operator's share of each line, no NCI), equity or none.", True, "select", ("full", "proportional", "equity", "none"), width=12),
             Col("effective_date", "First day this method applies.", True, "date", width=12),
             Col("end_date", "Last day; blank = open.", False, "date", width=12),
             Col("reason", "Required: the arrangement, the holders and the standard, e.g. joint control, IFRS 11.7.", True, width=40),
@@ -343,13 +343,14 @@ SHEETS: tuple[Sheet, ...] = (
         "Historical_Equity_Rates", "Historical Equity Rate",
         "IAS 21: the frozen rate for each equity account of each foreign entity (share capital, share premium). Submitted on load.",
         (
-            Col("consolidation_group", "Group code whose translation the rate applies to (the group whose reporting currency differs from the entity's).", True, width=14),
+            Col("consolidation_group", "Group code whose translation the rate applies to: the entity's owning group, or a group above it that consolidates the entity in another currency.", True, width=14),
             Col("data_area_id", "entity_code.", True, width=12),
             Col("main_account", "Equity account with fx_method = historical.", True, width=12),
+            Col("to_currency", "Presentation currency the rate converts INTO: the reporting currency of consolidation_group, or of a group above it that consolidates the entity. One row per currency. Required (konsol#374).", True, width=12),
             Col("rate_date", "Date the equity was contributed or acquired.", True, "date", width=12),
-            Col("historical_rate", "TRUE rate: units of group currency per 1 unit of entity currency on that date.", True, "float", width=12),
+            Col("historical_rate", "TRUE rate: units of to_currency per 1 unit of entity currency on that date.", True, "float", width=12),
         ),
-        key=("consolidation_group", "data_area_id", "main_account"), submit=True,
+        key=("consolidation_group", "data_area_id", "main_account", "to_currency", "rate_date"), submit=True,
     ),
     Sheet(
         "Consolidation_Journals", "Consolidation Journal",

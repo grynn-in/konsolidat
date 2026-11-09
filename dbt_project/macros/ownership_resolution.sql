@@ -160,6 +160,9 @@
         anyIf(link_pct, link_depth = depth) as direct_pct,
         countIf(link_pct is null) as unresolved_links,
         countIf(link_pct is null and link_has_history = 0) as unrecorded_links,
+        {# links on this path that are full and below 100%: a joint operation beneath one is refused
+           (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3 finding A) #}
+        countIf(link_method = 'full' and link_pct < 100) as partial_full_links,
         arrayProduct(groupArray(coalesce(link_pct, 0.0) / 100.0)) as path_product,
         max(multiIf(
             link_method = 'full', 1,
@@ -203,7 +206,8 @@
         any(node_group) as owner_group,
         uniqExactIf(path_method_rank, unresolved_links = 0) as method_ranks,
         maxIf(path_method_rank, unresolved_links = 0) as method_rank,
-        maxIf(path_method_rank = 1, unresolved_links = 0) as any_path_all_full
+        maxIf(path_method_rank = 1, unresolved_links = 0) as any_path_all_full,
+        toUInt8(maxIf(partial_full_links > 0, unresolved_links = 0)) as has_partial_full_link
     from {{ p }}paths
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, period_date
 ),
@@ -247,7 +251,8 @@
             'none'
         ) as consolidation_method,
         r.path_count as path_count,
-        r.direct_owner_count as direct_owner_count
+        r.direct_owner_count as direct_owner_count,
+        r.has_partial_full_link as has_partial_full_link
     from {{ p }}ruled as r
     asof left join {{ p }}declarations as d
         on r.consolidation_group = d.consolidation_group
