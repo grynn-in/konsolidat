@@ -11,8 +11,9 @@
 -- Adjustment on 2026-03-31; FY2024 the same a year earlier. ZZG (USD) has held 100% of ZZD (USD) since
 -- 2020-01-01 and sells all of it on 2025-04-01 for 1,000 cash. ZZD uploads FY2024 P12, FY2025 P1 and P2.
 -- The one rule (deal_period_holds()): a deal date belongs to the Regular period holding it, so the disposal is
--- in FY2025 P1. Expected: the disposal journal posts in FY2025 P1 and its line (0) derecognises through P1;
--- ZZD is consolidated in FY2024 P12 and FY2025 P1, and not in P2.
+-- in FY2025 P1. ZZD also has an FY2025 P0 row (7). Expected: the disposal journal posts in FY2025 P1 and its line (0) derecognises through P1;
+-- ZZD is consolidated in FY2024 P12, FY2025 P0 (held on 31 March, the eve; the P1 journal derecognises P0 too) and
+-- FY2025 P1, and not in P2.
 -- Before: the journals skipped only Closing periods and took the lowest tuple, so the journal posted in P0
 -- (derecognising through P0) while the window kept P1 (it starts on the disposal date): P1's movements were
 -- never derecognised ('journal posts in another period').
@@ -138,6 +139,8 @@ INSERT INTO epm_gold.gold_trial_balance_by_partner
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES
   ('ZZD', 2024, 12, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 120, 0, 120, 1),
+  ('ZZD', 2025, 0, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 7, 0, 7, 1),
+  ('ZZD', 2025, 0, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 7, -7, 1),
   ('ZZD', 2024, 12, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 120, -120, 1),
   ('ZZD', 2025, 1, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 110, 0, 110, 1),
   ('ZZD', 2025, 1, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 110, -110, 1),
@@ -147,6 +150,8 @@ INSERT INTO epm_gold.gold_trial_balance
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES
   ('ZZD', 2024, 12, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 120, 0, 120, 1),
+  ('ZZD', 2025, 0, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 7, 0, 7, 1),
+  ('ZZD', 2025, 0, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 7, -7, 1),
   ('ZZD', 2024, 12, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 120, -120, 1),
   ('ZZD', 2025, 1, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 110, 0, 110, 1),
   ('ZZD', 2025, 1, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 110, -110, 1),

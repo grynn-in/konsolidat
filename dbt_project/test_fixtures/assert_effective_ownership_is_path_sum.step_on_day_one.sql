@@ -8,10 +8,11 @@
 -- on the day before a change (ownership_change_model: current_ends = effective - 1 day). ZZE uploads FY2024
 -- P12 and P14, FY2025 P0 and P1.
 -- ZZG holds 60% of ZZE (full) to 2024-12-31 and 80% from 2025-01-01, on the same link.
--- Expected: FY2024 P12 0.60. FY2024 P14 and FY2025 P0 sit on the year boundary (after P12, before P1): ZZE was
--- held on its eve, 31 December, so both are consolidated, read on 1 January at 0.80. FY2025 P1 0.80.
--- On b7db234 both boundary periods read on 31 December, required the link to last to 1 January, found the
--- 60% row (ended 31 December) and dropped them: effective 0.00 (the oracle expects 0.80).
+-- Expected: 0.60 in FY2024 P12, P14 and FY2025 P0, then 0.80 from FY2025 P1. P14 and P0 sit on the year boundary
+-- (after P12, before P1) and carry the state of the period before them: the step is dated 1 January, so the
+-- journals and the window see it from P1 (PR #345 round-3 re-review, F1).
+-- On 6846fa2 both boundary periods were read on 1 January and took the new row: 0.80 (the oracle expects 0.60).
+-- (On b7db234 they were dropped: 0.00.)
 -- The live tables may predate konsol#117's graph columns: bring the scratch clones to the shape the
 -- ownership macro reads.
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
