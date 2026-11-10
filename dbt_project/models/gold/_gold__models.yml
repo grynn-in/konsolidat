@@ -637,13 +637,13 @@ models:
         tests:
           - not_null
       - name: line_no
-        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss"
+        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 105 post_disposal_pnl (Pro-rate by days, #171), 110+idx proceeds (110 for the header figure), 199 gain_loss"
       - name: account_role
-        description: "derecognised, goodwill, fva, cta, nci, proceeds, gain_loss"
+        description: "derecognised, goodwill, fva, cta, nci, post_disposal_pnl, proceeds, gain_loss"
         tests:
           - accepted_values:
               arguments:
-                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
+                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'post_disposal_pnl', 'proceeds', 'gain_loss']
       - name: deal
         description: "The Business Disposal document name"
 
