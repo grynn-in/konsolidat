@@ -14,7 +14,7 @@
 
    Fixtures: dbt_project/test_fixtures/assert_partial_period_treatment_declared.must_flag.sql (flags 3) and
    assert_partial_period_treatment_declared.sql (all three declared, passes). #}
-with deals as (
+with held as (
     select
         bc.consolidation_group as consolidation_group,
         bc.name as deal,
@@ -23,12 +23,10 @@ with deals as (
         fp.fiscal_year as fiscal_year,
         fp.fiscal_period as fiscal_period,
         fp.start_date as start_date,
-        fp.end_date as end_date,
-        'acquisition after the first day of the period' as reason
+        fp.end_date as end_date
     from {{ source('epm_staging', 'business_combinations') }} as bc
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where {{ deal_period_holds('fp', 'bc.acquisition_date') }}
-      and bc.acquisition_date > fp.start_date
 
     union all
 
@@ -40,44 +38,23 @@ with deals as (
         fp.fiscal_year as fiscal_year,
         fp.fiscal_period as fiscal_period,
         fp.start_date as start_date,
-        fp.end_date as end_date,
-        'full disposal before the last day of the period' as reason
+        fp.end_date as end_date
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where {{ deal_period_holds('fp', 'bd.disposal_date') }}
       and toFloat64(bd.retained_interest_pct) <= 0.0
-      and bd.disposal_date < fp.end_date
 ),
 
-{# the first (lowest) Regular period per deal, as the journals take it #}
-deal_period as (
+{# the first (lowest) Regular period per deal, as the journals take it; mid-period is judged against it #}
+deal_span as (
     select
         consolidation_group,
         deal,
         any(deal_type) as deal_type,
         any(deal_date) as deal_date,
-        min((fiscal_year, fiscal_period)) as fy_fp,
-        any(reason) as reason
-    from deals
+        min((fiscal_year, fiscal_period, start_date, end_date)) as pick
+    from held
     group by consolidation_group, deal
-),
-
-deal_span as (
-    select
-        d.consolidation_group as consolidation_group,
-        d.deal as deal,
-        d.deal_type as deal_type,
-        d.deal_date as deal_date,
-        d.fy_fp.1 as fiscal_year,
-        d.fy_fp.2 as fiscal_period,
-        min(x.start_date) as start_date,
-        max(x.end_date) as end_date,
-        d.reason as reason
-    from deal_period as d
-    inner join deals as x
-        on x.deal = d.deal and x.consolidation_group = d.consolidation_group
-        and x.fiscal_year = d.fy_fp.1 and x.fiscal_period = d.fy_fp.2
-    group by d.consolidation_group, d.deal, d.deal_type, d.deal_date, d.fy_fp, d.reason
 ),
 
 {# the group's root row, any() per column so a duplicated root cannot fan out (as the disposal journal) #}
@@ -95,12 +72,16 @@ select
     s.deal as deal,
     s.deal_type as deal_type,
     s.deal_date as deal_date,
-    s.fiscal_year as fiscal_year,
-    s.fiscal_period as fiscal_period,
-    s.start_date as start_date,
-    s.end_date as end_date,
+    s.pick.1 as fiscal_year,
+    s.pick.2 as fiscal_period,
+    s.pick.3 as start_date,
+    s.pick.4 as end_date,
     r.declared_value as declared_value,
-    concat(s.reason, '; partial_period_treatment is not Whole period, Pro-rate by days or Stub trial balance') as reason
+    concat(if(s.deal_type = 'Business Combination',
+              'acquisition after the first day of the period',
+              'full disposal before the last day of the period'), '; partial_period_treatment is not Whole period, Pro-rate by days or Stub trial balance') as reason
 from deal_span as s
 left join root as r on r.consolidation_group = s.consolidation_group
-where r.declared_value not in ('Whole period', 'Pro-rate by days', 'Stub trial balance')
+where ((s.deal_type = 'Business Combination' and s.deal_date > s.pick.3)
+        or (s.deal_type = 'Business Disposal' and s.deal_date < s.pick.4))
+  and r.declared_value not in ('Whole period', 'Pro-rate by days', 'Stub trial balance')
