@@ -66,6 +66,14 @@ class MiniExample(unittest.TestCase):
         net += goodwill + build_mini.FVA
         self.assertEqual(readme_number("Owners' equity at Close"), net)
 
+    def test_group_declares_whole_period_and_the_disposal_is_mid_period(self):
+        """konsolidat#171 2c: the example declares its partial-period treatment, and its disposal is a mid-period deal
+        (DSP 2025-12-30, in the Regular period that ends 2025-12-31), so the declaration is what the build reads."""
+        self.assertEqual(build_mini.POLICY["partial_period_treatment"], "Whole period")
+        regular = [p for p in build_mini.PERIODS if p[2] == "Regular" and p[4] <= build_mini.DSP_DATE <= p[5]]
+        self.assertEqual(len(regular), 1)
+        self.assertLess(build_mini.DSP_DATE, regular[0][5])
+
 
 if __name__ == "__main__":
     unittest.main()
