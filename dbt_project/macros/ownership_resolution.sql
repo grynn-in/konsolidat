@@ -46,11 +46,13 @@
 
    A period on a year boundary (Opening, Adjustment: its window_start_date, the
    first day of the next Regular period, is after its window_end_date, the last
-   day of the previous one) is read on that first day, and counts only for an
-   entity held on its eve (window_end_date). konsol ends a changed holding the
-   day before the change, so a step or a transfer dated on the first day of a
-   year is read from the new row, never lost between the two (PR #345 re-review,
-   F1).
+   day of the previous one) carries the state of the period before it: it is
+   read at window_end_date, so a step, a transfer or a method change dated on
+   the first day after the boundary is seen from the next Regular period, where
+   its journal posts. The one exception is a row ended by a full disposal dated
+   on or before that day (read from business_disposals, as the disposal journal
+   reads it): its journal has already derecognised the entity, so the row is
+   not held there (PR #345 round-3 re-review).
 
    This agrees with the period the deal journals post in (deal_period_holds():
    the Regular period holding the date): an acquisition is consolidated from
@@ -92,7 +94,16 @@
         effective_date,
         cast(end_date as Nullable(Date)) as end_date,
         cast(toFloat64(ownership_pct) as Nullable(Float64)) as ownership_pct,
-        cast(consolidation_method as Nullable(String)) as consolidation_method
+        cast(consolidation_method as Nullable(String)) as consolidation_method,
+        {# ended by a full disposal of the entity in the group, dated on this
+           row's end date: the submitted disposals gold_business_disposal_journal
+           posts (retained interest 0), read from the same source, so the window
+           and the journal cannot disagree on which rows a sale ended #}
+        cast(toUInt8((consolidation_group, data_area_id, end_date) in (
+            select consolidation_group, disposed_entity, disposal_date
+            from {{ source('epm_staging', 'business_disposals') }}
+            where toFloat64(retained_interest_pct) <= 0.0
+        )) as Nullable(UInt8)) as ended_by_disposal
     from {{ source('epm_staging', 'ownership_periods') }}
 ),
 
@@ -136,23 +147,26 @@
         pp.fiscal_year as fiscal_year,
         pp.fiscal_period as fiscal_period,
         pp.period_start_date as period_start_date,
-        pp.period_date as period_date,
-        {# the date the holding is read at: the period end, or for a period on a
-           year boundary (window_start_date after window_end_date: Opening, an
-           Adjustment) the first day after the boundary #}
-        greatest(pp.period_date, pp.period_start_date) as read_date
+        pp.period_date as period_date
     from {{ p }}ancestry as a
     inner join {{ periods_cte }} as pp
         on a.data_area_id = pp.data_area_id
 ),
 
 {# Each link, read two ways (PR #345 review, finding 1). The ASOF row is the
-   latest Ownership Period that started by read_date: the period end, or for a
-   period on a year boundary (Opening, Adjustment: window_start_date after
-   window_end_date, declared_periods()) the first day after the boundary, so a
-   holding konsol splits exactly there (old row ends the day before, new row
-   starts that day) is read from the new row (PR #345 re-review, F1).
-     *_end    held at the read date: the ASOF row has not ended before it.
+   latest Ownership Period that started by period_date: the period end, or, for
+   a period on a year boundary (Opening, Adjustment: window_start_date after
+   window_end_date, declared_periods()), the end of the Regular period before
+   it, so the boundary period carries the state of that period (PR #345 round-3
+   re-review: a change dated the first day after the boundary posts in the next
+   Regular period and is not seen yet).
+     *_end    held at period_date: the ASOF row has not ended before it. In a
+              boundary period a row ended by a full disposal (ended_by_disposal,
+              dated on or before period_date since the row is the ASOF row) is
+              not held: its disposal journal posted, line (0) included, in the
+              Regular period before. A row konsol closed the day before a change
+              (a step, a transfer) is still held there, at the old share and
+              method.
      *_start  not ended before the period began (end_date >= period_start_date):
               a link that ended INSIDE the period still counts. #}
 {{ p }}link_candidates as (
@@ -169,8 +183,12 @@
         ap.link_owner_data_area_id as link_owner_data_area_id,
         ap.link_depth as link_depth,
         ap.depth as depth,
-        if(o.end_date >= ap.read_date, o.ownership_pct, null) as link_pct_end,
-        if(o.end_date >= ap.read_date, o.consolidation_method, null) as link_method_end,
+        if(o.end_date >= ap.period_date
+           and not (ap.period_start_date > ap.period_date and coalesce(o.ended_by_disposal, 0) = 1),
+           o.ownership_pct, null) as link_pct_end,
+        if(o.end_date >= ap.period_date
+           and not (ap.period_start_date > ap.period_date and coalesce(o.ended_by_disposal, 0) = 1),
+           o.consolidation_method, null) as link_method_end,
         if(o.end_date >= ap.period_start_date, o.ownership_pct, null) as link_pct_start,
         if(o.end_date >= ap.period_start_date, o.consolidation_method, null) as link_method_start,
         h.has_history as link_has_history
@@ -180,42 +198,12 @@
         and ap.link_data_area_id = o.data_area_id
         and ap.link_owner_group = o.owner_group
         and ap.link_owner_data_area_id = o.owner_data_area_id
-        and ap.read_date >= o.effective_date
+        and ap.period_date >= o.effective_date
     left join {{ p }}link_history as h
         on ap.link_group = h.consolidation_group
         and ap.link_data_area_id = h.data_area_id
         and ap.link_owner_group = h.owner_group
         and ap.link_owner_data_area_id = h.owner_data_area_id
-),
-
-{# A period on a year boundary belongs to the group's history only if the
-   entity was held on its eve: some path held at window_end_date (the end of
-   the Regular period before it). An entity acquired on the first day after the
-   boundary is not in it: the acquisition journal posts in the next Regular
-   period, and its line (0) carries the boundary period. #}
-{{ p }}held_on_eve as (
-    select consolidation_group, data_area_id, fiscal_year, fiscal_period, toUInt8(1) as on_eve
-    from (
-        select
-            ap.consolidation_group as consolidation_group,
-            ap.data_area_id as data_area_id,
-            ap.path_id as path_id,
-            ap.fiscal_year as fiscal_year,
-            ap.fiscal_period as fiscal_period,
-            countIf(coalesce(o.end_date >= ap.period_date, 0) = 0) as n_not_held
-        from (
-            select * from {{ p }}ancestry_periods where period_start_date > period_date
-        ) as ap
-        asof left join {{ p }}ownership as o
-            on ap.link_group = o.consolidation_group
-            and ap.link_data_area_id = o.data_area_id
-            and ap.link_owner_group = o.owner_group
-            and ap.link_owner_data_area_id = o.owner_data_area_id
-            and ap.period_date >= o.effective_date
-        group by ap.consolidation_group, ap.data_area_id, ap.path_id, ap.fiscal_year, ap.fiscal_period
-    )
-    where n_not_held = 0
-    group by consolidation_group, data_area_id, fiscal_year, fiscal_period
 ),
 
 {# (group, entity, period) with at least one path whose every link is held at
@@ -253,12 +241,8 @@
         lc.depth as depth,
         {# join_use_nulls=0: a miss reads window_at_end = 0 #}
         he.window_at_end as window_at_end,
-        {# a boundary period whose entity was not held on its eve resolves nothing
-           (outside the window: every link has history, none counts) #}
-        if(lc.period_start_date > lc.period_date and ev.on_eve = 0, null,
-           if(he.window_at_end = 1, lc.link_pct_end, lc.link_pct_start)) as link_pct,
-        if(lc.period_start_date > lc.period_date and ev.on_eve = 0, null,
-           if(he.window_at_end = 1, lc.link_method_end, lc.link_method_start)) as link_method,
+        if(he.window_at_end = 1, lc.link_pct_end, lc.link_pct_start) as link_pct,
+        if(he.window_at_end = 1, lc.link_method_end, lc.link_method_start) as link_method,
         lc.link_has_history as link_has_history
     from {{ p }}link_candidates as lc
     left join {{ p }}held_at_end as he
@@ -266,12 +250,6 @@
         and he.data_area_id = lc.data_area_id
         and he.fiscal_year = lc.fiscal_year
         and he.fiscal_period = lc.fiscal_period
-    {# join_use_nulls=0: a miss reads on_eve = 0 #}
-    left join {{ p }}held_on_eve as ev
-        on ev.consolidation_group = lc.consolidation_group
-        and ev.data_area_id = lc.data_area_id
-        and ev.fiscal_year = lc.fiscal_year
-        and ev.fiscal_period = lc.fiscal_period
 ),
 
 {# One row per path: its product, its weakest link, its direct (last) link. An
@@ -351,7 +329,6 @@
 {{ p }}ruled as (
     select
         *,
-        greatest(period_date, period_start_date) as read_date,
         toUInt8(resolved_paths > 1 and (
             method_ranks > 1
             or (any_path_all_full = 0 and effective_sum * 100.0 > {{ DECLARATION_TRIGGER_PCT }})
@@ -375,11 +352,11 @@
         if(r.resolved_paths > 0 and r.unrecorded_paths = 0, r.direct_sum, 0.0) as direct_ownership_pct,
         multiIf(
             r.needs_declaration = 0, 'link',
-            d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, r.read_date, r.period_start_date), 'declared',
+            d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, r.period_date, r.period_start_date), 'declared',
             'undeclared'
         ) as method_source,
         multiIf(
-            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, r.read_date, r.period_start_date),
+            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, r.period_date, r.period_start_date),
                 assumeNotNull(d.consolidation_method),
             r.needs_declaration = 1, 'none',
             r.resolved_paths = 0, 'none',
@@ -395,6 +372,6 @@
     asof left join {{ p }}declarations as d
         on r.consolidation_group = d.consolidation_group
         and r.data_area_id = d.data_area_id
-        and r.read_date >= d.effective_date
+        and r.period_date >= d.effective_date
 )
 {% endmacro %}

@@ -369,7 +369,7 @@ models:
         tests:
           - not_null
       - name: period_date
-        description: "konsolidat#171 / #252: the period's DECLARED end_date (epm_staging.fiscal_periods; a Closing period takes its year's last Regular period's; an Opening or Adjustment period, the end of the Regular period before it (the eve of the year boundary it sits on). The holding is read at the later of period_date and period_start_date (macros/ownership_resolution.sql, THE WINDOW). Before, the first of calendar month P."
+        description: "konsolidat#171 / #252: the period's DECLARED end_date (epm_staging.fiscal_periods; a Closing period takes its year's last Regular period's; an Opening or Adjustment period, the end of the Regular period before it (the eve of the year boundary it sits on). The holding is read at period_date (macros/ownership_resolution.sql, THE WINDOW). Before, the first of calendar month P."
       - name: period_start_date
         description: "konsolidat#171 / #252: the period's DECLARED start_date (a Closing period: its year's last Regular period's; an Opening or Adjustment period: the start of the Regular period after it)."
       - name: effective_ownership_pct

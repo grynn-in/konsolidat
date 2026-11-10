@@ -10,16 +10,17 @@
    line (0) brings in every tuple before the acquisition period. So:
      Regular      its declared span.
      Opening, Adjustment
-                  judged by tuple order (PR #345 review, finding 2). window_end_date is the end_date of the
-                  latest Regular period BEFORE it, window_start_date the start_date of the earliest Regular
-                  period AFTER it. A link is in the window when effective_date <= window_end_date and
-                  end_date >= window_start_date, which is exactly "acquisition period < P and disposal
-                  period > P" in tuple order: an Opening P0 is consolidated only for an entity acquired
-                  before the year (an acquisition on day 1 posts in P1, and its line (0) carries P0), and
-                  for one disposed of on or after day 1 (the disposal journal of P1 derecognises P0 too);
-                  an Adjustment P14 only for one acquired by the year end and still held after it (a
-                  disposal in P12 derecognises through P12, never P14). With no Regular period before or
-                  after it, the day before its start or the day after its end stands in.
+                  a BOUNDARY period, between two Regular periods (PR #345 reviews). window_end_date is
+                  the end_date of the latest Regular period BEFORE it, window_start_date the start_date of
+                  the earliest Regular period AFTER it (so window_start_date > window_end_date). The
+                  ownership window reads it at window_end_date: it carries the state of the period before
+                  it, except that a row ended by a full disposal dated on or before that day is not held
+                  (macros/ownership_resolution.sql). That is "acquisition period < P and disposal period >
+                  P" in tuple order: an Opening P0 is consolidated for an entity acquired by the eve of the
+                  year (an acquisition on day 1 posts in P1, and its line (0) carries P0) and still held,
+                  or disposed of, after it (the disposal journal of P1 derecognises P0 too); an Adjustment
+                  P14 likewise (a disposal in P12 derecognises through P12, never P14). With no Regular
+                  period before or after it, the day before its start or the day after its end stands in.
      Closing      judged as its fiscal year's last Regular period, so it is consolidated exactly when that
                   period is, a disposal in the last Regular period included. It holds only the year-end
                   close (silver_tb_movements: profit and loss into retained earnings), which line (0) never
