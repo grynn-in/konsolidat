@@ -274,6 +274,7 @@ SHEETS: tuple[Sheet, ...] = (
             Col("acquisition_costs_treatment", "Root only: Expense or Capitalise.", False, "select", ("", "Expense", "Capitalise"), width=12),
             Col("measurement_period", "Root only: Off or 12 months.", False, "select", ("", "Off", "12 months"), width=10),
             Col("bargain_purchase", "Root only: Recognise gain or Refuse.", False, "select", ("", "Recognise gain", "Refuse"), width=14),
+            Col("partial_period_treatment", "Root only: how an acquiree's P&L enters when control passes mid-period (Whole period, Pro-rate by days or Stub trial balance). Required once the group has a Business Combination; no default.", False, "select", ("", "Whole period", "Pro-rate by days", "Stub trial balance"), width=16),
             Col("ic_difference_account", "Group nodes: P&L account that takes the difference when an intercompany pair does not match (a Published posting account, not itself intercompany).", False, width=12),
             Col("ic_difference_tolerance", "Group nodes: difference shown as tolerated, in reporting currency.", False, "float", width=10),
             Col("goodwill_account", "Root only: the accounts consolidation journals post to (all Published posting accounts).", False, width=10),

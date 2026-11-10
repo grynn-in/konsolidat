@@ -40,6 +40,12 @@
 --            recent tranche EVER and silently borrowed a future rate).
 --   * period_date from build_date_from_year_period(), as the model builds it.
 --
+-- Same-currency entities are skipped (konsolidat#295). An entity whose functional currency
+-- (accounting_currency) equals the presentation currency of the row (reporting_currency)
+-- translates at 1 by definition: gold_consolidated_trial_balance takes the 1.0 branch before it
+-- ever looks at a historical rate. Requiring a rate there made every single-currency site warn
+-- on every build. The same two columns decide it here, so test and model cannot disagree.
+--
 -- Severity warn, matching assert_equity_rate_coverage: a declared account with no
 -- rate is master data with a defined fallback, not a broken ledger. It must name the
 -- gap precisely enough to act on, which is what the message does.
@@ -71,6 +77,7 @@ candidates as (
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     inner join declared as d
         on ctb.main_account = d.main_account_id
+        and ctb.accounting_currency != ctb.reporting_currency
     inner join {{ ref('gold_entity_ownership') }} as eo
         on eo.consolidation_group = ctb.consolidation_group
         and eo.data_area_id = ctb.data_area_id
