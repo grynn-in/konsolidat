@@ -110,7 +110,7 @@ ownership as (
         o.end_date as end_date,
         toFloat64(o.ownership_pct) as ownership_pct,
         o.consolidation_method as consolidation_method,
-        toUInt8((o.consolidation_group, o.data_area_id, o.end_date) in (
+        toUInt8(o.is_disposal = 1 and (o.consolidation_group, o.data_area_id, o.end_date) in (
             select consolidation_group, disposed_entity, disposal_date
             from {{ source('epm_staging', 'business_disposals') }}
             where toFloat64(retained_interest_pct) <= 0.0
@@ -181,7 +181,7 @@ link_states as (
             4
         ) as link_rank,
         toUInt8(n_read > 0 and tupleElement(read_row, 1) >= e_d
-                and not (s_d > e_d and tupleElement(read_row, 4) = 1)) as held_e,
+                and not (s_d > e_d and tupleElement(read_row, 1) = e_d and tupleElement(read_row, 4) = 1)) as held_e,
         toUInt8(n_read > 0 and tupleElement(read_row, 1) >= s_d) as counted_s
     from link_reads
 ),
