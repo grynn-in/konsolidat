@@ -448,7 +448,16 @@ models:
 
   - name: gold_acquisition_adjustments
     description: >
-      PRD-11: P&L proration of an acquisition year to the post-acquisition months.
+      konsolidat#171 2c: the partial-period P&L of an acquisition, by the
+      treatment the group root declares (partial_period_treatment). Only
+      'Pro-rate by days' produces rows: for a deal dated after the start of its
+      period, each P&L account of the acquired entity gets
+      -group_amount x the fraction of the period before the acquisition date,
+      and one balancing line on the retained-earnings account (an is_pnl = 0
+      account) carries the opposite sum, so the rows sum to 0 per group, entity,
+      year and period. 'Whole period' and 'Stub trial balance' produce no rows;
+      an undeclared treatment with a mid-period deal fails
+      assert_partial_period_treatment_declared.
       konsolidat#198: the goodwill and fair-value lines it used to post one-sided
       to '1800'/'1900' moved to gold_business_combination_journal.
     columns:

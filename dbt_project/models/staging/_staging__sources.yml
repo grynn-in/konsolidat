@@ -131,7 +131,7 @@ sources:
           - name: acquisition_costs_account
             description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
           - name: partial_period_treatment
-            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the acquiree uploads a trial balance for the stub). Declared by the group, no default; '' until declared. Not read by any model yet."
+            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the uploaded period trial balance is the stub, used unscaled). Declared by the group, no default; '' until declared. Read by gold_acquisition_adjustments and gold_business_disposal_journal (the P&L adjustments) and by assert_partial_period_treatment_declared and assert_partial_period_pnl_matches_treatment (tests)."
 
   - name: epm_staging
     schema: epm_staging
