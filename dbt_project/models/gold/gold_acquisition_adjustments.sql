@@ -9,7 +9,7 @@
    Decided by Deepak Pai: 18 Sep 2026 (mid-period P&L follows the group root's partial_period_treatment:
    Whole period | Pro-rate by days | Stub trial balance, no default), 10 Nov 2026 Q1 A (an undeclared
    treatment with a mid-period deal is a build ERROR: assert_partial_period_treatment_declared).
-   Rejected: the month arithmetic this model used (prorate_period_amount over calendar months, in local
+   Rejected: the month arithmetic this model used (a calendar-month proration macro, in local
    currency, one-sided, keyed on ownership_periods.acquisition_date).
 
    The deal is the submitted Business Combination (epm_staging.business_combinations), never the Ownership
