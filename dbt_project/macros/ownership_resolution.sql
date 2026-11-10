@@ -99,7 +99,7 @@
            row's end date: the submitted disposals gold_business_disposal_journal
            posts (retained interest 0), read from the same source, so the window
            and the journal cannot disagree on which rows a sale ended #}
-        cast(toUInt8((consolidation_group, data_area_id, end_date) in (
+        cast(toUInt8(is_disposal = 1 and (consolidation_group, data_area_id, end_date) in (
             select consolidation_group, disposed_entity, disposal_date
             from {{ source('epm_staging', 'business_disposals') }}
             where toFloat64(retained_interest_pct) <= 0.0
@@ -161,9 +161,10 @@
    re-review: a change dated the first day after the boundary posts in the next
    Regular period and is not seen yet).
      *_end    held at period_date: the ASOF row has not ended before it. In a
-              boundary period a row ended by a full disposal (ended_by_disposal,
-              dated on or before period_date since the row is the ASOF row) is
-              not held: its disposal journal posted, line (0) included, in the
+              boundary period a row ended by a full disposal ON period_date
+              (ended_by_disposal: the row is is_disposal = 1 and a full disposal
+              of the entity is dated on its end_date; a disposal dated later
+              leaves the row held) is not held: its disposal journal posted, line (0) included, in the
               Regular period before. A row konsol closed the day before a change
               (a step, a transfer) is still held there, at the old share and
               method.
@@ -184,10 +185,12 @@
         ap.link_depth as link_depth,
         ap.depth as depth,
         if(o.end_date >= ap.period_date
-           and not (ap.period_start_date > ap.period_date and coalesce(o.ended_by_disposal, 0) = 1),
+           and not (ap.period_start_date > ap.period_date and o.end_date = ap.period_date
+                     and coalesce(o.ended_by_disposal, 0) = 1),
            o.ownership_pct, null) as link_pct_end,
         if(o.end_date >= ap.period_date
-           and not (ap.period_start_date > ap.period_date and coalesce(o.ended_by_disposal, 0) = 1),
+           and not (ap.period_start_date > ap.period_date and o.end_date = ap.period_date
+                     and coalesce(o.ended_by_disposal, 0) = 1),
            o.consolidation_method, null) as link_method_end,
         if(o.end_date >= ap.period_start_date, o.ownership_pct, null) as link_pct_start,
         if(o.end_date >= ap.period_start_date, o.consolidation_method, null) as link_method_start,
