@@ -5,44 +5,85 @@
     multiplied two paths into each other (shape 1: 0.8 x 0.6 x 0.2 = 0.096 instead of
     0.48 + 0.20 = 0.68).
 
-    Independent of the model's arithmetic: gold_entity_ownership uses arrayProduct
-    over a groupArray per path and sum across paths; this recomputes each path as
-    exp(sum(log(...))) keyed on path_id, straight from the ancestry closure and the
-    periods, then sums, so a bug in either aggregation shows up as a disagreement
-    rather than cancelling out. A link is matched on BOTH its nodes (owned and owner),
-    as the model does: two owners of one node are two links.
+    An independent oracle (PR #345 review, findings 1 and F3). It shares no macro with
+    gold_entity_ownership: the period dates come straight from epm_staging.fiscal_periods,
+    each link's Ownership Period is picked with argMax over a plain join (the model uses an
+    ASOF join), each path is a product of exp(log) (the model uses arrayProduct), and every
+    branch of the reading is checked, not skipped:
 
-    Each link is read as HELD AT THE PERIOD END (PR #345 review, finding 1): the latest
-    Ownership Period of the link that started by the period's declared end and had not
-    ended by it. A path counts when every link on it is held at the end; the paths that
-    count are summed. So a holding that moved between two owners inside the period
-    counts once, under the owner that holds it at the end (not 1.6 from both), and an
-    owner that sold out inside the period no longer counts.
+      the dates a period is read on, from the calendar source:
+        Regular                 its declared start S and end E
+        Closing                 its year's last Regular period's S and E
+        Opening, Adjustment     E = end of the latest Regular period before it,
+                                S = start of the earliest Regular period after it
+                                (S > E: the period sits on a boundary between them)
+      R = the later of S and E: the date a holding is read at. A link's Ownership Period
+      is the latest one that started by R.
+        held at R               it has not ended before R
+        some path held at R     sum the held paths
+        no path held at R       sum the paths whose links had not ended before S
+                                (a full disposal inside the period: it stays in)
+      a boundary period (S > E) counts only if some path was held at E, the eve of the
+      boundary (an entity acquired on S is not in it); otherwise expect 0.
 
+    A holding split exactly at a boundary (a step or an owner transfer dated on the first
+    day of a year: konsol ends the old row the day before) is read at S, so it is never lost.
     Skipped: a (group, entity, period) with a link that has no Ownership Period at all
-    (assert_ownership_chain_complete's case), one where NO path is held at the period end
-    (a full disposal inside the period: the window keeps the disposal period, judged by
-    assert_ownership_window_matches_deal_period), and one with a zero link on a counted
-    path (log(0) is undefined).
+    (assert_ownership_chain_complete's case) or a zero link on a counted path (log(0)).
 
-    Fixtures: assert_effective_ownership_is_path_sum.direct_plus_indirect.sql (+ .must_flag),
-    .indirect_associate.sql, .single_chain.sql.
+    Fixtures: assert_effective_ownership_is_path_sum.*.sql (direct_plus_indirect + .must_flag,
+    indirect_associate, single_chain, owner_transfer, partial_sale, step_on_day_one,
+    transfer_on_day_one), and every window fixture builds this test too.
 #}
 
-{# The periods and their dates come from the declared calendar, as the model's do (declared_periods(),
-   konsolidat#171 / #252): this test checks the path arithmetic, not the window, so it reads the window on
-   the same declared dates rather than on a second, disagreeing date rule. The window itself is checked
-   independently by assert_ownership_window_matches_deal_period and assert_ownership_uses_effective_date. #}
-with periods_needed as (
+with calendar as (
+    select
+        toUInt16(fiscal_year) as fy,
+        toUInt16(fiscal_period) as fp,
+        period_type,
+        start_date,
+        end_date
+    from {{ source('epm_staging', 'fiscal_periods') }}
+),
+
+regular as (
+    select fy as ry, fp as rfp, start_date as rs, end_date as re
+    from calendar
+    where period_type = 'Regular'
+),
+
+period_dates as (
+    select
+        c.fy as fy,
+        c.fp as fp,
+        multiIf(
+            c.period_type = 'Regular', c.start_date,
+            c.period_type = 'Closing' and countIf(r.ry = c.fy) > 0, argMaxIf(r.rs, r.rfp, r.ry = c.fy),
+            countIf((r.ry, r.rfp) > (c.fy, c.fp)) > 0, argMinIf(r.rs, (r.ry, r.rfp), (r.ry, r.rfp) > (c.fy, c.fp)),
+            addDays(c.end_date, 1)
+        ) as s_date,
+        multiIf(
+            c.period_type = 'Regular', c.end_date,
+            c.period_type = 'Closing' and countIf(r.ry = c.fy) > 0, argMaxIf(r.re, r.rfp, r.ry = c.fy),
+            countIf((r.ry, r.rfp) < (c.fy, c.fp)) > 0, argMaxIf(r.re, (r.ry, r.rfp), (r.ry, r.rfp) < (c.fy, c.fp)),
+            subtractDays(c.start_date, 1)
+        ) as e_date
+    from calendar as c
+    cross join regular as r
+    group by c.fy, c.fp, c.period_type, c.start_date, c.end_date
+),
+
+periods_needed as (
     select distinct
         tb.fiscal_year as fiscal_year,
         tb.fiscal_period as fiscal_period,
-        dp.window_start_date as period_start_date,
-        dp.window_end_date as period_date
+        pd.s_date as s_date,
+        pd.e_date as e_date,
+        greatest(pd.s_date, pd.e_date) as r_date
     from {{ ref('gold_trial_balance') }} as tb
-    inner join {{ declared_periods() }} as dp
-        on dp.fiscal_year = toUInt16(tb.fiscal_year)
-        and dp.fiscal_period = toUInt16(tb.fiscal_period)
+    inner join period_dates as pd
+        on pd.fy = toUInt16(tb.fiscal_year)
+        and pd.fp = toUInt16(tb.fiscal_period)
 ),
 
 ownership as (
@@ -52,15 +93,10 @@ ownership as (
         owner_group,
         owner_data_area_id,
         effective_date,
-        cast(end_date as Nullable(Date)) as end_date,
-        cast(toFloat64(ownership_pct) as Nullable(Float64)) as ownership_pct
+        end_date,
+        toFloat64(ownership_pct) as ownership_pct,
+        toUInt8(1) as hit
     from {{ source('epm_staging', 'ownership_periods') }}
-),
-
-link_history as (
-    select consolidation_group, data_area_id, owner_group, owner_data_area_id, toUInt8(1) as has_history
-    from {{ source('epm_staging', 'ownership_periods') }}
-    group by consolidation_group, data_area_id, owner_group, owner_data_area_id
 ),
 
 ancestry_periods as (
@@ -74,38 +110,57 @@ ancestry_periods as (
         a.link_owner_data_area_id as link_owner_data_area_id,
         p.fiscal_year as fiscal_year,
         p.fiscal_period as fiscal_period,
-        p.period_start_date as period_start_date,
-        p.period_date as period_date
+        p.s_date as s_date,
+        p.e_date as e_date,
+        p.r_date as r_date
     from {{ source('epm_staging', 'consolidation_ancestry') }} as a
     cross join periods_needed as p
     where a.consolidation_group != '' and a.data_area_id != ''
 ),
 
-path_oracle as (
+{# one row per link and period; join_use_nulls=0: a link with no Ownership Period reads hit = 0 #}
+link_reads as (
     select
         ap.consolidation_group as consolidation_group,
         ap.data_area_id as data_area_id,
         ap.path_id as path_id,
         ap.fiscal_year as fiscal_year,
         ap.fiscal_period as fiscal_period,
-        exp(sum(log(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) / 100.0))) as path_pct,
-        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) is null) as unresolved,
-        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) is null
-                and h.has_history = 0) as unrecorded,
-        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) = 0) as zero_links
+        any(ap.s_date) as s_d,
+        any(ap.e_date) as e_d,
+        any(ap.r_date) as r_d,
+        countIf(o.hit = 1) as n_rows,
+        countIf(o.hit = 1 and o.effective_date <= ap.r_date) as n_r,
+        argMaxIf(o.end_date, o.effective_date, o.hit = 1 and o.effective_date <= ap.r_date) as end_r,
+        argMaxIf(o.ownership_pct, o.effective_date, o.hit = 1 and o.effective_date <= ap.r_date) as pct_r,
+        countIf(o.hit = 1 and o.effective_date <= ap.e_date) as n_e,
+        argMaxIf(o.end_date, o.effective_date, o.hit = 1 and o.effective_date <= ap.e_date) as end_e
     from ancestry_periods as ap
-    asof left join ownership as o
+    left join ownership as o
         on ap.link_group = o.consolidation_group
         and ap.link_data_area_id = o.data_area_id
         and ap.link_owner_group = o.owner_group
         and ap.link_owner_data_area_id = o.owner_data_area_id
-        and ap.period_date >= o.effective_date
-    left join link_history as h
-        on ap.link_group = h.consolidation_group
-        and ap.link_data_area_id = h.data_area_id
-        and ap.link_owner_group = h.owner_group
-        and ap.link_owner_data_area_id = h.owner_data_area_id
-    group by ap.consolidation_group, ap.data_area_id, ap.path_id, ap.fiscal_year, ap.fiscal_period
+    group by ap.consolidation_group, ap.data_area_id, ap.path_id, ap.fiscal_year, ap.fiscal_period,
+             ap.link_group, ap.link_data_area_id, ap.link_owner_group, ap.link_owner_data_area_id
+),
+
+path_reads as (
+    select
+        consolidation_group,
+        data_area_id,
+        path_id,
+        fiscal_year,
+        fiscal_period,
+        max(s_d > e_d) as boundary,
+        min(n_r > 0 and end_r >= r_d) as held_r,
+        min(n_r > 0 and end_r >= s_d) as counted_s,
+        min(n_e > 0 and end_e >= e_d) as held_e,
+        max(n_rows = 0) as unrecorded,
+        countIf(pct_r = 0) as zero_links,
+        exp(sum(log(pct_r / 100.0))) as path_pct
+    from link_reads
+    group by consolidation_group, data_area_id, path_id, fiscal_year, fiscal_period
 ),
 
 oracle as (
@@ -114,13 +169,37 @@ oracle as (
         data_area_id,
         fiscal_year,
         fiscal_period,
-        sumIf(path_pct, unresolved = 0) as expected_pct,
-        count() as path_count,
-        countIf(unresolved = 0) as held_paths,
-        sum(unrecorded) as unrecorded,
-        sumIf(zero_links, unresolved = 0) as zero_links
-    from path_oracle
+        max(boundary) as is_boundary,
+        max(held_r) as any_held,
+        max(held_e) as any_held_before,
+        max(unrecorded) as any_unrecorded,
+        sumIf(path_pct, held_r = 1) as held_sum,
+        sumIf(path_pct, counted_s = 1) as counted_sum,
+        sumIf(zero_links, held_r = 1) as held_zero,
+        sumIf(zero_links, counted_s = 1) as counted_zero
+    from path_reads
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
+),
+
+expected as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        multiIf(
+            is_boundary = 1 and any_held_before = 0, 0.0,
+            any_held = 1, held_sum,
+            counted_sum
+        ) as expected_pct,
+        multiIf(
+            is_boundary = 1 and any_held_before = 0, 'boundary, not held before it',
+            any_held = 1, 'held at the read date',
+            'ended inside the period'
+        ) as branch,
+        any_unrecorded,
+        if(any_held = 1, held_zero, counted_zero) as zero_links
+    from oracle
 )
 
 select
@@ -129,15 +208,14 @@ select
     eo.fiscal_year,
     eo.fiscal_period,
     eo.effective_ownership_pct as model_pct,
-    o.expected_pct as expected_pct,
-    o.path_count as path_count
+    x.expected_pct as expected_pct,
+    x.branch as branch
 from {{ ref('gold_entity_ownership') }} as eo
-inner join oracle as o
-    on eo.consolidation_group = o.consolidation_group
-    and eo.data_area_id = o.data_area_id
-    and eo.fiscal_year = o.fiscal_year
-    and eo.fiscal_period = o.fiscal_period
-where o.held_paths > 0
-  and o.unrecorded = 0
-  and o.zero_links = 0
-  and abs(eo.effective_ownership_pct - o.expected_pct) > 0.000001
+inner join expected as x
+    on eo.consolidation_group = x.consolidation_group
+    and eo.data_area_id = x.data_area_id
+    and eo.fiscal_year = x.fiscal_year
+    and eo.fiscal_period = x.fiscal_period
+where x.any_unrecorded = 0
+  and x.zero_links = 0
+  and abs(eo.effective_ownership_pct - x.expected_pct) > 0.000001
