@@ -112,8 +112,6 @@ sources:
             description: "'Off' or '12 months': whether a submitted Business Combination may be amended and re-posted in the acquisition period."
           - name: bargain_purchase
             description: "'Recognise gain' (Cr bargain_purchase_gain_account) or 'Refuse' (the build stops and names the deal)."
-          - name: partial_period_treatment
-            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the acquiree uploads a trial balance for the stub). Declared by the group, no default; '' until declared. Not read by any model yet."
           - name: goodwill_account
             description: "Balance-sheet account debited with goodwill at acquisition, derecognised on disposal."
           - name: fair_value_adjustment_account
@@ -132,6 +130,8 @@ sources:
             description: "P&L account debited by the monthly goodwill amortisation when goodwill_treatment is 'Amortise'."
           - name: acquisition_costs_account
             description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
+          - name: partial_period_treatment
+            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the acquiree uploads a trial balance for the stub). Declared by the group, no default; '' until declared. Not read by any model yet."
 
   - name: epm_staging
     schema: epm_staging
