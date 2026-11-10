@@ -109,3 +109,30 @@
 {% macro deal_period_holds(fp, date_expr) %}
     ({{ fp }}.period_type = 'Regular' and {{ fp }}.start_date <= {{ date_expr }} and {{ fp }}.end_date >= {{ date_expr }})
 {% endmacro %}
+
+
+{# konsolidat#171 step 2c (T5): the share of the deal period the group did NOT hold, by calendar days.
+   Decided by Deepak Pai: 18 Sep 2026 (mid-period P&L follows the group's declared partial_period_treatment),
+   10 Nov 2026 Q2 C (a disposal period's P&L follows the treatment, IFRS 10.B88).
+   Days are inclusive and the deal date is a group day on both sides:
+     acquisition  dateDiff('day', start_date, deal_date) / (dateDiff('day', start_date, end_date) + 1)
+                  an acquisition on the 11th of a 31-day month removes 10/31; on the first day, 0.
+     disposal     dateDiff('day', deal_date, end_date) / (dateDiff('day', start_date, end_date) + 1)
+                  a disposal on the 20th of a 30-day month removes 10/30; on the last day, 0.
+   start_date and end_date are the deal period's declared span (the Regular period deal_period_holds() gives).
+   Returns Float64. `side` is the literal 'acquisition' or 'disposal'. #}
+{% macro partial_period_removed_fraction(side, deal_date, start_date, end_date) %}
+    {%- if side == 'acquisition' -%}
+    if({{ deal_date }} > {{ start_date }},
+       toFloat64(dateDiff('day', {{ start_date }}, {{ deal_date }}))
+           / (dateDiff('day', {{ start_date }}, {{ end_date }}) + 1),
+       toFloat64(0))
+    {%- elif side == 'disposal' -%}
+    if({{ deal_date }} < {{ end_date }},
+       toFloat64(dateDiff('day', {{ deal_date }}, {{ end_date }}))
+           / (dateDiff('day', {{ start_date }}, {{ end_date }}) + 1),
+       toFloat64(0))
+    {%- else -%}
+    {{ exceptions.raise_compiler_error("partial_period_removed_fraction: side must be 'acquisition' or 'disposal', got '" ~ side ~ "'") }}
+    {%- endif -%}
+{% endmacro %}
