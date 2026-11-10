@@ -2,8 +2,10 @@
    SAME period.
 
    gold_business_combination_journal posts an acquisition, and gold_business_disposal_journal a full
-   disposal, in the period whose declared span holds the deal date (epm_staging.fiscal_periods,
-   start_date <= date <= end_date, Closing periods skipped, the lowest period tuple). The acquisition
+   disposal, in the Regular period whose declared span holds the deal date (deal_period_holds(), the one
+   mapping rule; the lowest period tuple). The test checks the journals against that rule too: a journal
+   posted in any other period is named ('journal posts in another period'), so the journals, the window and
+   this test cannot use different rules. The acquisition
    journal's line (0) brings the balance sheet in up to the period BEFORE that one, so the entity's own
    movements must be consolidated from the acquisition period on. The disposal journal's line (0)
    derecognises the cumulative balances UP TO AND INCLUDING the disposal period, so the entity's movements
@@ -12,7 +14,8 @@
    The expectation is computed here from the calendar source, by the journals' own span rule, and never
    through the window's macros. A Closing period is compared as its year's last Regular period (the rule
    rate_period_map() declares for rates): a year-end close posts in it, and it is consolidated exactly when
-   that last Regular period is.
+   that last Regular period is. Opening and Adjustment periods are compared by their own tuple, as the
+   disposal journal's line (0) compares them: an Opening P0 is before P1, an Adjustment P14 after P12.
 
    Faults, one row each:
      acquisition period not consolidated   the entity has trial-balance rows in the acquisition period
@@ -26,6 +29,8 @@
                                            derecognise balances the group never carried)
      consolidated after disposal           consolidated rows in a period after the disposal period, when
                                            no later Business Combination re-acquires the entity
+     journal posts in another period       a deal journal posted in a period other than the one
+                                           deal_period_holds() gives its date
    Fixtures: assert_ownership_window_matches_deal_period.*.sql. #}
 with calendar as (
     select
@@ -64,9 +69,7 @@ acquisitions as (
         argMin(c.fp, (c.fy, c.fp)) as fp
     from {{ source('epm_staging', 'business_combinations') }} as bc
     cross join calendar as c
-    where c.start_date <= bc.acquisition_date
-      and c.end_date >= bc.acquisition_date
-      and c.period_type != 'Closing'
+    where {{ deal_period_holds('c', 'bc.acquisition_date') }}
     group by bc.consolidation_group, bc.acquired_entity, bc.acquisition_date
 ),
 
@@ -79,9 +82,7 @@ disposals as (
         argMin(c.fp, (c.fy, c.fp)) as fp
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join calendar as c
-    where c.start_date <= bd.disposal_date
-      and c.end_date >= bd.disposal_date
-      and c.period_type != 'Closing'
+    where {{ deal_period_holds('c', 'bd.disposal_date') }}
       and toFloat64(bd.retained_interest_pct) <= 0.0
     group by bd.consolidation_group, bd.disposed_entity, bd.disposal_date
 ),
@@ -116,6 +117,37 @@ held_before as (
         on op.consolidation_group = a.consolidation_group
         and op.data_area_id = a.data_area_id
     where op.effective_date < a.deal_date
+),
+
+{# the period each deal journal actually posted in #}
+journal_periods as (
+    select
+        consolidation_group,
+        data_area_id,
+        acquisition_date as deal_date,
+        toUInt16(fiscal_year) as fy,
+        toUInt16(fiscal_period) as fp,
+        'acquisition' as kind
+    from {{ ref('gold_business_combination_journal') }}
+    group by consolidation_group, data_area_id, acquisition_date, fiscal_year, fiscal_period
+
+    union all
+
+    select
+        consolidation_group,
+        data_area_id,
+        disposal_date as deal_date,
+        toUInt16(fiscal_year) as fy,
+        toUInt16(fiscal_period) as fp,
+        'disposal' as kind
+    from {{ ref('gold_business_disposal_journal') }}
+    group by consolidation_group, data_area_id, disposal_date, fiscal_year, fiscal_period
+),
+
+deal_periods as (
+    select consolidation_group, data_area_id, deal_date, fy, fp, 'acquisition' as kind from acquisitions
+    union all
+    select consolidation_group, data_area_id, deal_date, fy, fp, 'disposal' as kind from disposals
 ),
 
 {# disposals followed by a re-acquisition of the same entity in the same group #}
@@ -197,3 +229,17 @@ where (c.fy, c.cmp_fp) > (d.fy, d.fp)
   and (d.consolidation_group, d.data_area_id, d.deal_date) not in (
       select consolidation_group, data_area_id, deal_date from reacquired
   )
+
+union all
+
+select
+    j.consolidation_group,
+    j.data_area_id,
+    j.deal_date,
+    j.fy,
+    j.fp,
+    concat('journal posts in another period (', j.kind, ')')
+from journal_periods as j
+where (j.consolidation_group, j.data_area_id, j.deal_date, j.kind, j.fy, j.fp) not in (
+    select consolidation_group, data_area_id, deal_date, kind, fy, fp from deal_periods
+)

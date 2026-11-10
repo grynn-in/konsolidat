@@ -6,7 +6,7 @@
    model being wrong: on a fiscal year starting in April it checked P1 against 1 January.
 
    The expectation is computed here, independently of the window's macros, by the deal journals' span
-   rule: a date belongs to the lowest non-Closing period whose declared span holds it. An Ownership Period
+   rule (deal_period_holds()): a date belongs to the lowest Regular period whose declared span holds it. An Ownership Period
    applies from the period holding its effective_date through the period holding its end_date; a date
    before the calendar is before every period, and a date after it (or the open end, 9999-12-31 stored as
    2149-06-06) is after every period. A Closing period compares as its year's last Regular period. Where
@@ -51,10 +51,10 @@ ops as (
         op.effective_date as effective_date,
         op.end_date as end_date,
         toFloat64(op.ownership_pct) as ownership_pct,
-        countIf(c.period_type != 'Closing' and c.start_date <= op.effective_date and c.end_date >= op.effective_date) as n_from,
-        minIf((c.fy, c.fp), c.period_type != 'Closing' and c.start_date <= op.effective_date and c.end_date >= op.effective_date) as from_key,
-        countIf(c.period_type != 'Closing' and c.start_date <= op.end_date and c.end_date >= op.end_date) as n_to,
-        minIf((c.fy, c.fp), c.period_type != 'Closing' and c.start_date <= op.end_date and c.end_date >= op.end_date) as to_key
+        countIf({{ deal_period_holds('c', 'op.effective_date') }}) as n_from,
+        minIf((c.fy, c.fp), {{ deal_period_holds('c', 'op.effective_date') }}) as from_key,
+        countIf({{ deal_period_holds('c', 'op.end_date') }}) as n_to,
+        minIf((c.fy, c.fp), {{ deal_period_holds('c', 'op.end_date') }}) as to_key
     from {{ source('epm_staging', 'ownership_periods') }} as op
     cross join calendar as c
     group by op.consolidation_group, op.data_area_id, op.effective_date, op.end_date, op.ownership_pct

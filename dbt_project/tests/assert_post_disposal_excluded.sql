@@ -2,7 +2,7 @@
 -- When temporal ownership records a disposal, no consolidated TB rows should exist
 -- for that entity in periods after the disposal
 {# konsolidat#171 / #252: "after the disposal" means after the period whose DECLARED span holds the
-   disposal date (epm_staging.fiscal_periods, Closing periods skipped, the lowest period tuple), the rule
+   disposal date (deal_period_holds(): the Regular period holding it, the lowest tuple), the rule
    gold_business_disposal_journal posts by. Before, this test judged fiscal period P at the first of
    calendar month P, the same macro the model used. The disposal period itself is consolidated: the
    disposal journal derecognises the balances through it. A Closing period compares as its year's last
@@ -44,9 +44,7 @@ disposal_period as (
     from {{ source('epm_staging', 'ownership_periods') }} as op
     cross join calendar as c
     where op.is_disposal = 1
-      and c.start_date <= op.disposal_date
-      and c.end_date >= op.disposal_date
-      and c.period_type != 'Closing'
+      and {{ deal_period_holds('c', 'op.disposal_date') }}
     group by op.consolidation_group, op.data_area_id, op.disposal_date
 )
 

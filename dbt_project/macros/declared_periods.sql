@@ -58,3 +58,15 @@
             on r.ry = d.fy
     )
 {% endmacro %}
+
+{# konsolidat#171 / #252 (PR #345 review, finding 2): THE rule that puts a dated deal in a period. A deal date
+   belongs to the Regular period whose declared span holds it (start_date <= date <= end_date, period_type
+   'Regular'); a caller takes the lowest such tuple. Opening (P0), Closing (P13) and Adjustment (P14) periods
+   never hold a deal: konsol declares Opening and Closing as one-day periods that share their day with P1 and
+   P12, and an Adjustment period is a year-end bookkeeping period, so a deal on that day belongs to the Regular
+   period. One definition for the acquisition, disposal and goodwill amortisation journals and for every test
+   that looks for a deal's period, so none can map a date differently.
+   Used as `where {{ deal_period_holds('fp', 'bd.disposal_date') }}` on a cross join with the calendar. #}
+{% macro deal_period_holds(fp, date_expr) %}
+    ({{ fp }}.period_type = 'Regular' and {{ fp }}.start_date <= {{ date_expr }} and {{ fp }}.end_date >= {{ date_expr }})
+{% endmacro %}

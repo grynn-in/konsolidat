@@ -12,9 +12,18 @@
     rather than cancelling out. A link is matched on BOTH its nodes (owned and owner),
     as the model does: two owners of one node are two links.
 
-    A (group, entity, period) with an unresolved link on any path is skipped (the
-    has_complete_chain / window case is assert_ownership_chain_complete's), and so is
-    one with a zero link (log(0) is undefined).
+    Each link is read as HELD AT THE PERIOD END (PR #345 review, finding 1): the latest
+    Ownership Period of the link that started by the period's declared end and had not
+    ended by it. A path counts when every link on it is held at the end; the paths that
+    count are summed. So a holding that moved between two owners inside the period
+    counts once, under the owner that holds it at the end (not 1.6 from both), and an
+    owner that sold out inside the period no longer counts.
+
+    Skipped: a (group, entity, period) with a link that has no Ownership Period at all
+    (assert_ownership_chain_complete's case), one where NO path is held at the period end
+    (a full disposal inside the period: the window keeps the disposal period, judged by
+    assert_ownership_window_matches_deal_period), and one with a zero link on a counted
+    path (log(0) is undefined).
 
     Fixtures: assert_effective_ownership_is_path_sum.direct_plus_indirect.sql (+ .must_flag),
     .indirect_associate.sql, .single_chain.sql.
@@ -48,6 +57,12 @@ ownership as (
     from {{ source('epm_staging', 'ownership_periods') }}
 ),
 
+link_history as (
+    select consolidation_group, data_area_id, owner_group, owner_data_area_id, toUInt8(1) as has_history
+    from {{ source('epm_staging', 'ownership_periods') }}
+    group by consolidation_group, data_area_id, owner_group, owner_data_area_id
+),
+
 ancestry_periods as (
     select
         a.consolidation_group as consolidation_group,
@@ -73,9 +88,11 @@ path_oracle as (
         ap.path_id as path_id,
         ap.fiscal_year as fiscal_year,
         ap.fiscal_period as fiscal_period,
-        exp(sum(log(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) / 100.0))) as path_pct,
-        countIf(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) is null) as unresolved,
-        countIf(if(o.end_date >= ap.period_start_date, o.ownership_pct, null) = 0) as zero_links
+        exp(sum(log(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) / 100.0))) as path_pct,
+        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) is null) as unresolved,
+        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) is null
+                and h.has_history = 0) as unrecorded,
+        countIf(if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) = 0) as zero_links
     from ancestry_periods as ap
     asof left join ownership as o
         on ap.link_group = o.consolidation_group
@@ -83,6 +100,11 @@ path_oracle as (
         and ap.link_owner_group = o.owner_group
         and ap.link_owner_data_area_id = o.owner_data_area_id
         and ap.period_date >= o.effective_date
+    left join link_history as h
+        on ap.link_group = h.consolidation_group
+        and ap.link_data_area_id = h.data_area_id
+        and ap.link_owner_group = h.owner_group
+        and ap.link_owner_data_area_id = h.owner_data_area_id
     group by ap.consolidation_group, ap.data_area_id, ap.path_id, ap.fiscal_year, ap.fiscal_period
 ),
 
@@ -92,10 +114,11 @@ oracle as (
         data_area_id,
         fiscal_year,
         fiscal_period,
-        sum(path_pct) as expected_pct,
+        sumIf(path_pct, unresolved = 0) as expected_pct,
         count() as path_count,
-        sum(unresolved) as unresolved,
-        sum(zero_links) as zero_links
+        countIf(unresolved = 0) as held_paths,
+        sum(unrecorded) as unrecorded,
+        sumIf(zero_links, unresolved = 0) as zero_links
     from path_oracle
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
 )
@@ -114,6 +137,7 @@ inner join oracle as o
     and eo.data_area_id = o.data_area_id
     and eo.fiscal_year = o.fiscal_year
     and eo.fiscal_period = o.fiscal_period
-where o.unresolved = 0
+where o.held_paths > 0
+  and o.unrecorded = 0
   and o.zero_links = 0
   and abs(eo.effective_ownership_pct - o.expected_pct) > 0.000001
