@@ -878,6 +878,7 @@
   "acquisition_costs_treatment": "Expense",
   "measurement_period": "12 months",
   "bargain_purchase": "Recognise gain",
+  "partial_period_treatment": "Whole period",
   "goodwill_account": "1121",
   "fair_value_adjustment_account": "1125",
   "investment_account": "1141",

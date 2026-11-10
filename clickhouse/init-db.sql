@@ -252,14 +252,15 @@ CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
 -- Consolidation Policy (nci_measurement 'partial'|'full', accounting_framework,
 -- goodwill_treatment 'Impairment only'|'Amortise' + years,
 -- acquisition_costs_treatment 'Expense'|'Capitalise', measurement_period,
--- bargain_purchase 'Recognise gain'|'Refuse') and its declared deal accounts;
+-- bargain_purchase 'Recognise gain'|'Refuse', partial_period_treatment
+-- 'Whole period'|'Pro-rate by days'|'Stub trial balance') and its declared deal accounts;
 -- the acquisition and disposal journals read them and never assume a code.
 -- tests/test_deal_tables_ddl.py pins this body to konsol's.
 CREATE TABLE IF NOT EXISTS epm_gold.consolidation_groups (
     consolidation_group String, data_area_id String, entity_name String,
     reporting_currency String, ic_difference_account String DEFAULT '',
     ic_difference_tolerance Float64 DEFAULT 0,
-    nci_measurement String DEFAULT '', accounting_framework String DEFAULT '', framework_note String DEFAULT '', goodwill_treatment String DEFAULT '', goodwill_amortisation_years UInt16 DEFAULT 0, acquisition_costs_treatment String DEFAULT '', measurement_period String DEFAULT '', bargain_purchase String DEFAULT '', goodwill_account String DEFAULT '', fair_value_adjustment_account String DEFAULT '', investment_account String DEFAULT '', nci_account String DEFAULT '', bargain_purchase_gain_account String DEFAULT '', disposal_gain_loss_account String DEFAULT '', disposal_proceeds_account String DEFAULT '', goodwill_amortisation_expense_account String DEFAULT '', acquisition_costs_account String DEFAULT ''
+    nci_measurement String DEFAULT '', accounting_framework String DEFAULT '', framework_note String DEFAULT '', goodwill_treatment String DEFAULT '', goodwill_amortisation_years UInt16 DEFAULT 0, acquisition_costs_treatment String DEFAULT '', measurement_period String DEFAULT '', bargain_purchase String DEFAULT '', partial_period_treatment String DEFAULT '', goodwill_account String DEFAULT '', fair_value_adjustment_account String DEFAULT '', investment_account String DEFAULT '', nci_account String DEFAULT '', bargain_purchase_gain_account String DEFAULT '', disposal_gain_loss_account String DEFAULT '', disposal_proceeds_account String DEFAULT '', goodwill_amortisation_expense_account String DEFAULT '', acquisition_costs_account String DEFAULT ''
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id);
 
 -- One row per (ancestor group, entity, link on one PATH between them), written

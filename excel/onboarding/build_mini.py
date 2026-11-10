@@ -136,7 +136,7 @@ PERIOD_NO = {code: n for code, n, *_ in PERIODS}
 
 POLICY = {
     "accounting_framework": "IFRS", "goodwill_method": "partial", "goodwill_treatment": "Impairment only",
-    "acquisition_costs_treatment": "Expense", "measurement_period": "12 months", "bargain_purchase": "Recognise gain",
+    "acquisition_costs_treatment": "Expense", "measurement_period": "12 months", "bargain_purchase": "Recognise gain", "partial_period_treatment": "Whole period",
     "goodwill_account": "1400", "fair_value_adjustment_account": "1410", "investment_account": "1300",
     "nci_account": "3700", "bargain_purchase_gain_account": "6760", "disposal_gain_loss_account": "6730",
     "disposal_proceeds_account": "1500", "goodwill_amortisation_expense_account": "6640",
