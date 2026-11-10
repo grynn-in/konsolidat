@@ -491,7 +491,7 @@ models:
         description: "The acquired entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Closing periods skipped)"
+        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null
@@ -618,7 +618,7 @@ models:
         description: "The disposed entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Closing periods skipped)"
+        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null

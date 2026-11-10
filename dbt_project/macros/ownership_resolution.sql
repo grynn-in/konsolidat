@@ -30,25 +30,27 @@
    The trigger (50%, the IFRS 10.B35 presumption of control through votes)
    only REQUIRES a declaration; it never picks a method. A declaration is a row
    of epm_staging.consolidation_method_declarations for (G, E), read ASOF
-   effective_date <= period_date and end_date >= period_start_date, the same
-   window as a link.
+   effective_date <= period_date and not lapsed, read as a link is (below).
 
    THE WINDOW (konsolidat#171, #252, #278): a period is judged on the dates
    konsol's calendar DECLARES for it (macros/declared_periods.sql), never on a
-   date built from the period number. A link (or a declaration) is in the
-   window for period P when
+   date built from the period number. The ASOF join, keyed on period_date (P's
+   declared end), picks per link the latest Ownership Period that started by
+   P's end, and the holding is read AT THE PERIOD END: a link counts when it
+   has not ended by P's end. Only when no path from the group to the entity is
+   held at P's end (a full disposal inside P) does a link that ended inside P
+   still count (end_date >= period_start_date), so the disposal period stays in
+   the window. Read at the start for every link, a holding moved between two
+   owners inside P counted under both (PR #345 review, finding 1). A
+   declaration lapses by the same reading.
 
-       effective_date <= period_date        (P's declared end_date: held by P's end)
-       end_date       >= period_start_date  (P's declared start_date: not ended before P began)
-
-   and the ASOF join, keyed on period_date, picks the latest link that started
-   by P's end: the holding at the period end. This is exactly the span rule the
-   deal journals post by (start_date <= deal date <= end_date): an acquisition
-   is consolidated from the period its journal posts in (line (0) brings the
-   balance sheet in up to the period before), and a full disposal up to and
-   including the period its journal posts in (line (0) derecognises the
-   cumulative balances through that period), and not after. A Closing period is
-   judged as its year's last Regular period (declared_periods()).
+   This agrees with the period the deal journals post in (deal_period_holds():
+   the Regular period holding the date): an acquisition is consolidated from
+   the period its journal posts in (line (0) brings the balance sheet in up to
+   the period before), and a full disposal up to and including the period its
+   journal posts in (line (0) derecognises the cumulative balances through that
+   period), and not after. Opening, Adjustment and Closing periods are judged as
+   declared_periods() explains.
 
    periods_cte names a CTE with one row per (data_area_id, fiscal_year,
    fiscal_period, period_start_date, period_date) to resolve, the two dates
@@ -132,7 +134,15 @@
         on a.data_area_id = pp.data_area_id
 ),
 
-{{ p }}links as (
+{# Each link, read two ways (PR #345 review, finding 1):
+     *_end    held at the period END: the ASOF row (the latest that started by
+              period_date) has not ended by it. greatest() because an Opening or
+              Adjustment period's window_start_date lies after its window_end_date
+              (declared_periods()): held at its end means still held when the next
+              Regular period starts.
+     *_start  not ended before the period began (end_date >= period_start_date):
+              a link that ended INSIDE the period still counts. #}
+{{ p }}link_candidates as (
     select
         ap.consolidation_group as consolidation_group,
         ap.data_area_id as data_area_id,
@@ -146,8 +156,10 @@
         ap.link_owner_data_area_id as link_owner_data_area_id,
         ap.link_depth as link_depth,
         ap.depth as depth,
-        if(o.end_date >= ap.period_start_date, o.ownership_pct, null) as link_pct,
-        if(o.end_date >= ap.period_start_date, o.consolidation_method, null) as link_method,
+        if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.ownership_pct, null) as link_pct_end,
+        if(o.end_date >= greatest(ap.period_date, ap.period_start_date), o.consolidation_method, null) as link_method_end,
+        if(o.end_date >= ap.period_start_date, o.ownership_pct, null) as link_pct_start,
+        if(o.end_date >= ap.period_start_date, o.consolidation_method, null) as link_method_start,
         h.has_history as link_has_history
     from {{ p }}ancestry_periods as ap
     asof left join {{ p }}ownership as o
@@ -163,6 +175,52 @@
         and ap.link_owner_data_area_id = h.owner_data_area_id
 ),
 
+{# (group, entity, period) with at least one path whose every link is held at
+   the period end. There the period-end reading decides: a holding that moved
+   between owners inside the period counts once, under the owner holding it at
+   the end, and an owner that sold out inside it counts for nothing. Where NO
+   path is held at the end (a full disposal inside the period), the
+   not-ended-before-the-start reading decides, so the disposal period stays in
+   the window for the disposal journal's line (0) to derecognise. #}
+{{ p }}held_at_end as (
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period, toUInt8(1) as window_at_end
+    from (
+        select consolidation_group, data_area_id, path_id, fiscal_year, fiscal_period,
+               countIf(link_pct_end is null) as n_not_held
+        from {{ p }}link_candidates
+        group by consolidation_group, data_area_id, path_id, fiscal_year, fiscal_period
+    )
+    where n_not_held = 0
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period
+),
+
+{{ p }}links as (
+    select
+        lc.consolidation_group as consolidation_group,
+        lc.data_area_id as data_area_id,
+        lc.path_id as path_id,
+        lc.fiscal_year as fiscal_year,
+        lc.fiscal_period as fiscal_period,
+        lc.period_start_date as period_start_date,
+        lc.period_date as period_date,
+        lc.link_group as link_group,
+        lc.link_owner_group as link_owner_group,
+        lc.link_owner_data_area_id as link_owner_data_area_id,
+        lc.link_depth as link_depth,
+        lc.depth as depth,
+        {# join_use_nulls=0: a miss reads window_at_end = 0 #}
+        he.window_at_end as window_at_end,
+        if(he.window_at_end = 1, lc.link_pct_end, lc.link_pct_start) as link_pct,
+        if(he.window_at_end = 1, lc.link_method_end, lc.link_method_start) as link_method,
+        lc.link_has_history as link_has_history
+    from {{ p }}link_candidates as lc
+    left join {{ p }}held_at_end as he
+        on he.consolidation_group = lc.consolidation_group
+        and he.data_area_id = lc.data_area_id
+        and he.fiscal_year = lc.fiscal_year
+        and he.fiscal_period = lc.fiscal_period
+),
+
 {# One row per path: its product, its weakest link, its direct (last) link. An
    unresolved link ranks as 'none' (the strictest), as an unrecognised method
    does. #}
@@ -175,6 +233,7 @@
         fiscal_period,
         period_start_date,
         period_date,
+        max(window_at_end) as path_at_end,
         max(depth) as path_depth,
         anyIf(link_owner_group, link_depth = depth) as direct_owner_group,
         anyIf(link_owner_data_area_id, link_depth = depth) as direct_owner_data_area_id,
@@ -208,6 +267,7 @@
         fiscal_period,
         period_start_date,
         period_date,
+        max(path_at_end) as window_at_end,
         max(path_depth) as chain_depth,
         toUInt32(uniqExact(path_id)) as path_count,
         toUInt32(uniqExact((direct_owner_group, direct_owner_data_area_id))) as direct_owner_count,
@@ -261,11 +321,11 @@
         if(r.resolved_paths > 0 and r.unrecorded_paths = 0, r.direct_sum, 0.0) as direct_ownership_pct,
         multiIf(
             r.needs_declaration = 0, 'link',
-            d.consolidation_method is not null and d.end_date >= r.period_start_date, 'declared',
+            d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, greatest(r.period_date, r.period_start_date), r.period_start_date), 'declared',
             'undeclared'
         ) as method_source,
         multiIf(
-            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date >= r.period_start_date,
+            r.needs_declaration = 1 and d.consolidation_method is not null and d.end_date >= if(r.window_at_end = 1, greatest(r.period_date, r.period_start_date), r.period_start_date),
                 assumeNotNull(d.consolidation_method),
             r.needs_declaration = 1, 'none',
             r.resolved_paths = 0, 'none',

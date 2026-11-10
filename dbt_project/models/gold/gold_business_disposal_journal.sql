@@ -99,8 +99,9 @@
    period) before this model runs.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
-   end_date, never from the month: a Closing period (one day inside the last
-   Regular period) is skipped, so the disposal lands in the Regular period.
+   end_date, never from the month: only a Regular period holds a deal
+   (deal_period_holds(): an Opening, Closing or Adjustment period sharing the
+   day is skipped), so the disposal lands in the Regular period.
    Balances, journals and CTA are compared by (fiscal_year, fiscal_period)
    tuple, never by date.
 
@@ -142,7 +143,7 @@ group_policy as (
 ),
 
 {# the calendar period holding the disposal date; the lowest-numbered
-   non-Closing period whose span holds it. A range condition is not a
+   Regular period whose span holds it. A range condition is not a
    ClickHouse join key, so the calendar is cross-joined and filtered. #}
 disposal_period as (
     select
@@ -151,9 +152,7 @@ disposal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from full_disposals as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 

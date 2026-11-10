@@ -10,7 +10,7 @@
 --   root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''),
 --                                  where konsol syncs the accounts; without it nothing else of the group is
 --                                  checked (one line says it all)
---   disposal_period                a non-Closing epm_staging.fiscal_periods row spanning disposal_date
+--   disposal_period                a Regular epm_staging.fiscal_periods row spanning disposal_date
 --   disposal_gain_loss_account     always: the balancing line of every disposal journal
 --   disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through)
 --   goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal
@@ -59,9 +59,7 @@ deal_period as (
         count() as n_periods
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 
@@ -76,9 +74,7 @@ deal_holding as (
     inner join {{ ref('gold_entity_ownership') }} as eo
         on eo.consolidation_group = bd.consolidation_group
         and eo.data_area_id = bd.disposed_entity
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
       and toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period <= toUInt32(fp.fiscal_year) * 1000 + fp.fiscal_period
     group by bd.name
 ),
@@ -91,15 +87,13 @@ disposal_window as (
     select
         d.name as deal,
         min(cur.start_date) as cur_start,
-        countIf(prev.period_type != 'Closing' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
-        minIf(prev.start_date, prev.period_type != 'Closing') as prev_start
+        countIf(prev.period_type = 'Regular' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type = 'Regular') as prev_start
     from {{ source('epm_staging', 'business_disposals') }} as d
     cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
     left join {{ source('epm_staging', 'fiscal_periods') }} as prev
         on prev.end_date = subtractDays(cur.start_date, 1)
-    where cur.start_date <= d.disposal_date
-      and cur.end_date >= d.disposal_date
-      and cur.period_type != 'Closing'
+    where {{ deal_period_holds('cur', 'd.disposal_date') }}
     group by d.name
 ),
 
