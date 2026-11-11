@@ -264,6 +264,12 @@ def ownership_window_filter(cfg):
     This is the same period set, read from the same model, with the same
     predicates as the consolidated model (has_complete_chain = 1 already
     implies outside_ownership_window = 0; both are stated for the reader).
+
+    "In the window" means what gold_entity_ownership checks (konsolidat#171):
+    the ownership started on or before the period's declared end date and
+    had not ended before its declared start date. A period in which the
+    entity was acquired or disposed of is in the window as a whole period;
+    the part of it outside the holding is not removed here.
     """
     return f"""(data_area_id, fiscal_year, fiscal_period) IN (
             SELECT data_area_id, fiscal_year, fiscal_period

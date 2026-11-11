@@ -10,7 +10,7 @@
 --   root_row                     the group's root row in epm_gold.consolidation_groups (data_area_id = ''),
 --                                where konsol syncs the accounts and the policy; without it nothing else
 --                                of the group is checked (one line says it all)
---   acquisition_period           a non-Closing epm_staging.fiscal_periods row spanning acquisition_date
+--   acquisition_period           a Regular epm_staging.fiscal_periods row spanning acquisition_date
 --   accounting_framework         IFRS | US GAAP | Local
 --   nci_measurement              partial | full, the DEAL's (konsol#205: its override or the group's value,
 --                                resolved by konsol into business_combinations), when share_acquired_pct < 100
@@ -92,9 +92,7 @@ deal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_combinations') }} as bc
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bc.acquisition_date
-      and fp.end_date >= bc.acquisition_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bc.acquisition_date') }}
     group by bc.name
 ),
 
@@ -115,15 +113,13 @@ deal_window as (
     select
         d.name as deal,
         min(cur.start_date) as cur_start,
-        countIf(prev.period_type != 'Closing' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
-        minIf(prev.start_date, prev.period_type != 'Closing') as prev_start
+        countIf(prev.period_type = 'Regular' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type = 'Regular') as prev_start
     from {{ source('epm_staging', 'business_combinations') }} as d
     cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
     left join {{ source('epm_staging', 'fiscal_periods') }} as prev
         on prev.end_date = subtractDays(cur.start_date, 1)
-    where cur.start_date <= d.acquisition_date
-      and cur.end_date >= d.acquisition_date
-      and cur.period_type != 'Closing'
+    where {{ deal_period_holds('cur', 'd.acquisition_date') }}
     group by d.name
 ),
 

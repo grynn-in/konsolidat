@@ -10,7 +10,7 @@
 -- group accepts the figure knowingly.
 --
 -- How it is found: the disposal date is mapped through epm_staging.fiscal_periods exactly as the journal does
--- (start_date <= d <= end_date, Closing skipped, the lowest period tuple), then the entity's gold_trial_balance
+-- (start_date <= d <= end_date, Regular periods only, the lowest period tuple), then the entity's gold_trial_balance
 -- rows with a period tuple <= that period are counted. A disposal whose date has no calendar period is not
 -- named here (assert_disposal_accounts_declared names it).
 with disposal_period as (
@@ -20,9 +20,7 @@ with disposal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 

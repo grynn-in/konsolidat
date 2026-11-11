@@ -45,14 +45,29 @@
    period during a scoped close would rebuild both holding that period alone and
    silently drop every prior period's NCI schedule and equity entries. The
    consolidation chokepoint downstream still applies its own filter, and
-   gold_trial_balance is deliberately unscoped. #}
+   gold_trial_balance is deliberately unscoped.
+
+   konsolidat#171 / #252 / #278: each period is judged on the dates konsol's
+   calendar DECLARES for it (declared_periods(): epm_staging.fiscal_periods),
+   never on the first of calendar month P. period_date is the period's declared
+   end_date (a Closing period: its year's last Regular period's), the date the
+   holding is read at; period_start_date is its declared start_date. Before,
+   period_date was the first of calendar month P, clamped to 1..12: a deal
+   dated inside a period shifted the window by a period, and a fiscal year
+   starting in April resolved P1 as of 1 January. A period the calendar does
+   not declare is dropped by the inner join and refused by
+   assert_trial_balance_period_declared (ERROR). #}
 with entity_periods as (
     select distinct
-        data_area_id,
-        fiscal_year,
-        fiscal_period,
-        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }}
+        tb.data_area_id as data_area_id,
+        tb.fiscal_year as fiscal_year,
+        tb.fiscal_period as fiscal_period,
+        dp.window_start_date as period_start_date,
+        dp.window_end_date as period_date
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
 {# The graph itself is resolved by ownership_resolution_ctes (macros/
@@ -69,11 +84,14 @@ with entity_periods as (
      acquisition, after a disposal) is a deliberate 0, not a missing
      percentage. Consolidation excludes it either way, but only the latter is
      worth failing a build over.
-   - links: ASOF picks the latest period whose effective_date <= period_date,
-     matched on both the owned and the owning node (konsol#117: two owners of
-     one node are two links); end_date is then checked explicitly, because
-     ASOF cannot carry a second inequality and would otherwise keep applying
-     an expired period forever.
+   - links: ASOF picks the latest period whose effective_date <= period_date
+     (the period's declared end), matched on both the owned and the owning node
+     (konsol#117: two owners of one node are two links); end_date is then
+     checked explicitly against period_start_date (the link had not ended
+     before the period began), because ASOF cannot carry a second inequality
+     and would otherwise keep applying an expired period forever. The window is
+     the deal journals' span rule (macros/ownership_resolution.sql, THE
+     WINDOW).
    - paths: one row per path_id: the product of its links, the weakest link's
      method (a sub-group held at equity is not line consolidated into its
      parent, so nothing beneath it is either; an unrecognised or unresolved

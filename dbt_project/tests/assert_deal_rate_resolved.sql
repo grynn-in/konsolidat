@@ -24,7 +24,7 @@
 --     dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql,
 --     dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value_zero.must_flag.sql.
 -- into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period:
--- epm_staging.fiscal_periods by start_date <= date <= end_date (Closing periods skipped), then
+-- epm_staging.fiscal_periods by start_date <= date <= end_date (Regular periods only, deal_period_holds()), then
 -- rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every
 -- trial-balance translation does). A currency equal to the group currency translates at 1 and needs no rate.
 --
@@ -66,9 +66,7 @@ combination_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_combinations') }} as bc
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bc.acquisition_date
-      and fp.end_date >= bc.acquisition_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bc.acquisition_date') }}
     group by bc.name
 ),
 
@@ -79,9 +77,7 @@ disposal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 

@@ -131,7 +131,7 @@ sources:
           - name: acquisition_costs_account
             description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
           - name: partial_period_treatment
-            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the acquiree uploads a trial balance for the stub). Declared by the group, no default; '' until declared. Not read by any model yet."
+            description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the uploaded period trial balance is the stub, used unscaled). Declared by the group, no default; '' until declared. Read by gold_acquisition_adjustments and gold_business_disposal_journal (the P&L adjustments) and by assert_partial_period_treatment_declared and assert_partial_period_pnl_matches_treatment (tests)."
 
   - name: epm_staging
     schema: epm_staging
@@ -212,9 +212,10 @@ sources:
           reaches along several paths whose links do not settle it (methods
           disagree, or no path is all-full and the paths sum past the 50%
           trigger). One row per Consolidation Method Declaration on the group
-          node, effective-dated; ownership_resolution reads it ASOF
-          (effective_date <= period_date < end_date) only when the rule asks for
-          it, and resolves method_source = 'undeclared' when it is required and
+          node, effective-dated; ownership_resolution reads it ASOF on the
+          period's declared dates (effective_date <= the period's end_date and
+          end_date >= its start_date, the window a link has) only when the rule
+          asks for it, and resolves method_source = 'undeclared' when it is required and
           absent. May be absent on a volume konsol has not upgraded yet.
         loaded_at_field: updated_at
         columns:

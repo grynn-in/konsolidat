@@ -10,6 +10,12 @@ ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id 
 -- ReplacingMergeTree duplicate. This is the live upgrade statement; it is a no-op on an upgraded table.
 ALTER TABLE epm_staging.ownership_periods ADD COLUMN IF NOT EXISTS owner_group String, ADD COLUMN IF NOT EXISTS owner_data_area_id String, MODIFY ORDER BY (consolidation_group, data_area_id, effective_date, owner_group, owner_data_area_id);
 ALTER TABLE epm_gold.gold_entity_ownership ADD COLUMN IF NOT EXISTS path_count UInt32, ADD COLUMN IF NOT EXISTS direct_owner_count UInt32, ADD COLUMN IF NOT EXISTS method_source String;
+-- konsolidat#171 / #252: the window is judged on the declared calendar, so the period is declared (a period the
+-- calendar does not declare drops out of gold_entity_ownership and the oracle, and the test could not fail).
+INSERT INTO epm_staging.fiscal_periods
+  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
+VALUES
+  (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open');
 INSERT INTO epm_staging.consolidation_ancestry
   (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id)
 VALUES
@@ -35,6 +41,6 @@ INSERT INTO epm_gold.gold_entity_ownership
    has_complete_chain, outside_ownership_window, effective_ownership_pct, direct_ownership_pct, consolidation_method,
    path_count, direct_owner_count, method_source)
 VALUES
-  ('ZZP', 'ZZA', 2026, 1, '2026-01-01', 1, 'ZZP', 1, 0, 0.8,   0.8, 'full', 1, 1, 'link'),
-  ('ZZP', 'ZZD', 2026, 1, '2026-01-01', 2, 'ZZA', 1, 0, 0.096, 0.8, 'full', 2, 2, 'link'),
-  ('ZZA', 'ZZD', 2026, 1, '2026-01-01', 1, 'ZZA', 1, 0, 0.6,   0.6, 'full', 1, 1, 'link');
+  ('ZZP', 'ZZA', 2026, 1, '2026-01-31', 1, 'ZZP', 1, 0, 0.8,   0.8, 'full', 1, 1, 'link'),
+  ('ZZP', 'ZZD', 2026, 1, '2026-01-31', 2, 'ZZA', 1, 0, 0.096, 0.8, 'full', 2, 2, 'link'),
+  ('ZZA', 'ZZD', 2026, 1, '2026-01-31', 1, 'ZZA', 1, 0, 0.6,   0.6, 'full', 1, 1, 'link');

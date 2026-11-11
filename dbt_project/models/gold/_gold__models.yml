@@ -368,6 +368,10 @@ models:
       - name: data_area_id
         tests:
           - not_null
+      - name: period_date
+        description: "konsolidat#171 / #252: the period's DECLARED end_date (epm_staging.fiscal_periods; a Closing period takes its year's last Regular period's; an Opening or Adjustment period, the end of the Regular period before it (the eve of the year boundary it sits on). The holding is read at period_date (macros/ownership_resolution.sql, THE WINDOW). Before, the first of calendar month P."
+      - name: period_start_date
+        description: "konsolidat#171 / #252: the period's DECLARED start_date (a Closing period: its year's last Regular period's; an Opening or Adjustment period: the start of the Regular period after it)."
       - name: effective_ownership_pct
         description: "Sum over paths of each path's link product, as a fraction. 0 when a path has an unrecorded link or no path resolves."
       - name: direct_ownership_pct
@@ -444,7 +448,16 @@ models:
 
   - name: gold_acquisition_adjustments
     description: >
-      PRD-11: P&L proration of an acquisition year to the post-acquisition months.
+      konsolidat#171 2c: the partial-period P&L of an acquisition, by the
+      treatment the group root declares (partial_period_treatment). Only
+      'Pro-rate by days' produces rows: for a deal dated after the start of its
+      period, each P&L account of the acquired entity gets
+      -group_amount x the fraction of the period before the acquisition date,
+      and one balancing line on the retained-earnings account (an is_pnl = 0
+      account) carries the opposite sum, so the rows sum to 0 per group, entity,
+      year and period. 'Whole period' and 'Stub trial balance' produce no rows;
+      an undeclared treatment with a mid-period deal fails
+      assert_partial_period_treatment_declared.
       konsolidat#198: the goodwill and fair-value lines it used to post one-sided
       to '1800'/'1900' moved to gold_business_combination_journal.
     columns:
@@ -487,7 +500,7 @@ models:
         description: "The acquired entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Closing periods skipped)"
+        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null
@@ -614,7 +627,7 @@ models:
         description: "The disposed entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Closing periods skipped)"
+        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null
@@ -633,13 +646,13 @@ models:
         tests:
           - not_null
       - name: line_no
-        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss"
+        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 105 post_disposal_pnl (Pro-rate by days, #171), 110+idx proceeds (110 for the header figure), 199 gain_loss"
       - name: account_role
-        description: "derecognised, goodwill, fva, cta, nci, proceeds, gain_loss"
+        description: "derecognised, goodwill, fva, cta, nci, post_disposal_pnl, proceeds, gain_loss"
         tests:
           - accepted_values:
               arguments:
-                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
+                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'post_disposal_pnl', 'proceeds', 'gain_loss']
       - name: deal
         description: "The Business Disposal document name"
 
