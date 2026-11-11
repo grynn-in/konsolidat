@@ -79,6 +79,13 @@ disposals as (
     where c.start_date <= bd.disposal_date
       and c.end_date >= bd.disposal_date
       and toFloat64(bd.retained_interest_pct) <= 0.0
+      {# review F2: the journal posts a disposal whole or not at all (a disposal with no governed Closing rate posts
+         nothing, and assert_deal_rate_resolved names the rate), so a disposal with no journal row in its period has
+         no line 105 to expect. Any row of the journal counts; a posted disposal that lacks line 105 still flags. #}
+      and (bd.consolidation_group, bd.disposed_entity, c.fy, c.fp) in (
+          select consolidation_group, data_area_id, toUInt16(fiscal_year), toUInt16(fiscal_period)
+          from {{ ref('gold_business_disposal_journal') }}
+      )
     group by bd.consolidation_group, bd.disposed_entity, bd.disposal_date
 ),
 
