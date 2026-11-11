@@ -227,7 +227,10 @@ jobs:
   fixture-gate:
     name: test fixtures make their tests pass or flag
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 75, raised from 45 on 11 Nov 2026: #345 took the fixtures from 153 to 186
+    # and the job from ~26 min to 35-45 min; on main it was cancelled at 45 min
+    # after 175 of 186 fixtures, twice. The fixtures run one by one (~14 s each).
+    timeout-minutes: 75
     # konsolidat#266 (Deepak Pai, 11 Oct 2026, option G-1). Every fixture in
     # dbt_project/test_fixtures runs: a `.must_flag.` fixture must make its
     # test FAIL or WARN, any other must make it PASS. A test that cannot fail
