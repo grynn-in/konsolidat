@@ -164,7 +164,9 @@ nci_attribution as (
 {# Layer 6: Acquisition & disposal adjustments (PRD-11/12).
    #175 re-review F3: the pnl_proration rows are one per consolidated row,
    and gold_consolidated_trial_balance has a row per intercompany partner,
-   so they are summed to the account grain here, like layer 1. Otherwise
+   so they are summed to the account grain here, like layer 1 (the
+   proration rows inherit the dimensions of their source row, review F1; the
+   partner is summed away). Otherwise
    gold_consolidated_ytd ran a separate running total per row.
    konsolidat#198: the goodwill and fair-value lines come from the balanced
    acquisition journal (gold_business_combination_journal, posted from the
@@ -203,14 +205,14 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
         concat('ACQ_', data_area_id) as journal_id
     from {{ ref('gold_acquisition_adjustments') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
-             account_name, adjustment_type
+             account_name, adjustment_type{{ dim_group_by(leading=true) }}
 
     union all
 

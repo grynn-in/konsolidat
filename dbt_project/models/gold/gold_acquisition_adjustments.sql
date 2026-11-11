@@ -36,7 +36,16 @@
    acquisition/disposal layer, where the two lines net to 0 (the P&L shift and its counter-entry), so the
    layer does not double count; gold_fully_consolidated_tb sums each account's rows to the account grain.
 
-   Fixtures: assert_partial_period_pnl_matches_treatment.acquisition_*.sql. #}
+   Grain (review F1; decided by Deepak Pai, 3 Oct 2026: consolidation entry dimensions are hybrid, inherit
+   where derivable): the proration is not a deal journal and its source row carries a dimension value and an
+   intercompany partner, so each P&L line inherits both (one line per account, partner and dimension values of
+   the source). The balancing line inherits the DIMENSIONS, one per (group, entity, year, period, dimensions),
+   so every dimension slice nets to 0 and a dimension report shows the P&L and its counter-entry on the same
+   member. It carries NO partner: retained earnings is not an intercompany account, and the partner on a P&L
+   line only says whom the entity traded with (decision 2 Oct 2026: a partner on a non-IC account is reported).
+   Fixtures: assert_partial_period_pnl_matches_treatment.acquisition_*.sql.
+
+   Known limit: two Business Combinations for one entity in one period are not handled (deferred to konsolidat#348). #}
 
 with {# the group root row declares the treatment #}
 treatment as (
@@ -91,6 +100,8 @@ pnl_lines as (
         m.fiscal_period as fiscal_period,
         ctb.main_account as main_account,
         any(ctb.account_name) as account_name,
+        ctb.partner_data_area_id as partner_data_area_id,
+        {{ dim_select(prefix='ctb.', trailing=true) }}
         -(sum(coalesce(ctb.group_amount, 0.0)) * any(m.removed_fraction)) as adjustment_amount,
         any(m.acquisition_date) as acquisition_date
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
@@ -100,7 +111,8 @@ pnl_lines as (
         and m.fiscal_year = toUInt16(ctb.fiscal_year)
         and m.fiscal_period = toUInt16(ctb.fiscal_period)
     where ctb.main_account in (select main_account_id from pnl_accounts)
-    group by m.consolidation_group, m.data_area_id, m.fiscal_year, m.fiscal_period, ctb.main_account
+    group by m.consolidation_group, m.data_area_id, m.fiscal_year, m.fiscal_period, ctb.main_account,
+             ctb.partner_data_area_id{{ dim_group_by(prefix='ctb.', leading=true) }}
     having abs(adjustment_amount) > {{ materiality_floor() }}
 ),
 
@@ -113,15 +125,19 @@ balancing_line as (
         p.fiscal_period as fiscal_period,
         (select min(main_account_id) from {{ ref('silver_main_accounts') }} where is_retained_earnings = 1) as main_account,
         (select argMin(account_name, main_account_id) from {{ ref('silver_main_accounts') }} where is_retained_earnings = 1) as account_name,
+        '' as partner_data_area_id,
+        {{ dim_select(prefix='p.', trailing=true) }}
         -sum(p.adjustment_amount) as adjustment_amount,
         any(p.acquisition_date) as acquisition_date
     from pnl_lines as p
-    group by p.consolidation_group, p.data_area_id, p.fiscal_year, p.fiscal_period
+    group by p.consolidation_group, p.data_area_id, p.fiscal_year, p.fiscal_period{{ dim_group_by(prefix='p.', leading=true) }}
 )
 
 select
     consolidation_group, data_area_id, fiscal_year, fiscal_period,
     main_account, account_name,
+    partner_data_area_id,
+    {{ dim_select(trailing=true) }}
     'pnl_proration' as adjustment_type,
     adjustment_amount, acquisition_date
 from pnl_lines
@@ -131,6 +147,8 @@ union all
 select
     consolidation_group, data_area_id, fiscal_year, fiscal_period,
     main_account, account_name,
+    partner_data_area_id,
+    {{ dim_select(trailing=true) }}
     'pnl_proration' as adjustment_type,
     adjustment_amount, acquisition_date
 from balancing_line

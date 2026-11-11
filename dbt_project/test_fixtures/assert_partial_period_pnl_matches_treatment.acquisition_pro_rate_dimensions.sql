@@ -9,6 +9,7 @@
 -- konsolidat#171 2c review F1 (decision 3 Oct 2026, Deepak Pai: consolidation entry dimensions are hybrid,
 -- inherit where derivable): the proration inherits the dimension grain of its source row. ZZ4000 3,100 Cr is
 -- ZZCC1 2,000 and ZZCC2 1,100; the proration must sit on ZZCC1 and ZZCC2 (10/31 of each), never as one blank-dimension lump.
+-- The ZZCC2 slice also carries intercompany partner ZZT, which the proration keeps.
 -- Expected: assert_pnl_proration_inherits_grain passes (it flags proration rows on a dimension grain that the
 -- trial balance does not have, and any dimension grain that does not net to 0).
 -- Calendar year. ZZG (Pro-rate by days) acquires ZZS on 2026-03-11: P3 is 31 days, the group did not hold 10 of them (10/31).
@@ -125,7 +126,7 @@ INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id, dim_cost_center)
 VALUES
   ('ZZP3', 'ZZS', 2026, 3, 'ZZ4000', 0, 2000, 'Revenue', 'ZZ-TBS-P3', now(), '', 'ZZCC1'),
-  ('ZZP3', 'ZZS', 2026, 3, 'ZZ4000', 0, 1100, 'Revenue', 'ZZ-TBS-P3', now(), '', 'ZZCC2'),
+  ('ZZP3', 'ZZS', 2026, 3, 'ZZ4000', 0, 1100, 'Revenue', 'ZZ-TBS-P3', now(), 'ZZT', 'ZZCC2'),
   ('ZZP3', 'ZZS', 2026, 3, 'ZZ5000', 1550, 0, 'Cost', 'ZZ-TBS-P3', now(), '', 'ZZCC1'),
   ('ZZP3', 'ZZS', 2026, 3, 'ZZ1000', 1550, 0, 'Cash', 'ZZ-TBS-P3', now(), '', '');
 INSERT INTO epm_raw.trial_balance_submission_control
