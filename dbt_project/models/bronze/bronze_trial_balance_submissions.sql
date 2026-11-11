@@ -97,8 +97,9 @@ select
     {{ cast_to_uint16('raw.fiscal_year') }}               as fiscal_year,
     {{ cast_to_uint8('raw.fiscal_period') }}              as fiscal_period,
     {{ cast_to_string('raw.main_account') }}              as main_account,
-    {{ cast_to_decimal128('raw.debit_amount', 2) }}       as debit_amount,
-    {{ cast_to_decimal128('raw.credit_amount', 2) }}      as credit_amount,
+    {# #256: amount_scale() (4) places, so a three-decimal currency keeps its amounts exactly #}
+    {{ cast_to_decimal128('raw.debit_amount', amount_scale()) }} as debit_amount,
+    {{ cast_to_decimal128('raw.credit_amount', amount_scale()) }} as credit_amount,
     {{ cast_to_string('raw.description') }}               as description,
     {{ cast_to_string(partner_expr) }}                    as partner_data_area_id,
     {# konsol#255: the declared dimensions, in var order (see tb_dims above) #}

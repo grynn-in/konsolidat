@@ -356,7 +356,7 @@ close_spine as (
         'Year-end close' as submission_name,
         '' as description,
         multiIf(
-            ma.is_pnl = 1, toDecimal128(0, 2),
+            ma.is_pnl = 1, toDecimal128(0, {{ amount_scale() }}),
             {{ retained_lump_key }},
                 s.source_net_amount + t.pnl_total,
             s.source_net_amount
@@ -396,13 +396,13 @@ differenced as (
         {# previous claimed period of the key, any year: the 'Period-end balance' rule.
            konsol#255 row 7b: the declared dimensions are part of the partition,
            so a slice is only ever differenced against its own previous figure #}
-        lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
+        lagInFrame(source_net_amount, 1, toDecimal128(0, {{ amount_scale() }})) over (
             partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and current row
         ) as previous_net_any_year,
         {# previous claimed period of the key within the fiscal year: the 'Year-to-date movement' rule #}
-        lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
+        lagInFrame(source_net_amount, 1, toDecimal128(0, {{ amount_scale() }})) over (
             partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
             order by fiscal_period
             rows between unbounded preceding and current row
@@ -451,8 +451,8 @@ select
     description,
     source_net_amount,
     movement_amount,
-    greatest(movement_amount, toDecimal128(0, 2)) as debit_amount,
-    greatest(-movement_amount, toDecimal128(0, 2)) as credit_amount,
+    greatest(movement_amount, toDecimal128(0, {{ amount_scale() }})) as debit_amount,
+    greatest(-movement_amount, toDecimal128(0, {{ amount_scale() }})) as credit_amount,
     movement_kind
 from movements
 where not (movement_amount = 0 and has_source = 0)
