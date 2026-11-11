@@ -15,7 +15,7 @@ consolidation engine with every defect this one has already paid for.
 |---|---|
 | assertions | **149** |
 | carrying their reasoning | 128 |
-| citing the issue that caused them | 120 |
+| citing the issue that caused them | 121 |
 | severity `warn` (reports, does not stop a build) | 21 |
 | severity `error` (stops the build, and its children) | 128 |
 
@@ -106,9 +106,9 @@ silver_tb_movements turns a 'Year-to-date movement' or 'Period-end balance' file
 
 **Every claimed trial-balance batch must balance: sum(debit) = sum(credit) within a small rounding tolerance.**
 
-konsol validates this before a submission can be submitted (on the SAME rounded-to-cents values that land here), so a failure means rows were landed or altered outside the doctype flow. Defense in depth for the one property that makes a trial balance a trial balance. Aliases are defined once and reused — the displayed difference is by construction the number the HAVING fired on.
+konsol validates this exactly, at the currency's own minor unit, before a submission can be submitted (konsol#180), so a failure means rows were landed or altered outside the doctype flow. Defense in depth for the one property that makes a trial balance a trial balance. #256: bronze keeps amounts at amount_scale() (4 places), and the sums are not rounded here, so a three-decimal currency's (BHD, KWD) third decimal reaches the comparison. Before #256 bronze rounded each line to cents: a balanced BHD batch could arrive unbalanced, and an unbalanced one could arrive balanced (fixtures assert_tb_submission_batches_balance.three_decimal*). The 0.01 tolerance is unchanged; a sub-cent imbalance is still below it. Aliases are defined once and reused — the displayed difference is by construction the number the HAVING fired on.
 
-<sub>`error (default)` · `tests/assert_tb_submission_batches_balance.sql`</sub>
+<sub>`error (default)` · `tests/assert_tb_submission_batches_balance.sql` · konsol#180 konsolidat#256</sub>
 
 ### `tb_submission_has_basis`
 
@@ -1056,9 +1056,9 @@ Key a line by (consolidation_group, journal_id, data_area_id, main_account); sum
 
 **depends_on: {{ ref('bronze_trial_balance_submissions') }} konsolidat#191: cast_to_decimal128(expr, scale) must recover the exact decimal value that was submitted, not truncate it.**
 
-toDecimal128(Float64, scale) truncates toward zero on the binary double, which is usually a hair below the decimal the value was entered as (e.g. 0.29 becomes 0.28). Summed over a trial-balance batch, balanced raw batches arrive unbalanced in bronze (konsolidat#191). A float *sum* (e.g. two submitted amounts added together, as gold_scenario_trial_balance.sql does) has the same problem even after the text-route fix, because the shortest text form of the sum itself can sit a hair below the cent (0.7 + 0.1 = 0.7999999999999999) — the macro now rounds to the target scale before the text step so this casts exactly too. Cases: an ordinary two-decimal amount, a large amount from the reported batch (177,485,814.95), a negative amount, a Nullable(Float64) input (assumeNotNull must still work through toString), a float sum whose binary result is a hair short of the cent, and a very small value at scale 12 (the exchange-rate caller's scale). Depends on bronze_trial_balance_submissions (not read otherwise) purely so CI's indirect test selection picks this test up whenever that model is selected — see dbt_project/tests/assert_ic_difference_account_in_chart.sql for the same pattern. bronze_trial_balance_submissions feeds silver_gl_entries -> gold_trial_balance_by_partner -> gold_consolidated_trial_balance, which is in tb_only_first_build.py's MUST_CREATE, so `dbt build --select @silver_main_accounts` (the tb-only-first-build CI job) now selects this test too.
+toDecimal128(Float64, scale) truncates toward zero on the binary double, which is usually a hair below the decimal the value was entered as (e.g. 0.29 becomes 0.28). Summed over a trial-balance batch, balanced raw batches arrive unbalanced in bronze (konsolidat#191). A float *sum* (e.g. two submitted amounts added together, as gold_scenario_trial_balance.sql does) has the same problem even after the text-route fix, because the shortest text form of the sum itself can sit a hair below the cent (0.7 + 0.1 = 0.7999999999999999) — the macro now rounds to the target scale before the text step so this casts exactly too. Cases: an ordinary two-decimal amount, a large amount from the reported batch (177,485,814.95), a negative amount, a Nullable(Float64) input (assumeNotNull must still work through toString), a float sum whose binary result is a hair short of the cent, a very small value at scale 12 (the exchange-rate caller's scale), and #256's cases at the TB amount scale, amount_scale(): a three-decimal amount (BHD, KWD), a four-decimal one, and a three-decimal float sum. At scale 2 each of the last three loses a digit and is listed. Depends on bronze_trial_balance_submissions (not read otherwise) purely so CI's indirect test selection picks this test up whenever that model is selected — see dbt_project/tests/assert_ic_difference_account_in_chart.sql for the same pattern. bronze_trial_balance_submissions feeds silver_gl_entries -> gold_trial_balance_by_partner -> gold_consolidated_trial_balance, which is in tb_only_first_build.py's MUST_CREATE, so `dbt build --select @silver_main_accounts` (the tb-only-first-build CI job) now selects this test too.
 
-<sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191</sub>
+<sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191 konsolidat#256</sub>
 
 ### `d365_gl_vouchers_balance`
 
