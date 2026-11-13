@@ -135,7 +135,8 @@ def spec(path):
         test = name.split(".")[0]
         s["expect"] = [(test, "flag" if must_flag else "pass", None)]
     for test, verdict, _n in s["expect"]:
-        if verdict != "built" and not os.path.exists(os.path.join(TESTS, test + ".sql")):
+        if verdict != "built" and not any(
+                test + ".sql" in files for _d, _dirs, files in os.walk(TESTS)):
             raise SystemExit(f"{name}: no singular test {test} in dbt_project/tests")
     if (s["refuse"] or any(v == "built" for _t, v, _n in s["expect"])) and s["mode"] != "build":
         raise SystemExit(f"{name}: `built` and `refuse` need a `gate: build` selector")

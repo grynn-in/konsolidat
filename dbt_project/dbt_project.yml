@@ -271,3 +271,10 @@ models:
         +tags: ['gold', 'domain:staging']
       # --- END konsol-managed model domains ---
 
+# Singular tests tagged with their domain. The allocation tests read the
+# isolated allocation scope (konsol#269); builds that exclude that scope
+# exclude them by this tag.
+tests:
+  open_epm:
+    cost_allocation:
+      +tags: ['domain:allocation']
