@@ -3,6 +3,7 @@
         materialized='incremental',
         incremental_strategy='append',
         on_schema_change='fail',
+        full_refresh=false,
         pre_hook=[
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE run NOT IN (SELECT name FROM {{ source('epm_staging', 'cost_allocation_runs') }}){% endif %}"
         ],
@@ -27,8 +28,13 @@
 -- before the INSERT, so a run cancelled and re-submitted under the same name is
 -- frozen afresh.
 --
--- A --full-refresh rebuilds the table, so it freezes every run again at the
--- current data. Do not full-refresh this model on a site with approved runs.
+-- full_refresh=false: `dbt build --full-refresh` skips the rebuild of this table
+-- (dbt treats the model as a normal incremental run), so it cannot re-freeze
+-- approved runs at current data (W5b; fixture
+-- assert_cost_allocation_frozen_drift.full_refresh.must_flag). A deliberate
+-- re-freeze of one run means cancelling and re-approving it: the cancel removes its
+-- rows (pre_hook above), the new approval is frozen afresh. A column change needs a
+-- manual DROP of this table, which discards every frozen amount.
 -- It must not ref gold_cost_allocation (which unions this table): that is a cycle.
 {{ cost_allocation_lines(
     runs_predicate="r.amounts_after_approval = 'Freeze at Approval'"
