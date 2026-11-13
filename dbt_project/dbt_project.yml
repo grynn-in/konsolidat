@@ -200,6 +200,8 @@ models:
       # --- Domain: allocation ---
       gold_cost_allocation:
         +tags: ['gold', 'domain:allocation']
+      gold_cost_allocation_frozen:
+        +tags: ['gold', 'domain:allocation']
       # --- Domain: consolidation ---
       gold_acquisition_adjustments:
         +tags: ['gold', 'domain:consolidation']
