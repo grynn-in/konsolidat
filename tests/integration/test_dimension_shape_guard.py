@@ -95,6 +95,8 @@ def test_a_different_declaration_is_refused_naming_both_lists_and_the_fix(ch, pr
     assert REFUSED in out, out[-3000:]
     assert "dim_zz_a, dim_zz_b" in out and "(none)" in out, out[-3000:]
     assert "konsol migrate" in out and "--full-refresh" in out, out[-3000:]
+    assert "full-refresh Build Approval is pending: approve it (or wait for it) instead of migrating" \
+        in out, out[-3000:]
     # the run stopped at the hook: the table keeps its columns
     cols = ch(f"select arrayStringConcat(groupArray(name), ',') from system.columns "
               f"where database = '{PREFIX}_gold' and table = 'gold_trial_balance'")
@@ -111,3 +113,34 @@ def test_dbt_test_reshapes_nothing_and_is_not_guarded(ch, project):
     _make_tb(ch, "dim_zz_a", "dim_zz_b")
     out = _dbt(project, "test", _dims())
     assert REFUSED not in out, out[-3000:]
+
+
+def test_a_declared_budget_only_dimension_without_the_prefix_builds(ch, project):
+    """var('dimensions') holds every Published Dimension, and one that is not in
+    the trial balance may be named without dim_ (konsol dimension.py validate).
+    gold_trial_balance selects every declared dimension (dim_select()), so the
+    built table carries that column too: the guard must count it, not refuse."""
+    _make_tb(ch, "business_unit", "dim_zz_a")
+    out = _dbt(project, "run", _dims("dim_zz_a", "business_unit"))
+    assert _guard_hook_ran(out), out[-3000:]
+
+
+def test_a_built_dimension_without_the_prefix_is_still_guarded(ch, project):
+    _make_tb(ch, "business_unit", "dim_zz_a")
+    out = _dbt(project, "run", _dims("dim_zz_a"))
+    assert REFUSED in out and "business_unit, dim_zz_a" in out, out[-3000:]
+
+
+def test_dbt_retry_is_guarded(ch, project):
+    """`dbt retry` re-runs the previous run or build: it is checked too."""
+    _make_tb(ch, "dim_zz_a", "dim_zz_b")
+    # A build that passes the guard and leaves a failure to retry: this
+    # singular test reads a staging table the scratch schema never creates.
+    first = _dbt(project, "build", _dims("dim_zz_a", "dim_zz_b"), "--select",
+                 "assert_historical_is_equity_only")
+    assert _guard_hook_ran(first) and "historical_equity_rates" in first, first[-3000:]
+    cmd = ["dbt", "--no-use-colors", "retry", "--vars", json.dumps(_dims()),
+           "--project-dir", project, "--profiles-dir", project]
+    proc = subprocess.run(cmd, cwd=project, capture_output=True, text=True, timeout=600)
+    out = (proc.stdout or "") + (proc.stderr or "")
+    assert REFUSED in out, out[-3000:]
