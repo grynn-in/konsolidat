@@ -467,3 +467,19 @@ sources:
       - name: ic_balances
         description: "PRD-15: IC sales and inventory balances between entity pairs"
         loaded_at_field: updated_at
+      - name: cost_allocation_runs
+        description: >
+          konsol#269: the header of a submitted Cost Allocation Run (one row per
+          run, written through on submit and removed on cancel). Records the
+          method, dimension, receiver account mode and the snapshots taken at
+          Compute.
+      - name: cost_allocation_run_accounts
+        description: "konsol#269: the accounts a submitted Cost Allocation Run allocates, one row per line (parent = the run's name)."
+      - name: cost_allocation_run_weights
+        description: "konsol#269: the step-by-step allocation weights of a submitted Cost Allocation Run (parent = the run's name)."
+      - name: cost_allocation_coefficients
+        description: "konsol#269: the coefficients of every submitted run, recomputed from all submitted weights; resynced as one set (run = the run's name)."
+      - name: cost_allocation_statistics
+        description: "konsol#269: the header of a submitted Cost Allocation Statistic (one row per statistic, scenario and fiscal year)."
+      - name: cost_allocation_statistic_values
+        description: "konsol#269: the period values of a submitted Cost Allocation Statistic (parent = the statistic's name)."

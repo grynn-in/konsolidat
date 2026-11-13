@@ -405,3 +405,14 @@ CREATE TABLE IF NOT EXISTS epm_gold.budget_monthly_input (
     fiscal_period UInt8, amount Decimal(18,2), layer String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, layer);
 
+
+-- konsol#269 (cost allocation phase 1): the staging tables konsol writes through
+-- for Cost Allocation Run, Cost Allocation Statistic and their child tables.
+-- Submitted rows only. Pinned, verbatim with the konsol write-through, by
+-- tests/test_cost_allocation_ddl.py.
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_runs (name String, rule_set String, method String, allocation_dimension String, receiver_account_mode String, allocation_account String, amounts_after_approval String, data_area_id String, scenario_id String, fiscal_year UInt16, fiscal_period UInt8, computed_at DateTime) ENGINE = MergeTree ORDER BY name;
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_accounts (parent String, idx UInt32, main_account String, declared_account String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_weights (parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, driver String, statistic String, value_period UInt8, carried_forward UInt8, driver_value Decimal(38,9)) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistics (name String, driver String, dimension String, data_area_id String, scenario_id String, fiscal_year UInt16) ENGINE = MergeTree ORDER BY name;
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistic_values (parent String, idx UInt32, fiscal_period UInt8, member String, value Decimal(38,9)) ENGINE = MergeTree ORDER BY (parent, idx);

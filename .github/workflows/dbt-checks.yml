@@ -19,6 +19,7 @@ on:
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
+      - 'tests/test_cost_allocation_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -46,6 +47,7 @@ on:
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
+      - 'tests/test_cost_allocation_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -155,6 +157,10 @@ jobs:
       # widened tables names its columns.
       - name: ownership graph DDL, sources and column-named inserts
         run: python -m unittest -v tests.test_ownership_graph_ddl
+      # konsol#269 (W1): the six cost allocation staging tables are konsol's DDL,
+      # verbatim, and declared dbt sources.
+      - name: cost allocation staging DDL and sources
+        run: python -m unittest -v tests.test_cost_allocation_ddl
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
