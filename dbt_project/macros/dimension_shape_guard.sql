@@ -14,14 +14,15 @@
     reshapes nothing.
 
     Like with like. gold_trial_balance selects EVERY declared dimension
-    (dim_select() with no filter; dbt has no trial-balance-only list), and
-    var('dimensions') holds every Published Dimension, including a budget-only
-    one konsol lets the site name without the dim_ prefix (konsol
-    dimension.py validate: the prefix rule binds in_trial_balance only). So
-    the built side is not "columns starting dim_" but every column of the
-    table that is not one of its fixed columns (`fixed` below, from
-    gold_trial_balance.sql's own select list) or a declared measure
-    (var('base_measures')).
+    (dim_select() with no filter), and var('dimensions') holds every Published
+    Dimension, so a budget dimension declared without the dim_ prefix is a
+    built column too. The built side is therefore the columns that start with
+    dim_ OR are declared. An undeclared non-dim_ column is ignored, by design:
+    since konsol#348 BUD-8-2 every published budget dimension is also a
+    trial-balance dimension, and those require dim_, so such a column cannot
+    come from a published dimension. This needs no hand-kept list of the
+    model's fixed columns, which would read a dropped fixed column as an
+    undeclared dimension and refuse every later build.
 
     It allows the run when:
       - gold_trial_balance does not exist yet (a fresh site or scratch schema:
@@ -61,20 +62,16 @@
     {%- if exists | int == 0 -%}
         {{ return('select 1') }}
     {%- endif -%}
-    {#- gold_trial_balance.sql's columns that are not dimensions or measures -#}
-    {%- set fixed = ['data_area_id', 'fiscal_year', 'fiscal_period', 'main_account', 'account_name',
-                     'account_type_name', 'is_balance_sheet', 'is_pnl']
-                    + (var('base_measures', []) | map(attribute='name') | list) -%}
+    {%- set declared = get_dimensions() | map(attribute='name') | sort | list -%}
     {%- set built = [] -%}
     {%- for name in run_query(
         "select name from system.columns where database = '" ~ schema
         ~ "' and table = '" ~ identifier ~ "' order by name"
     ).columns[0].values() -%}
-        {%- if name not in fixed -%}
+        {%- if name.startswith('dim_') or name in declared -%}
             {%- do built.append(name) -%}
         {%- endif -%}
     {%- endfor -%}
-    {%- set declared = get_dimensions() | map(attribute='name') | sort | list -%}
     {%- if (built | sort | list) != declared -%}
         {{ exceptions.raise_compiler_error(
             "konsol#287: refusing to reshape the dimension columns of " ~ schema ~ "." ~ identifier ~ ". "
