@@ -16,7 +16,7 @@ This guard fails when either comes back:
    machinery, not dimensions, and are allowed. The ERP staging trees
    (models/staging/d365_fo, models/staging/erpnext) are excluded: they read
    the ERP's own columns and are being removed (konsolidat#221). Two singular
-   tests are listed as deferred to konsol#348 S2 (DEFERRED below), each with
+   tests are listed as deferred to konsol#287 S2 (DEFERRED below), each with
    its reason; any other hit fails.
 
 Test fixtures are not shipped. They declare the dimensions they need in the
@@ -48,7 +48,7 @@ MACROS = os.path.join(ROOT, "dbt_project", "macros")
 SCANNED = [os.path.join(ROOT, "dbt_project", d) for d in ("models", "macros", "tests")]
 EXCLUDED_TREES = [os.path.join(ROOT, "dbt_project", "models", "staging", erp) + os.sep
                   for erp in ("d365_fo", "erpnext")]
-#: Known hits, deferred to konsol#348 S2, which re-points the fixtures to ZZ
+#: Known hits, deferred to konsol#287 S2, which re-points the fixtures to ZZ
 #: dimension names. Both are singular tests over the hierarchy_dated.sql fixture,
 #: whose ZZ_DIV / ZZ_DIV_CC trees are built over these dimensions. Each renders
 #: nothing when the site does not declare the dimension it reads, so neither
