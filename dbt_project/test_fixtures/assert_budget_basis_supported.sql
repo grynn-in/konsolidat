@@ -1,4 +1,4 @@
--- gate: expect assert_budget_entries_basis_read pass
+-- gate: expect assert_budget_basis_supported pass
 -- konsol#348 S2 (R9): every budget line is a 'Period movement' line, the one basis gold_spread_budget
 -- reads (R2), so the test flags nothing. Replaced or narrowed when R10 lands.
 CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (

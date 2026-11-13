@@ -1,4 +1,4 @@
--- gate: expect assert_budget_entries_basis_read flag 1
+-- gate: expect assert_budget_basis_supported flag 1
 -- konsol#348 S2 (R9): one 'Year-to-date movement' line, which gold_spread_budget does not read (R2 sums
 -- 'Period movement' only). The test must name it; the Period movement line beside it must not be flagged.
 CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
