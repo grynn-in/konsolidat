@@ -26,20 +26,16 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro cost_allocation_lines(runs_predicate, frozen_at_expr) %}
-with runs as (
-    select *
-    from {{ source('epm_staging', 'cost_allocation_runs') }} as r
-    where {{ runs_predicate }}
-),
-
-pools as (
+{# The pool per (run, origin member, account): the run's accounts in
+   gold_scenario_trial_balance. `runs_cte` names a CTE of cost_allocation_runs
+   rows (alias r inside). Shared by the lines and by the drift test (T6). #}
+{% macro cost_allocation_pools(runs_cte) %}
     select
         r.name as run,
         {{ cost_allocation_member_expr('tb') }} as origin_member,
         tb.main_account as main_account,
         {{ cast_to_decimal128('sum(tb.amount)', amount_scale()) }} as origin_amount
-    from runs as r
+    from {{ runs_cte }} as r
     inner join {{ source('epm_staging', 'cost_allocation_run_accounts') }} as a
         on a.parent = r.name
     inner join {{ ref('gold_scenario_trial_balance') }} as tb
@@ -49,6 +45,17 @@ pools as (
         and tb.fiscal_period = r.fiscal_period
         and tb.main_account = a.main_account
     group by r.name, origin_member, tb.main_account
+{% endmacro %}
+
+{% macro cost_allocation_lines(runs_predicate, frozen_at_expr) %}
+with runs as (
+    select *
+    from {{ source('epm_staging', 'cost_allocation_runs') }} as r
+    where {{ runs_predicate }}
+),
+
+pools as (
+    {{ cost_allocation_pools('runs') }}
 ),
 
 hops as (

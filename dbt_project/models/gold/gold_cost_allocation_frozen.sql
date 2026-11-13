@@ -15,7 +15,7 @@
 -- amounts_after_approval = 'Freeze at Approval' is computed ONCE, the first
 -- build after it appears in staging, stamped frozen_at = now(), and never
 -- recomputed, so a later change to the trial balance does not move it
--- (gold_cost_allocation_frozen_drift, W6, reports the difference).
+-- (assert_cost_allocation_frozen_drift, W6, reports the difference).
 --
 -- Incremental strategy: `append` plus a pre_hook DELETE, not `delete+insert`.
 -- delete+insert deletes only the keys of the rows it is about to insert, so it
