@@ -56,6 +56,10 @@ invocation failed and nothing ran), or when any table it inserts into ends
 with 0 rows. In build mode
 an ERROR on any model fails the fixture unless `refuse` names it.
 
+Zero dimensions. The fixtures in ZERO_DIM_FIXTURES (budget and variance) run
+a second time at `dimensions: []`, reported as `<name> [dimensions: []]`, so a
+model that breaks for a site declaring none fails here too (konsol#287 review).
+
 Usage:
 
     python scripts/fixture_gate.py <fixture.sql> [...]     # some fixtures
@@ -89,6 +93,15 @@ from tb_only_first_build import (  # noqa: E402
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
 #: the fixtures' own declaration (FIXTURE_DIMENSIONS in tb_only_first_build.py).
 DIM_VARS = fixture_dimension_vars()
+#: konsol#287 review: every fixture runs at FIXTURE_DIMENSIONS, so a model that
+#: breaks at zero dimensions (konsolidat#220's class: dim_select call sites that
+#: leave a dangling comma or an empty CTE) would pass the gate. These budget and
+#: variance fixtures run a second time at `dimensions: []`, a site that declares
+#: none. Their budget rows name dim_cost_center / dim_department, but the fixture
+#: ALTERs those columns onto the input table itself and every value the zero pass
+#: relies on is the entity/account/period grain, so they run unchanged.
+ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
+ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": []})]
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")
@@ -223,8 +236,18 @@ def test_parents(manifest, tests):
 
 # ── one fixture ─────────────────────────────────────────────────────────────
 
-def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
-    print(f"\n== {s['name']}", flush=True)
+def passes(specs):
+    """(spec, dim_vars, label) for each run: every fixture at FIXTURE_DIMENSIONS,
+    then each ZERO_DIM_FIXTURES one again at `dimensions: []`."""
+    plan = [(s, DIM_VARS, s["name"]) for s in specs]
+    plan += [(s, ZERO_DIM_VARS, s["name"] + " [dimensions: []]")
+             for s in specs if s["name"] in ZERO_DIM_FIXTURES]
+    return plan
+
+
+def run_fixture(client, dbt, project, manifest, tables, s, log_dir, dim_vars=DIM_VARS, label=None):
+    label = label or s["name"]
+    print(f"\n== {label}", flush=True)
     reset_scratch(client)
     relations = manifest_relations(manifest)
     wanted = {f"epm_{layer}.{t}" for layer, t in TABLE_RE.findall(s["text"])}
@@ -263,10 +286,10 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
         # cautious: a test runs only when ALL its parents are selected, so the
         # build does not drag in a test whose other inputs this fixture never
         # created. The fixture's own tests are named, so they always run.
-        args = ["build", "--indirect-selection", "cautious", "--select"] + s["selector"] + DIM_VARS
+        args = ["build", "--indirect-selection", "cautious", "--select"] + s["selector"] + dim_vars
     else:
-        args = ["test", "--select"] + tests + DIM_VARS
-    log = os.path.join(log_dir, s["name"] + ".log")
+        args = ["test", "--select"] + tests + dim_vars
+    log = os.path.join(log_dir, label.replace(" [dimensions: []]", ".zero-dims") + ".log")
     # The previous fixture's results must not be read as this one's: dbt leaves
     # run_results.json alone when the invocation fails before running anything.
     stale = os.path.join(project, "target", "run_results.json")
@@ -407,9 +430,10 @@ def main():
 
     verdicts = []
     try:
-        for s in specs:
-            verdict, problems = run_fixture(client, a.dbt, project, manifest, tables, s, log_dir)
-            verdicts.append((s["name"], verdict, problems))
+        for s, dim_vars, label in passes(specs):
+            verdict, problems = run_fixture(client, a.dbt, project, manifest, tables, s, log_dir,
+                                            dim_vars, label)
+            verdicts.append((label, verdict, problems))
     finally:
         reset_scratch(client, create=False)
         shutil.rmtree(work, ignore_errors=True)
