@@ -870,9 +870,9 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts.
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
 
 ### `favorable_expense`
 
@@ -894,17 +894,19 @@ This test checks declaration, activeness and branch type: every scenario_id with
 
 <sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsolidat#206 konsolidat#211</sub>
 
-### `spread_has_12_periods`
+### `spread_covers_declared_periods`
 
-**each ANNUAL-spread budget line spreads into exactly 12 periods.**
+**each ANNUAL-spread budget line spreads into every declared Regular period of its fiscal year (epm_staging.fiscal_periods, period_type = 'Regular') and into no other period.**
 
-riods. Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural 12-period guarantee.
+eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN.
 
-<sub>`error (default)` · `tests/assert_spread_has_12_periods.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsolidat#94</sub>
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: Sum of 12 spread period amounts must equal annual_amount**
+**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
 
 <sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
 
