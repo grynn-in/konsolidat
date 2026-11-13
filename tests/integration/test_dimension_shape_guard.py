@@ -125,10 +125,22 @@ def test_a_declared_budget_only_dimension_without_the_prefix_builds(ch, project)
     assert _guard_hook_ran(out), out[-3000:]
 
 
-def test_a_built_dimension_without_the_prefix_is_still_guarded(ch, project):
+def test_a_built_non_dimension_column_does_not_refuse(ch, project):
+    """A built column that is neither dim_* nor declared (here: a fixed column a
+    later model change dropped) is not a dimension and must not refuse."""
+    _make_tb(ch, "zz_dropped_fixed_column", "dim_zz_a")
+    out = _dbt(project, "run", _dims("dim_zz_a"))
+    assert _guard_hook_ran(out), out[-3000:]
+
+
+def test_an_undeclared_built_non_dim_column_is_not_detected_by_design(ch, project):
+    """Not detected, by design (konsol#348 BUD-8-2): every published budget
+    dimension is also a trial-balance dimension, and those require dim_. So an
+    undeclared non-dim_ column cannot come from a published dimension; the guard
+    ignores it rather than keep a hand list of the model's fixed columns."""
     _make_tb(ch, "business_unit", "dim_zz_a")
     out = _dbt(project, "run", _dims("dim_zz_a"))
-    assert REFUSED in out and "business_unit, dim_zz_a" in out, out[-3000:]
+    assert _guard_hook_ran(out), out[-3000:]
 
 
 def test_dbt_retry_is_guarded(ch, project):
