@@ -1,0 +1,29 @@
+22:08:10  Running with dbt=1.12.3
+22:08:10  Registered adapter: clickhouse=1.9.3
+22:08:10  Found 81 models, 1 analysis, 274 data tests, 3 operations, 59 sources, 597 macros
+22:08:10  
+22:08:10  Concurrency: 1 threads (target='scratch')
+22:08:10  
+22:08:10  1 of 3 START hook: open_epm.on-run-start.0 ..................................... [RUN]
+22:08:10  1 of 3 OK hook: open_epm.on-run-start.0 ........................................ [OK in 0.02s]
+22:08:10  2 of 3 START hook: open_epm.on-run-start.1 ..................................... [RUN]
+22:08:10  2 of 3 OK hook: open_epm.on-run-start.1 ........................................ [OK in 0.01s]
+22:08:10  3 of 3 START hook: open_epm.on-run-start.2 ..................................... [RUN]
+22:08:10  3 of 3 OK hook: open_epm.on-run-start.2 ........................................ [OK in 0.00s]
+22:08:10  
+22:08:10  1 of 5 START test assert_cost_allocation_coefficients_close .................... [RUN]
+22:08:10  1 of 5 PASS assert_cost_allocation_coefficients_close .......................... [PASS in 0.02s]
+22:08:10  2 of 5 START sql incremental model `zzg_gold`.`gold_cost_allocation_frozen` .... [RUN]
+22:08:10  2 of 5 OK created sql incremental model `zzg_gold`.`gold_cost_allocation_frozen`  [OK in 0.09s]
+22:08:10  3 of 5 START sql table model `zzg_gold`.`gold_cost_allocation` ................. [RUN]
+22:08:10  3 of 5 OK created sql table model `zzg_gold`.`gold_cost_allocation` ............ [OK in 0.09s]
+22:08:10  4 of 5 START test assert_cost_allocation_conserved ............................. [RUN]
+22:08:10  4 of 5 PASS assert_cost_allocation_conserved ................................... [PASS in 0.01s]
+22:08:10  5 of 5 START test assert_cost_allocation_frozen_consistent ..................... [RUN]
+22:08:10  5 of 5 PASS assert_cost_allocation_frozen_consistent ........................... [PASS in 0.01s]
+22:08:10  
+22:08:10  Finished running 1 incremental model, 3 project hooks, 1 table model, 3 data tests in 0 hours 0 minutes and 0.38 seconds (0.38s).
+22:08:11  
+22:08:11  Completed successfully
+22:08:11  
+22:08:11  Done. PASS=8 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=8

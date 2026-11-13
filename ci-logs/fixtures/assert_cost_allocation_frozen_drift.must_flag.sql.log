@@ -1,0 +1,26 @@
+22:08:12  Running with dbt=1.12.3
+22:08:12  Registered adapter: clickhouse=1.9.3
+22:08:13  Found 81 models, 1 analysis, 274 data tests, 3 operations, 59 sources, 597 macros
+22:08:13  
+22:08:13  Concurrency: 1 threads (target='scratch')
+22:08:13  
+22:08:13  1 of 3 START hook: open_epm.on-run-start.0 ..................................... [RUN]
+22:08:13  1 of 3 OK hook: open_epm.on-run-start.0 ........................................ [OK in 0.06s]
+22:08:13  2 of 3 START hook: open_epm.on-run-start.1 ..................................... [RUN]
+22:08:13  2 of 3 OK hook: open_epm.on-run-start.1 ........................................ [OK in 0.01s]
+22:08:13  3 of 3 START hook: open_epm.on-run-start.2 ..................................... [RUN]
+22:08:13  3 of 3 OK hook: open_epm.on-run-start.2 ........................................ [OK in 0.00s]
+22:08:13  
+22:08:13  1 of 1 START test assert_cost_allocation_frozen_drift .......................... [RUN]
+22:08:13  1 of 1 WARN 1 assert_cost_allocation_frozen_drift .............................. [WARN 1 in 0.03s]
+22:08:13  
+22:08:13  Finished running 3 project hooks, 1 test in 0 hours 0 minutes and 0.20 seconds (0.20s).
+22:08:13  
+22:08:13  Completed with 1 warning:
+22:08:13  
+22:08:13  [WARNING]: in test assert_cost_allocation_frozen_drift (tests/cost_allocation/assert_cost_allocation_frozen_drift.sql)
+22:08:13  [WARNING]: Got 1 result, configured to warn if != 0
+22:08:13  
+22:08:13    compiled code at target/compiled/open_epm/tests/cost_allocation/assert_cost_allocation_frozen_drift.sql
+22:08:13  
+22:08:13  Done. PASS=3 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=4
