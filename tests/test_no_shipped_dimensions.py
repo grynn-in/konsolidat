@@ -11,9 +11,13 @@ and the canonical ERP union selected the same three by name.
 This guard fails when either comes back:
 
 1. the shipped `dimensions` default declares any dimension;
-2. a canonical staging model names a `dim_<name>` column outside a comment.
-   Macro names (`dim_select`, `dim_harmonize_joins`, ...) are machinery, not
-   dimensions, and are allowed.
+2. a model, macro or singular test names a `dim_<name>` column outside a
+   comment. Macro names (`dim_select`, `dim_harmonize_joins`, ...) are
+   machinery, not dimensions, and are allowed. The ERP staging trees
+   (models/staging/d365_fo, models/staging/erpnext) are excluded: they read
+   the ERP's own columns and are being removed (konsolidat#221). Two singular
+   tests are listed as deferred to konsol#348 S2 (DEFERRED below), each with
+   its reason; any other hit fails.
 
 Test fixtures are not shipped. They declare the dimensions they need in the
 harness (`FIXTURE_DIMENSIONS`, scripts/tb_only_first_build.py), and the two
@@ -21,12 +25,18 @@ scripts that build at declared dimensions must pass that declaration, or the
 project would build at the empty default and the dimensional fixtures would
 lose their columns:
 
-3. scripts/ci_full_build.py and scripts/fixture_gate.py pass
-   `fixture_dimension_vars()` to dbt.
+3. every script that runs dbt against fixture-built tables CALLS
+   `fixture_dimension_vars()` (found in the parsed source, so a comment or a
+   string naming it does not count): scripts/ci_full_build.py,
+   scripts/fixture_gate.py, tests/integration/conftest.py and
+   tests/integration/test_orchestrator_filters.py. The integration suite runs
+   on the tables ci_full_build.py's first leg built, so a dbt call there at the
+   empty default would build on top of them at another shape.
 
 Plain unittest, static source, no third-party imports.
 `python -m unittest -v tests.test_no_shipped_dimensions`
 """
+import ast
 import glob
 import os
 import re
@@ -34,8 +44,27 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_YML = os.path.join(ROOT, "dbt_project", "dbt_project.yml")
-CANONICAL = os.path.join(ROOT, "dbt_project", "models", "staging", "canonical")
 MACROS = os.path.join(ROOT, "dbt_project", "macros")
+SCANNED = [os.path.join(ROOT, "dbt_project", d) for d in ("models", "macros", "tests")]
+EXCLUDED_TREES = [os.path.join(ROOT, "dbt_project", "models", "staging", erp) + os.sep
+                  for erp in ("d365_fo", "erpnext")]
+#: Known hits, deferred to konsol#348 S2, which re-points the fixtures to ZZ
+#: dimension names. Both are singular tests over the hierarchy_dated.sql fixture,
+#: whose ZZ_DIV / ZZ_DIV_CC trees are built over these dimensions. Each renders
+#: nothing when the site does not declare the dimension it reads, so neither
+#: ships a dimension into a site's build; they are fixture assertions that name
+#: the fixture's own columns. A new hit, or a new name in these files, fails.
+DEFERRED = {
+    "tests/assert_hierarchy_node_as_of.sql": ["dim_business_unit", "dim_cost_center"],
+    "tests/assert_unassigned_as_of.sql": ["dim_business_unit"],
+}
+#: The scripts that run dbt against tables built at FIXTURE_DIMENSIONS.
+FIXTURE_DBT_CALLERS = (
+    "scripts/ci_full_build.py",
+    "scripts/fixture_gate.py",
+    "tests/integration/conftest.py",
+    "tests/integration/test_orchestrator_filters.py",
+)
 MANAGED_BEGIN = "# --- BEGIN konsol-managed vars"
 MANAGED_END = "# --- END konsol-managed vars ---"
 DIM_RE = re.compile(r"\bdim_[a-z0-9_]+")
@@ -70,24 +99,46 @@ class ShippedDefaultDeclaresNoDimension(unittest.TestCase):
             "declares its own (konsol#287, decided 17 Sep 2026)")
 
 
-class CanonicalUnionNamesNoDimension(unittest.TestCase):
-    def test_canonical_models_name_no_dimension_column(self):
+def _calls(path, name):
+    """Calls to ``name`` in the parsed source: comments and strings do not count."""
+    tree = ast.parse(_read(path), filename=path)
+    return [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+            and ((isinstance(n.func, ast.Name) and n.func.id == name)
+                 or (isinstance(n.func, ast.Attribute) and n.func.attr == name))]
+
+
+class ProjectNamesNoDimension(unittest.TestCase):
+    def test_models_macros_and_tests_name_no_dimension_column(self):
         macros = _macro_names()
         found = {}
-        for path in sorted(glob.glob(os.path.join(CANONICAL, "*.sql"))):
-            names = set(DIM_RE.findall(_strip_comments(_read(path)))) - macros
-            if names:
-                found[os.path.basename(path)] = sorted(names)
-        self.assertEqual(found, {}, "canonical staging selects dimensions by name; "
-                                    "render them from var('dimensions') instead")
+        for base in SCANNED:
+            for path in sorted(glob.glob(os.path.join(base, "**", "*.sql"), recursive=True)):
+                if any(path.startswith(t) for t in EXCLUDED_TREES):
+                    continue
+                names = set(DIM_RE.findall(_strip_comments(_read(path)))) - macros
+                if names:
+                    rel = os.path.relpath(path, os.path.join(ROOT, "dbt_project"))
+                    found[rel] = sorted(names)
+        self.assertEqual(found, DEFERRED,
+                         "a model, macro or test selects a dimension by name; render it "
+                         "from var('dimensions') instead (DEFERRED lists the known hits)")
 
 
 class FixtureBuildsDeclareTheirDimensions(unittest.TestCase):
-    def test_both_scripts_pass_the_fixture_declaration(self):
-        for name in ("ci_full_build.py", "fixture_gate.py"):
-            src = _read(os.path.join(ROOT, "scripts", name))
-            self.assertTrue("fixture_dimension_vars()" in src,
-                            f"scripts/{name} does not pass fixture_dimension_vars() to dbt")
+    def test_every_fixture_dbt_caller_calls_the_fixture_declaration(self):
+        for rel in FIXTURE_DBT_CALLERS:
+            with self.subTest(script=rel):
+                self.assertTrue(_calls(os.path.join(ROOT, rel), "fixture_dimension_vars"),
+                                f"{rel} does not call fixture_dimension_vars()")
+
+    def test_a_comment_or_string_does_not_count(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
+            f.write("# fixture_dimension_vars()\nX = 'fixture_dimension_vars()'\n")
+        try:
+            self.assertEqual(_calls(f.name, "fixture_dimension_vars"), [])
+        finally:
+            os.unlink(f.name)
 
 
 if __name__ == "__main__":
