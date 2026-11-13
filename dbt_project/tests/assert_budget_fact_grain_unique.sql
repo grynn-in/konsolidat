@@ -2,7 +2,8 @@
 -- per (scenario, entity, year, period, account, budget dims). The two entry
 -- methods (annual×profile spread and manual monthly identity-spread) are
 -- UNIONed, with manual overriding annual-spread on the same grain — this asserts
--- the precedence actually dedups and nothing double-counts.
+-- the precedence actually dedups and nothing double-counts. `layer` is part of the
+-- grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
 select
     scenario_id,
@@ -10,6 +11,7 @@ select
     fiscal_year,
     fiscal_period,
     main_account,
+    layer,
     {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }}
     count(*) as n_rows
 from {{ ref('gold_spread_budget') }}
@@ -18,6 +20,7 @@ group by
     data_area_id,
     fiscal_year,
     fiscal_period,
-    main_account
+    main_account,
+    layer
     {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
 having count(*) > 1
