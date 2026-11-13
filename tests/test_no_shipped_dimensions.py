@@ -141,5 +141,28 @@ class FixtureBuildsDeclareTheirDimensions(unittest.TestCase):
             os.unlink(f.name)
 
 
+class FixtureGateRunsAZeroDimensionPass(unittest.TestCase):
+    """The gate runs every fixture at FIXTURE_DIMENSIONS, so a budget or variance
+    model that breaks at zero dimensions (konsolidat#220's class) passes it. The
+    fixtures in ZERO_DIM_FIXTURES run a second time at `dimensions: []`."""
+
+    def test_the_budget_and_variance_fixtures_run_again_at_zero_dimensions(self):
+        import json
+        import sys
+
+        sys.path.insert(0, os.path.join(ROOT, "scripts"))
+        import fixture_gate as g
+
+        wanted = {"variance_budget_scenario.sql", "variance_node_two_budgets.sql"}
+        self.assertTrue(wanted <= set(g.ZERO_DIM_FIXTURES), g.ZERO_DIM_FIXTURES)
+        specs = [g.spec(os.path.join(g.FIXTURES, n)) for n in sorted(wanted)]
+        plan = g.passes(specs)
+        for name in wanted:
+            dims = sorted(json.dumps(json.loads(v[v.index("--vars") + 1])["dimensions"])
+                          for sp, v, _label in plan if sp["name"] == name)
+            self.assertEqual(len(dims), 2, f"{name}: expected two passes, got {dims}")
+            self.assertIn("[]", dims, f"{name} has no pass at dimensions: []")
+
+
 if __name__ == "__main__":
     unittest.main()
