@@ -27,7 +27,9 @@ Isolation. Nothing named epm_* is written. Per fixture the gate:
 Where the DDL comes from. Live, the epm_* tables are the stack's own. In CI
 there is no live stack, so `--prepare-ci` first builds one on the throwaway
 ClickHouse: clickhouse/init-db.sql and raw-schema.sql (as ci_full_build.py
-applies them), then `dbt run` of the whole project at the real dimensions.
+applies them), then `dbt run` of the whole project at the fixtures' declared
+dimensions (FIXTURE_DIMENSIONS, tb_only_first_build.py; konsol#287: the shipped
+default declares none, and every dbt call here passes the same declaration).
 The DDL is taken from that build, not from clickhouse/*.sql alone, because
 those files declare only the sources: every model table a fixture seeds
 (gold_trial_balance, silver_entity_currencies, ...) exists only once dbt has
@@ -53,6 +55,10 @@ line that looks like a directive and does not parse (`-- gate build`,
 invocation failed and nothing ran), or when any table it inserts into ends
 with 0 rows. In build mode
 an ERROR on any model fails the fixture unless `refuse` names it.
+
+Zero dimensions. The fixtures in ZERO_DIM_FIXTURES (budget and variance) run
+a second time at `dimensions: []`, reported as `<name> [dimensions: []]`, so a
+model that breaks for a site declaring none fails here too (konsol#287 review).
 
 Usage:
 
@@ -81,8 +87,21 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
-    LAYERS, copy_project, rewrite, run_dbt, split_sql,
+    LAYERS, copy_project, fixture_dimension_vars, rewrite, run_dbt, split_sql,
 )
+
+#: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
+#: the fixtures' own declaration (FIXTURE_DIMENSIONS in tb_only_first_build.py).
+DIM_VARS = fixture_dimension_vars()
+#: konsol#287 review: every fixture runs at FIXTURE_DIMENSIONS, so a model that
+#: breaks at zero dimensions (konsolidat#220's class: dim_select call sites that
+#: leave a dangling comma or an empty CTE) would pass the gate. These budget and
+#: variance fixtures run a second time at `dimensions: []`, a site that declares
+#: none. Their budget rows name dim_cost_center / dim_department, but the fixture
+#: ALTERs those columns onto the input table itself and every value the zero pass
+#: relies on is the entity/account/period grain, so they run unchanged.
+ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
+ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": []})]
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")
@@ -217,8 +236,18 @@ def test_parents(manifest, tests):
 
 # ── one fixture ─────────────────────────────────────────────────────────────
 
-def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
-    print(f"\n== {s['name']}", flush=True)
+def passes(specs):
+    """(spec, dim_vars, label) for each run: every fixture at FIXTURE_DIMENSIONS,
+    then each ZERO_DIM_FIXTURES one again at `dimensions: []`."""
+    plan = [(s, DIM_VARS, s["name"]) for s in specs]
+    plan += [(s, ZERO_DIM_VARS, s["name"] + " [dimensions: []]")
+             for s in specs if s["name"] in ZERO_DIM_FIXTURES]
+    return plan
+
+
+def run_fixture(client, dbt, project, manifest, tables, s, log_dir, dim_vars=DIM_VARS, label=None):
+    label = label or s["name"]
+    print(f"\n== {label}", flush=True)
     reset_scratch(client)
     relations = manifest_relations(manifest)
     wanted = {f"epm_{layer}.{t}" for layer, t in TABLE_RE.findall(s["text"])}
@@ -257,10 +286,10 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir):
         # cautious: a test runs only when ALL its parents are selected, so the
         # build does not drag in a test whose other inputs this fixture never
         # created. The fixture's own tests are named, so they always run.
-        args = ["build", "--indirect-selection", "cautious", "--select"] + s["selector"]
+        args = ["build", "--indirect-selection", "cautious", "--select"] + s["selector"] + dim_vars
     else:
-        args = ["test", "--select"] + tests
-    log = os.path.join(log_dir, s["name"] + ".log")
+        args = ["test", "--select"] + tests + dim_vars
+    log = os.path.join(log_dir, label.replace(" [dimensions: []]", ".zero-dims") + ".log")
     # The previous fixture's results must not be read as this one's: dbt leaves
     # run_results.json alone when the invocation fails before running anything.
     stale = os.path.join(project, "target", "run_results.json")
@@ -334,11 +363,11 @@ def judge(s, results, out):
 
 def prepare_ci(client, dbt, log_dir):
     """The epm_* shape a deployed stack has: sources from clickhouse/*.sql,
-    models from a full `dbt run` at the real dimensions."""
+    models from a full `dbt run` at the fixtures' declared dimensions."""
     from ci_full_build import PROJECT, apply_schema
 
     apply_schema(client)
-    code, out = run_dbt(dbt, PROJECT, ["run"], os.path.join(log_dir, "prepare-run.log"))
+    code, out = run_dbt(dbt, PROJECT, ["run", *DIM_VARS], os.path.join(log_dir, "prepare-run.log"))
     m = re.search(r"Done\. .*", out)
     print("    " + (m.group(0) if m else f"no dbt summary (exit {code})"), flush=True)
     if code != 0:
@@ -393,7 +422,7 @@ def main():
     if leaks:
         sys.exit(f"refusing: the project copy still names epm_ in {leaks[:5]}")
     reset_scratch(client)
-    code, out = run_dbt(a.dbt, project, ["parse"], os.path.join(log_dir, "parse.log"))
+    code, out = run_dbt(a.dbt, project, ["parse", *DIM_VARS], os.path.join(log_dir, "parse.log"))
     if code != 0:
         sys.exit(f"dbt parse failed (exit {code}); see {log_dir}/parse.log")
     with open(os.path.join(project, "target", "manifest.json"), encoding="utf-8") as f:
@@ -401,9 +430,10 @@ def main():
 
     verdicts = []
     try:
-        for s in specs:
-            verdict, problems = run_fixture(client, a.dbt, project, manifest, tables, s, log_dir)
-            verdicts.append((s["name"], verdict, problems))
+        for s, dim_vars, label in passes(specs):
+            verdict, problems = run_fixture(client, a.dbt, project, manifest, tables, s, log_dir,
+                                            dim_vars, label)
+            verdicts.append((label, verdict, problems))
     finally:
         reset_scratch(client, create=False)
         shutil.rmtree(work, ignore_errors=True)

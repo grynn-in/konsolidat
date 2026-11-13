@@ -21,7 +21,9 @@ This script therefore, against a warehouse it is allowed to destroy:
   1. applies clickhouse/init-db.sql and clickhouse/raw-schema.sql — the shape a
      fresh volume gets;
   2. loads the ZZ fixture (the same one the scoped-build job uses);
-  3. runs a FULL `dbt build` — no `--select`, which is the whole point;
+  3. runs a FULL `dbt build` — no `--select`, which is the whole point — at
+     the fixtures' declared dimensions (FIXTURE_DIMENSIONS; konsol#287: the
+     shipped default declares none);
   4. runs it again with `dimensions: []`. konsolidat#220 — a site that declared
      no dimensions could not build at all, 53 call sites across five macros in
      three failure shapes — was found by hand and nothing stopped that class
@@ -65,7 +67,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
-    budget_dimension_columns, fixture_sql, project_dimensions, run_dbt, split_sql, summary,
+    FIXTURE_DIMENSIONS, budget_dimension_columns, fixture_dimension_vars, fixture_sql,
+    run_dbt, split_sql, summary,
 )
 
 PROJECT = os.path.join(REPO, "dbt_project")
@@ -73,7 +76,9 @@ SCHEMA_SQL = ("clickhouse/init-db.sql", "clickhouse/raw-schema.sql")
 
 #: No --select. The scoped build has its own job; narrowing here would
 #: reintroduce exactly the coverage gap this job was added to close.
-FULL_BUILD = ["build"]
+#: konsol#287: the shipped default declares no dimension, so this leg builds at
+#: the fixtures' declared ones; the zero-dimension leg below is the default.
+FULL_BUILD = ["build", *fixture_dimension_vars()]
 #: konsolidat#220's standing guard.
 ZERO_DIM_BUILD = ["build", "--full-refresh", "--vars", json.dumps({"dimensions": []})]
 
@@ -86,8 +91,9 @@ def apply_schema(client):
             client.command(stmt)
         print(f"applied {rel} ({len(statements)} statements)", flush=True)
     # konsol#287: what konsol adds to the budget input tables for the declared
-    # in_budget dimensions; init-db.sql names none.
-    for stmt in budget_dimension_columns(project_dimensions()):
+    # in_budget dimensions; init-db.sql names none. The fixtures' declaration
+    # stands in for a site's (dbt_project.yml ships none).
+    for stmt in budget_dimension_columns(FIXTURE_DIMENSIONS):
         client.command(stmt)
 
 
@@ -209,7 +215,7 @@ def main():
             print("PROBLEM: " + p)
         sys.exit(f"FAILED: {len(problems)} problem(s); logs in {log_dir}")
     ran = "; integration suite ran with no skips" if a.with_integration else ""
-    print("OK: the full project builds at real and zero dimensions" + ran)
+    print("OK: the full project builds at declared and zero dimensions" + ran)
 
 
 if __name__ == "__main__":

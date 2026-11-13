@@ -253,10 +253,13 @@ class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
                 [{"name": "dim_x; DROP TABLE y", "in_budget": True}], "zz")
 
     def test_both_ci_scripts_add_them_after_the_schema(self):
-        for name in ("tb_only_first_build.py", "ci_full_build.py"):
+        # konsol#287: the fresh-site build reads the shipped (empty) default; the
+        # full build declares the fixtures' dimensions, as a site would.
+        for name, call in (("tb_only_first_build.py", "budget_dimension_columns(project_dimensions()"),
+                           ("ci_full_build.py", "budget_dimension_columns(FIXTURE_DIMENSIONS)")):
             with open(os.path.join(PROJECT_ROOT, "scripts", name), encoding="utf-8") as f:
                 src = f.read()
-            self.assertIn("budget_dimension_columns(project_dimensions()", src, name)
+            self.assertIn(call, src, name)
 
     def test_init_db_names_no_budget_dimension(self):
         with open(INIT_DB, encoding="utf-8") as f:
