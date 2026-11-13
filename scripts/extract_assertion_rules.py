@@ -109,7 +109,8 @@ def rule_sentence(prose: str) -> str:
 
 
 def main() -> int:
-    files = sorted(TESTS.glob("assert_*.sql"))
+    # Subfolders count too (cost_allocation/, staging/), as fixture_gate.py walks them.
+    files = sorted(TESTS.rglob("assert_*.sql"))
     if not files:
         print(f"no assertions under {TESTS}", file=sys.stderr)
         return 1
@@ -125,7 +126,7 @@ def main() -> int:
         }
         rows.append({
             "name": f.stem.removeprefix("assert_"),
-            "file": f.name,
+            "file": f.relative_to(TESTS).as_posix(),
             "rule": rule_sentence(prose),
             "prose": prose,
             "severity": sev.group(1) if sev else "error (default)",
