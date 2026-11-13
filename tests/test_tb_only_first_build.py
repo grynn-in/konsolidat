@@ -242,6 +242,7 @@ class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
         self.assertEqual(_load_script().budget_dimension_columns(dims, "zz"), [
             "ALTER TABLE zz_gold.budget_annual_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
             "ALTER TABLE zz_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
+            "ALTER TABLE zz_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
         ])
 
     def test_no_budget_dimension_means_no_alter(self):
@@ -261,6 +262,7 @@ class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
     def test_init_db_names_no_budget_dimension(self):
         with open(INIT_DB, encoding="utf-8") as f:
             sql = f.read()
-        for table in ("budget_annual_input", "budget_monthly_input"):
-            body = sql.split(f"CREATE TABLE IF NOT EXISTS epm_gold.{table} (")[1].split(")")[0]
+        for table in ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input",
+                      "epm_raw.budget_entries"):
+            body = sql.split(f"CREATE TABLE IF NOT EXISTS {table} (")[1].split(") ENGINE")[0]
             self.assertNotRegex(body, r"\bdim_\w+", table)
