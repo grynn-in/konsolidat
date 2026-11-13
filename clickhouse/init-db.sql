@@ -198,6 +198,19 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
     claimed_at DateTime, amount_basis String DEFAULT ''
 ) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;
 
+-- Budget S2 (R1): the approved budget lines, one row per Budget Entry Line of
+-- a submitted Budget Cycle. Written through from konsol (Budget Entry Line);
+-- tests/test_budget_raw_ddl.py pins this body to konsol's
+-- _REFERENCE_TABLE_DDL. No partner column (#427); dim_* columns are added by
+-- ALTER ... ADD COLUMN IF NOT EXISTS when a dimension is published in_budget.
+CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
+    entry_name String, cycle String, scenario_id String, layer String,
+    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
+    main_account String, debit Decimal(18,4), credit Decimal(18,4),
+    currency String, amount_basis String
+) ENGINE = MergeTree
+ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
+
 -- F3: governed reference data written through from konsol (Dimension Mapping,
 -- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated
 -- into the dbt repo on every save and migrate. One metadata path now: Frappe
