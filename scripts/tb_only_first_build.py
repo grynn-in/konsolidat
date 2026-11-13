@@ -61,6 +61,31 @@ BUDGET_INPUT_TABLES = ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_
 DIM_NAME_RE = re.compile(r"dim_[a-z0-9_]+\Z")
 
 
+#: konsol#287: konsolidat ships no dimensions (decided 17 Sep 2026), so
+#: dbt_project.yml's default is empty and a site's own declaration is written
+#: there by konsol. The test fixtures are not a site: they declare here the
+#: dimensions their rows carry, and the builds that run them (ci_full_build.py's
+#: first leg, fixture_gate.py) pass this with --vars. These are TEST data; the
+#: names are the ones the fixtures were written against (konsol#287 S2 re-points
+#: them to ZZ names).
+FIXTURE_DIMENSIONS = [
+    {"name": "dim_business_unit", "source_column": "dim_business_unit",
+     "label": "Business Unit", "cube_type": "string", "in_budget": False},
+    {"name": "dim_cost_center", "source_column": "dim_cost_center",
+     "label": "Cost Center", "cube_type": "string", "in_budget": True,
+     "allocation_role": "cost_center"},
+    {"name": "dim_department", "source_column": "dim_department",
+     "label": "Department", "cube_type": "string", "in_budget": True},
+]
+
+
+def fixture_dimension_vars():
+    """dbt arguments that build at the fixtures' declared dimensions."""
+    import json
+
+    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS})]
+
+
 def project_dimensions():
     """The `dimensions` var of dbt_project.yml: what the build will read."""
     import yaml  # dbt-core brings it; imported here so the module needs none

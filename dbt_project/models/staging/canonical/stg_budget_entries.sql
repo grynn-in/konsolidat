@@ -4,7 +4,7 @@
     (budget_register_entry_recid, include_in_cash_flow) joined from adapter.
 
     Dimensions harmonized centrally (keyed on per-row erp_source) over the
-    budget dimension subset (cost_center, department — no business_unit).
+    declared in_budget subset (get_budget_dimensions()).
 
     With no ERP listed in `erp_sources`, an empty relation with the same
     columns and types (empty_relation, macros/erp_sources.sql).
@@ -43,8 +43,8 @@ with unioned as (
         transaction_currency,
         budget_model,
         budget_status,
-        dim_cost_center,
-        dim_department,
+        {# konsol#287: the declared in_budget dimensions, by name. #}
+        {{ dim_select(dims=budget_dims, trailing=true) }}
         _loaded_at,
         _raw_id
     from {{ ref('stg_' ~ erp ~ '__budget_entries') }}

@@ -59,9 +59,8 @@ with unioned as (
         posting_type,
         ledger_account,
         partner_data_area_id,
-        dim_cost_center,
-        dim_department,
-        dim_business_unit,
+        {# konsol#287: the declared dimensions, by name; konsolidat ships none. #}
+        {{ dim_select(trailing=true) }}
         _loaded_at,
         _raw_id
     from {{ ref('stg_' ~ erp ~ '__gl_entries') }}

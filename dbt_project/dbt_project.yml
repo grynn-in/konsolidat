@@ -70,23 +70,7 @@ vars:
   erp_sources: []
 
   # --- BEGIN konsol-managed vars (regenerated; do not edit by hand) ---
-  dimensions:
-  - name: dim_business_unit
-    source_column: dim_business_unit
-    label: Business Unit
-    cube_type: string
-    in_budget: false
-  - name: dim_cost_center
-    source_column: dim_cost_center
-    label: Cost Center
-    cube_type: string
-    in_budget: true
-    allocation_role: cost_center
-  - name: dim_department
-    source_column: dim_department
-    label: Department
-    cube_type: string
-    in_budget: true
+  dimensions: []
   base_measures:
   - name: period_credit
     expression: sum(credit_amount)
