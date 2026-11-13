@@ -197,6 +197,9 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_ytd_trial_balance:
         +tags: ['gold', 'domain:actuals']
+      # --- Domain: allocation ---
+      gold_cost_allocation:
+        +tags: ['gold', 'domain:allocation']
       # --- Domain: consolidation ---
       gold_acquisition_adjustments:
         +tags: ['gold', 'domain:consolidation']

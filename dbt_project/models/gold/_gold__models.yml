@@ -132,6 +132,63 @@ models:
         tests:
           - not_null
 
+  - name: gold_cost_allocation
+    description: >
+      Cost allocation lines (konsol#269): per run and origin member, one sent
+      and one received line per hop. Runs that follow the latest data only;
+      frozen runs are added by W5. Domain allocation, an isolated scope.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: run
+        data_type: String
+        description: "Cost Allocation Run name"
+      - name: rule_set
+        data_type: String
+      - name: method
+        data_type: String
+      - name: scenario_id
+        data_type: String
+      - name: data_area_id
+        data_type: String
+      - name: main_account
+        data_type: String
+      - name: allocation_dimension
+        data_type: String
+      - name: member
+        data_type: String
+        description: "Dimension member the line is booked to: the sender on a sent line, the receiver on a received line"
+      - name: line_type
+        data_type: String
+        description: "sent (negative, at the sender, in the pool's account) or received (positive, at the receiver)"
+      - name: origin_member
+        data_type: String
+        description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
+      - name: sender_member
+        data_type: String
+      - name: receiver_member
+        data_type: String
+      - name: driver
+        data_type: String
+      - name: fiscal_year
+        data_type: UInt16
+      - name: fiscal_period
+        data_type: UInt8
+      - name: step
+        data_type: UInt16
+      - name: coefficient
+        data_type: Decimal(38, 12)
+      - name: origin_amount
+        data_type: Decimal(38, 4)
+        description: "The origin member's pool on the run's accounts, from gold_scenario_trial_balance"
+      - name: amount
+        data_type: Decimal(38, 16)
+        description: "origin_amount * coefficient, signed by line_type; sent and received cancel exactly"
+      - name: frozen_at
+        data_type: Nullable(DateTime)
+        description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"
+
   - name: gold_scenario_trial_balance
     description: "Union of actual + budget + forecast across all scenarios"
     columns:
