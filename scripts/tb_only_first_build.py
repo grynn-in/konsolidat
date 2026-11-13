@@ -57,7 +57,8 @@ CAST_TEST = "assert_cast_to_decimal128_is_exact"
 #: konsol#287: the budget input tables name no dimension in init-db.sql; konsol
 #: adds the site's Published in_budget dimensions by ALTER. A fresh site built
 #: here has no konsol, so these stand in for it.
-BUDGET_INPUT_TABLES = ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input")
+BUDGET_INPUT_TABLES = ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input",
+                       "epm_raw.budget_entries")
 DIM_NAME_RE = re.compile(r"dim_[a-z0-9_]+\Z")
 
 

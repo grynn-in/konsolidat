@@ -11,9 +11,9 @@
    read identically by K.EPM's `budget_input` fact and gold_scenario_trial_balance:
 
      (a) annual inputs spread across 12 periods by a profile (PRD-6); and
-     (b) manually-entered monthly budgets (epm_gold.budget_monthly_input),
-         treated as an "identity" spread — the typed monthly values ARE the
-         weights (profile_id = 'manual').
+     (b) manually-entered monthly budgets (epm_raw.budget_entries, konsol's
+         Budget Entry lines; konsol#348 S2), treated as an "identity" spread —
+         the entered monthly values ARE the weights (profile_id = 'manual').
 
    Budget LAYERS (base / challenge / management / board): the final budget is the
    sum of all layers. All layers are carried here as separate rows with a `layer`
@@ -33,9 +33,8 @@ with annual_input as (
         spread_profile_id,
         submitted_by
     {# konsolidat#146: konsol's Budget Annual Input doctype, not a seed in this
-       repo. The other branch of this model already reads konsol's
-       epm_gold.budget_monthly_input, so both halves of budget input are the
-       app's now. #}
+       repo. The other branch of this model reads konsol's
+       epm_raw.budget_entries, so both halves of budget input are the app's. #}
     from {{ source('epm_gold', 'budget_annual_input') }}
 ),
 
@@ -54,11 +53,41 @@ profiles as (
     from {{ source('epm_gold', 'spread_profiles') }}
 ),
 
-{# (b) Manually-entered monthly budgets as an identity spread. ALL layers are
-   carried (challenge/management/board as well as base); the per-layer monthly
-   values normalize within their own layer (window partitions on layer too).
-   annual_amount / period_weight are derived from the monthly values so the row
-   shape matches the annual-spread branch. #}
+{# (b) Manually-entered monthly budgets as an identity spread (konsol#348 S2,
+   R2). Each epm_raw.budget_entries line is a debit or a credit; the fact carries
+   net = debit - credit, debit positive, signed like actuals (BUD-7), summed to
+   one value per (scenario, entity, year, period, account, budget dims, layer):
+   several lines on one grain are one fact row.
+   Only 'Period movement' lines are read (Q15-c). A 'Year-to-date movement' or
+   'Period-end balance' line needs a conversion that is not built yet (R10);
+   assert_budget_basis_supported (R9) names every such line, so none is dropped
+   silently.
+   ALL layers are carried (challenge/management/board as well as base); the
+   per-layer monthly values normalize within their own layer (window partitions
+   on layer too). annual_amount / period_weight are derived from the monthly
+   values so the row shape matches the annual-spread branch. #}
+manual_lines as (
+    select
+        scenario_id,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
+        layer,
+        sum(debit - credit) as net_amount
+    from {{ source('budget_raw', 'budget_entries') }}
+    where amount_basis = 'Period movement'
+    group by
+        scenario_id,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }}
+        layer
+),
+
 manual as (
     select
         scenario_id,
@@ -68,13 +97,13 @@ manual as (
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
-        toFloat64(sum(amount) over w) as annual_amount,
+        toFloat64(sum(net_amount) over w) as annual_amount,
         'manual' as spread_profile_id,
         'Manual (as-entered)' as profile_name,
-        toFloat64(amount) / nullIf(toFloat64(sum(amount) over w), 0) as period_weight,
-        toFloat64(amount) as period_amount,
+        toFloat64(net_amount) / nullIf(toFloat64(sum(net_amount) over w), 0) as period_weight,
+        toFloat64(net_amount) as period_amount,
         '' as submitted_by
-    from {{ source('epm_gold', 'budget_monthly_input') }}
+    from manual_lines
     window w as (
         partition by scenario_id, data_area_id, fiscal_year, main_account,
                      {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }} layer
