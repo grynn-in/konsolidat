@@ -10,7 +10,7 @@
 
    konsolidat#220: the tree is resolved per period, as in gold_tb_at_hierarchy_node. A budget row joins only the
    leaf tranche and the closure rows whose windows cover its period's end_date (declared calendar,
-   epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its month). #}
+   epm_staging.fiscal_periods; a period the calendar does not declare drops out of this model (an inner join)). #}
 
 with budget_long as (
     {{ budget_dimension_long_sql('b') }}
@@ -28,14 +28,10 @@ periods as (
 budget_dated as (
     select
         b.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('b.fiscal_year', 'b.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        {# inner join: a period the calendar does not declare drops out (QA3 a); the ERROR tests name it #}
+        p.end_date as period_end_date
     from budget_long as b
-    left join periods as p
+    inner join periods as p
         on p.fiscal_year = toUInt16(b.fiscal_year)
         and p.fiscal_period = toUInt16(b.fiscal_period)
 ),
