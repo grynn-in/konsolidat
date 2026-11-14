@@ -14,18 +14,8 @@
 -- gold_spread_budget also reads these tables, empty here, so they are named to exist (empty):
 -- epm_gold.budget_annual_input, epm_gold.spread_profiles, epm_gold.budget_monthly_input.
 --
--- epm_raw.budget_entries is konsol's (I3) and may not exist on the stack yet: create it with the body
--- of clickhouse/init-db.sql (pinned by tests/test_budget_raw_ddl.py), then add the site's budget
--- dimensions as konsol does, by ALTER.
-CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
-    entry_name String, cycle String, scenario_id String, layer String,
-    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
-    main_account String, debit Decimal(18,4), credit Decimal(18,4),
-    currency String, amount_basis String
-) ENGINE = MergeTree
-ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
+-- epm_raw.budget_entries is konsol's (I3), declared in clickhouse/init-db.sql: fixture_gate.py creates it
+-- (as zzg_raw) when the stack lacks it and adds the fixture budget dimension columns.
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES

@@ -19,16 +19,6 @@
 --   ZZ_AX   leaf under ZZ_A 2010-01-01 .. open
 --
 -- The live table may predate the two tranche columns: add them first.
--- epm_raw.budget_entries is konsol's (I3) and may not exist on the stack yet: created here as in budget_raw_monthly.
-CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
-    entry_name String, cycle String, scenario_id String, layer String,
-    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
-    main_account String, debit Decimal(18,4), credit Decimal(18,4),
-    currency String, amount_basis String
-) ENGINE = MergeTree
-ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
 -- A table that already has them as plain Date (1970-01-01..2149-06-06 clamps both ends) becomes Date32.

@@ -15,16 +15,6 @@
 -- epm_gold.spread_profiles, epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns: add them first.
--- epm_raw.budget_entries is konsol's (I3) and may not exist on the stack yet: created here as in budget_raw_monthly.
-CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
-    entry_name String, cycle String, scenario_id String, layer String,
-    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
-    main_account String, debit Decimal(18,4), credit Decimal(18,4),
-    currency String, amount_basis String
-) ENGINE = MergeTree
-ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
