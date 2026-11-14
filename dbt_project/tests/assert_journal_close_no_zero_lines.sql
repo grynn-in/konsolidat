@@ -5,7 +5,7 @@ select
     consolidation_group,
     fiscal_year,
     main_account,
-    sum(amount) as amount
+    sum(amount) as line_amount
 from {{ ref('gold_fully_consolidated_tb') }}
 where adjustment_type = 'journal_close'
 group by consolidation_group, data_area_id, fiscal_year, main_account{{ dim_group_by(leading=true) }}
