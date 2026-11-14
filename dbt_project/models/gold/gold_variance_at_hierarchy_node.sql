@@ -13,34 +13,21 @@
 
    konsolidat#220: the tree is resolved per period, as in gold_tb_at_hierarchy_node. A variance row joins only
    the leaf tranche and the closure rows whose windows cover its period's end_date (declared calendar,
-   epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its month). #}
+   epm_staging.fiscal_periods, declared_periods()); a period the calendar does not list has no date and is dropped, as in
+   gold_tb_at_hierarchy_node (konsolidat#171 2d). #}
 
 with variance_long as (
     {{ variance_dimension_long_sql('v') }}
 ),
 
-periods as (
-    select
-        toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period,
-        max(end_date) as end_date
-    from {{ source('epm_staging', 'fiscal_periods') }}
-    group by fiscal_year, fiscal_period
-),
-
 variance_dated as (
     select
         v.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('v.fiscal_year', 'v.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        dp.end_date as period_end_date
     from variance_long as v
-    left join periods as p
-        on p.fiscal_year = toUInt16(v.fiscal_year)
-        and p.fiscal_period = toUInt16(v.fiscal_period)
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(v.fiscal_year)
+        and dp.fiscal_period = toUInt16(v.fiscal_period)
 ),
 
 leaf_closure as (
