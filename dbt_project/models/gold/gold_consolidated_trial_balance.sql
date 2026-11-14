@@ -619,25 +619,62 @@ densified_stints as (
 ),
 
 {# The windows run over every row of every period (period_filter is applied
-   only in the final select), so a scoped build sees the key's history. #}
-retranslated as (
+   only in the final select), so a scoped build sees the key's history.
+
+   konsolidat#335 (task X16): the windows partition by the KEY only, never by
+   stint, so retranslated and close_pnl share one sort, as before X7. With
+   stint in the partition, close_pnl (partition key, fiscal_year) needed a
+   sort of its own; every window sort scatters its input by partition into
+   max_threads x streams outputs, and the extra one grew the pipeline past
+   the server's memory while building it, on an empty site (ClickHouse 24.8:
+   the first TB-only build and the fixture gate's --prepare-ci both failed
+   there). The stint boundary is applied by arithmetic instead:
+   cum_local_before is the key's cumulative local amount before the row, and
+   the anyLast over key_to_row is its value at the first row of the row's
+   stint, so their difference is the cumulative within the stint. At a stint's first row it is
+   0, so that row retranslates nothing, whatever the previous row's rate;
+   later rows of the stint follow rows of the same stint (stint never falls
+   as the period rises). An entity that never exited has one stint starting
+   at its first row, the subtracted value is 0, and the figures are unchanged. #}
+stint_marks as (
     select
         *,
-        if(
-            is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
-            toFloat64(sum(local_amount) over key_before)
-                * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
-            0
-        ) as retranslation_amount
+        sum(local_amount) over key_before as cum_local_before,
+        toUInt8(stint != lagInFrame(stint, 1, toUInt32(4294967295)) over key_all) as is_stint_start
     from densified_stints
     window
         key_before as (
-            partition by consolidation_group, data_area_id, stint, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and 1 preceding
         ),
         key_all as (
-            partition by consolidation_group, data_area_id, stint, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and unbounded following
+        )
+),
+
+retranslated as (
+    select
+        * except (cum_local_before, is_stint_start),
+        if(
+            is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
+            toFloat64(ifNull(
+                cum_local_before - anyLast(if(is_stint_start = 1, cum_local_before, null)) over key_to_row,
+                0))
+                * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
+            0
+        ) as retranslation_amount
+    from stint_marks
+    window
+        key_to_row as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and current row
+        ),
+        key_all as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and unbounded following
         )
