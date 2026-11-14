@@ -5,7 +5,7 @@
     silver_gl_entries builds a synthetic GL row for every trial-balance
     submission (F8). Its accounting_date/document_date come from a LEFT JOIN
     from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced
-    to build_date_from_year_period() when the entity's fiscal calendar isn't
+    to the declared calendar's start_date (declared_periods()) when the entity's fiscal calendar isn't
     loaded -- exactly the shape of a TB-only site, which has no ERP calendar
     at all (konsol#182).
 
