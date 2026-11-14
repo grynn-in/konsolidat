@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **152** |
-| carrying their reasoning | 131 |
-| citing the issue that caused them | 124 |
+| assertions | **159** |
+| carrying their reasoning | 138 |
+| citing the issue that caused them | 131 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 130 |
+| severity `error` (stops the build, and its children) | 137 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,14 +25,14 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 19
-- [Currency and translation](#currency-and-translation) — 24
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 23
+- [Currency and translation](#currency-and-translation) — 25
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 10
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 15
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 9
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -202,6 +202,14 @@ gold_consolidated_trial_balance keeps the movement grain: one row per (group, en
 
 <sub>`error (default)` · `tests/assert_bs_translated_at_closing_rate.sql` · konsolidat#257</sub>
 
+### `budget_blank_layer_currency`
+
+**konsol#348 S2 (Q13-a): every budget row declares its layer and currency;**
+
+a blank is never defaulted (no silent fallback). Flags each row of epm_raw.budget_entries and epm_gold.budget_annual_input whose layer or currency is ''. Error severity: a blank layer would form its own silent slice and a blank currency is unconvertible.
+
+<sub>`error` · `tests/assert_budget_blank_layer_currency.sql` · konsol#348</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -367,6 +375,14 @@ Two failure modes, both of which silently misstate translated balances: 1. trans
 Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severity. It supersedes #238-1, which conditioned the layers on declarations (Published IC accounts, partner membership, more than one currency). A review of PR #261 measured that this did not match the models: an unmatched IC pair, with no ic_difference_account, is eliminated by nothing, and CTA does not depend on how many currencies the group has. Whether an elimination SHOULD exist stays with gold_ic_reconciliation and gold_ic_unmatched. Rejected: #238-1 as worded, and #238-2 (warn and keep asserting all four). A layer must appear for a group exactly when its source model has rows for that group. Each source is mapped to the adjustment_type gold_fully_consolidated_tb gives it: - entity:              gold_consolidated_trial_balance (layer 1); - ic_elimination:      gold_ic_eliminations (layer 2). Every kind, including unrealized_profit from ic_elimination_rules, lands as ic_elimination. There is no ic_elimination_nci layer any more (eliminations are posted in full: konsol#117 pair 2 K3, konsolidat#204 (a)); - topside:             gold_consolidation_adjustments, adjustment_type 'topside' (layer 4 passes adjustment_type through); - cta:                 gold_fx_revaluation (layer 3); - nci_attribution:     gold_nci_attribution_journal (the minority's share of a full-method subsidiary's result and CTA, konsol#117 pair 2 K2, konsolidat#204 (a)). Every model carries the group in consolidation_group. Two directions, one row per (group, layer): - missing_layer: the source has rows, the consolidated TB has none; - unexpected_layer: the consolidated TB has the layer, the source has no rows (a stale or misattributed layer). konsolidat#238 / #249: NOT IN, not a LEFT JOIN. adjustment_type is a String, and under join_use_nulls = 0 (the server default; a singular test carries no settings clause) an unmatched LEFT JOIN fills it with '' rather than NULL. The former `where actual.layer is null` therefore matched nothing, and the test could never fail.
 
 <sub>`error (default)` · `tests/assert_all_layers_present.sql` · konsol#117 konsolidat#204 konsolidat#238 konsolidat#249 konsolidat#261</sub>
+
+### `budget_ytd_reconciles`
+
+**Budget year-to-date lines reconcile to the spread (konsol#348 S2, Q15-c, R10).**
+
+gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date movement' into period movements within the Cycle year. Undoing that conversion must give the stated figure back: for every key a (cycle, scenario, layer, entity) states in that year, and every period it states any YTD figure for, the running sum of the spread's manual movements through that period equals the stated YTD. A key missing from a period's lines has a stated YTD of 0 there (the spine of macros/period_movements.sql), so a key that vanishes must have been reversed: a model that only differenced the rows that exist leaves its last YTD standing and is named here. The spread has no cycle column, so the stated figures are summed to the spread's grain (scenario, entity, year, period, account, budget dims, layer). A grain that mixes bases in one year does not reconcile either; assert_budget_basis_supported names that case by itself. Flags one row per (grain, period) that does not reconcile. Tolerance 0.01, as for the TB balance tests.
+
+<sub>`error` · `tests/assert_budget_ytd_reconciles.sql` · konsol#348</sub>
 
 ### `cash_flow_excludes_nci_attribution`
 
@@ -866,13 +882,37 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 
 ## Budget, forecast and variance
 
+### `budget_basis_supported`
+
+**every epm_raw.budget_entries line is on a basis gold_spread_budget reads, and no (cycle, entity, layer, year) mixes bases (konsol#348 S2, R9;**
+
+2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
+
+<sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
+
 ### `budget_fact_grain_unique`
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c, backstopped by assert_budget_one_writer_per_grain), so nothing double-counts and this asserts it. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
 <sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
+
+### `budget_one_cycle_per_scenario_year`
+
+**konsol#348 S2 (Q16-c, one writer per grain;**
+
+decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums manual lines without the cycle, so two Cycles with lines on one (scenario, fiscal year) would be added together: a doubled budget. konsol's intake keeps one Cycle per (scenario, year); this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. epm_gold.budget_annual_input carries no cycle column, so the annual side has nothing to check here (n/a). Error severity: the budget fact would be wrong.
+
+<sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
+
+### `budget_one_writer_per_grain`
+
+**konsol#348 S2 (R8, Q16-c, decided 13 Nov 2026 under Deepak Pai's standing rule): a budget grain (scenario, entity, year, layer, account, budget dims) has ONE writer.**
+
+konsol's intake refuses an Annual Input and a manual Budget Entry line on the same grain, so gold_spread_budget is a plain UNION ALL of the two branches with no precedence rule. This test is the warehouse backstop: it flags every grain fed by both, naming the annual side (spread profile, submitter) and the manual side (Budget Entries and cycles). Any amount_basis counts: every manual line is a writer. Flags one row per doubly-written grain.
+
+<sub>`error` · `tests/assert_budget_one_writer_per_grain.sql` · konsol#348</sub>
 
 ### `budget_period_declared`
 
@@ -881,6 +921,22 @@ The two entry methods (annual×profile spread and manual monthly identity-spread
 Budget Cycle and Budget Annual Input carry fiscal_year as a plain Int, so nothing else forces the year to exist. It is named here as a WARN, not an ERROR, so a budget for a year not yet declared never blocks the consolidation chain (an ERROR test with gold_trial_balance as a second parent would skip every child of gold_trial_balance under `dbt build`). Chosen under the 5 Nov 2026 standing rule (refuse / report: report); see #171 2d and the PR #355 re-review. One row per (scenario, entity, period) of budget not declared in epm_staging.fiscal_periods. Fixture: dbt_project/test_fixtures/assert_budget_period_declared.undeclared_year.must_flag.sql.
 
 <sub>`warn` · `tests/assert_budget_period_declared.sql` · konsolidat#171 konsolidat#355</sub>
+
+### `budget_ytd_hand_table`
+
+**konsol#348 S2 (R10, Q15-c): the hand-computed movements of test_fixtures/budget_raw_ytd.sql, as literals.**
+
+assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated YTD per account and layer (the fixture's header holds the table); the manual spread of ZZ_PLAN_2026 / ZZE1 / FY2026 must hold exactly these movements, summed over budget dimensions. It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built. Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
+
+<sub>`error` · `tests/assert_budget_ytd_hand_table.sql` · konsol#348</sub>
+
+### `budget_ytd_periods_contiguous`
+
+**konsol#348 S2 (Q15-c, Q21-a): a Year-to-date slice states every period from 1 to its last.**
+
+Q21-a was chosen under the standing rule (#348 comment 6875869375). konsol refuses the same slices at intake; this is the build-time backstop. gold_spread_budget differences a 'Year-to-date movement' series across the periods it states. With P6 missing, P7 would be YTD7 - YTD5 (two months merged into one); with a first stated period above 1, P1..Pn would merge into it. So every YTD (cycle, scenario, layer, entity, year) must state exactly periods 1..max(stated period). One row per scope that does not. (The model reads no declared-period calendar for budget lines, so the check is on the stated periods themselves.) Error severity: the budget fact would be wrong.
+
+<sub>`error` · `tests/assert_budget_ytd_periods_contiguous.sql` · konsol#348</sub>
 
 ### `favorable_expense`
 
@@ -902,13 +958,13 @@ This test checks declaration, activeness and branch type: every scenario_id with
 
 <sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsolidat#206 konsolidat#211</sub>
 
-### `spread_has_12_periods`
+### `spread_covers_declared_periods`
 
-**each ANNUAL-spread budget line spreads into exactly 12 periods.**
+**each ANNUAL-spread budget line spreads into every declared Regular period of its fiscal year (epm_staging.fiscal_periods, period_type = 'Regular') and into no other period.**
 
-riods. Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural 12-period guarantee.
+eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN.
 
-<sub>`error (default)` · `tests/assert_spread_has_12_periods.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsolidat#94</sub>
 
 ### `spread_sums_to_annual`
 
