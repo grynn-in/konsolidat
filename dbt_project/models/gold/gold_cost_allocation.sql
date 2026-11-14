@@ -19,7 +19,7 @@ select * from (
 union all
 
 select
-    run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension,
-    member, line_type, origin_member, sender_member, receiver_member, driver,
+    run, rule_set, method, scenario_id, data_area_id, main_account, pool_account,
+    allocation_dimension, member, line_type, origin_member, sender_member, receiver_member, driver,
     fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at
 from {{ ref('gold_cost_allocation_frozen') }}

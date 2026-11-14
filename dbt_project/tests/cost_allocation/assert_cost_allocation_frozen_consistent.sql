@@ -1,11 +1,13 @@
-{{ config(severity='error') }}
 -- Cost allocation lines agree with their run (konsol#269, W5). Three ways the
 -- published lines can disagree with epm_staging.cost_allocation_runs:
---   1. duplicate line: the same hop appears twice (a frozen run frozen again);
+--   1. duplicate line: the same hop of the same pool appears twice (a frozen run
+--      frozen again). pool_account is in the key: in declared mode the received
+--      lines of two pools share the allocation account (review M1);
 --   2. run not in staging: lines of a cancelled run were not removed;
 --   3. freeze stamp does not match the policy: a 'Freeze at Approval' run
 --      with a NULL frozen_at, or a 'Follow Latest Data' run with one.
 -- Inner joins and IN only: join_use_nulls=0 would fill an unmatched side.
+{{ config(severity='error') }}
 with lines as (
     select * from {{ ref('gold_cost_allocation') }}
 ),
@@ -17,7 +19,7 @@ runs as (
 
 select run, 'duplicate line' as problem
 from lines
-group by run, main_account, origin_member, step, sender_member, receiver_member, line_type
+group by run, main_account, pool_account, origin_member, step, sender_member, receiver_member, line_type
 having count() > 1
 
 union all
