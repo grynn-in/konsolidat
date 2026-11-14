@@ -582,9 +582,21 @@ opening_lines as (
     where abs(o.adjustment_amount) > {{ materiality_floor() }}
 ),
 
-{# line (0)'s balancing line, to the chart's retained-earnings account
-   (silver_main_accounts.is_retained_earnings; '' when the chart flags none,
-   which row J7's guard names). Scalar subqueries: one chart, one account. #}
+{# The chart's single retained-earnings account (konsolidat#316, macro retained_earnings_account()).
+   With 0 or 2+ accounts flagged there is no single account: line (0)'s balancing line is posted on ''
+   (never an anyIf guess) so the journal stays balanced, and assert_retained_earnings_account_unique
+   names the group. #}
+re_account as (
+    select
+        if(r.re_count = 1, r.retained_earnings_account, '') as re_account,
+        if(r.re_count = 1, any(a.account_name), '') as re_name
+    from {{ retained_earnings_account() }} as r
+    left join {{ ref('silver_main_accounts') }} as a
+        on a.main_account_id = r.retained_earnings_account
+    group by r.re_count, r.retained_earnings_account
+),
+
+{# line (0)'s balancing line, to the chart's single retained-earnings account (see re_account). #}
 opening_residual_lines as (
     select
         f.deal as deal,
@@ -592,8 +604,8 @@ opening_residual_lines as (
         f.data_area_id as data_area_id,
         f.fiscal_year as fiscal_year,
         f.fiscal_period as fiscal_period,
-        (select anyIf(main_account_id, is_retained_earnings = 1) from {{ ref('silver_main_accounts') }}) as main_account,
-        (select anyIf(account_name, is_retained_earnings = 1) from {{ ref('silver_main_accounts') }}) as account_name,
+        re.re_account as main_account,
+        re.re_name as account_name,
         r.residual_amount as adjustment_amount,
         f.acquisition_date as acquisition_date,
         f.journal_id as journal_id,
@@ -603,6 +615,7 @@ opening_residual_lines as (
     from opening_residual as r
     inner join figures as f
         on f.deal = r.deal
+    cross join re_account as re
 ),
 
 equity_lines as (
