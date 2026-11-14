@@ -17,6 +17,8 @@
 --   - the acquisition journal's investment, proceeds, costs and bargain_gain lines: the parent's investment and the
 --     deal's settlement, which the disposal journal does not derecognise either (its header, "Not here");
 --   - topside (gold_consolidation_adjustments): the design does not reverse it on exit; a WARN names it (task X8).
+-- Check periods stop at a re-entry (task X7): from the first later period in which E is live in G again, the group
+-- carries E anew; assert_reentry_carries_full_balance checks that it carries 100%, not 100% plus the pre-exit share.
 -- Second check: every ownership_exit journal in the FCTB sums to 0 per (group, entity, period).
 --
 -- Every exit method is checked, not only 'full': a proportional or equity-method exit that leaves its balances is
@@ -98,7 +100,22 @@ accounts as (
     where main_account != ''
 ),
 
-check_periods as (
+{# task X7: a re-entry ends the check. From the first later period in which gold_entity_ownership holds E live in G
+   again (full, proportional or equity, complete chain) the group carries E's balances anew, and
+   assert_reentry_carries_full_balance checks them instead. 0 = never re-entered (join_use_nulls = 0). #}
+reentries as (
+    select x.consolidation_group as consolidation_group, x.data_area_id as data_area_id,
+        x.fiscal_year as fiscal_year, x.fiscal_period as fiscal_period,
+        min(toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) as reentry_ord
+    from exits as x
+    inner join {{ ref('gold_entity_ownership') }} as eo
+        on eo.consolidation_group = x.consolidation_group and eo.data_area_id = x.data_area_id
+    where eo.consolidation_method in ('full', 'proportional', 'equity') and eo.has_complete_chain = 1
+      and (toUInt16(eo.fiscal_year), toUInt16(eo.fiscal_period)) > (x.fiscal_year, x.fiscal_period)
+    group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period
+),
+
+check_periods_all as (
     select consolidation_group, data_area_id, fiscal_year, fiscal_period,
         fiscal_year as check_year, fiscal_period as check_period
     from exits
@@ -113,6 +130,17 @@ check_periods as (
     ) as f
         on f.consolidation_group = x.consolidation_group
     where (toUInt16(f.fiscal_year), toUInt16(f.fiscal_period)) > (x.fiscal_year, x.fiscal_period)
+),
+
+check_periods as (
+    select c.consolidation_group as consolidation_group, c.data_area_id as data_area_id,
+        c.fiscal_year as fiscal_year, c.fiscal_period as fiscal_period,
+        c.check_year as check_year, c.check_period as check_period
+    from check_periods_all as c
+    left join reentries as r
+        on r.consolidation_group = c.consolidation_group and r.data_area_id = c.data_area_id
+        and r.fiscal_year = c.fiscal_year and r.fiscal_period = c.fiscal_period
+    where r.reentry_ord = 0 or toUInt32(c.check_year) * 1000 + c.check_period < r.reentry_ord
 ),
 
 {# every signed amount on E's rows: the FCTB in full, less the two parts named in the header #}

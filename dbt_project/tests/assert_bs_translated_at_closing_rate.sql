@@ -28,6 +28,12 @@
     The closing rate of a spine period is read from the entity's rows in that
     period (one currency pair per entity and group, so one closing rate).
     Same-currency entities translate at 1.0 and are skipped.
+
+    konsolidat#335 (task X7): the balance restarts at a re-entry. An exit
+    (ownership_exits(), a bare link end) derecognises what the group carried
+    (gold_ownership_exit_journal), so from the exit period on a key's balance
+    counts only the rows at or after the latest exit up to p; the model's
+    windows partition the same way (its spine_stints).
 #}
 
 with declared as (
@@ -71,8 +77,30 @@ spine as (
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
 ),
 
-{# Balance to each spine period: every governed row at or before it. A key is
-   checked from its first row on (no row before p means no balance yet). #}
+{# The latest exit of (group, entity) at or before each spine period, as an
+   ordinal; 0 when none (UNION + GROUP BY: join_use_nulls = 0). #}
+stint_start as (
+    select consolidation_group, data_area_id, period_ord, max(exit_ord) as start_ord
+    from (
+        select consolidation_group, data_area_id, period_ord, toUInt32(0) as exit_ord
+        from spine
+
+        union all
+
+        select s.consolidation_group, s.data_area_id, s.period_ord,
+            toUInt32(x.fiscal_year) * 1000 + x.fiscal_period
+        from spine as s
+        inner join {{ ownership_exits() }} as x
+            on x.consolidation_group = s.consolidation_group
+            and x.data_area_id = s.data_area_id
+        where toUInt32(x.fiscal_year) * 1000 + x.fiscal_period <= s.period_ord
+    )
+    group by consolidation_group, data_area_id, period_ord
+),
+
+{# Balance to each spine period: every governed row at or before it, from the
+   latest exit on. A key is checked from its first row on (no row before p
+   means no balance yet). #}
 to_date as (
     select
         g.consolidation_group as consolidation_group,
@@ -89,7 +117,12 @@ to_date as (
     inner join spine as s
         on g.consolidation_group = s.consolidation_group
         and g.data_area_id = s.data_area_id
+    inner join stint_start as st
+        on st.consolidation_group = s.consolidation_group
+        and st.data_area_id = s.data_area_id
+        and st.period_ord = s.period_ord
     where g.period_ord <= s.period_ord
+      and g.period_ord >= st.start_ord
     group by
         g.consolidation_group, g.data_area_id, g.main_account, g.partner_data_area_id,
         {{ dim_select(prefix='g.', trailing=true) }}

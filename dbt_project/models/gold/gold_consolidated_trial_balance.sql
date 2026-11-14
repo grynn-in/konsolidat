@@ -574,6 +574,50 @@ densified as (
     from fillers
 ),
 
+{# konsolidat#335 (task X7): a key's retranslation history starts again at a
+   re-entry. An exit (ownership_exits(): a bare link end) derecognises
+   everything the group carried for the entity up to it
+   (gold_ownership_exit_journal), and a later acquisition brings the balance
+   back in at the acquisition period's closing rate (the acquisition journal's
+   line (0)). Without a boundary the windows below would reach back across the
+   gap and retranslate the derecognised pre-exit rows at 100% again (the
+   joint_operation_gap shape: 50% carried, then 100% from the deal, plus
+   cum_local(pre-exit) x (C(re-entry) - C(last pre-exit period))). stint
+   counts the exits of (group, entity) up to and including the row's period;
+   the windows partition by it. 0 for an entity that never exited, so nothing
+   else changes. A re-entry after a full Business Disposal is not an exit
+   (ownership_exits()) and keeps one stint. #}
+spine_stints as (
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period, sum(n) as stint
+    from (
+        select consolidation_group, data_area_id, fiscal_year, fiscal_period, toUInt32(0) as n
+        from entity_spine
+
+        union all
+
+        select s.consolidation_group, s.data_area_id, s.fiscal_year, s.fiscal_period, toUInt32(1)
+        from entity_spine as s
+        inner join {{ ownership_exits() }} as x
+            on x.consolidation_group = s.consolidation_group
+            and x.data_area_id = s.data_area_id
+        where (toUInt16(x.fiscal_year), toUInt16(x.fiscal_period))
+            <= (toUInt16(s.fiscal_year), toUInt16(s.fiscal_period))
+    )
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period
+),
+
+{# Every row's period is on its entity's spine (fillers are spine periods), so
+   the inner join drops nothing. #}
+densified_stints as (
+    select d.*, ss.stint as stint
+    from densified as d
+    inner join spine_stints as ss
+        on ss.consolidation_group = d.consolidation_group
+        and ss.data_area_id = d.data_area_id
+        and ss.fiscal_year = d.fiscal_year
+        and ss.fiscal_period = d.fiscal_period
+),
+
 {# The windows run over every row of every period (period_filter is applied
    only in the final select), so a scoped build sees the key's history. #}
 retranslated as (
@@ -585,15 +629,15 @@ retranslated as (
                 * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
             0
         ) as retranslation_amount
-    from densified
+    from densified_stints
     window
         key_before as (
-            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            partition by consolidation_group, data_area_id, stint, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and 1 preceding
         ),
         key_all as (
-            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
+            partition by consolidation_group, data_area_id, stint, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and unbounded following
         )
@@ -722,7 +766,7 @@ consolidated as (
    positional append lands them swapped.
    konsolidat#257: the run's period filter applies here, after the windows. #}
 select * except (partner_data_area_id, uses_historical_rate, translation_adjustment, fx_method,
-                 is_retained_earnings, is_year_end_close, is_filler),
+                 is_retained_earnings, is_year_end_close, is_filler, stint),
        partner_data_area_id,
        uses_historical_rate,
        {# konsolidat#259: the column also carries the year-end close's
