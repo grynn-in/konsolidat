@@ -5,7 +5,7 @@
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis)
 VALUES
-  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 100, 'USD', 'Year-to-date movement');
+  ('ZZ-BE-1', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 100, 'USD', 'Year-to-date movement');
 INSERT INTO epm_gold.gold_spread_budget
   (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, layer, annual_amount, spread_profile_id, profile_name, period_weight, period_amount, submitted_by)
 VALUES

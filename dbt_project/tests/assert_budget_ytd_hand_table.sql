@@ -1,9 +1,9 @@
 -- konsol#348 S2 (R10, Q15-c): the hand-computed movements of test_fixtures/budget_raw_ytd.sql, as
 -- literals. assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it
--- cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-2026 (ZZ data) is stated
+-- cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated
 -- YTD per account and layer (the fixture's header holds the table); the manual spread of ZZ_PLAN_2026 /
 -- ZZE1 / FY2026 must hold exactly these movements, summed over budget dimensions.
--- It is vacuous where the cycle ZZ-CY-2026 has no lines (every real site): no expected row is built.
+-- It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built.
 -- Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
 {{ config(severity='error') }}
 
@@ -19,7 +19,7 @@ with expected as (
         union all select 'challenge', 'ZZ4000', 2, -50
         union all select 'challenge', 'ZZ4000', 3, 0
     )
-    where (select count() from {{ source('budget_raw', 'budget_entries') }} where cycle = 'ZZ-CY-2026') > 0
+    where 'ZZ-CY-HAND' in (select cycle from {{ source('budget_raw', 'budget_entries') }})
 ),
 
 combined as (
@@ -38,7 +38,7 @@ combined as (
       and scenario_id = 'ZZ_PLAN_2026'
       and data_area_id = 'ZZE1'
       and fiscal_year = 2026
-      and (select count() from {{ source('budget_raw', 'budget_entries') }} where cycle = 'ZZ-CY-2026') > 0
+      and 'ZZ-CY-HAND' in (select cycle from {{ source('budget_raw', 'budget_entries') }})
 ),
 
 per_row as (

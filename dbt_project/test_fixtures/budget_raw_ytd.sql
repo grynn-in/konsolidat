@@ -8,7 +8,7 @@
 -- gate: expect assert_budget_blank_layer_currency pass
 -- konsol#348 S2 (R10, Q15-c): epm_raw.budget_entries lines on 'Year-to-date movement' reach
 -- gold_spread_budget as period movements, converted within the Cycle year by the rule
--- silver_tb_movements uses (macros/period_movements.sql). One cycle ZZ-CY-2026, scenario ZZ_PLAN_2026,
+-- silver_tb_movements uses (macros/period_movements.sql). One cycle ZZ-CY-HAND, scenario ZZ_PLAN_2026,
 -- entity ZZE1, FY2026. Net = debit - credit. Stated YTD, and the movements computed by hand:
 --
 --   layer      account  dims    P1 YTD  P2 YTD  P3 YTD          movements P1 / P2 / P3
@@ -34,12 +34,12 @@
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES
-  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 100, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 2, 'ZZ4000', 0, 250, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-3', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 300, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-3', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 150, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 80, 0, 'USD', 'Year-to-date movement', 'ZZCC1', ''),
-  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 2, 'ZZ6000', 200, 0, 'USD', 'Year-to-date movement', 'ZZCC1', ''),
-  ('ZZ-BE-4', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 1, 'ZZ4000', 0, 0, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-4', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 2, 'ZZ4000', 0, 50, 'USD', 'Year-to-date movement', '', ''),
-  ('ZZ-BE-5', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 3, 'ZZ4000', 0, 50, 'USD', 'Year-to-date movement', '', '');
+  ('ZZ-BE-1', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 100, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-2', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 2, 'ZZ4000', 0, 250, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-3', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 300, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-3', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 150, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-1', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 80, 0, 'USD', 'Year-to-date movement', 'ZZCC1', ''),
+  ('ZZ-BE-2', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 2, 'ZZ6000', 200, 0, 'USD', 'Year-to-date movement', 'ZZCC1', ''),
+  ('ZZ-BE-4', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 1, 'ZZ4000', 0, 0, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-4', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 2, 'ZZ4000', 0, 50, 'USD', 'Year-to-date movement', '', ''),
+  ('ZZ-BE-5', 'ZZ-CY-HAND', 'ZZ_PLAN_2026', 'challenge', 'ZZE1', 2026, 3, 'ZZ4000', 0, 50, 'USD', 'Year-to-date movement', '', '');
