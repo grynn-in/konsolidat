@@ -1,6 +1,6 @@
 {# journal_close macros (konsolidat#316). Design: chosen under the 5 Nov 2026
    standing rule (not a personal pick), recorded on #316 when the PR opens.
-   No model uses these yet; the journal_close CTE in
+   The journal_close CTE in
    gold_fully_consolidated_tb and the year-end test read them.
 #}
 
@@ -24,4 +24,24 @@
 #}
 {% macro journal_close_excluded_layers() %}
   {{ return(['entity', 'ic_elimination']) }}
+{% endmacro %}
+
+{# The fiscal-year rule of the journal close (#357 re-review R1; chosen under the 5 Nov 2026 standing
+   rule: the journal close follows the #259 entity close). One row per consolidation group with
+   last_year = the latest fiscal year in the group's ENTITY layer (gold_consolidated_trial_balance: the
+   members' own TB rows, which is what #259's years_to_close reads, per entity). A (group, fiscal year)
+   is closed only when fiscal_year < last_year. A journal posting into a later year (a topside
+   auto-reversing into next year's P1, a deal journal) does not close a year: until a member files the
+   later year, #259 has not closed the entity P&L, so closing the journal P&L would split the year.
+   Residual: a group whose later year is filed by only some members closes the year for all of them
+   (the #259 close is per entity; the IC check in assert_journal_pnl_closed_at_year_end judges only
+   entity-years #259 closed).
+   Usage: inner join {{ journal_close_years() }} as y on y.consolidation_group = ... where fiscal_year < y.last_year
+#}
+{% macro journal_close_years() %}
+    (
+        select consolidation_group, max(fiscal_year) as last_year
+        from {{ ref('gold_consolidated_trial_balance') }}
+        group by consolidation_group
+    )
 {% endmacro %}

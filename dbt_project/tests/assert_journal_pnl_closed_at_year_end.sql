@@ -10,17 +10,24 @@
 -- own P&L legs with the entity close in the Closing period and so must net to zero by itself.
 -- The design note is on #316 (chosen under the 5 Nov 2026 standing rule).
 --
--- Closed years only (#357 review F1/F2): a (group, fiscal year) is judged only when a LATER fiscal
--- year follows it in the group's rows of gold_fully_consolidated_tb (journal_close excluded), the
--- rule the journal close (journal_close_years) and the #259 entity close (silver_tb_movements
--- years_to_close: fiscal_year < last_year) both follow. The group's last, open year is not closed
--- yet: its journal P&L and its ic_elimination P&L stay open, as its entity P&L does.
+-- Closed years only (#357 review F1/F2, re-review R1): a (group, fiscal year) is judged only when a LATER fiscal
+-- year exists in the group's ENTITY layer, the members' own TB rows: journal_close_years(), the one macro the
+-- journal close in gold_fully_consolidated_tb also reads, following the #259 entity close (silver_tb_movements
+-- years_to_close: fiscal_year < last_year). A journal posted into a later year (a topside auto-reversing into
+-- next year's P1) does not make a year closed. The group's last, open year is not closed yet: its journal P&L
+-- and its ic_elimination P&L stay open, as its entity P&L does.
+--
+-- ic_elimination is judged per entry, from gold_ic_eliminations (the FCTB layer carries no entity), and only
+-- when BOTH entities of the entry (debit_entity, credit_entity) have #259 close rows for that fiscal year
+-- (silver_tb_movements movement_kind = 'year_end_close'): its P&L legs reverse only as the entities' P&L is
+-- closed. Residual, not judged: an entry whose entity has no #259 close for the year, i.e. a late filer (no
+-- later year of its own yet) or an entity filing on a movement basis (#259 closes period-end balances only).
 --
 -- Closed layers net with the close PER ACCOUNT: for every layer not in
 -- journal_close_excluded_layers(), together with 'journal_close', the year's P&L to the Closing
 -- period sums to zero per (group, year, account), so one layer's error cannot hide behind
--- another's. Each excluded layer other than entity (ic_elimination) must net to zero by itself,
--- per adjustment_type: the #259 close reverses its P&L legs in the Closing period.
+-- another's. Each excluded layer other than entity must net to zero by itself, per adjustment_type:
+-- ic_elimination from its #259-closed entries (above); any other excluded layer from the FCTB rows.
 --
 -- Rows returned (ERROR severity), with main_account ('' when not per account) and the
 -- contributing adjustment_types:
@@ -59,10 +66,7 @@ journal_pnl as (
 ),
 
 group_years as (
-    select consolidation_group, max(fiscal_year) as last_year
-    from {{ ref('gold_fully_consolidated_tb') }}
-    where adjustment_type != 'journal_close'
-    group by consolidation_group
+    select * from {{ journal_close_years() }}
 ),
 
 {# journal P&L of closed years: a later fiscal year follows, and a Closing period is declared #}
@@ -107,7 +111,53 @@ open_excluded_layers as (
     from closed_pnl as p
     where p.fiscal_period <= p.closing_period
       and p.adjustment_type in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
+      and p.adjustment_type != 'ic_elimination'
     group by p.consolidation_group, p.fiscal_year, p.adjustment_type
+    having abs(sum(p.amount)) > {{ materiality_floor() }}
+),
+
+{# entity-years the #259 close ran for #}
+entity_closed_years as (
+    select distinct data_area_id, fiscal_year
+    from {{ ref('silver_tb_movements') }}
+    where movement_kind = 'year_end_close'
+),
+
+{# ic_elimination P&L legs of entries whose two entities both have a #259 close for the year (the same
+   legs the FCTB ic_elimination layer carries: debit_elimination on debit_account, credit_elimination on
+   credit_account) #}
+ic_closed_pnl as (
+    select
+        e.consolidation_group as consolidation_group,
+        e.fiscal_year as fiscal_year,
+        e.fiscal_period as fiscal_period,
+        leg.1 as main_account,
+        leg.2 as amount,
+        c.closing_period as closing_period
+    from {{ ref('gold_ic_eliminations') }} as e
+    array join [(e.debit_account, toFloat64(e.debit_elimination)),
+                (e.credit_account, toFloat64(e.credit_elimination))] as leg
+    inner join group_years as g on g.consolidation_group = e.consolidation_group
+    inner join closing_periods as c on c.fiscal_year = e.fiscal_year
+    left join {{ ref('silver_main_accounts') }} as ma on ma.main_account_id = leg.1
+    where e.fiscal_year < g.last_year
+      and (e.debit_entity, e.fiscal_year) in (select data_area_id, fiscal_year from entity_closed_years)
+      and (e.credit_entity, e.fiscal_year) in (select data_area_id, fiscal_year from entity_closed_years)
+      and (ma.is_pnl = 1
+           or leg.1 in ({{ "'" ~ journal_pnl_pseudo_accounts() | join("','") ~ "'" }}))
+),
+
+open_ic_elimination as (
+    select
+        p.consolidation_group as consolidation_group,
+        p.fiscal_year as fiscal_year,
+        '' as main_account,
+        ['ic_elimination'] as adjustment_types,
+        sum(p.amount) as open_amount,
+        'open' as reason
+    from ic_closed_pnl as p
+    where p.fiscal_period <= p.closing_period
+    group by p.consolidation_group, p.fiscal_year
     having abs(sum(p.amount)) > {{ materiality_floor() }}
 ),
 
@@ -143,6 +193,8 @@ no_closing as (
 select * from open_closed_layers
 union all
 select * from open_excluded_layers
+union all
+select * from open_ic_elimination
 union all
 select * from after_closing
 union all
