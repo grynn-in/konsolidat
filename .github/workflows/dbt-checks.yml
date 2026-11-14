@@ -21,6 +21,7 @@ on:
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_no_calendar_month_dates.py'
+      - 'tests/test_cost_allocation_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -50,6 +51,7 @@ on:
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_no_calendar_month_dates.py'
+      - 'tests/test_cost_allocation_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -170,6 +172,10 @@ jobs:
           # exit 1 = no match (pass); 0 = a match, 128 = a git error: both fail
           rc=0; git grep -n build_date_from_year_period -- dbt_project || rc=$?; test $rc -eq 1
           python -m unittest -v tests.test_no_calendar_month_dates
+      # konsol#269 (W1): the six cost allocation staging tables are konsol's DDL,
+      # verbatim, and declared dbt sources.
+      - name: cost allocation staging DDL and sources
+        run: python -m unittest -v tests.test_cost_allocation_ddl
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip

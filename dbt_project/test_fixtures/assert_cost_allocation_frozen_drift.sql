@@ -1,0 +1,16 @@
+-- konsol#269 W6 (T6) clean fixture: a frozen run whose pool still equals the current TB.
+-- ZZRP (Freeze at Approval, ZZE1 P1) was frozen at 1000 and the TB still says 1000.
+-- ZZOT has TB data but no coefficients for the run: it gets no lines, so it is not flagged (M3).
+-- tables epm_gold.gold_scenario_trial_balance, epm_gold.gold_cost_allocation_frozen
+INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
+('ZZRP','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Freeze at Approval','ZZE1','ZZSC',2026,1);
+INSERT INTO epm_staging.cost_allocation_run_accounts (parent, idx, main_account, declared_account) VALUES
+('ZZRP',1,'ZZ6000','');
+INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES
+('ZZRP','ZZIT',1,'ZZIT','ZZP1','ZZHC',1,1);
+INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, dim_cost_center, amount) VALUES
+('ZZSC','ZZE1',2026,1,'ZZ6000','ZZIT',1000),
+('ZZSC','ZZE1',2026,1,'ZZ6000','ZZOT',50);
+INSERT INTO epm_gold.gold_cost_allocation_frozen (run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension, member, line_type, origin_member, sender_member, receiver_member, driver, fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at) VALUES
+('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
+('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZP1','received','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00');
