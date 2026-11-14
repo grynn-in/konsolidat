@@ -26,9 +26,9 @@
        adjustment_amount = -group_amount * partial_period_removed_fraction('acquisition', ...)
    (an acquisition on the 11th of a 31-day month removes 10/31 of the period: days 1 to 10).
    One balancing line per (group, entity, year, period) on the chart's retained-earnings account
-   (silver_main_accounts.is_retained_earnings = 1, the lowest code if several, as
-   gold_nci_attribution_journal picks it) carries the opposite sum, so the rows sum to 0 and
-   assert_end_to_end_bs_balances holds. A chart that flags no retained-earnings account gets the balancing
+   (silver_main_accounts.is_retained_earnings = 1, read through retained_earnings_account(), konsolidat#316: '' when 0 or 2+ are flagged, named by assert_retained_earnings_account_unique;
+   gold_nci_attribution_journal reads it the same way) carries the opposite sum, so the rows sum to 0 and
+   assert_end_to_end_bs_balances holds. A chart that flags none, or several, gets the balancing
    line on account '' (the account the pre-acquisition-profit line of gold_business_combination_journal
    also uses), which assert_acquisition_accounts_declared names.
 
@@ -116,21 +116,29 @@ pnl_lines as (
     having abs(adjustment_amount) > {{ materiality_floor() }}
 ),
 
-{# the balancing line: the chart's retained-earnings account, '' when it flags none #}
+{# the balancing line: the chart's single retained-earnings account, '' when it flags none or several (#316) #}
 balancing_line as (
     select
         p.consolidation_group as consolidation_group,
         p.data_area_id as data_area_id,
         p.fiscal_year as fiscal_year,
         p.fiscal_period as fiscal_period,
-        (select min(main_account_id) from {{ ref('silver_main_accounts') }} where is_retained_earnings = 1) as main_account,
-        (select argMin(account_name, main_account_id) from {{ ref('silver_main_accounts') }} where is_retained_earnings = 1) as account_name,
+        if(re.re_count = 1, re.retained_earnings_account, '') as main_account,
+        if(re.re_count = 1, re_name.account_name, '') as account_name,
         '' as partner_data_area_id,
         {{ dim_select(prefix='p.', trailing=true) }}
         -sum(p.adjustment_amount) as adjustment_amount,
         any(p.acquisition_date) as acquisition_date
     from pnl_lines as p
-    group by p.consolidation_group, p.data_area_id, p.fiscal_year, p.fiscal_period{{ dim_group_by(prefix='p.', leading=true) }}
+    cross join {{ retained_earnings_account() }} as re
+    left join (
+        select main_account_id, any(account_name) as account_name
+        from {{ ref('silver_main_accounts') }}
+        group by main_account_id
+    ) as re_name
+        on re_name.main_account_id = re.retained_earnings_account
+    group by p.consolidation_group, p.data_area_id, p.fiscal_year, p.fiscal_period{{ dim_group_by(prefix='p.', leading=true) }},
+             re.re_count, re.retained_earnings_account, re_name.account_name
 )
 
 select

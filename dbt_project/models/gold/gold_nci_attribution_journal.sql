@@ -44,10 +44,11 @@
    The close period carries the share of its own activity, or no journal.
 
    No home, no journal. The retained-earnings account is the chart's
-   silver_main_accounts.is_retained_earnings = 1 (the lowest code if a chart
-   flags several); the NCI account is the group's root nci_account. A chart
-   without a retained-earnings account, or a group whose root declares no
-   nci_account, gets NO journal (inner joins); assert_nci_attribution_equals_
+   silver_main_accounts.is_retained_earnings = 1, read through the macro
+   retained_earnings_account() (konsolidat#316): when the chart flags none or
+   several, the RE line is posted on '' (the journal stays balanced) and
+   assert_retained_earnings_account_unique flags the group. A group whose root
+   declares no nci_account gets NO journal (inner join); assert_nci_attribution_equals_
    minority_result flags the missing figure and
    assert_nci_account_declared_for_partial_subs warns about the group.
 
@@ -145,12 +146,18 @@ group_nci as (
     {{ ic_group_nci_accounts() }}
 ),
 
+{# The chart's single retained-earnings account (konsolidat#316, macro retained_earnings_account()).
+   With 0 or 2+ accounts flagged there is no single account: the RE line is posted on '' (never a
+   lowest-code guess) so the journal stays balanced, and assert_retained_earnings_account_unique
+   names the group. #}
 re_account as (
     select
-        min(main_account_id) as re_account,
-        argMin(account_name, main_account_id) as re_name
-    from {{ ref('silver_main_accounts') }}
-    where is_retained_earnings = 1
+        if(r.re_count = 1, r.retained_earnings_account, '') as re_account,
+        if(r.re_count = 1, any(a.account_name), '') as re_name
+    from {{ retained_earnings_account() }} as r
+    left join {{ ref('silver_main_accounts') }} as a
+        on a.main_account_id = r.retained_earnings_account
+    group by r.re_count, r.retained_earnings_account
 ),
 
 nci_names as (
@@ -184,7 +191,6 @@ journal as (
     left join {{ source('epm_gold', 'consolidation_groups') }} as grp
         on grp.consolidation_group = sh.consolidation_group
         and grp.data_area_id = ''
-    where re.re_account != ''
 )
 
 select
