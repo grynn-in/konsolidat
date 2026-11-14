@@ -1,5 +1,6 @@
--- konsol#348 S2 (Q15-c; Q21-a, chosen under the standing rule, #348 comment 6875869375).
--- konsol refuses the same slices at intake; this is the build-time backstop.
+-- konsol#348 S2 (Q15-c, Q21-a): a Year-to-date slice states every period from 1 to its last.
+-- Q21-a was chosen under the standing rule (#348 comment 6875869375). konsol refuses the same
+-- slices at intake; this is the build-time backstop.
 -- gold_spread_budget differences a 'Year-to-date movement' series across the periods it states.
 -- With P6 missing, P7 would be YTD7 - YTD5 (two months merged into one); with a first stated period
 -- above 1, P1..Pn would merge into it. So every YTD (cycle, scenario, layer, entity, year) must state
