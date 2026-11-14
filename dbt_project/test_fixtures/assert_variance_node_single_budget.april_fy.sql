@@ -5,7 +5,7 @@
 -- assert_variance_node_single_budget, April-March fiscal year (konsolidat#171 step 2d, task 5c): must PASS when the
 -- variance, budget and unassigned-member models and the test all judge the tree at the DECLARED period end.
 --
--- The declared calendar is April-March: FY2026 P1 = 2025-04-01..2025-04-30 (build_date_from_year_period(2026, 1)
+-- The declared calendar is April-March: FY2026 P1 = 2025-04-01..2025-04-30 (the old calendar-month fallback for (2026, 1)
 -- would say 2026-01-01, nine months late). Hierarchy ZZ_AP over dim_cost_center, leaf ZZ_EX moves from ZZ_E to
 -- ZZ_B on 2026-01-01. FY2026 P1 (declared end 2025-04-30) rolls ZZ_EX to ZZ_E; the calendar-month date would roll it to ZZ_B.
 -- FY2026 P2 is NOT declared. The models used to give it the calendar-month date (2026-02-28, so ZZ_B); now it has

@@ -3,7 +3,7 @@
 -- when the historical equity rate is read as-of the DECLARED period end, not the first of calendar month P.
 --
 -- One GBP entity (ZZE1) in one USD group (ZZGRP); ZZ3000 share capital declares fx_method = 'historical'.
--- The declared calendar is April-March: FY2026 P1 = 2025-04-01..2025-04-30 (build_date_from_year_period(2026, 1)
+-- The declared calendar is April-March: FY2026 P1 = 2025-04-01..2025-04-30 (the old calendar-month fallback for (2026, 1)
 -- would say 2026-01-01, eight months late). Three tranches into USD under the owning group:
 --   1.10 dated 2025-02-01   (before P1)
 --   1.20 dated 2025-04-15   (INSIDE declared P1: the rate P1 must apply)

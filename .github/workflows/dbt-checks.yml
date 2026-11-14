@@ -20,6 +20,7 @@ on:
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
+      - 'tests/test_no_calendar_month_dates.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -48,6 +49,7 @@ on:
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
+      - 'tests/test_no_calendar_month_dates.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -161,6 +163,12 @@ jobs:
       # widened tables names its columns.
       - name: ownership graph DDL, sources and column-named inserts
         run: python -m unittest -v tests.test_ownership_graph_ddl
+      # konsolidat#171 2d: a period's date is the declared calendar's, never
+      # the calendar month of (year, period). The macro is deleted; keep it so.
+      - name: no build_date_from_year_period under dbt_project
+        run: |
+          if git grep -n build_date_from_year_period -- dbt_project; then exit 1; fi
+          python -m unittest -v tests.test_no_calendar_month_dates
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
