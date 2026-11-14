@@ -1,4 +1,4 @@
--- gate: build +gold_business_combination_journal +gold_business_disposal_journal gold_entity_ownership assert_no_ownership_step_on_partial_full_subsidiary assert_acquisition_accounts_declared
+-- gate: build +gold_business_combination_journal +gold_business_disposal_journal +gold_ownership_exit_journal gold_entity_ownership assert_no_ownership_step_on_partial_full_subsidiary assert_acquisition_accounts_declared
 -- gate: expect assert_acquisition_accounts_declared pass
 -- gate: expect assert_no_ownership_step_on_partial_full_subsidiary pass
 -- Passing fixture (konsol#117 pair 3 review, finding B; decision on the gap case). ZZJ was a joint operation until
@@ -33,6 +33,8 @@ ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_gain
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_proceeds_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS goodwill_amortisation_expense_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS acquisition_costs_account String DEFAULT '';
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS partial_period_treatment String DEFAULT '';
 CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
 ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_fair_value Float64 DEFAULT 0;
@@ -54,6 +56,7 @@ VALUES
   ('ZZ3500', 'ZZ investment in subsidiaries', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'INVESTMENTS', 'Published', 0),
   ('ZZ4900', 'ZZ bargain purchase gain', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Other income', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OTHER_INCOME', 'Published', 0),
   ('ZZ4950', 'ZZ gain or loss on disposal', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Other income', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OTHER_INCOME', 'Published', 0),
+  ('ZZ4960', 'ZZ gain or loss on exit', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Other income', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OTHER_INCOME', 'Published', 0),
   ('ZZ6900', 'ZZ goodwill amortisation', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OPEX', 'Published', 0),
   ('ZZ6950', 'ZZ acquisition costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OPEX', 'Published', 0);
 INSERT INTO epm_staging.fiscal_periods
@@ -83,16 +86,16 @@ INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency,
    nci_measurement, accounting_framework, goodwill_treatment, acquisition_costs_treatment, measurement_period, bargain_purchase,
    goodwill_account, fair_value_adjustment_account, investment_account, nci_account, bargain_purchase_gain_account,
-   disposal_gain_loss_account, disposal_proceeds_account, goodwill_amortisation_expense_account, acquisition_costs_account)
+   disposal_gain_loss_account, disposal_proceeds_account, goodwill_amortisation_expense_account, acquisition_costs_account, exit_gain_loss_account)
 VALUES
   ('ZZH', '', 'ZZ Holdings', 'USD',
    'full', 'US GAAP', 'Impairment only', 'Expense', 'Off', 'Recognise gain',
    'ZZ1800', 'ZZ1900', 'ZZ3500', 'ZZ3400', 'ZZ4900',
-   'ZZ4950', 'ZZ1000', 'ZZ6900', 'ZZ6950'),
+   'ZZ4950', 'ZZ1000', 'ZZ6900', 'ZZ6950', 'ZZ4960'),
   ('ZZH', 'ZZJ', 'ZZ Target', 'USD',
    '', '', '', '', '', '',
    '', '', '', '', '',
-   '', '', '', '');
+   '', '', '', '', '');
 INSERT INTO epm_staging.consolidation_hierarchy
   (consolidation_group, data_area_id, parent_group, hierarchy_level, path)
 VALUES
