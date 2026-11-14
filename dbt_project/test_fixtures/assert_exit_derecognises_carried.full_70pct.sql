@@ -7,7 +7,7 @@
 -- Business Combination ends its Ownership Period with no Business Disposal and no successor (a bare end).
 -- Group ZZQG (USD, root declares goodwill ZZ1800, FVA ZZ1900, investment ZZ3500, NCI ZZ3400, exit gain/loss ZZ4960;
 -- Impairment only, so no amortisation). Entity ZZQS (EUR), 70% full from 2026-01-01, end_date 2026-03-31:
--- the exit event is FY2026 P4 (ownership_exits()). Equity accounts declare fx_method 'closing' (equity is never
+-- the exit event is FY2026 P3 (the Regular period holding end_date; #358 review F1 moved it from P4) (ownership_exits()). Equity accounts declare fx_method 'closing' (equity is never
 -- revalued: movement x the closing rate of the period it was posted, #257 Q2).
 -- Governed EUR->USD: P1 Closing 1.10 / Average 1.10, P2 1.20 / 1.15, P3 1.25 / 1.22 (P4 1.30 / 1.28, unused).
 -- Acquisition BC-ZZQG-ZZQS-2026-01-01 (FY2026 P1), 70% for 1,500 USD, NCI partial. Acquired balances (EUR):
@@ -19,12 +19,12 @@
 -- CTA (fx_revaluation plug): P2 -135, P3 -78 (P1 0), total -213; NCI attribution 30%: result P2 -103.50, P3 -36.60;
 -- CTA leg +40.50, +23.40; NCI P2 -144.00, P3 -60.00. So the 'CTA' line carries -213 + 63.90 = -149.10 (the group's
 -- 70%), and ZZ3400 carries -462 - 144 - 60 = -666 (= 0.30 x (2,000 net assets + 220 FVA)).
--- Expected journal EXIT_ZZQG_ZZQS_2026_4 in FY2026 P4:
+-- Expected journal EXIT_ZZQG_ZZQS_2026_3 in FY2026 P3, reversing what was carried through P3 inclusive:
 --   Cr ZZ1100 1,750 | Cr ZZ1420 625 | Dr ZZ2100 375 | Cr ZZ1800 422 | Cr ZZ1900 220 | Dr CTA 149.10 | Dr ZZ3400 666
 --   Dr ZZ4960 1,826.90  (loss = 2,000 + 422 + 220 - 666 - 149.10: net assets, goodwill and FVA out, NCI out,
 --                         the group's CTA recycled to P&L; no proceeds)
 -- Equity (ZZ3000, ZZ3100) and the P&L are not touched (IFRS 10.B98). On the base (no exit journal) the balances
--- stay in the group: assert_exit_derecognises_carried flags the 7 carried accounts in P4.
+-- stay in the group: assert_exit_derecognises_carried flags the 7 carried accounts in P3.
 -- Inputs named so they exist (empty): epm_staging.consolidation_adjustments, epm_staging.ic_balances,
 -- epm_staging.ic_elimination_rules, epm_staging.intercompany_accounts, epm_staging.historical_equity_rates.
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';

@@ -2,10 +2,12 @@
 -- gate: expect assert_exit_matches_ic_left pass
 -- konsolidat#335 (option A, Deepak Pai, 14 Nov 2026), task X6: an ownership exit and the intercompany 'left' row agree.
 -- Group ZZXG (EUR). Held entity ZZXA 100% full from 2026-01-01, no end. Exited entity ZZXE 100% full from 2026-01-01,
--- end_date 2026-03-31 with no successor and no disposal: a bare end, so the exit event is FY2026 P4.
+-- end_date 2026-03-31 with no successor and no disposal: a bare end, so the exit event is FY2026 P3
+-- (the Regular period holding end_date; #358 review F1 moved it from P4) and ZZXE is first out in P4.
 -- IC pair ZZ1200 (receivable, ZZXE, partner ZZXA) <-> ZZ2100 (payable, ZZXA, partner ZZXE), 100 each, booked in P1.
--- ZZXA also books a movement in P4 so the IC spine (periods present in the trial balance) has the exit period.
--- Expected: gold_ic_reconciliation has a 'left' row in FY2026 P4 for the pair; in P4, summed over every FCTB layer,
+-- ZZXA also books a movement in P4 so the IC spine (periods present in the trial balance) has the first period out.
+-- Expected: gold_ic_reconciliation has a 'left' row in FY2026 P4 for the pair (the first spine period at or after
+-- the first period out); to P4, summed over every FCTB layer,
 -- ZZXE's ZZ1200 is 0 (layer 1 +100, exit journal -100, the layer-2 elimination reversed) and ZZXA's ZZ2100 is -100 on its own:
 -- the group sees the full, now external, balance. The exit journal never reads layer 2 (no double reversal). EXPECT pass.
 -- Inputs named so they exist (empty): epm_raw.general_journal_account_entry_bi_entities,

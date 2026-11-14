@@ -31,9 +31,10 @@
 
     konsolidat#335 (task X7): the balance restarts at a re-entry. An exit
     (ownership_exits(), a bare link end) derecognises what the group carried
-    (gold_ownership_exit_journal), so from the exit period on a key's balance
-    counts only the rows at or after the latest exit up to p; the model's
-    windows partition the same way (its spine_stints).
+    (gold_ownership_exit_journal) through its exit period, so from the exit's
+    first period out (out_fiscal_*) on a key's balance counts only the rows at
+    or after the latest such period up to p; the model's windows reset the
+    same way (its spine_stints).
 #}
 
 with declared as (
@@ -88,12 +89,12 @@ stint_start as (
         union all
 
         select s.consolidation_group, s.data_area_id, s.period_ord,
-            toUInt32(x.fiscal_year) * 1000 + x.fiscal_period
+            toUInt32(x.out_fiscal_year) * 1000 + x.out_fiscal_period
         from spine as s
         inner join {{ ownership_exits() }} as x
             on x.consolidation_group = s.consolidation_group
             and x.data_area_id = s.data_area_id
-        where toUInt32(x.fiscal_year) * 1000 + x.fiscal_period <= s.period_ord
+        where toUInt32(x.out_fiscal_year) * 1000 + x.out_fiscal_period <= s.period_ord
     )
     group by consolidation_group, data_area_id, period_ord
 ),

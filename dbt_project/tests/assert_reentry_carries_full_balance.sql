@@ -17,9 +17,11 @@
 -- deal's settlement, not E's balances) and topside (gold_consolidation_adjustments).
 -- Full only: a proportional re-entry carries translated x the share of each period, not one share of the
 -- cumulative balance, so this formula does not hold for it after a share step.
+{# a re-entry is live again at or after the exit's first period out (out_fiscal_*): between the exit period
+   and it the entity can still be consolidated (a year-end boundary period, ownership_exits()) #}
 with exits as (
-    select consolidation_group, data_area_id, toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period
+    select consolidation_group, data_area_id, toUInt16(out_fiscal_year) as fiscal_year,
+        toUInt16(out_fiscal_period) as fiscal_period
     from {{ ownership_exits() }}
 ),
 

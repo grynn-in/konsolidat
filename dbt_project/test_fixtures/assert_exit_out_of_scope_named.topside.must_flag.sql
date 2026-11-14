@@ -1,7 +1,7 @@
 -- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_exit_out_of_scope_named
 -- gate: expect assert_exit_out_of_scope_named flag 1
--- konsolidat#335 task X8, case (d): ZZQS (full 70%) exits in FY2026 P4; an approved topside of 25 on ZZ1100 in P3 stays.
--- Exactly one WARN row: FY2026 P4, 'topside on exited entity'.
+-- konsolidat#335 task X8, case (d): ZZQS (full 70%) exits in FY2026 P3 (#358 review F1; was P4); an approved topside of 25 on ZZ1100 in P3 stays.
+-- Exactly one WARN row: FY2026 P3 (the exit period), 'topside on exited entity'.
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';

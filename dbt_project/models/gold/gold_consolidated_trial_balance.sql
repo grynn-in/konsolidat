@@ -583,7 +583,10 @@ densified as (
    gap and retranslate the derecognised pre-exit rows at 100% again (the
    joint_operation_gap shape: 50% carried, then 100% from the deal, plus
    cum_local(pre-exit) x (C(re-entry) - C(last pre-exit period))). stint
-   counts the exits of (group, entity) up to and including the row's period;
+   counts the exits of (group, entity) whose first period out (out_fiscal_*,
+   the period after the last one the entity was consolidated in) is at or
+   before the row's period, so the rows of the exit period itself, which the
+   exit journal reverses, close the old stint;
    the windows partition by it. 0 for an entity that never exited, so nothing
    else changes. A re-entry after a full Business Disposal is not an exit
    (ownership_exits()) and keeps one stint. #}
@@ -600,7 +603,7 @@ spine_stints as (
         inner join {{ ownership_exits() }} as x
             on x.consolidation_group = s.consolidation_group
             and x.data_area_id = s.data_area_id
-        where (toUInt16(x.fiscal_year), toUInt16(x.fiscal_period))
+        where (toUInt16(x.out_fiscal_year), toUInt16(x.out_fiscal_period))
             <= (toUInt16(s.fiscal_year), toUInt16(s.fiscal_period))
     )
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period

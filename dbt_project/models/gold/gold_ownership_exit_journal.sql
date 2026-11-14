@@ -10,11 +10,15 @@
    Ownership Period ends without a deal. Design note: konsol .claude/memory/active/tasks-p1-round2.md, T8 (chosen
    under the 5 Nov standing rule). Task X3: the FULL method.
 
-   One journal per exit event (G, E, P) of ownership_exits() (X1: E live in G the previous declared period, not
-   live in P, not ended by its own full Business Disposal), journal_id EXIT_<group>_<entity>_<FY>_<period>,
-   adjustment_type 'ownership_exit', posted in P, in group currency, dimensions blank (deal journal rule, decided
-   3 Oct 2026). It reverses what the group carried for E up to the period BEFORE P, read from the layers that
-   posted it, and is balanced by construction:
+   One journal per exit event (G, E, P) of ownership_exits() (X1: E live in G, then not live, not ended by its own
+   full Business Disposal; P is the Regular period holding the end date, #358 review F1), journal_id
+   EXIT_<group>_<entity>_<FY>_<period>, adjustment_type 'ownership_exit', posted in P, in group currency, dimensions
+   blank (deal journal rule, decided 3 Oct 2026). It reverses what the group carried for E through AND including P,
+   as gold_business_disposal_journal line (0) does for the disposal period (decision #171 Q2 C, 10 Nov 2026: the
+   deal period stays inside the window and its journal derecognises through it), read from the layers that posted
+   it, and is balanced by construction. The group's balance sheet at the end of P no longer holds E (IFRS 10.25).
+   P's P&L stays whole: the #171 2c partial-period treatment (line 105 of the disposal journal) is read for
+   Business Combination and Disposal documents, and a bare exit is neither (follow-up). The lines:
      (0)   derecognised  every non-equity balance-sheet account of E: layer 1 (gold_consolidated_trial_balance,
                          group_amount, 100% for full) and the acquisition journal's opening_balance lines.
                          Equity is the chart's silver_main_accounts.is_equity, the classification
@@ -41,15 +45,15 @@
    model translates every result at the period's Average rate and carries no revaluation. EQ_INCOME stays (the
    share of past results is in group reserves). gold_equity_method_associates stops by itself at the end: it
    reads gold_entity_ownership with consolidation_method = 'equity', which has no row for the associate from
-   the exit period on, so nothing posts after the exit (the fixture .equity pins it).
+   the first period it is out (out_fiscal_period) on; what it posted through the exit period is reversed here,
+   so nothing is carried after the exit (the fixture .equity pins it).
 
    The accounts come from the group's root row (data_area_id = ''), read with any() per column as
    gold_business_disposal_journal reads it. A group without a root row, or whose root declares no
    exit_gain_loss_account, posts nothing: assert_exit_accounts_declared (X2, ERROR) names it, and
    assert_exit_derecognises_carried flags the balances left behind.
 
-   Known gap (not this task): gold_goodwill_amortisation_journal stops only at a Business Disposal, so under
-   'Amortise' it keeps posting after a bare exit; assert_exit_derecognises_carried flags the goodwill then.
+   gold_goodwill_amortisation_journal stops before P (X3c), as it stops before a disposal period.
 
    line_no: 0 derecognised, 101 goodwill, 102 fva, 103 cta, 104 nci, 105 equity_investment, 199 gain_loss. #}
 
@@ -109,9 +113,10 @@ posting_exits_all as (
 ),
 
 {# What an earlier journal already derecognised is not carried any more: after a re-entry (the
-   joint_operation_gap shape, task X7) the next exit reverses only from the previous exit period on (that
-   exit's journal reversed everything before it), and only after the latest full Business Disposal of E in G
-   before P (its journal derecognised up to and including its period). ord = FY x 1000 + period. #}
+   joint_operation_gap shape, task X7) the next exit reverses only from the period after the previous exit
+   period (that exit's journal reversed everything up to and including its period), and only after the latest
+   full Business Disposal of E in G before P (its journal derecognised up to and including its period), so both
+   bounds are the period + 1. ord = FY x 1000 + period. #}
 previous_exit as (
     select
         consolidation_group, data_area_id, fiscal_year, fiscal_period,
@@ -145,7 +150,8 @@ previous_disposal as (
 posting_exits as (
     select
         x.*,
-        greatest(pe.previous_exit_ord, if(pd.disposal_ord = 0, toUInt32(0), pd.disposal_ord + 1)) as from_ord
+        greatest(if(pe.previous_exit_ord = 0, toUInt32(0), pe.previous_exit_ord + 1),
+                 if(pd.disposal_ord = 0, toUInt32(0), pd.disposal_ord + 1)) as from_ord
     from posting_exits_all as x
     left join previous_exit as pe
         on pe.consolidation_group = x.consolidation_group and pe.data_area_id = x.data_area_id
@@ -259,8 +265,8 @@ carried_sources as (
     where q.main_account = 'EQ_INVEST'
 ),
 
-{# the to-date carried amount per exit and line: every period BEFORE the exit period, by tuple, from the
-   lower bound posting_exits sets #}
+{# the to-date carried amount per exit and line: every period up to AND including the exit period, by tuple,
+   from the lower bound posting_exits sets #}
 carried as (
     select
         x.consolidation_group as consolidation_group,
@@ -279,7 +285,7 @@ carried as (
     inner join posting_exits as x
         on x.consolidation_group = s.consolidation_group
         and x.data_area_id = s.data_area_id
-    where (s.fiscal_year, s.fiscal_period) < (x.fiscal_year, x.fiscal_period)
+    where (s.fiscal_year, s.fiscal_period) <= (x.fiscal_year, x.fiscal_period)
       and toUInt32(s.fiscal_year) * 1000 + s.fiscal_period >= x.from_ord
     group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period, x.journal_id, x.end_date,
              x.exit_gain_loss_account, s.main_account, s.line_no, s.account_role

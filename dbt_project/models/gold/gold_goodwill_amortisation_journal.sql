@@ -133,8 +133,10 @@ disposal_stop as (
 
         {# konsolidat#335 (X3c): a bare end of the link (ownership_exits(),
            no Business Disposal) stops the schedule the same way, before the
-           exit period: gold_ownership_exit_journal derecognises the goodwill
-           net of the amortisation posted to the period before it. #}
+           exit period (the Regular period holding the end date, as the
+           disposal period holds its date): gold_ownership_exit_journal
+           derecognises the goodwill net of the amortisation posted to date
+           through the exit period, in which none is posted. #}
         select
             x.consolidation_group as consolidation_group,
             x.data_area_id as data_area_id,

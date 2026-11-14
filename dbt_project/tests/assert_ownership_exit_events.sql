@@ -7,7 +7,7 @@
     The event's period P (#358 review F1) is the Regular period whose declared span holds the end date that
     caused it (lowest tuple), as a full disposal's period holds its disposal_date: E is derecognised by the end
     of the period the group last held it in (IFRS 10.25). With no such end date, or none a Regular period
-    before F holds, P = F.
+    before F holds, P = F. The macro's F (out_fiscal_*) and previous period are checked too.
 
     One check, one row per failure. ORACLE: for every entity whose chain is a single direct link (no
     sub-group above it) the exit events are recomputed here from epm_staging.ownership_periods, business_disposals and the fiscal
@@ -143,7 +143,7 @@ candidates as (
 ),
 
 oracle as (
-    select c.lg as g, c.le as ent, c.xfy as fy, c.xfp as fp, c.p_fy as pfy, c.p_fp as pfp
+    select c.lg as g, c.le as ent, c.xfy as fy, c.xfp as fp, c.lfy as ofy, c.lfp as ofp, c.p_fy as pfy, c.p_fp as pfp
     from candidates as c
     left join (
         select l.g as dg, l.ent as de, o.o_to as d_end
@@ -161,6 +161,7 @@ oracle as (
 
 macro as (
     select consolidation_group as g, data_area_id as ent, fiscal_year as fy, fiscal_period as fp,
+      out_fiscal_year as ofy, out_fiscal_period as ofp,
       previous_fiscal_year as pfy, previous_fiscal_period as pfp, end_date as ended
     from {{ ownership_exits() }}
 )
@@ -168,9 +169,9 @@ macro as (
 select 'macro event the oracle does not have' as problem, concat(g, ' ', ent, ' FY', toString(fy), ' P', toString(fp)) as event
 from macro
 where (g, ent) in (select g, ent from links)
-  and (g, ent, fy, fp, pfy, pfp) not in (select g, ent, fy, fp, pfy, pfp from oracle)
+  and (g, ent, fy, fp, ofy, ofp, pfy, pfp) not in (select g, ent, fy, fp, ofy, ofp, pfy, pfp from oracle)
 
 union all
 select 'oracle event the macro does not have', concat(g, ' ', ent, ' FY', toString(fy), ' P', toString(fp))
 from oracle
-where (g, ent, fy, fp, pfy, pfp) not in (select g, ent, fy, fp, pfy, pfp from macro)
+where (g, ent, fy, fp, ofy, ofp, pfy, pfp) not in (select g, ent, fy, fp, ofy, ofp, pfy, pfp from macro)
