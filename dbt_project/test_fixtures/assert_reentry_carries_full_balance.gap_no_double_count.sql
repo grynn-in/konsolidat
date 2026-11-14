@@ -1,5 +1,7 @@
--- gate: build +gold_fully_consolidated_tb gold_ownership_exit_journal assert_reentry_carries_full_balance
+-- gate: build +gold_fully_consolidated_tb gold_ownership_exit_journal assert_reentry_carries_full_balance assert_exit_derecognises_carried assert_bs_translated_at_closing_rate
 -- gate: expect assert_reentry_carries_full_balance pass
+-- gate: expect assert_exit_derecognises_carried pass
+-- gate: expect assert_bs_translated_at_closing_rate pass
 -- konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X7. Based on
 -- assert_acquisition_accounts_declared.joint_operation_gap: ZZJ (EUR) is a joint operation of ZZH (USD), 50%
 -- proportional until 2025-12-31 (a bare end, no Business Disposal), then out of the group for Jan-Mar 2026, then
