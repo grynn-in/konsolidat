@@ -1,7 +1,17 @@
 -- gate: build gold_spread_budget assert_spread_sums_to_annual
 -- gate: expect assert_spread_sums_to_annual pass
 -- One annual input of 1200 spread by a flat 12-period profile: the 12 period amounts sum to 1200, so the
--- test must PASS. epm_gold.budget_monthly_input is read too, empty here, so it is named to exist (empty).
+-- test must PASS. epm_raw.budget_entries is read too, empty here, so it is created empty.
+-- epm_raw.budget_entries is konsol's (I3) and may not exist on the stack yet: created here as in budget_raw_monthly.
+CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
+    entry_name String, cycle String, scenario_id String, layer String,
+    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
+    main_account String, debit Decimal(18,4), credit Decimal(18,4),
+    currency String, amount_basis String
+) ENGINE = MergeTree
+ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
+ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
+ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, annual_amount, spread_profile_id, submitted_by)
 VALUES

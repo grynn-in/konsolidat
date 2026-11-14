@@ -19,6 +19,16 @@
 --   ZZ_AX   leaf under ZZ_A 2010-01-01 .. open
 --
 -- The live table may predate the two tranche columns: add them first.
+-- epm_raw.budget_entries is konsol's (I3) and may not exist on the stack yet: created here as in budget_raw_monthly.
+CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
+    entry_name String, cycle String, scenario_id String, layer String,
+    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
+    main_account String, debit Decimal(18,4), credit Decimal(18,4),
+    currency String, amount_basis String
+) ENGINE = MergeTree
+ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
+ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
+ALTER TABLE epm_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
 -- A table that already has them as plain Date (1970-01-01..2149-06-06 clamps both ends) becomes Date32.
@@ -27,8 +37,6 @@ ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_to 
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_staging.reporting_hierarchies
   (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
 VALUES
@@ -102,7 +110,7 @@ VALUES
 -- ZZ_EX is mirrored on dim_cost_center as hierarchy ZZ_DIV_CC, same codes and windows:
 --   ZZ_ROOT group 2010-01-01 .. open | ZZ_B group 2010-01-01 .. open | ZZ_E group 2017-01-01 .. 2024-12-31
 --   ZZ_EX leaf under ZZ_E 2017-01-01 .. 2024-12-31, under ZZ_B 2025-01-01 .. open
--- Budget Sheet (epm_gold.budget_monthly_input), scenario ZZ_PLAN_H, base layer, ZZ4000, cost centre ZZ_EX:
+-- Budget Entry lines (epm_raw.budget_entries, debit/credit, Period movement), scenario ZZ_PLAN_H, base layer, ZZ4000, cost centre ZZ_EX:
 --   FY2018 P6 -70 -> ZZ_EX, ZZ_E, ZZ_ROOT (not ZZ_B) | FY2025 P6 -600 -> ZZ_EX, ZZ_B, ZZ_ROOT (not ZZ_E).
 -- gold_spread_budget also reads epm_gold.budget_annual_input and epm_gold.spread_profiles, empty here.
 INSERT INTO epm_staging.reporting_hierarchies
@@ -113,11 +121,11 @@ VALUES
   ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_E', 'ZZ E', 'ZZ_ROOT', 1, 2, 'ZZ_ROOT/ZZ_E', '', '', 1, 'Published', '2017-01-01', '2024-12-31'),
   ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_EX', 'ZZ EX', 'ZZ_E', 0, 3, 'ZZ_ROOT/ZZ_E/ZZ_EX', '', '', 1, 'Published', '2017-01-01', '2024-12-31'),
   ('ZZ_DIV_CC', 'dim_cost_center', 'ZZ_EX', 'ZZ EX', 'ZZ_B', 0, 3, 'ZZ_ROOT/ZZ_B/ZZ_EX', '', '', 1, 'Published', '2025-01-01', '2299-12-31');
-INSERT INTO epm_gold.budget_monthly_input
-  (scenario_id, data_area_id, fiscal_year, main_account, dim_cost_center, dim_department, fiscal_period, amount, layer)
+INSERT INTO epm_raw.budget_entries
+  (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES
-  ('ZZ_PLAN_H', 'ZZE1', 2018, 'ZZ4000', 'ZZ_EX', '', 6, -70, 'base'),
-  ('ZZ_PLAN_H', 'ZZE1', 2025, 'ZZ4000', 'ZZ_EX', '', 6, -600, 'base');
+  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_H', 'base', 'ZZE1', 2018, 6, 'ZZ4000', 0, 70, 'USD', 'Period movement', 'ZZ_EX', ''),
+  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_H', 'base', 'ZZE1', 2025, 6, 'ZZ4000', 0, 600, 'USD', 'Period movement', 'ZZ_EX', '');
 --
 -- Scenarios (row H5b): gold_scenario_trial_balance and gold_variance_analysis read epm_gold.scenario_definitions;
 -- ZZ_PLAN_H must be an active budget-type scenario for its budget rows to reach variance.
