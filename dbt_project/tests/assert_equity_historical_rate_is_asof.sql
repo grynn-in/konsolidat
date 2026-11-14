@@ -19,6 +19,10 @@
 -- presentation currencies were one as-of series and the later one won at
 -- both levels.
 --
+-- period_date is read from gold_entity_ownership (the ownership window date), not recomputed from
+-- declared_periods(): a test that recomputed the model's own date would pass a date error both share
+-- (konsolidat#171 2d, review F3).
+--
 -- Fails (returns rows) when, for a row that applied a historical rate:
 --   * no tranche into the row's reporting currency qualifies as-of the period
 --     (rate borrowed from the future, or from another currency's series), or
@@ -31,7 +35,7 @@ with applied as (
         ctb.data_area_id as data_area_id,
         ctb.main_account as main_account,
         ctb.reporting_currency as reporting_currency,
-        dp.end_date as period_date,
+        eo.period_date as period_date,
         ctb.historical_equity_rate as historical_equity_rate
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     inner join {{ ref('gold_entity_ownership') }} as eo
@@ -39,9 +43,6 @@ with applied as (
         and eo.data_area_id = ctb.data_area_id
         and eo.fiscal_year = ctb.fiscal_year
         and eo.fiscal_period = ctb.fiscal_period
-    inner join {{ declared_periods() }} as dp
-        on dp.fiscal_year = ctb.fiscal_year
-        and dp.fiscal_period = ctb.fiscal_period
     where ctb.historical_equity_rate is not null
 ),
 
