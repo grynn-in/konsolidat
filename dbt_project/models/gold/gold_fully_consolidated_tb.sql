@@ -298,14 +298,17 @@ posted_layers as (
    pseudo-account in journal_pnl_pseudo_accounts() (EQ_INCOME). Summed over the year's periods up
    to AND including the Closing period; postings after it are not closed (the year-end test names
    them, reason after_closing).
-   The year rule is the #259 entity close's (#357 review F2, chosen under the 5 Nov 2026 standing
-   rule): a (group, fiscal year) is closed only when a LATER fiscal year follows it in the group's
-   posted layers (journal_close_years). The open, current year is not closed early, so its journal
-   P&L stays in P&L beside the entity P&L, which #259 also leaves open until a later year arrives
-   (silver_tb_movements years_to_close: fiscal_year < last_year). The group's posted layers are the
-   source, not silver_tb_movements' entity periods, because the close is per group and a group can
-   hold members that post no entity rows (an associate, a disposed subsidiary) whose layers carry
-   the later year. One negating line per (group, entity, year, account, dimensions) and one retained-earnings
+   The year rule is the #259 entity close's (#357 review F2, re-review R1; chosen under the 5 Nov 2026
+   standing rule: the journal close follows the #259 entity close): a (group, fiscal year) is closed
+   only when a LATER fiscal year exists in the group's ENTITY layer, the members' own TB rows
+   (journal_close_years(), shared with the year-end test). A journal posting into a later year (a
+   topside auto-reversing into next year's P1) does not close a year: until a member files the later
+   year #259 leaves the entity P&L open (silver_tb_movements years_to_close: fiscal_year < last_year),
+   and so the journal P&L stays open beside it. Residual: a group of members that post no entity rows
+   for the later year (only associates, or only deal journals) is not closed until one does.
+   Lines are rounded to 4 places (journals are kept to 4 places, #353; re-review R2), so Float dust
+   (0.1 + 0.2 - 0.3) posts no line.
+   One negating line per (group, entity, year, account, dimensions) and one retained-earnings
    line per (group, entity, year, dimensions); no partner (this table has none). When the chart
    flags not exactly one retained-earnings account, nothing is posted:
    assert_retained_earnings_account_unique fails naming the group. Reads posted_layers, never this
@@ -315,12 +318,6 @@ journal_close_periods as (
     from {{ source('epm_staging', 'fiscal_periods') }}
     where period_type = 'Closing'
     group by fiscal_year
-),
-
-journal_close_years as (
-    select consolidation_group, max(fiscal_year) as last_year
-    from posted_layers
-    group by consolidation_group
 ),
 
 journal_close_source as (
@@ -337,7 +334,7 @@ journal_close_source as (
         l.amount as amount
     from posted_layers as l
     inner join journal_close_periods as c on c.fiscal_year = l.fiscal_year
-    inner join journal_close_years as y on y.consolidation_group = l.consolidation_group
+    inner join {{ journal_close_years() }} as y on y.consolidation_group = l.consolidation_group
     left join {{ ref('silver_main_accounts') }} as ma on ma.main_account_id = l.main_account
     where l.fiscal_year < y.last_year
       and l.adjustment_type not in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
@@ -346,8 +343,9 @@ journal_close_source as (
            or l.main_account in ({{ "'" ~ journal_pnl_pseudo_accounts() | join("','") ~ "'" }}))
 ),
 
-{# Per-account lines: one per (group, entity, year, account, dimensions) whose year P&L is not 0
-   (#357 review F5: a topside and its auto-reversal that net to 0 post no line). #}
+{# Per-account lines: one per (group, entity, year, account, dimensions) whose year P&L, rounded to 4
+   places, is not 0 (#357 review F5: a topside and its auto-reversal that net to 0 post no line;
+   re-review R2: Float dust rounds to 0 and posts no line). #}
 journal_close_lines as (
     select
         s.consolidation_group as consolidation_group,
@@ -359,17 +357,17 @@ journal_close_lines as (
         {% for d in get_dimensions() -%}
         s.{{ d.name }} as {{ d.name }},
         {% endfor -%}
-        -sum(s.amount) as amount
+        round(-sum(s.amount), 4) as amount
     from journal_close_source as s
     cross join {{ retained_earnings_account() }} as re
     where re.re_count = 1
     group by s.consolidation_group, s.data_area_id, s.fiscal_year, s.closing_period,
              s.main_account{{ dim_group_by(prefix='s.', leading=true) }}
-    having abs(sum(s.amount)) > 0
+    having round(sum(s.amount), 4) != 0
 ),
 
-{# The retained-earnings line is minus the sum of the KEPT lines (same filtered set, so the journal
-   balances by construction; it equals the unfiltered total because every dropped line is 0). #}
+{# The retained-earnings line is minus the sum of the KEPT, rounded lines, itself rounded to 4 places,
+   so the journal balances to 4 places by construction; a dropped line rounds to 0. #}
 journal_close as (
     select
         l.consolidation_group as consolidation_group,
@@ -400,7 +398,7 @@ journal_close as (
         l.{{ d.name }} as {{ d.name }},
         {% endfor -%}
         '' as reporting_currency,
-        -sum(l.amount) as amount,
+        round(-sum(l.amount), 4) as amount,
         'journal_close' as adjustment_type,
         concat('JCLOSE_', l.consolidation_group, '_', toString(l.fiscal_year)) as journal_id
     from journal_close_lines as l
@@ -408,7 +406,7 @@ journal_close as (
     where re.re_count = 1
     group by l.consolidation_group, l.data_area_id, l.fiscal_year,
              l.fiscal_period{{ dim_group_by(prefix='l.', leading=true) }}
-    having abs(sum(l.amount)) > 0
+    having round(sum(l.amount), 4) != 0
 ),
 
 {# Union all layers #}
