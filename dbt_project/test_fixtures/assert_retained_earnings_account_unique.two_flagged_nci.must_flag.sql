@@ -1,5 +1,5 @@
 -- gate: expect assert_retained_earnings_account_unique flag 1
--- gate: expect assert_retained_earnings_account_unique assert_nci_attribution_equals_minority_result pass
+-- gate: expect assert_nci_attribution_equals_minority_result pass
 -- konsolidat#316 7b: nci_attribution_journal.sql with a SECOND chart account (ZZ3200) flagged is_retained_earnings.
 -- Before 7b the NCI journal silently posted its RE line on the lowest code (ZZ3100); now it posts on '' and
 -- assert_retained_earnings_account_unique names group ZZP (count 2). The journal stays balanced (the oracle passes).
