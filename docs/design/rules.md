@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **150** |
-| carrying their reasoning | 129 |
-| citing the issue that caused them | 122 |
+| assertions | **151** |
+| carrying their reasoning | 130 |
+| citing the issue that caused them | 123 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 129 |
+| severity `error` (stops the build, and its children) | 130 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -33,7 +33,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
-- [The chart of accounts](#the-chart-of-accounts) — 7
+- [The chart of accounts](#the-chart-of-accounts) — 8
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 4
@@ -870,9 +870,9 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts.
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
 
 ### `favorable_expense`
 
@@ -904,7 +904,9 @@ riods. Excludes manual (identity-spread) budgets (#94): a manually-entered budge
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: Sum of 12 spread period amounts must equal annual_amount**
+**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
 
 <sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
 
@@ -969,6 +971,14 @@ What the chart DECLARES about translation is a separate fact with its own column
 appear
 
 <sub>`error (default)` · `tests/assert_pnl_only_pnl_accounts.sql`</sub>
+
+### `retained_earnings_account_unique`
+
+**konsolidat#316 (option A, prerequisite): the journal layers close their P&L into ONE retained-earnings account, found by the macro `retained_earnings_account()`: the single chart account with is_retained_earnings = 1.**
+
+With none flagged there is nowhere to close to; with two or more, any choice (lowest code, anyIf) silently decides policy for the customer. Either way the journal-layer close must not guess, so a consolidation group that carries journal-layer rows in gold_fully_consolidated_tb (adjustment_type other than 'entity') while the flagged count is not exactly 1 is an ERROR here, naming the group and the count. Fix: flag exactly one account. Fixtures: dbt_project/test_fixtures/assert_retained_earnings_account_unique.one_account.sql (pass) and assert_retained_earnings_account_unique.must_flag.sql (two flagged, one topside P&L row: flag 1).
+
+<sub>`error` · `tests/assert_retained_earnings_account_unique.sql` · konsolidat#316</sub>
 
 ### `undeclared_accounts_in_trial_balance`
 
