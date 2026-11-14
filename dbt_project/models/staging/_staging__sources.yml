@@ -143,8 +143,10 @@ sources:
           - name: amount_basis
             description: >
               'Period movement', 'Year-to-date movement' or 'Period-end
-              balance'. gold_spread_budget reads 'Period movement' rows only
-              until the conversion of the other two is built.
+              balance'. gold_spread_budget reads 'Period movement' rows as
+              landed and 'Year-to-date movement' rows converted to movements
+              within the Cycle year; 'Period-end balance' is not read
+              (assert_budget_basis_supported names it).
 
   - name: epm_staging
     schema: epm_staging

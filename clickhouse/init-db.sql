@@ -398,7 +398,7 @@ CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
 -- konsolidat#146: budget_annual_input was seeds/budget_annual_input.csv, a
 -- top-down annual figure that gold_spread_budget spreads into months by profile.
 -- The bottom-up monthly half is epm_raw.budget_entries (konsol#348); the old
--- The old monthly table of epm_gold is gone from this contract.
+-- monthly table of epm_gold is gone from this contract.
 -- konsol#287: neither table names a dimension. Which dim_* columns they carry is
 -- the site's Published Dimensions ticked in_budget, which konsol adds by ALTER
 -- (schema_apply._sync_budget_dimension_columns); gold_spread_budget reads that

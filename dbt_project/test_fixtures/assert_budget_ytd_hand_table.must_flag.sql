@@ -1,7 +1,7 @@
--- gate: expect assert_budget_ytd_hand_table flag 4
+-- gate: expect assert_budget_ytd_hand_table flag 5
 -- konsol#348 S2 (R10, Q15-c): the hand table of budget_raw_ytd.sql, asserted as literals. Same stated
 -- lines (one is enough to open the cycle), but a seeded spread that is wrong: ZZ4000 base P2 holds -250
--- (hand: -150), and ZZ4000 base P3, ZZ6000 P3 (-200) and challenge P3 (0) are missing. 4 results.
+-- (hand: -150), and ZZ4000 base P3, ZZ6000 P3 (-200) and challenge P1 and P3 (both 0) are missing. 5 results.
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis)
 VALUES
