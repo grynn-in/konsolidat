@@ -13,34 +13,24 @@
    trial-balance row joins only the leaf tranche and the closure rows whose windows cover its period's end_date:
    a moved leaf rolls to the parent it had then, an ended node carries no later period, and a renamed node
    carries the label of that period. The period's end_date comes from the declared calendar
-   (epm_staging.fiscal_periods); a period the calendar does not list is judged at the last day of its month. #}
+   (epm_staging.fiscal_periods, declared_periods()); a period the calendar does not list has no date and is dropped. #}
 
 with tb_long as (
     {{ tb_dimension_long_sql('tb') }}
 ),
 
-periods as (
-    select
-        toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period,
-        max(end_date) as end_date
-    from {{ source('epm_staging', 'fiscal_periods') }}
-    group by fiscal_year, fiscal_period
-),
-
 tb_dated as (
     select
         tb.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        {# konsolidat#171 step 2d: the period's DECLARED end_date, the date the ownership window reads
+           (gold_entity_ownership.period_date, #345). INNER on purpose: a period the calendar does not
+           declare has no date and is dropped here, not given the last day of a calendar month;
+           assert_trial_balance_period_declared (ERROR) names it. #}
+        dp.end_date as period_end_date
     from tb_long as tb
-    left join periods as p
-        on p.fiscal_year = toUInt16(tb.fiscal_year)
-        and p.fiscal_period = toUInt16(tb.fiscal_period)
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
 leaf_closure as (
