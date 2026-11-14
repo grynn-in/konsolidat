@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **150** |
-| carrying their reasoning | 129 |
-| citing the issue that caused them | 122 |
+| assertions | **151** |
+| carrying their reasoning | 130 |
+| citing the issue that caused them | 123 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 129 |
+| severity `error` (stops the build, and its children) | 130 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,7 +26,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 19
 - [Currency and translation](#currency-and-translation) — 24
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 23
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
@@ -494,6 +494,14 @@ Ownership Period is the only grain now, so a node with no period covering the da
 
 <sub>`error (default)` · `tests/assert_ownership_chain_complete.sql`</sub>
 
+### `ownership_exit_events`
+
+**konsolidat#335, option A (Deepak Pai, 14 Nov 2026), task X1: the exit events of macros/ownership_exits().**
+
+An exit event (G, E, P): E is live in G (complete chain, method full, proportional or equity) in the previous declared period, is not live in P, and was not ended by a full Business Disposal. A successor period or an owner-to-owner transfer keeps E live, so it is not an exit (konsol#305-Q1-1). Two checks, one row per failure: 1. ORACLE. For every entity whose chain is a single direct link (no sub-group above it) the exit events are recomputed here from epm_staging.ownership_periods, business_disposals and the fiscal calendar directly, never through ownership_resolution or declared_periods(): the window dates (Regular, Closing = its year's last Regular, Opening/Adjustment = between two Regulars), the held-at-end then not-ended-before-the-start reading, and the previous declared period. An event the macro has and the oracle has not, or the other way, is a row. Oracle limit: it reads one link per entity, so a chain with an owner above is outside it (the fixture's owner transfer is covered by check 2). 2. PINNED CASES. On test_fixtures/assert_ownership_exit_events.cases.sql (group ZZXG) the macro must return exactly one event: ZZXB, FY2024 P6 (previous P5), end date 2024-08-15; and one: ZZXE, FY2025 P1 (previous P0, the Opening period after the year boundary), end date 2025-03-31. The successor ZZXS, the owner transfer ZZXT, the full disposal ZZXD and the live ZZXL have none. The oracle and the macro could share a mistake; the pinned list cannot. Without group ZZXG (a site that did not load the fixture) check 2 has nothing to pin and returns no rows.
+
+<sub>`error (default)` · `tests/assert_ownership_exit_events.sql` · konsol#305 konsolidat#335</sub>
+
 ### `ownership_paths_acyclic`
 
 **konsol#117 (design section 3): a path from a group to an entity never visits a node twice.**
@@ -870,9 +878,9 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts.
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
 
 ### `favorable_expense`
 
@@ -904,7 +912,9 @@ riods. Excludes manual (identity-spread) budgets (#94): a manually-entered budge
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: Sum of 12 spread period amounts must equal annual_amount**
+**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
 
 <sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
 
