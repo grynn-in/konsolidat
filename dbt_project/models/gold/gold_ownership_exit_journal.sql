@@ -34,9 +34,14 @@
    (a WARN names it, task X8). Layer 2 (IC) is never read: its 'left' row reverses the eliminations
    (gold_ic_reconciliation); gold_fully_consolidated_tb is never read (it unions this model).
 
-   Methods. method_before 'full' (full_exits) and 'proportional' (proportional_exits, task X4) post here. An
-   equity-method exit (task X5, EQ_INVEST) posts NOTHING yet: they are not refused and not posted wrong;
-   assert_exit_derecognises_carried flags their carried balances until task X5 lands.
+   Methods. method_before 'full' (full_exits), 'proportional' (proportional_exits, task X4) and 'equity'
+   (equity_exits, task X5) post here. An equity-method associate carries only the reserved pseudo-account
+   EQ_INVEST, outside the chart (gold_equity_method_associates posts EQ_INCOME / EQ_INVEST per period). Its exit
+   reverses the to-date EQ_INVEST (line 105) against the exit account and nothing else: no CTA leg, because that
+   model translates every result at the period's Average rate and carries no revaluation. EQ_INCOME stays (the
+   share of past results is in group reserves). gold_equity_method_associates stops by itself at the end: it
+   reads gold_entity_ownership with consolidation_method = 'equity', which has no row for the associate from
+   the exit period on, so nothing posts after the exit (the fixture .equity pins it).
 
    The accounts come from the group's root row (data_area_id = ''), read with any() per column as
    gold_business_disposal_journal reads it. A group without a root row, or whose root declares no
@@ -46,7 +51,7 @@
    Known gap (not this task): gold_goodwill_amortisation_journal stops only at a Business Disposal, so under
    'Amortise' it keeps posting after a bare exit; assert_exit_derecognises_carried flags the goodwill then.
 
-   line_no: 0 derecognised, 101 goodwill, 102 fva, 103 cta, 104 nci, 199 gain_loss. #}
+   line_no: 0 derecognised, 101 goodwill, 102 fva, 103 cta, 104 nci, 105 equity_investment, 199 gain_loss. #}
 
 with group_policy as (
     select
@@ -90,11 +95,17 @@ proportional_exits as (
     select * from exit_events where method_before = 'proportional'
 ),
 
-{# task X5 adds equity_exits (EQ_INVEST against the exit account, no CTA leg). Until then it posts nothing. #}
+{# task X5: an equity-method exit reverses EQ_INVEST (line 105) against the exit account; no CTA leg #}
+equity_exits as (
+    select * from exit_events where method_before = 'equity'
+),
+
 posting_exits_all as (
     select * from full_exits
     union all
     select * from proportional_exits
+    union all
+    select * from equity_exits
 ),
 
 {# What an earlier journal already derecognised is not carried any more: after a re-entry (the
@@ -231,6 +242,21 @@ carried_sources as (
         n.account_role
     from {{ ref('gold_nci_attribution_journal') }} as n
     where n.account_role in ('cta', 'nci')
+
+    union all
+
+    select
+        q.consolidation_group,
+        q.data_area_id,
+        toUInt16(q.fiscal_year),
+        toUInt16(q.fiscal_period),
+        q.main_account,
+        q.account_name,
+        toFloat64(q.amount),
+        toUInt16(105),
+        'equity_investment'
+    from {{ ref('gold_equity_method_associates') }} as q
+    where q.main_account = 'EQ_INVEST'
 ),
 
 {# the to-date carried amount per exit and line: every period BEFORE the exit period, by tuple, from the

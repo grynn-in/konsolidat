@@ -11,7 +11,8 @@
 --   - every non-equity balance-sheet account of E's layer 1 (gold_consolidated_trial_balance, is_balance_sheet = 1)
 --     and of the acquisition journal's opening_balance lines; equity is the chart's silver_main_accounts.is_equity,
 --     the classification gold_business_disposal_journal line (0) uses;
---   - 'CTA', and the root's goodwill_account, fair_value_adjustment_account and nci_account.
+--   - 'CTA', and the root's goodwill_account, fair_value_adjustment_account and nci_account;
+--   - for an equity-method exit (task X5), EQ_INVEST: a pseudo-account outside the chart, so no list above holds it.
 -- Two parts of the FCTB are not E's carried balances and are taken out of the sum, read from their own models:
 --   - the acquisition journal's investment, proceeds, costs and bargain_gain lines: the parent's investment and the
 --     deal's settlement, which the disposal journal does not derecognise either (its header, "Not here");
@@ -19,9 +20,9 @@
 -- Second check: every ownership_exit journal in the FCTB sums to 0 per (group, entity, period).
 --
 -- Every exit method is checked, not only 'full': a proportional or equity-method exit that leaves its balances is
--- flagged here until tasks X4 / X5 post its journal. Layer 2 (IC, data_area_id '') is outside E's rows.
+-- flagged here (fixtures .proportional_step, .equity). Layer 2 (IC, data_area_id '') is outside E's rows.
 with exits as (
-    select consolidation_group, data_area_id, fiscal_year, fiscal_period
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period, method_before
     from {{ ownership_exits() }}
 ),
 
@@ -82,6 +83,13 @@ carried_accounts as (
     from exits as x
     inner join root_accounts as ra
         on ra.consolidation_group = x.consolidation_group
+    union all
+
+    {# task X5: an equity-method associate carries the reserved pseudo-account EQ_INVEST (the share of its results,
+       gold_equity_method_associates), which is outside the chart: neither list above can see it #}
+    select x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period, 'EQ_INVEST'
+    from exits as x
+    where x.method_before = 'equity'
 ),
 
 accounts as (
