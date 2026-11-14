@@ -15,7 +15,8 @@
 {# PRD-5 R4: Unified consolidated trial balance
    Unions: entity balances + IC eliminations + CTA + topside adjustments
    PRD-14: + Layer 5: equity method entries
-   PRD-11/12: + Layer 6: acquisition/disposal adjustments #}
+   PRD-11/12: + Layer 6: acquisition/disposal adjustments
+   konsolidat#335: + the ownership exit journal, a branch of layer 6 #}
 
 {# Layer 1: Entity translated balances.
    konsol#159: gold_consolidated_trial_balance has one row per intercompany
@@ -265,6 +266,28 @@ acquisition_disposal as (
         adjustment_type,
         any(journal_id) as journal_id
     from {{ ref('gold_business_disposal_journal') }}
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+             adjustment_type
+
+    union all
+
+    {# konsolidat#335 option A (decided 14 Nov 2026, Deepak Pai), task X3: the ownership exit journal
+       (gold_ownership_exit_journal, adjustment_type 'ownership_exit'): an Ownership Period that ends without
+       a Business Disposal derecognises the entity's carried balances, beside the disposal journal and summed
+       to the same grain (row J11/J13). #}
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        any(account_name) as account_name,
+        {{ dim_empty_strings(trailing=true) }}
+        '' as reporting_currency,
+        sum(adjustment_amount) as amount,
+        adjustment_type,
+        any(journal_id) as journal_id
+    from {{ ref('gold_ownership_exit_journal') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
              adjustment_type
 ),
