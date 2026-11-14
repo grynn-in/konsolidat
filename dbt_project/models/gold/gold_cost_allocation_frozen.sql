@@ -25,8 +25,10 @@
 -- the rows of runs no longer in epm_staging.cost_allocation_runs (cancelled),
 -- and the SELECT is restricted to Freeze runs with no row in this table yet, so
 -- an existing frozen run is left untouched. Within one build the DELETE runs
--- before the INSERT, so a run cancelled and re-submitted under the same name is
--- frozen afresh.
+-- before the INSERT. A run cancelled and re-submitted under the same name is
+-- frozen afresh only if a build ran between the cancel and the re-submit; if
+-- not, its old rows are still here under that name and are kept. An amend gets a
+-- new name, so it is frozen afresh whatever the build order.
 --
 -- full_refresh=false: `dbt build --full-refresh` skips the rebuild of this table
 -- (dbt treats the model as a normal incremental run), so it cannot re-freeze

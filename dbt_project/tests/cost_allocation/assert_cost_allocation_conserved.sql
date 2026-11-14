@@ -2,6 +2,11 @@
 --   1. every line sums to zero (what is sent is received, to the last digit);
 --   2. the lines received at members that never send in the run sum to the
 --      origin's pool, so nothing is parked at an intermediate sender.
+-- Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry
+-- the same hop_amount, so each hop sums to zero); it stays as the tripwire for a
+-- macro change that rounds or filters one side, and fires on a seeded table.
+-- Part 2 can fire on a real build: a coefficient chain that parks money at a
+-- sender, or receives at a member that does not close.
 -- The pool is read from the `sent` lines, one value per (run, origin, account);
 -- origin_amount repeats on every line of that origin, so it is taken once per
 -- account and summed across accounts. Exact comparison, no tolerance: the model

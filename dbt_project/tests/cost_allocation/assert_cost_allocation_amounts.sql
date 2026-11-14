@@ -4,6 +4,10 @@
 -- run carries frozen_at on every line; its amount is judged against the trial
 -- balance by assert_cost_allocation_frozen_drift (warn), not here, because a
 -- frozen run is meant to differ from later data.
+-- The stamp check can fire on a real build only if a model's stamp expression
+-- changes. The `stale` check compares the model with the macro's pools, so within
+-- one full build it cannot fire; it fires when gold_scenario_trial_balance is
+-- rebuilt without rebuilding this model (a partial build) or on a seeded table.
 -- Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 with runs as (
     select * from {{ source('epm_staging', 'cost_allocation_runs') }}
