@@ -10,8 +10,17 @@
 -- own P&L legs with the entity close in the Closing period and so must net to zero by itself.
 -- The design note is on #316 (chosen under the 5 Nov 2026 standing rule).
 --
--- Rows returned (ERROR severity):
---   open               |sum| > materiality_floor() for (group, year, adjustment_type)
+-- Closed layers net with the close PER ACCOUNT: for every layer not in
+-- journal_close_excluded_layers(), together with 'journal_close', the year's P&L to the Closing
+-- period sums to zero per (group, year, account), so one layer's error cannot hide behind
+-- another's. Each excluded layer other than entity (ic_elimination) must net to zero by itself,
+-- per adjustment_type, as before.
+--
+-- Rows returned (ERROR severity), with main_account ('' when not per account) and the
+-- contributing adjustment_types:
+--   open               |sum| > materiality_floor() for (group, year, account) over the closed
+--                      layers and journal_close, or for (group, year, adjustment_type) of an
+--                      excluded layer other than entity
 --   no_closing_period  journal-layer P&L exists in a year with no declared Closing period while a
 --                      later fiscal year is present in the table: nothing can close it
 -- The Closing period is the first period_type = 'Closing' of the year in
@@ -30,6 +39,7 @@ journal_pnl as (
         f.fiscal_year as fiscal_year,
         f.fiscal_period as fiscal_period,
         f.adjustment_type as adjustment_type,
+        f.main_account as main_account,
         f.amount as amount
     from {{ ref('gold_fully_consolidated_tb') }} as f
     left join {{ ref('silver_main_accounts') }} as ma
@@ -44,16 +54,34 @@ last_year as (
     from {{ ref('gold_fully_consolidated_tb') }}
 ),
 
-open_at_close as (
+open_closed_layers as (
     select
         p.consolidation_group as consolidation_group,
         p.fiscal_year as fiscal_year,
-        p.adjustment_type as adjustment_type,
+        p.main_account as main_account,
+        arraySort(groupUniqArray(p.adjustment_type)) as adjustment_types,
         sum(p.amount) as open_amount,
         'open' as reason
     from journal_pnl as p
     inner join closing_periods as c on c.fiscal_year = p.fiscal_year
     where p.fiscal_period <= c.closing_period
+      and p.adjustment_type not in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
+    group by p.consolidation_group, p.fiscal_year, p.main_account
+    having abs(sum(p.amount)) > {{ materiality_floor() }}
+),
+
+open_excluded_layers as (
+    select
+        p.consolidation_group as consolidation_group,
+        p.fiscal_year as fiscal_year,
+        '' as main_account,
+        [p.adjustment_type] as adjustment_types,
+        sum(p.amount) as open_amount,
+        'open' as reason
+    from journal_pnl as p
+    inner join closing_periods as c on c.fiscal_year = p.fiscal_year
+    where p.fiscal_period <= c.closing_period
+      and p.adjustment_type in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
     group by p.consolidation_group, p.fiscal_year, p.adjustment_type
     having abs(sum(p.amount)) > {{ materiality_floor() }}
 ),
@@ -62,7 +90,8 @@ no_closing as (
     select
         p.consolidation_group as consolidation_group,
         p.fiscal_year as fiscal_year,
-        '' as adjustment_type,
+        '' as main_account,
+        arraySort(groupUniqArray(p.adjustment_type)) as adjustment_types,
         sum(p.amount) as open_amount,
         'no_closing_period' as reason
     from journal_pnl as p
@@ -71,6 +100,8 @@ no_closing as (
     group by p.consolidation_group, p.fiscal_year
 )
 
-select * from open_at_close
+select * from open_closed_layers
+union all
+select * from open_excluded_layers
 union all
 select * from no_closing
