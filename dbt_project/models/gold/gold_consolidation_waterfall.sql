@@ -47,5 +47,7 @@ select
     cta_amount,
     topside_amount,
     equity_method_amount,
-    acq_disposal_amount
+    acq_disposal_amount,
+    nci_attribution_amount,
+    journal_close_amount
 from waterfall

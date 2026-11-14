@@ -5,9 +5,9 @@ select
     fiscal_period,
     final_amount,
     entity_amount + ic_elimination_amount + cta_amount + topside_amount
-        + equity_method_amount + acq_disposal_amount as calculated_total,
+        + equity_method_amount + acq_disposal_amount + nci_attribution_amount + journal_close_amount as calculated_total,
     abs(final_amount - (entity_amount + ic_elimination_amount + cta_amount + topside_amount
-        + equity_method_amount + acq_disposal_amount)) as gap
+        + equity_method_amount + acq_disposal_amount + nci_attribution_amount + journal_close_amount)) as gap
 from {{ ref('gold_consolidation_waterfall') }}
 where abs(final_amount - (entity_amount + ic_elimination_amount + cta_amount + topside_amount
-    + equity_method_amount + acq_disposal_amount)) > 0.01
+    + equity_method_amount + acq_disposal_amount + nci_attribution_amount + journal_close_amount)) > 0.01

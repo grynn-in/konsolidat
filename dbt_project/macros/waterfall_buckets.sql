@@ -10,6 +10,9 @@
       plus the P&L proration gold_acquisition_adjustments still posts. The one-sided
       'goodwill' / 'fair_value_adjustment' / 'disposal_gain_loss' / 'cta_recycling' rows no
       longer exist; the names stay so an older build of the TB still sums. #}
+{# nci_attribution (konsolidat#316 7h2): gold_nci_attribution_journal moves the minority's share of
+   result and CTA from the group's equity lines to the NCI line, so it is neither an elimination nor
+   a topside entry: its own bucket, nets to 0 per journal. #}
 {% macro waterfall_buckets() %}
   {{ return({
       'entity': ['entity'],
@@ -19,6 +22,7 @@
       'equity_method': ['equity_method'],
       'acq_disposal': ['pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
                        'goodwill', 'fair_value_adjustment', 'disposal_gain_loss', 'cta_recycling'],
+      'nci_attribution': ['nci_attribution'],
       'journal_close': ['journal_close']
   }) }}
 {% endmacro %}
