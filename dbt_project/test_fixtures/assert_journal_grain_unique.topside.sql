@@ -13,6 +13,8 @@
 -- The staging INSERT names its columns and never names auto_reverse_period, so this works before
 -- and after J05a deploys; reverse_fiscal_year/reverse_fiscal_period are 0 (no reversal) on both
 -- journals, added here because the live table structure this fixture clones predates J05a.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 
 -- Acquisition journal with PRE-ACQUISITION TB HISTORY (konsolidat#198 row J3, design §3-4 line 0):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows,

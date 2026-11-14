@@ -18,6 +18,8 @@
 -- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
 -- epm_staging.dimension_mappings, epm_staging.group_exchange_rates, epm_staging.ic_balances,
 -- epm_staging.ic_elimination_rules.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
