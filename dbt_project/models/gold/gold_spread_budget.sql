@@ -18,8 +18,14 @@
    Budget LAYERS (base / challenge / management / board): the final budget is the
    sum of all layers. All layers are carried here as separate rows with a `layer`
    column; K.EPM sums them by default (no layer filter) and filters to one when a
-   layer is passed (Dataset.has_layer). Annual-spread inputs have no layer of
-   their own (the seed predates layering) and are treated as the 'base' layer. #}
+   layer is passed (Dataset.has_layer). Each Annual Input declares its own layer
+   (R6), and the annual branch carries it.
+
+   One writer per grain (konsol#348 Q16-c, 13 Nov 2026, Deepak Pai's standing
+   rule): konsol refuses an Annual Input and a manual Budget Entry line on one
+   (scenario, entity, year, layer, account, budget dims). The two branches are
+   therefore a plain UNION ALL with no precedence rule;
+   assert_budget_one_writer_per_grain is the backstop that names any overlap. #}
 
 with annual_input as (
     select
@@ -28,7 +34,7 @@ with annual_input as (
         {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
-        'base' as layer,
+        layer,
         annual_amount,
         spread_profile_id,
         submitted_by
@@ -110,11 +116,8 @@ manual as (
     )
 ),
 
-{# Precedence: a manual monthly budget OVERRIDES an annual-spread one for the
-   same (scenario, entity, year, account, dims) grain — explicit per-month values
-   win and we never double-count. Annual inputs are the 'base' layer, so only a
-   manual BASE row displaces them; non-base manual layers are purely additive.
-   Disjoint grains keep both branches. #}
+{# (a) Annual inputs spread by profile. No manual row displaces an annual one
+   (Q16-c): intake keeps the two writers on disjoint grains. #}
 spread as (
     select
         ai.scenario_id as scenario_id,
@@ -133,16 +136,6 @@ spread as (
     from annual_input as ai
     inner join profiles as p
         on ai.spread_profile_id = p.profile_id
-    where (
-        ai.scenario_id, ai.data_area_id, ai.fiscal_year, toString(ai.main_account)
-        {{- dim_group_by(prefix='ai.', dims=get_budget_dimensions(), leading=true) }}
-    ) not in (
-        select
-            scenario_id, data_area_id, fiscal_year, main_account
-            {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
-        from manual
-        where layer = 'base'
-    )
 )
 
 select * from spread
