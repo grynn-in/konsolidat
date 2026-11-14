@@ -151,11 +151,13 @@ with entity_tb as (
            by position, so no column may be added before partner_data_area_id. #}
         if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
-        {# konsolidat#171 step 2d: the period's DECLARED end_date, the date the ownership
-           window reads (gold_entity_ownership.period_date, #345), not the first of
-           calendar month P, which is wrong for a non-calendar fiscal year. The
-           historical-rate ASOF join below reads it. #}
-        dp.end_date as period_date
+        {# konsolidat#171 step 2d: the period's ownership WINDOW date (declared_periods().window_end_date),
+           the date gold_entity_ownership.period_date reads (#345), not the first of calendar month P, which
+           is wrong for a non-calendar fiscal year. It is NOT end_date for every period: an Opening, Adjustment
+           or Closing period's window date is the end of the Regular period before it (an Opening P0 is a
+           one-day period on 1 January, its window date 31 December of the prior year). The historical-rate
+           ASOF join below reads it. #}
+        dp.window_end_date as period_date
     {# konsol#159: the partner-grained twin of gold_trial_balance. That model
        stays at the account grain for its own readers; see
        gold_trial_balance_by_partner. #}
