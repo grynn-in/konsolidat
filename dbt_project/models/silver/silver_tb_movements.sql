@@ -109,6 +109,12 @@
    across dimension values would otherwise take the year's result once per
    slice. Driven by the `dimensions` var, never a literal dimension name; on a
    site that declares none it renders exactly the pre-#255 condition. #}
+{# konsol#255 row 7b: the key of one series below the entity — account, partner
+   and every declared dimension. movement_spine and ytd_movement take it as a
+   list (konsol#348 R10); on a site that declares no dimensions it is the
+   pre-#255 key. #}
+{%- set tb_key_columns = ['main_account', 'partner_data_area_id'] + (get_dimensions() | map(attribute='name') | list) -%}
+
 {%- set retained_lump_key -%}
 k.main_account = y.retained_account and k.partner_data_area_id = ''{% for d in get_dimensions() %} and k.{{ d.name }} = ''{% endfor %}
 {%- endset -%}
@@ -272,46 +278,28 @@ keys as (
 
 claimed_spine as (
 
-    {# entity periods x entity keys; a key with no source row reads 0 (ClickHouse
-       LEFT JOIN fills the unmatched side with column defaults, not NULL) #}
-    select
-        p.data_area_id as data_area_id,
-        p.fiscal_year as fiscal_year,
-        p.fiscal_period as fiscal_period,
-        k.main_account as main_account,
-        k.partner_data_area_id as partner_data_area_id,
-        {# konsol#255 row 7b: the dimension values come from the KEY, not from
-           the matched source row — a key with no source row in this period
-           still has to be the same series in the windows below, and s.* would
-           read '' there (ClickHouse fills an unmatched LEFT JOIN side with the
-           column default). POSITIONAL TWIN: close_spine below must emit its
-           dimension block in this same position, the union binds by position.
-
-           Written out rather than dim_select(prefix='k.'): that macro emits no
-           alias, so the column would be NAMED `k.dim_…` and the widened
-           partition by below cannot see it (measured — ClickHouse
-           UNKNOWN_IDENTIFIER in scope `differenced`). Still driven by the
-           `dimensions` var, no literal dimension name anywhere #}
-        {% for d in get_dimensions() -%}
-        k.{{ d.name }} as {{ d.name }},
-        {% endfor -%}
-        p.amount_basis as amount_basis,
-        p.batch_id as batch_id,
-        p.submission_name as submission_name,
-        s.description as description,
-        s.source_net_amount as source_net_amount,
-        s.has_source as has_source,
-        'activity' as movement_kind
-    from periods as p
-    inner join keys as k
-        on p.data_area_id = k.data_area_id
-    left join source as s
-        on s.data_area_id = p.data_area_id
-        and s.fiscal_year = p.fiscal_year
-        and s.fiscal_period = p.fiscal_period
-        and s.main_account = k.main_account
-        and s.partner_data_area_id = k.partner_data_area_id
-        {{ dim_join_on('s', 'k') }}
+    {# entity periods x entity keys; a key with no source row reads 0. The spine
+       is movement_spine (macros/period_movements.sql), shared with the budget's
+       year-to-date lines (konsol#348 R10) so the rule exists once.
+       konsol#255 row 7b: the dimension values come from the KEY, not from the
+       matched source row — a key with no source row in this period still has
+       to be the same series in the windows below. movement_spine takes every
+       key column from `keys` and aliases it, so the widened partition by below
+       can see it. POSITIONAL TWIN: close_spine below must emit its columns in
+       this same order (entity, year, period, account, partner, dimensions,
+       basis, batch, submission, description, net, has_source, kind); the union
+       binds by position. Still driven by the `dimensions` var, no literal
+       dimension name anywhere #}
+    select *, 'activity' as movement_kind
+    from (
+        {{ movement_spine(
+            'periods', 'keys', 'source',
+            scope=['data_area_id'],
+            key_columns=tb_key_columns,
+            period_columns=['amount_basis', 'batch_id', 'submission_name'],
+            source_columns=['description']
+        ) }}
+    )
 
 ),
 
@@ -401,12 +389,10 @@ differenced as (
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and current row
         ) as previous_net_any_year,
-        {# previous claimed period of the key within the fiscal year: the 'Year-to-date movement' rule #}
-        lagInFrame(source_net_amount, 1, toDecimal128(0, {{ amount_scale() }})) over (
-            partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
-            order by fiscal_period
-            rows between unbounded preceding and current row
-        ) as previous_net_same_year
+        {# the 'Year-to-date movement' rule: net less the key's previous claimed
+           period within the fiscal year. ytd_movement (macros/period_movements.sql)
+           is the one definition, shared with the budget (konsol#348 R10) #}
+        {{ ytd_movement(['data_area_id'] + tb_key_columns) }} as ytd_movement_amount
     from spine
 
 ),
@@ -428,7 +414,7 @@ movements as (
         has_source,
         movement_kind,
         multiIf(
-            amount_basis = 'Year-to-date movement', source_net_amount - previous_net_same_year,
+            amount_basis = 'Year-to-date movement', ytd_movement_amount,
             amount_basis = 'Period-end balance', source_net_amount - previous_net_any_year,
             source_net_amount
         ) as movement_amount
