@@ -99,3 +99,8 @@ VALUES
   ('ZZC', 2026, 3, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 600, 0, 600, 1),
   ('ZZC', 2026, 3, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 400, 0, 400, 1),
   ('ZZC', 2026, 3, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 1000, -1000, 1);
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+VALUES
+  ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03'),
+  ('USD', 'SEK', 2026, 3, 'Average', 0.09, 'ZZ-GER-2026-03');
