@@ -1,6 +1,8 @@
 -- gate: build +gold_fully_consolidated_tb assert_journal_pnl_closed_at_year_end assert_end_to_end_bs_balances
 -- gate: expect assert_journal_pnl_closed_at_year_end pass
 -- gate: expect assert_end_to_end_bs_balances pass
+-- 7k (#357 review F2): the journal close runs only for a year a later fiscal year follows in the group's posted layers
+-- (the #259 rule). a USD parent ZZP (100%, full) files a FY2027 P1 movement (cash 10 Dr | share capital ZZ3000 10 Cr) so FY2026 is still a closed year and this fixture still exercises its close.
 -- konsolidat#316 (decided 14 Nov 2026 by Deepak Pai, option A): acquisition costs expensed under acquisition_costs_treatment
 -- 'Expense' (IFRS 3.53) are P&L of the acquisition year and must be closed into retained earnings in the declared Closing period.
 -- Scaffold: assert_journal_grain_unique.topside.sql without its topside journals, i.e. business_combination_history.sql (ZZG acquires ZZS 2026-03-15, FY2026 P3, closing P13 declared, ZZ3100 the one
@@ -202,3 +204,36 @@ INSERT INTO epm_staging.business_combination_costs
 VALUES
   ('BC-ZZG-ZZS-2026-03-15', 1, 'Legal', 120, 'USD', 'Share purchase agreement'),
   ('BC-ZZG-ZZS-2026-03-15', 2, 'Advisory', 80, 'USD', 'Financial due diligence');
+INSERT INTO epm_staging.fiscal_periods
+  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
+VALUES
+  (2027, 1, 'FY2027-P01', 'Jan 2027', 'Regular', '2027-01-01', '2027-01-31', 'Q1', 'Open');
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
+VALUES
+  ('ZZP', 'ZZ Parent', 'ZZG', 0, 'Active', 'USD', 'US', '');
+INSERT INTO epm_gold.consolidation_groups
+  (consolidation_group, data_area_id, entity_name, reporting_currency)
+VALUES
+  ('ZZG', 'ZZP', 'ZZ Parent', 'USD');
+INSERT INTO epm_staging.consolidation_hierarchy
+  (consolidation_group, data_area_id, parent_group, hierarchy_level, path)
+VALUES
+  ('ZZG', 'ZZP', '', 1, 'ZZG');
+INSERT INTO epm_staging.consolidation_ancestry
+  (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path)
+VALUES
+  ('ZZG', 'ZZP', 'ZZG', 'ZZP', 1, 1, 'ZZG/ZZP');
+INSERT INTO epm_staging.ownership_periods
+  (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method)
+VALUES
+  ('ZZG', 'ZZP', '2020-01-01', 100, 'full');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZL1', 'ZZP', 2027, 1, 'ZZ1000', 10, 0, 'Cash', 'ZZ-TBS-ZZL1', now(), ''),
+  ('ZZL1', 'ZZP', 2027, 1, 'ZZ3000', 0, 10, 'Later year', 'ZZ-TBS-ZZL1', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZL1', 'ZZ-TBS-ZZL1', 'ZZP', 2027, 1, 2, now(), 'Period movement');

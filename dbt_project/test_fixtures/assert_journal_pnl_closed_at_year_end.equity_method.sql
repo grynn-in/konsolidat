@@ -1,6 +1,8 @@
 -- gate: build +gold_fully_consolidated_tb assert_journal_pnl_closed_at_year_end assert_end_to_end_bs_balances
 -- gate: expect assert_journal_pnl_closed_at_year_end pass
 -- gate: expect assert_end_to_end_bs_balances pass
+-- 7k (#357 review F2): the journal close runs only for a year a later fiscal year follows in the group's posted layers
+-- (the #259 rule). ZZA files a FY2027 P1 movement (cash 10 Dr | revenue 10 Cr; the group's EQ_INCOME share posts in FY2027) so FY2026 is still a closed year and this fixture still exercises its close.
 -- konsolidat#316 (decided 14 Nov 2026 by Deepak Pai, option A): a 30% associate's result is journal-layer
 -- P&L (EQ_INCOME) and must be closed into retained earnings in the declared Closing period.
 --
@@ -89,3 +91,16 @@ INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
   ('ZZE1', 'ZZ-TBS-E1', 'ZZA', 2026, 12, 2, now(), 'Period movement');
+INSERT INTO epm_staging.fiscal_periods
+  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
+VALUES
+  (2027, 1, 'FY2027-P01', 'Jan 2027', 'Regular', '2027-01-01', '2027-01-31', 'Q1', 'Open');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZE2', 'ZZA', 2027, 1, 'ZZ1000', 10, 0, 'Cash', 'ZZ-TBS-ZZE2', now(), ''),
+  ('ZZE2', 'ZZA', 2027, 1, 'ZZ4000', 0, 10, 'Later year', 'ZZ-TBS-ZZE2', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZE2', 'ZZ-TBS-ZZE2', 'ZZA', 2027, 1, 2, now(), 'Period movement');
