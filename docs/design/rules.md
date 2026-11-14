@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **157** |
-| carrying their reasoning | 136 |
-| citing the issue that caused them | 129 |
+| assertions | **160** |
+| carrying their reasoning | 138 |
+| citing the issue that caused them | 132 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 136 |
+| severity `error` (stops the build, and its children) | 139 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -33,10 +33,10 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 14
-- [The chart of accounts](#the-chart-of-accounts) — 7
+- [The chart of accounts](#the-chart-of-accounts) — 8
 - [Calendar and periods](#calendar-and-periods) — 8
-- [Platform and data integrity](#platform-and-data-integrity) — 14
-- [Other](#other) — 4
+- [Platform and data integrity](#platform-and-data-integrity) — 15
+- [Other](#other) — 5
 
 ---
 
@@ -1028,6 +1028,14 @@ appear
 
 <sub>`error (default)` · `tests/assert_pnl_only_pnl_accounts.sql`</sub>
 
+### `retained_earnings_account_unique`
+
+**konsolidat#316 (option A, prerequisite): the journal layers close their P&L into ONE retained-earnings account, found by the macro `retained_earnings_account()`: the single chart account with is_retained_earnings = 1.**
+
+With none flagged there is nowhere to close to; with two or more, any choice (lowest code, anyIf) silently decides policy for the customer. Either way the journal-layer close must not guess, so a consolidation group that carries journal-layer rows in gold_fully_consolidated_tb (adjustment_type other than 'entity') while the flagged count is not exactly 1 is an ERROR here, naming the group and the count. Fix: flag exactly one account. Fixtures: dbt_project/test_fixtures/assert_retained_earnings_account_unique.one_account.sql (pass) and assert_retained_earnings_account_unique.must_flag.sql (two flagged, one topside P&L row: flag 1).
+
+<sub>`error` · `tests/assert_retained_earnings_account_unique.sql` · konsolidat#316</sub>
+
 ### `undeclared_accounts_in_trial_balance`
 
 <sub>`warn` · `tests/assert_undeclared_accounts_in_trial_balance.sql` · konsol#182</sub>
@@ -1196,6 +1204,10 @@ Background: D11 wanted ClickHouse to read Frappe's MariaDB directly so metadata 
 
 <sub>`error (default)` · `tests/assert_staging_not_stale.sql` · konsolidat#246</sub>
 
+### `waterfall_covers_every_adjustment_type`
+
+<sub>`error` · `tests/assert_waterfall_covers_every_adjustment_type.sql` · konsolidat#316</sub>
+
 ### `ytd_trial_balance_grain`
 
 **konsol#159 / #175 review B2, re-review F1: gold_ytd_trial_balance keeps one row per (entity, year, period, account, dimensions).**
@@ -1231,6 +1243,14 @@ An equity account's translated movement is its local movement at the rate the ro
 A joint operation reached through a partly owned FULL link is carried at the wrong share and with no NCI. P -> S full 80%, S -> J proportional 50%: the weakest link is proportional and the path sum is 0.40, so layer 1 posts 40% of J's lines with nci 0. S itself recognises 50% of J's lines (IFRS 11.20) and P consolidates S in full with a 20% minority, so the group should carry 50% of J's lines with NCI = 10% (20% x 50%). Computing that needs an NCI attribution for the intermediary's minority of a joint operation, which is a later pair. The flag is entity-wide: any resolved path with a partial full link on a proportional entity fires it, even when that path has no proportional link itself (several paths), hence the general sentence. Until then the case is refused: the build fails naming the entity. A path of all-100% full links plus proportional links (P -> S full 100, S -> J proportional 50) stays allowed: 0.50 is exactly the operator's share.
 
 <sub>`error (default)` · `tests/assert_joint_operation_path_has_no_partial_full_link.sql` · konsol#117 konsolidat#331</sub>
+
+### `journal_pnl_closed_at_year_end`
+
+**konsolidat#316 (decided 14 Nov 2026 by Deepak Pai, option A: one journal_close layer in gold_fully_consolidated_tb).**
+
+Year-end closed: for each consolidation group and fiscal year with a declared Closing period, the P&L of every journal layer (adjustment_type != 'entity') must sum to zero over the year's periods up to AND including the Closing period, once the journal_close layer has moved it into retained earnings. P&L = silver_main_accounts.is_pnl = 1, or an account in journal_pnl_pseudo_accounts() (EQ_INCOME, outside the chart). Entity rows are the #259 close's job. ic_elimination is EXCLUDED from the close (journal_close_excluded_layers()) but CHECKED here: it reverses its own P&L legs with the entity close in the Closing period and so must net to zero by itself. The design note is on #316 (chosen under the 5 Nov 2026 standing rule). Closed layers net with the close PER ACCOUNT: for every layer not in journal_close_excluded_layers(), together with 'journal_close', the year's P&L to the Closing period sums to zero per (group, year, account), so one layer's error cannot hide behind another's. Each excluded layer other than entity (ic_elimination) must net to zero by itself, per adjustment_type, as before. Rows returned (ERROR severity), with main_account ('' when not per account) and the contributing adjustment_types: open               |sum| > materiality_floor() for (group, year, account) over the closed layers and journal_close, or for (group, year, adjustment_type) of an excluded layer other than entity no_closing_period  journal-layer P&L exists in a year with no declared Closing period while a later fiscal year is present in the table: nothing can close it The Closing period is the first period_type = 'Closing' of the year in epm_staging.fiscal_periods, as silver_tb_movements finds it. Postings after it are not summed. Fixtures: test_fixtures/assert_journal_pnl_closed_at_year_end.*.sql
+
+<sub>`error (default)` · `tests/assert_journal_pnl_closed_at_year_end.sql` · konsolidat#259 konsolidat#316</sub>
 
 ### `method_declared_for_multi_path`
 

@@ -19,25 +19,15 @@ with layer_amounts as (
     group by consolidation_group, fiscal_year, fiscal_period, adjustment_type
 ),
 
+{# Buckets: macros/waterfall_buckets.sql (the columns *_amount below). #}
 waterfall as (
     select
         consolidation_group,
         fiscal_year,
         fiscal_period,
-        sum(case when adjustment_type = 'entity' then layer_amount else 0 end) as entity_amount,
-        sum(case when adjustment_type = 'ic_elimination' then layer_amount else 0 end) as ic_elimination_amount,
-        sum(case when adjustment_type = 'cta' then layer_amount else 0 end) as cta_amount,
-        sum(case when adjustment_type in ('topside', 'reclassification', 'auto_reversal') then layer_amount else 0 end) as topside_amount,
-        sum(case when adjustment_type = 'equity_method' then layer_amount else 0 end) as equity_method_amount,
-        {# konsolidat#198 (row J6b): layer 6 is the three balanced deal journals, adjustment_type
-           'acquisition' (gold_business_combination_journal), 'goodwill_amortisation'
-           (gold_goodwill_amortisation_journal) and 'disposal' (gold_business_disposal_journal),
-           plus the P&L proration gold_acquisition_adjustments still posts. The one-sided
-           'goodwill' / 'fair_value_adjustment' / 'disposal_gain_loss' / 'cta_recycling' rows no
-           longer exist; the names stay so an older build of the TB still sums. #}
-        sum(case when adjustment_type in ('pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
-                                           'goodwill', 'fair_value_adjustment',
-                                           'disposal_gain_loss', 'cta_recycling') then layer_amount else 0 end) as acq_disposal_amount,
+        {% for bucket, members in waterfall_buckets().items() %}
+        sum(case when adjustment_type in ({{ "'" ~ members | join("','") ~ "'" }}) then layer_amount else 0 end) as {{ bucket }}_amount,
+        {% endfor %}
         sum(layer_amount) as final_amount
     from layer_amounts
     group by consolidation_group, fiscal_year, fiscal_period
@@ -57,5 +47,7 @@ select
     cta_amount,
     topside_amount,
     equity_method_amount,
-    acq_disposal_amount
+    acq_disposal_amount,
+    nci_attribution_amount,
+    journal_close_amount
 from waterfall
