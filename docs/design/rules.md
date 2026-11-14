@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **150** |
-| carrying their reasoning | 129 |
-| citing the issue that caused them | 122 |
+| assertions | **151** |
+| carrying their reasoning | 130 |
+| citing the issue that caused them | 123 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 129 |
+| severity `error` (stops the build, and its children) | 130 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -34,7 +34,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 8
+- [Calendar and periods](#calendar-and-periods) — 9
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 4
 
@@ -122,7 +122,7 @@ An ERP exports period movements, year-to-date movements or period-end balances, 
 
 **Guard against the join_use_nulls=0 default silently winning over the TBS coalesce fallback.**
 
-silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to build_date_from_year_period() when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
+silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to the declared calendar's start_date (declared_periods()) when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
 
 <sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#182</sub>
 
@@ -430,9 +430,9 @@ Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG
 
 **A group node's amount must equal the sum of its descendant leaves for the same slice: hierarchy, node, entity, period, account and every other dimension.**
 
-Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its month). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
+Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods; a period it does not list has no date and is dropped). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
-<sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#220</sub>
+<sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#171 konsolidat#220</sub>
 
 ### `ic_difference_not_from_ownership`
 
@@ -860,7 +860,7 @@ On the fixture hierarchy_dated.sql (ZZ_DIV over dim_business_unit, entity ZZE1):
 
 gold_variance_analysis has one set of rows per active budget-type scenario (budget_scenario_id), the actuals repeated against each. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's actual_amount for a (budget_scenario_id, entity, year, period, account) must equal gold_variance_analysis' actual_amount over the rows whose dimension value is a leaf of that hierarchy. So must its budget_amount (PR #211 review 4): a node that adds two budget scenarios together, or shows one scenario's budget under another, fails. The budget is compared NULL-safely: two missing budgets (null) agree, and a null against a number differs. A node model that does not carry budget_scenario_id is compared on the rest of the key, so each budget scenario's actuals meet the node's sum across scenarios: with two budget scenarios the actuals are counted twice and the test fails rather than erroring. One row per mismatched key. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
-<sub>`error (default)` · `tests/assert_variance_node_single_budget.sql` · konsolidat#206 konsolidat#211 konsolidat#220</sub>
+<sub>`error (default)` · `tests/assert_variance_node_single_budget.sql` · konsolidat#171 konsolidat#206 konsolidat#211 konsolidat#220</sub>
 
 ---
 
@@ -870,9 +870,9 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts.
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed, with manual overriding annual-spread on the same grain — this asserts the precedence actually dedups and nothing double-counts. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
 
 ### `favorable_expense`
 
@@ -904,7 +904,9 @@ riods. Excludes manual (identity-spread) budgets (#94): a manually-entered budge
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: Sum of 12 spread period amounts must equal annual_amount**
+**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
 
 <sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
 
@@ -997,6 +999,14 @@ konsol checks this when the journal is approved; this catches a calendar changed
 silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, ClickHouse fills fp.* with 0 and the model falls back to deriving the period from the posting date (see #65). That fallback is correct for calendar fiscal years but silently wrong for offset ones — and a missed join is exactly what put every row in FY0/P0 before #65/#76. This test fails if any entity that actually has GL activity points (via entity_fiscal_calendars) at a fiscal calendar that ISN'T loaded in silver_fiscal_periods. That is the precise condition under which the join silently misses, turning a future re-break (e.g. a seed pointing an active entity back at a non-existent calendar, or a calendar dropping out of the raw load) into a failing test instead of quietly-wrong numbers.
 
 <sub>`error (default)` · `tests/assert_fiscal_calendar_is_loaded.sql` · konsolidat#65 konsolidat#76 konsolidat#77</sub>
+
+### `gl_period_start_is_declared`
+
+**konsolidat#171 step 2d (task 5d): a Trial Balance Submission row whose entity has no fiscal calendar of its own is dated from konsol's declared calendar (declared_periods().start_date), the same calendar every other period-dated reader uses.**
+
+This catches the wrong-but-not-epoch date that assert_tb_submission_period_start_not_epoch cannot see: an April-March site's FY2026 P1 is 2025-04-01, and a calendar-month fallback said 2026-01-01. Mirrors the join in silver_gl_entries (entity_fiscal_calendars -> silver_fiscal_periods): a row is judged here only when that join finds no own-calendar period. A period the declared calendar does not list is not judged here (it has no date: the epoch test and assert_trial_balance_period_declared name it).
+
+<sub>`error (default)` · `tests/assert_gl_period_start_is_declared.sql` · konsolidat#171</sub>
 
 ### `partial_period_pnl_matches_treatment`
 
