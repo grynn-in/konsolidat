@@ -167,7 +167,8 @@ jobs:
       # the calendar month of (year, period). The macro is deleted; keep it so.
       - name: no build_date_from_year_period under dbt_project
         run: |
-          if git grep -n build_date_from_year_period -- dbt_project; then exit 1; fi
+          # exit 1 = no match (pass); 0 = a match, 128 = a git error: both fail
+          rc=0; git grep -n build_date_from_year_period -- dbt_project || rc=$?; test $rc -eq 1
           python -m unittest -v tests.test_no_calendar_month_dates
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
