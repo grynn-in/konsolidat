@@ -1,6 +1,8 @@
 -- gate: build +gold_fully_consolidated_tb assert_journal_pnl_closed_at_year_end assert_end_to_end_bs_balances
 -- gate: expect assert_journal_pnl_closed_at_year_end pass
 -- gate: expect assert_end_to_end_bs_balances pass
+-- 7k (#357 review F2): the journal close runs only for a year a later fiscal year follows in the group's posted layers
+-- (the #259 rule). ZZS files a FY2027 P1 movement (cash 10 Dr | share capital ZZ3000 10 Cr) so FY2026 is still a closed year and this fixture still exercises its close.
 -- konsolidat#316 (decided 14 Nov 2026 by Deepak Pai, option A): topside P&L must be closed into retained earnings.
 -- Group ZZG (USD) fully owns ZZS (USD books; P12 balance sheet only: cash ZZ1000 1,000 Dr | share capital ZZ3000 1,000 Cr).
 -- FY2026 has a declared Closing period P13; ZZ3100 is the one is_retained_earnings account.
@@ -101,3 +103,16 @@ VALUES
   ('ZZG', 'topside', 'ZZJ-00001', 'ZZS', 2026, 6, 'ZZ4000', 0, 100, 'accrued income', 'zz', 'Approved', 'zz', 2026, 7),
   ('ZZG', 'topside', 'ZZJ-00002', 'ZZS', 2026, 8, 'ZZ1000', 40, 0, 'permanent topside revenue', 'zz', 'Approved', 'zz', 0, 0),
   ('ZZG', 'topside', 'ZZJ-00002', 'ZZS', 2026, 8, 'ZZ4000', 0, 40, 'permanent topside revenue', 'zz', 'Approved', 'zz', 0, 0);
+INSERT INTO epm_staging.fiscal_periods
+  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
+VALUES
+  (2027, 1, 'FY2027-P01', 'Jan 2027', 'Regular', '2027-01-01', '2027-01-31', 'Q1', 'Open');
+INSERT INTO epm_raw.trial_balance_submissions
+  (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
+VALUES
+  ('ZZT2', 'ZZS', 2027, 1, 'ZZ1000', 10, 0, 'Cash', 'ZZ-TBS-ZZT2', now(), ''),
+  ('ZZT2', 'ZZS', 2027, 1, 'ZZ3000', 0, 10, 'Later year', 'ZZ-TBS-ZZT2', now(), '');
+INSERT INTO epm_raw.trial_balance_submission_control
+  (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
+VALUES
+  ('ZZT2', 'ZZ-TBS-ZZT2', 'ZZS', 2027, 1, 2, now(), 'Period movement');

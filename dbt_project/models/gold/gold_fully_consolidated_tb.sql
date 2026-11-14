@@ -297,7 +297,15 @@ posted_layers as (
    legs) moves into retained_earnings_account(). P&L = silver_main_accounts.is_pnl = 1, or a
    pseudo-account in journal_pnl_pseudo_accounts() (EQ_INCOME). Summed over the year's periods up
    to AND including the Closing period; postings after it are not closed (the year-end test names
-   them). One negating line per (group, entity, year, account, dimensions) and one retained-earnings
+   them, reason after_closing).
+   The year rule is the #259 entity close's (#357 review F2, chosen under the 5 Nov 2026 standing
+   rule): a (group, fiscal year) is closed only when a LATER fiscal year follows it in the group's
+   posted layers (journal_close_years). The open, current year is not closed early, so its journal
+   P&L stays in P&L beside the entity P&L, which #259 also leaves open until a later year arrives
+   (silver_tb_movements years_to_close: fiscal_year < last_year). The group's posted layers are the
+   source, not silver_tb_movements' entity periods, because the close is per group and a group can
+   hold members that post no entity rows (an associate, a disposed subsidiary) whose layers carry
+   the later year. One negating line per (group, entity, year, account, dimensions) and one retained-earnings
    line per (group, entity, year, dimensions); no partner (this table has none). When the chart
    flags not exactly one retained-earnings account, nothing is posted:
    assert_retained_earnings_account_unique fails naming the group. Reads posted_layers, never this
@@ -307,6 +315,12 @@ journal_close_periods as (
     from {{ source('epm_staging', 'fiscal_periods') }}
     where period_type = 'Closing'
     group by fiscal_year
+),
+
+journal_close_years as (
+    select consolidation_group, max(fiscal_year) as last_year
+    from posted_layers
+    group by consolidation_group
 ),
 
 journal_close_source as (
@@ -323,8 +337,10 @@ journal_close_source as (
         l.amount as amount
     from posted_layers as l
     inner join journal_close_periods as c on c.fiscal_year = l.fiscal_year
+    inner join journal_close_years as y on y.consolidation_group = l.consolidation_group
     left join {{ ref('silver_main_accounts') }} as ma on ma.main_account_id = l.main_account
-    where l.adjustment_type not in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
+    where l.fiscal_year < y.last_year
+      and l.adjustment_type not in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
       and l.fiscal_period <= c.closing_period
       and (ma.is_pnl = 1
            or l.main_account in ({{ "'" ~ journal_pnl_pseudo_accounts() | join("','") ~ "'" }}))
