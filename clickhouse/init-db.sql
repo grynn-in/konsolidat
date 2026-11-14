@@ -404,9 +404,13 @@ CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
 -- (schema_apply._sync_budget_dimension_columns); gold_spread_budget reads that
 -- same set through get_budget_dimensions(). They used to be created with two
 -- customers' dimensions as literal columns.
+-- Budget S2 R6 (Q13-a): every annual row declares its layer and currency.
+-- tests/test_budget_annual_input_ddl.py pins this body to konsol's
+-- _REFERENCE_TABLE_DDL; konsol adds the two columns to an existing table on
+-- migrate (ALTER ... ADD COLUMN IF NOT EXISTS ... AFTER).
 CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String,
+    main_account String, layer String, currency String,
     annual_amount Decimal(18,2), spread_profile_id String, submitted_by String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, main_account);
 
