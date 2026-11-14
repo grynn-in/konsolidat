@@ -7,10 +7,16 @@
    source of period dates (macros/declared_periods.sql), so the row's accounting_date is that period's
    start_date, and this test fails the build when it is not.
 
+   What this test is: a regression pin. silver_gl_entries and this test compute the SAME join (declared_periods()
+   on the period key, reading start_date), so a row the model builds carries the declared date by construction
+   and the test cannot fail on it. It fails only when a future change dates a submission any other way; its
+   must_flag fixture seeds silver_gl_entries directly to prove it can. The guards that fail the build on a
+   wrongly dated or undeclared submission period are assert_trial_balance_period_declared (the period is not
+   declared) and assert_tb_submission_period_start_not_epoch (the row kept at 1970-01-01).
+
    One row per (entity, period) whose submission rows carry a date other than the declared start_date. A period
-   the calendar does not declare has no declared date and is not judged here
-   (assert_trial_balance_period_declared refuses it).
-   Fixture: dbt_project/test_fixtures/assert_tb_submission_date_is_declared.sql. #}
+   the calendar does not declare has no declared date and is not judged here.
+   Fixtures: dbt_project/test_fixtures/assert_tb_submission_date_is_declared*.sql. #}
 select
     g.data_area_id as data_area_id,
     g.fiscal_year as fiscal_year,

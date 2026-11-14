@@ -11,7 +11,11 @@
    konsolidat#220: members are dated tranches (member_effective_from .. member_effective_to), so a value is
    unassigned in a period only when no leaf tranche of the default hierarchy covers that period's end_date.
    A value that becomes a leaf in 2025 is unassigned in 2024 and assigned from 2025. The period's end_date
-   comes from the declared calendar (epm_staging.fiscal_periods); a period the calendar does not declare drops out of this model (an inner join). #}
+   comes from the declared calendar (epm_staging.fiscal_periods);
+   a period the calendar does not declare drops out of this model (an inner join), silently:
+   assert_hierarchy_node_period_declared cannot see it (it reads the same declared keys) and is only a pin
+   against a change here; the guards are upstream, where the row is kept: assert_trial_balance_period_declared
+   on gold_trial_balance. #}
 
 with tb_long as (
     {{ tb_dimension_long_sql('tb') }}

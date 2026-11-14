@@ -13,7 +13,10 @@
    trial-balance row joins only the leaf tranche and the closure rows whose windows cover its period's end_date:
    a moved leaf rolls to the parent it had then, an ended node carries no later period, and a renamed node
    carries the label of that period. The period's end_date comes from the declared calendar
-   (epm_staging.fiscal_periods); a period the calendar does not declare drops out of this model (an inner join). #}
+   (epm_staging.fiscal_periods); a period the calendar does not declare drops out of this model (an inner join),
+   silently: assert_hierarchy_node_period_declared cannot see it (it reads the same declared keys) and is only a
+   pin against a change here; the guards are upstream, where the row is kept:
+   assert_trial_balance_period_declared on gold_trial_balance. #}
 
 with tb_long as (
     {{ tb_dimension_long_sql('tb') }}

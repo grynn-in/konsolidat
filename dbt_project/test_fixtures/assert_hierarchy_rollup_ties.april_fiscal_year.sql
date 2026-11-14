@@ -14,8 +14,11 @@
 --     ZZ_E, so the groups tie. The macro would have dated P1 at 2026-01-31, under ZZ_B: the declared date is the
 --     one read, before and after A6.
 --   FY2026 P10 (undeclared): leaf ZZ_X 30, no group row. Before A6 the test dated it 2026-10-31 and expected 30
---     at ZZ_B and ZZ_ROOT (2 rows). Now the period is not judged here; assert_hierarchy_node_period_declared
---     names it.
+--     at ZZ_B and ZZ_ROOT (2 rows). Now the period is not judged here. The row STAYS: it is the one that made the
+--     old test fail, so the fixture still tells a test that invents a date for an undeclared period (FAIL 2) from
+--     one that does not (PASS). Nothing in this selector names the period: on a live site such a row can only come
+--     from gold_trial_balance, where assert_trial_balance_period_declared (ERROR) names it;
+--     assert_hierarchy_node_period_declared cannot, since the node model drops the period by the same join.
 -- The live table may predate the two tranche columns: add them first.
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';

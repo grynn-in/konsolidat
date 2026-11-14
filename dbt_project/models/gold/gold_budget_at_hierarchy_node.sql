@@ -10,7 +10,11 @@
 
    konsolidat#220: the tree is resolved per period, as in gold_tb_at_hierarchy_node. A budget row joins only the
    leaf tranche and the closure rows whose windows cover its period's end_date (declared calendar,
-   epm_staging.fiscal_periods; a period the calendar does not declare drops out of this model (an inner join)). #}
+   epm_staging.fiscal_periods);
+   a period the calendar does not declare drops out of this model (an inner join), silently:
+   assert_hierarchy_node_period_declared cannot see it (it reads the same declared keys) and is only a pin
+   against a change here; the guard is upstream, where the line is kept: assert_budget_period_declared on the
+   raw budget lines and gold_spread_budget. #}
 
 with budget_long as (
     {{ budget_dimension_long_sql('b') }}

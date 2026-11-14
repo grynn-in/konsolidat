@@ -5,7 +5,10 @@
    konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group
    only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared
    calendar, epm_staging.fiscal_periods). A period the calendar does not declare is not judged: its leaf rows
-   drop out here, as they do from the node model (QA3 a), and assert_hierarchy_node_period_declared names it. So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later.
+   drop out here, as they do from the node model (QA3 a). assert_trial_balance_period_declared names the period on
+   gold_trial_balance, where the row is kept; assert_hierarchy_node_period_declared cannot (it reads the same declared
+   keys the node model does) and is only a pin against a change to that model. So a moved leaf is counted once, under
+   the parent it had then, and an ended group gets nothing later.
 
    Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both
    show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier
