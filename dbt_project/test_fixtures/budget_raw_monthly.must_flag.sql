@@ -8,7 +8,7 @@
 -- (Q15-c), so ZZ_B2 has no rows and is not named: a second result means the basis is not filtered.
 --
 -- The lineage reads these tables too, empty here, so they are named to exist (empty):
--- epm_gold.budget_annual_input, epm_gold.spread_profiles, epm_gold.budget_monthly_input,
+-- epm_gold.budget_annual_input, epm_gold.spread_profiles,
 -- epm_gold.gold_trial_balance, epm_silver.silver_budget_entries, epm_gold.scenario_definitions.
 --
 -- epm_raw.budget_entries is konsol's (I3), declared in clickhouse/init-db.sql: fixture_gate.py creates it
