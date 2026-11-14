@@ -98,13 +98,11 @@ left join fiscal_dates as fp
    of truth. (It was dim_empty_strings() until #255: a submitted trial balance
    carried no dimensions at all.)
 
-   accounting_date comes from the entity's OWN fiscal calendar
-   (entity_fiscal_calendars -> silver_fiscal_periods.period_start_date), the
-   same machinery the branch above uses in reverse — an April-March entity's
-   FY2026 P1 is 2025-04-01, not 2026-01-01. When the calendar or period is not
-   loaded, build_date_from_year_period() is the guarded fallback (it clamps,
-   so an out-of-range period from a manual insert cannot make an invalid
-   date). One computed date serves accounting_date and document_date. #}
+   accounting_date is the declared start_date of the period in konsol's fiscal
+   calendar (konsol#348): an April-March site's FY2026 P1 is 2025-04-01, not
+   2026-01-01. A period the calendar does not declare is dated 1970-01-01 and
+   named by the tests (see period_start below). One computed date serves
+   accounting_date and document_date. #}
 
 union all
 
@@ -180,26 +178,16 @@ from (
         {{ dim_select(prefix='m.', trailing=true) }}
         m.submission_name as submission_name,
         m.movement_amount as net_amount,
-        {# ClickHouse LEFT JOIN fills an unmatched sfp row with the column
-           default under join_use_nulls=0 -- Date's default is toDate(0) =
-           1970-01-01, NOT NULL -- so coalesce() never falls through. A
-           TB-only site has no ERP fiscal calendar loaded at all, so every
-           submission hit this exact miss and landed on 1970-01-01 instead of
-           the first day of its own fiscal year/period. Test the sentinel
-           value itself, the same shape as the fp.fiscal_year != 0 guard
-           above. #}
-        if(
-            sfp.period_start_date = toDate(0),
-            {{ build_date_from_year_period('m.fiscal_year', 'm.fiscal_period') }},
-            sfp.period_start_date
-        ) as period_start
+        {# konsol#348 (QA1 c / A11): the declared start_date of the period in konsol's fiscal calendar
+           (macros/declared_periods.sql), the one source of period dates; no ERP calendar and no calendar-month
+           guess. A period the calendar does not declare misses the LEFT JOIN and, under join_use_nulls=0,
+           reads Date's default 1970-01-01. The row is KEPT, so assert_trial_balance_period_declared and
+           assert_tb_submission_period_start_not_epoch name it; nothing is invented for the period. #}
+        dp.start_date as period_start
     from {{ ref('silver_tb_movements') }} as m
-    left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
-        on m.data_area_id = efc.data_area_id
-    left join {{ ref('silver_fiscal_periods') }} as sfp
-        on sfp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
-        and {{ extract_year('sfp.year_start_date') }} = m.fiscal_year
-        and sfp.calendar_month = m.fiscal_period
+    left join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(m.fiscal_year)
+        and dp.fiscal_period = toUInt16(m.fiscal_period)
 ) as tbs
 left join {{ ref('silver_main_accounts') }} as ma
     on tbs.main_account = ma.main_account_id
