@@ -15,42 +15,41 @@
    lesser balance for each: 2.61M eliminated against a 2.56M intercompany
    revenue balance. It had no counterparty to pair on.
 
-   Two views (elimination_view):
-   - 'group': the group view, the one gold_fully_consolidated_tb books. It
-     presents each entity at the share the group holds (group_amount).
-   - 'nci': the NCI view, the minority owners' share of each line
-     (gold_consolidated_trial_balance.nci_amount), which the consolidation
-     report adds to the group view for its 100% column (#175 re-review H1).
-   Group plus NCI is the full (100%) consolidation. In it both sides of a
-   pair are eliminated in full, a difference is booked at 100%, and the NCI
-   line nets to zero per group and period (assert_ic_nci_line_nets_zero).
-   Not per entity: its legs are attributed to the entity whose minority owns
-   them (assert_ic_nci_leg_entity), and with sides held at 70% and 80% those
-   differ.
+   Posted in full for subsidiaries (IFRS 10.B86(c)), at the operator's share
+   where a side is a joint operation (IFRS 11.B34-B37, konsol#117 pair 3).
+   Pair 2 K3: IFRS 10.B86(c) eliminates intragroup
+   balances, transactions, income and expenses IN FULL, and layer 1 now
+   carries a full-method subsidiary at 100% (konsolidat#204 option (a)), so
+   both sides of a pair are eliminated at 100% whatever the holding. The
+   minority's share of a subsidiary is one NCI line, posted by the attribution
+   journal (gold_nci_attribution_journal, K2), not a part of the elimination. This
+   supersedes decision 12 (13 Sep 2026: eliminate at the share both sides
+   hold, the rest to an NCI leg, and a second 'nci' view for the 100%
+   column) by Deepak Pai's decision of 8 Nov 2026 (konsol#117). Every row is
+   now in one view, elimination_view = 'group', a column kept for the readers
+   that filter on it. assert_ic_eliminated_in_full pins it.
+
+   Pair 3: layer 1 carries a `proportional` entity (an IFRS 11 joint operation)
+   at the operator's share, so a transaction with it is eliminated to the
+   extent of that interest. One factor per pair, least(share_a, share_b), with
+   share = effective_ownership_pct for a `proportional` side and 1.0 otherwise
+   (an entity with no ownership row in the group and period keeps 1.0), scales
+   the matched legs, the difference legs and the unrealised profit (buyer and
+   seller). Pinned by assert_ic_eliminated_in_full and
+   assert_unrealized_profit_at_operator_share.
+
+   The difference legs are scaled by the same factor: for S receivable 100 against J (joint operation, 50%) payable 90, the matched 45 is eliminated on both sides,
+   S's residual 10 x 0.5 = 5 goes to the difference account, and S keeps 50, 
+   the co-operator's share of the receivable, which from the group's view is the external claim whatever J's books say.
 
    Balance eliminations come from gold_ic_reconciliation, one row per pair and
    period (decided 13 Sep 2026):
-   - 'matched' (group view): the matched amount (the smaller side, at 100%),
-     eliminated from both sides at the share of it both hold,
-     least(share_a, share_b).
-   - 'nci' (group view, decision 12): the side the group holds more of (for
-     example the 100%-owned entity against an 80%-owned one) is eliminated at
-     its own share. The rest of it goes to the NCI line: the NCI Account
-     the group declares on its root (konsolidat#208), or
-     ic_nci_placeholder() until it declares one. It is attributed to the other, partly owned side's entity, whose minority
-     owners hold that share; never to the difference account. Each side's
-     entry is computed and posted on its own account (re-review L1). With
-     1000 against 1000 at 100% and 80%, the group view eliminates 1000 and
-     800 and puts +200 to NCI.
-   - 'difference' (group view): what is left of each side after that (the
-     100% residual) at the side's share, moved to the group's
-     intercompany-difference account and labelled with the pair's
-     difference_cause (decision 13). A group without one books no
+   - 'matched': the matched amount (the smaller side, at 100%), eliminated
+     from each side in full: full_a from side A, full_b from side B.
+   - 'difference': what is left of each side after that (the 100% residual),
+     moved to the group's intercompany-difference account and labelled with
+     the pair's difference_cause (decision 13). A group without one books no
      difference; the rest stays on the IC accounts.
-   - 'matched' and 'difference' (NCI view): the same eliminations for the
-     minority's share of each side, at (1 - share), against the NCI line.
-     In the example, B's minority holds -200 of the payable: +200 on it,
-     -200 to the NCI line. Nothing is posted for a 100%-owned side.
    - Decision 14: a balance-sheet pair is valued at its balance to date, so
      the amounts above are eliminations TO DATE. The views hold movements, so
      each period posts the change since the pair's previous row: a timing
@@ -60,11 +59,11 @@
      posts it as it is.
    - Rows without a partner are never eliminated (gold_ic_unmatched).
      Balance-type IC Elimination Rules no longer eliminate anything. The
-     doctype stays for special cases: 'unrealized_profit' below (group view). #}
+     doctype stays for special cases: 'unrealized_profit' below. #}
 
 {% set pair = "consolidation_group, entity_a, account_a, entity_b, account_b" %}
 {% set to_date = "partition by " ~ pair ~ " order by fiscal_year, fiscal_period rows between unbounded preceding and current row" %}
-{% set components = ['m_a', 'm_b', 'n_a', 'n_b', 'd_a', 'd_b', 'v_m_a', 'v_m_b', 'v_d_a', 'v_d_b'] %}
+{% set components = ['m_a', 'm_b', 'd_a', 'd_b'] %}
 
 with ic_rules as (
     select
@@ -80,9 +79,25 @@ with ic_rules as (
     from {{ source('epm_staging', 'ic_elimination_rules') }}
 ),
 
-{# konsolidat#208: the NCI Account each group declares on its root #}
-group_nci as (
-    {{ ic_group_nci_accounts() }}
+{# the pair's factor, IFRS 11.B34-B37. join_use_nulls=0: a miss fills method ''
+   and share 0; '' is not 'proportional', so an entity with no ownership row in
+   the group and period keeps share 1.0 (today's behaviour) #}
+pair_factors as (
+    select
+        r.consolidation_group as consolidation_group, r.fiscal_year as fiscal_year,
+        r.fiscal_period as fiscal_period, r.entity_a as entity_a, r.account_a as account_a,
+        r.entity_b as entity_b, r.account_b as account_b,
+        least(
+            if(oa.consolidation_method = 'proportional', toFloat64(oa.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)
+        ) as factor
+    from {{ ref('gold_ic_reconciliation') }} as r
+    left join {{ ref('gold_entity_ownership') }} as oa
+        on oa.consolidation_group = r.consolidation_group and oa.data_area_id = r.entity_a
+        and oa.fiscal_year = r.fiscal_year and oa.fiscal_period = r.fiscal_period
+    left join {{ ref('gold_entity_ownership') }} as ob
+        on ob.consolidation_group = r.consolidation_group and ob.data_area_id = r.entity_b
+        and ob.fiscal_year = r.fiscal_year and ob.fiscal_period = r.fiscal_period
 ),
 
 pairs as (
@@ -91,35 +106,28 @@ pairs as (
         r.fiscal_period as fiscal_period, r.basis as basis,
         r.entity_a as entity_a, r.account_a as account_a, r.entity_b as entity_b, r.account_b as account_b,
         r.ic_difference_account as ic_difference_account, r.difference_cause as difference_cause,
-        {# join_use_nulls=0: a group with no root row gets '' and so the placeholder #}
-        {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }} as nci_account,
-        r.share_a as share_a, r.share_b as share_b,
-        {# each side's full (100%) elimination: it takes the side to its residual #}
-        -sign(r.balance_a) * r.matched_amount as full_a,
-        -sign(r.balance_b) * r.matched_amount as full_b,
+        {# each side's elimination at the pair's factor (1.0 unless a side is a
+           joint operation): at 100% it takes the side to its residual #}
+        -sign(r.balance_a) * r.matched_amount * f.factor as full_a,
+        -sign(r.balance_b) * r.matched_amount * f.factor as full_b,
         r.residual_a as residual_a,
-        r.residual_b as residual_b
+        r.residual_b as residual_b,
+        f.factor as factor
     from {{ ref('gold_ic_reconciliation') }} as r
-    left join group_nci as gn
-        on gn.nci_group = r.consolidation_group
+    inner join pair_factors as f
+        on f.consolidation_group = r.consolidation_group and f.fiscal_year = r.fiscal_year
+        and f.fiscal_period = r.fiscal_period and f.entity_a = r.entity_a and f.account_a = r.account_a
+        and f.entity_b = r.entity_b and f.account_b = r.account_b
 ),
 
 {# every leg on the pair's basis: to date (balance) or for the period (movement) #}
 at_basis as (
     select
         *,
-        {# group view #}
-        full_a * least(share_a, share_b) as m_a,
-        full_b * least(share_a, share_b) as m_b,
-        if(share_a > share_b, full_a * (share_a - share_b), 0) as n_a,
-        if(share_b > share_a, full_b * (share_b - share_a), 0) as n_b,
-        if(ic_difference_account != '', -residual_a * share_a, 0) as d_a,
-        if(ic_difference_account != '', -residual_b * share_b, 0) as d_b,
-        {# NCI view: the minority's share of each side #}
-        full_a * (1 - share_a) as v_m_a,
-        full_b * (1 - share_b) as v_m_b,
-        if(ic_difference_account != '', -residual_a * (1 - share_a), 0) as v_d_a,
-        if(ic_difference_account != '', -residual_b * (1 - share_b), 0) as v_d_b
+        full_a as m_a,
+        full_b as m_b,
+        if(ic_difference_account != '', -residual_a * factor, 0) as d_a,
+        if(ic_difference_account != '', -residual_b * factor, 0) as d_b
     from pairs
 ),
 
@@ -146,24 +154,15 @@ posted as (
     from previous
 ),
 
-{# (account, entity, amount) for each of an entry's two legs. The NCI-line
-   legs below (group 'nci', NCI view 'matched') net to zero per group and
-   period, not per entity: the group view's is attributed to the other,
-   partly owned side, the NCI view's to its own side. #}
+{# (account, entity, amount) for each of an entry's two legs #}
 {% set legs = [
-    ('group', 'matched', "''",           'account_a', 'entity_a', 'post_m_a',   'account_b',             'entity_b', 'abs(post_m_a) >= ' ~ materiality_floor()),
-    ('group', 'nci',     "''",           'account_a', 'entity_a', 'post_n_a',   'nci_account',           'entity_b', 'abs(post_n_a) >= ' ~ materiality_floor()),
-    ('group', 'nci',     "''",           'account_b', 'entity_b', 'post_n_b',   'nci_account',           'entity_a', 'abs(post_n_b) >= ' ~ materiality_floor()),
-    ('group', 'difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= " ~ materiality_floor()),
-    ('group', 'difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= " ~ materiality_floor()),
-    ('nci',   'matched', "''",           'account_a', 'entity_a', 'post_v_m_a', 'nci_account',           'entity_a', 'abs(post_v_m_a) >= ' ~ materiality_floor()),
-    ('nci',   'matched', "''",           'account_b', 'entity_b', 'post_v_m_b', 'nci_account',           'entity_b', 'abs(post_v_m_b) >= ' ~ materiality_floor()),
-    ('nci',   'difference', 'posted_cause', 'account_a', 'entity_a', 'post_v_d_a', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_v_d_a) >= " ~ materiality_floor()),
-    ('nci',   'difference', 'posted_cause', 'account_b', 'entity_b', 'post_v_d_b', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_v_d_b) >= " ~ materiality_floor()),
+    ('matched',    "''",           'account_a', 'entity_a', 'post_m_a', 'account_b',             'entity_b', 'abs(post_m_a) >= ' ~ materiality_floor()),
+    ('difference', 'posted_cause', 'account_a', 'entity_a', 'post_d_a', 'ic_difference_account', 'entity_b', "ic_difference_account != '' and abs(post_d_a) >= " ~ materiality_floor()),
+    ('difference', 'posted_cause', 'account_b', 'entity_b', 'post_d_b', 'ic_difference_account', 'entity_a', "ic_difference_account != '' and abs(post_d_b) >= " ~ materiality_floor()),
 ] %}
 entries as (
-    {% for view, kind, cause, acc1, ent1, amount, acc2, ent2, cond in legs %}
-    select '{{ view }}' as elimination_view, '{{ kind }}' as elimination_kind, {{ cause }} as cause,
+    {% for kind, cause, acc1, ent1, amount, acc2, ent2, cond in legs %}
+    select 'group' as elimination_view, '{{ kind }}' as elimination_kind, {{ cause }} as cause,
            {{ acc1 }} as acc1, {{ ent1 }} as ent1, {{ amount }} as v1, {{ acc2 }} as acc2, {{ ent2 }} as ent2,
            consolidation_group, fiscal_year, fiscal_period, basis, entity_a, account_a, entity_b, account_b
     from posted
@@ -215,9 +214,15 @@ unrealized_profit_eliminations as (
         icr.asset_account as credit_account,
         icb.selling_entity as debit_entity,
         icb.buying_entity as credit_entity,
-        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as elimination_amount,
-        -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0)) as debit_elimination,
-        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) as credit_elimination,
+        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)) as elimination_amount,
+        -(icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0))) as debit_elimination,
+        icb.ending_inventory_from_ic * (icr.margin_pct / 100.0) * least(
+            if(os.consolidation_method = 'proportional', toFloat64(os.effective_ownership_pct), 1.0),
+            if(ob.consolidation_method = 'proportional', toFloat64(ob.effective_ownership_pct), 1.0)) as credit_elimination,
         'unrealized_profit' as elimination_kind,
         '' as difference_cause,
         '' as basis,
@@ -232,13 +237,24 @@ unrealized_profit_eliminations as (
        an unrealized-profit elimination is raised in every group that holds the
        buyer — including a parent group, which the single-level seed join never
        reached. distinct because the ownership model is period-grained and this
-       join only needs the membership. #}
+       join only needs the membership. Membership is the set the CTB
+       line-consolidates (full, proportional): a buyer resolved `none` or
+       `equity` raises no unrealised-profit elimination (#336). #}
     inner join (
         select distinct consolidation_group, data_area_id
         from {{ ref('gold_entity_ownership') }}
-        where has_complete_chain = 1 and consolidation_method != 'equity'
+        where has_complete_chain = 1 and consolidation_method in ('full', 'proportional')
     ) as cg
         on icb.buying_entity = cg.data_area_id
+    {# the seller's and the buyer's share in this group and period: a joint
+       operation on either side limits the elimination to the operator's
+       interest (IFRS 11.B34-B37); a miss keeps 1.0 (join_use_nulls=0) #}
+    left join {{ ref('gold_entity_ownership') }} as os
+        on os.consolidation_group = cg.consolidation_group and os.data_area_id = icb.selling_entity
+        and os.fiscal_year = icb.fiscal_year and os.fiscal_period = icb.fiscal_period
+    left join {{ ref('gold_entity_ownership') }} as ob
+        on ob.consolidation_group = cg.consolidation_group and ob.data_area_id = icb.buying_entity
+        and ob.fiscal_year = icb.fiscal_year and ob.fiscal_period = icb.fiscal_period
     where icr.rule_type = 'unrealized_profit'
       and icb.ending_inventory_from_ic > 0
       and icr.margin_pct > 0

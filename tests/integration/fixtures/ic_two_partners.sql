@@ -11,7 +11,7 @@
 -- konsolidat#227: this fixture is self-contained. It used to post for ZZF with
 -- no entity row anywhere, so ZZF never resolved a currency and
 -- assert_every_tb_entity_has_a_currency flagged it -- silver_entity_currencies
--- unions epm_staging.entities with silver_legal_entities and ZZF was in neither.
+-- reads epm_staging.entities (konsolidat#255) and ZZF was not in it.
 -- It also booked accounts it never declared. Its codes are its own: it shares
 -- none with ic_decisions.sql, because the two load under separate pytest
 -- fixtures and each tears down only what it created.

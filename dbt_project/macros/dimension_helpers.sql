@@ -6,12 +6,12 @@
    ============================================================ #}
 
 {% macro get_dimensions() %}
-    {{ return(var('dimensions')) }}
+    {{ return(var('dimensions', [])) }}
 {% endmacro %}
 
 {% macro get_budget_dimensions() %}
     {% set result = [] %}
-    {% for d in var('dimensions') %}
+    {% for d in var('dimensions', []) %}
         {% if d.in_budget %}
             {% do result.append(d) %}
         {% endif %}
@@ -42,7 +42,7 @@
 
 {# SELECT list of dimension columns with optional table prefix #}
 {% macro dim_select(prefix='', dims=none, trailing=false, leading=false) %}
-    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {%- set dimensions = dims if dims is not none else var('dimensions', []) %}
     {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
@@ -52,7 +52,7 @@
 
 {# GROUP BY list of dimension columns with optional table prefix #}
 {% macro dim_group_by(prefix='', dims=none, trailing=false, leading=false) %}
-    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {%- set dimensions = dims if dims is not none else var('dimensions', []) %}
     {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
@@ -62,7 +62,7 @@
 
 {# JOIN conditions for matching dimensions between two aliases #}
 {% macro dim_join_on(left, right, dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% set dimensions = dims if dims is not none else var('dimensions', []) %}
     {% for d in dimensions %}
     and {{ left }}.{{ d.name }} = {{ right }}.{{ d.name }}
     {%- endfor %}
@@ -70,7 +70,7 @@
 
 {# COALESCE for FULL OUTER JOIN selects #}
 {% macro dim_coalesce(left, right, dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% set dimensions = dims if dims is not none else var('dimensions', []) %}
     {% for d in dimensions %}
     coalesce({{ left }}.{{ d.name }}, {{ right }}.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}
@@ -78,7 +78,7 @@
 
 {# PARTITION BY clause for window functions #}
 {% macro dim_partition_by(prefix='', dims=none, trailing=false, leading=false) %}
-    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {%- set dimensions = dims if dims is not none else var('dimensions', []) %}
     {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ prefix }}{{ d.name }}{{ ',' if not loop.last }}
@@ -88,7 +88,7 @@
 
 {# Empty string literals for non-entity layers (IC eliminations, CTA, etc.) #}
 {% macro dim_empty_strings(dims=none, trailing=false, leading=false) %}
-    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {%- set dimensions = dims if dims is not none else var('dimensions', []) %}
     {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     '' as {{ d.name }}{{ ',' if not loop.last }}
@@ -125,7 +125,7 @@
    NULL — so coalesce() would wrongly blank out unmapped values.
    Trailing comma slots this before the trailing _loaded_at/_raw_id. #}
 {% macro dim_harmonize_select(raw_alias='unioned', map_prefix='dmap_', dims=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% set dimensions = dims if dims is not none else var('dimensions', []) %}
     {% for d in dimensions %}
     {# precedence: entity-specific mapping beats the ERP-wide default (entity='')
        beats passthrough. Cost centre 100 can be Sales in USMF and Manufacturing
@@ -140,7 +140,7 @@
    erp_source_col is a SQL expression — the per-row erp_source column
    (e.g. 'unioned.erp_source') so each source's values map correctly. #}
 {% macro dim_harmonize_joins(erp_source_col, raw_alias='unioned', map_prefix='dmap_', dims=none, entity_col=none) %}
-    {% set dimensions = dims if dims is not none else var('dimensions') %}
+    {% set dimensions = dims if dims is not none else var('dimensions', []) %}
     {% set entity_expr = entity_col if entity_col is not none else raw_alias ~ '.entity_id' %}
     {% for d in dimensions %}
     {# TWO joins, not one OR-predicate: a value with BOTH an entity-specific row
@@ -163,7 +163,7 @@
 
 {# Bronze source mapping: casts source columns to dimension names #}
 {% macro dim_select_from_source(prefix='', dims=none, trailing=false, leading=false) %}
-    {%- set dimensions = dims if dims is not none else var('dimensions') %}
+    {%- set dimensions = dims if dims is not none else var('dimensions', []) %}
     {{- ',' if leading and dimensions | length > 0 }}
     {% for d in dimensions %}
     {{ cast_to_string("coalesce(" ~ prefix ~ d.source_column ~ ", '')") }} as {{ d.name }}{{ ',' if not loop.last }}

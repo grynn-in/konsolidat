@@ -1,3 +1,5 @@
+-- gate: build +gold_consolidated_trial_balance
+-- gate: refuse gold_consolidated_trial_balance EUR->USD FY2026 P12 missing
 -- Closing-period rates, must flag (konsolidat#199 row D9): the governed-rate guard must still REFUSE
 -- `+gold_consolidated_trial_balance` on these rows, naming "EUR->USD FY2026 P12 missing".
 --

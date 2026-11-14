@@ -52,20 +52,38 @@ ORDER BY (consolidation_group, data_area_id);
 -- ============================================================
 -- PRD-10: Historical FX rates for equity accounts (IAS 21)
 -- ============================================================
+-- konsol#374 (option b; Deepak Pai, 7 Nov 2026): a rate converts INTO one
+-- presentation currency (to_currency), so a sub-group presenting in EUR and
+-- its parent presenting in USD each carry their own rate for the same entity
+-- and account. to_currency is LAST in the sort key and has no DEFAULT: konsol
+-- upgrades an existing table with one ALTER (ADD COLUMN, MODIFY ORDER BY), and
+-- ClickHouse appends to a sorting key only a column that ALTER adds, without a
+-- default expression. Keep in step with konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_historical_equity_rates_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.historical_equity_rates (
     consolidation_group String,
     data_area_id String,
     main_account String,
     rate_date Date,
     historical_rate Decimal(18,6),
+    to_currency LowCardinality(String),
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (consolidation_group, data_area_id, main_account, rate_date);
+ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency);
 
 -- ============================================================
 -- PRD-9 / PRD-11 / PRD-12: Ownership periods (temporal ownership,
 --   step acquisitions, disposals)
 -- ============================================================
+-- konsol#117 pair 1 (option A; Deepak Pai, 7 Nov 2026): a period is the
+-- ownership LINK, so it names its owner node (owner_group, owner_data_area_id;
+-- '' for a pure group node). The two columns are LAST in the column list and
+-- appended LAST to the sorting key, with no DEFAULT: two links into one node
+-- from one date share the old key and ReplacingMergeTree collapses them on
+-- merge, and ClickHouse appends to a sorting key only a column the same ALTER
+-- adds, without a default expression (konsolidat#246), which is how konsol
+-- upgrades an existing table with one ALTER. Keep in step with konsol's
+-- _REFERENCE_TABLE_DDL (tests/test_ownership_graph_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.ownership_periods (
     consolidation_group String,
     data_area_id String,
@@ -82,9 +100,12 @@ CREATE TABLE IF NOT EXISTS epm_staging.ownership_periods (
     disposal_date Date DEFAULT '9999-12-31',
     disposal_price Decimal(18,2) DEFAULT 0,
     is_disposal UInt8 DEFAULT 0,
-    updated_at DateTime DEFAULT now()
+    updated_at DateTime DEFAULT now(),
+    -- konsol#117: the link's owner node, in the key
+    owner_group String,
+    owner_data_area_id String
 ) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (consolidation_group, data_area_id, effective_date);
+ORDER BY (consolidation_group, data_area_id, effective_date, owner_group, owner_data_area_id);
 
 -- ============================================================
 -- PRD-16: Extended consolidation adjustments (workflow fields)
@@ -97,8 +118,11 @@ CREATE TABLE IF NOT EXISTS epm_staging.consolidation_adjustments (
     fiscal_year UInt16,
     fiscal_period UInt8,
     main_account String,
-    debit_amount Decimal(18,2) DEFAULT 0,
-    credit_amount Decimal(18,2) DEFAULT 0,
+    -- konsol#353 option C (Deepak Pai, 5 Nov 2026): 4 decimal places, so a
+    -- journal in a 3-decimal currency (BHD, KWD, OMR) is stored exactly. konsol
+    -- widens an existing table on migrate (ALTER TABLE ... MODIFY COLUMN).
+    debit_amount Decimal(20,4) DEFAULT 0,
+    credit_amount Decimal(20,4) DEFAULT 0,
     description String DEFAULT '',
     posted_by String DEFAULT '',
     -- PRD-16: Workflow fields
@@ -228,24 +252,46 @@ CREATE TABLE IF NOT EXISTS epm_staging.reporting_hierarchies (
 -- Consolidation Policy (nci_measurement 'partial'|'full', accounting_framework,
 -- goodwill_treatment 'Impairment only'|'Amortise' + years,
 -- acquisition_costs_treatment 'Expense'|'Capitalise', measurement_period,
--- bargain_purchase 'Recognise gain'|'Refuse') and its declared deal accounts;
+-- bargain_purchase 'Recognise gain'|'Refuse', partial_period_treatment
+-- 'Whole period'|'Pro-rate by days'|'Stub trial balance') and its declared deal accounts;
 -- the acquisition and disposal journals read them and never assume a code.
 -- tests/test_deal_tables_ddl.py pins this body to konsol's.
 CREATE TABLE IF NOT EXISTS epm_gold.consolidation_groups (
     consolidation_group String, data_area_id String, entity_name String,
     reporting_currency String, ic_difference_account String DEFAULT '',
     ic_difference_tolerance Float64 DEFAULT 0,
-    nci_measurement String DEFAULT '', accounting_framework String DEFAULT '', framework_note String DEFAULT '', goodwill_treatment String DEFAULT '', goodwill_amortisation_years UInt16 DEFAULT 0, acquisition_costs_treatment String DEFAULT '', measurement_period String DEFAULT '', bargain_purchase String DEFAULT '', goodwill_account String DEFAULT '', fair_value_adjustment_account String DEFAULT '', investment_account String DEFAULT '', nci_account String DEFAULT '', bargain_purchase_gain_account String DEFAULT '', disposal_gain_loss_account String DEFAULT '', disposal_proceeds_account String DEFAULT '', goodwill_amortisation_expense_account String DEFAULT '', acquisition_costs_account String DEFAULT ''
+    nci_measurement String DEFAULT '', accounting_framework String DEFAULT '', framework_note String DEFAULT '', goodwill_treatment String DEFAULT '', goodwill_amortisation_years UInt16 DEFAULT 0, acquisition_costs_treatment String DEFAULT '', measurement_period String DEFAULT '', bargain_purchase String DEFAULT '', goodwill_account String DEFAULT '', fair_value_adjustment_account String DEFAULT '', investment_account String DEFAULT '', nci_account String DEFAULT '', bargain_purchase_gain_account String DEFAULT '', disposal_gain_loss_account String DEFAULT '', disposal_proceeds_account String DEFAULT '', goodwill_amortisation_expense_account String DEFAULT '', acquisition_costs_account String DEFAULT '', partial_period_treatment String DEFAULT ''
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id);
 
--- One row per (ancestor group, entity, link on the chain between them), written
--- by konsol's tree walk. gold_entity_ownership multiplies each link's dated
--- percentage, which is how a 60%-owned subsidiary of an 80%-owned sub-group
--- reaches the top group at 48% instead of not reaching it at all.
+-- One row per (ancestor group, entity, link on one PATH between them), written
+-- by konsol's path walk over the ownership links. gold_entity_ownership
+-- multiplies each link's dated percentage within a path, which is how a
+-- 60%-owned subsidiary of an 80%-owned sub-group reaches the top group at 48%
+-- instead of not reaching it at all. konsol#117 pair 1: ownership is a graph,
+-- so an entity may be reached by more than one path; path_id names the path
+-- (the node labels from the ancestor to the entity, unique per path), and the
+-- per-path products are summed. link_owner_group / link_owner_data_area_id
+-- name the node each link leaves. `path` keeps its meaning: the entity's tree
+-- path from the root. ORDER BY unchanged; konsol adds the three columns to an
+-- existing table with ADD COLUMN ... AFTER. Keep in step with konsol's
+-- _REFERENCE_TABLE_DDL (tests/test_ownership_graph_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.consolidation_ancestry (
     consolidation_group String, data_area_id String, link_group String,
-    link_data_area_id String, link_depth UInt8, depth UInt8, path String
+    link_data_area_id String, link_depth UInt8, depth UInt8, path String,
+    path_id String, link_owner_group String, link_owner_data_area_id String
 ) ENGINE = MergeTree ORDER BY (consolidation_group, data_area_id, link_depth);
+
+-- konsol#117 pair 1: the consolidation method a group DECLARES for an entity
+-- its links reach by more than one path, where the links alone do not decide
+-- it (design comment section 2; written through from konsol's Consolidation
+-- Method Declaration child table). Read by the ownership macro only when that
+-- rule asks for it. Identical to konsol's _REFERENCE_TABLE_DDL.
+CREATE TABLE IF NOT EXISTS epm_staging.consolidation_method_declarations (
+    consolidation_group String, data_area_id String, consolidation_method String,
+    effective_date Date, end_date Date DEFAULT '9999-12-31', reason String,
+    updated_at DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(updated_at)
+ORDER BY (consolidation_group, data_area_id, effective_date);
 
 -- konsol#110: the governed entity registry, written through from konsol's Entity
 -- doctype. The warehouse used to know entities only from ERP extraction
@@ -342,15 +388,20 @@ CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
 -- budget_monthly_input is the bottom-up half, written by Budget Sheet; it has
 -- always been a konsol write-through with nothing that creates it, which is why
 -- gold_spread_budget has been failing every build.
+-- konsol#287: neither table names a dimension. Which dim_* columns they carry is
+-- the site's Published Dimensions ticked in_budget, which konsol adds by ALTER
+-- (schema_apply._sync_budget_dimension_columns); gold_spread_budget reads that
+-- same set through get_budget_dimensions(). They used to be created with two
+-- customers' dimensions as literal columns.
 CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String, dim_cost_center String, dim_department String,
+    main_account String,
     annual_amount Decimal(18,2), spread_profile_id String, submitted_by String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, main_account);
 
 CREATE TABLE IF NOT EXISTS epm_gold.budget_monthly_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String, dim_cost_center String, dim_department String,
+    main_account String,
     fiscal_period UInt8, amount Decimal(18,2), layer String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, layer);
 

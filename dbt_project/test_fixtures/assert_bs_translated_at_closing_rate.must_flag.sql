@@ -1,9 +1,9 @@
+-- gate: expect assert_bs_translated_at_closing_rate flag 2
 -- assert_bs_translated_at_closing_rate (konsolidat#257): must FLAG, before and after the fix.
 --
 -- Seeds gold_consolidated_trial_balance as the movement-only translation produced it before #257,
 -- and runs the test alone:
---   gate-v.sh <wt> dbt_project/test_fixtures/assert_bs_translated_at_closing_rate.must_flag.sql \
---     "assert_bs_translated_at_closing_rate"
+--   test mode: dbt test --select assert_bs_translated_at_closing_rate
 --
 -- ZZE1 (EUR) in ZZG (USD). ZZ1000 cash +100 at P1 (closing 1.10) translated 110; no movement at P2
 -- (closing 1.20), so the balance stays at 110 instead of 120. ZZ2000 mirrors it (-110 for -120).

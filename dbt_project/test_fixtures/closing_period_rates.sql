@@ -1,3 +1,5 @@
+-- gate: build +gold_consolidated_trial_balance
+-- gate: expect gold_consolidated_trial_balance built
 -- Closing-period rates (konsolidat#199 row D9): `+gold_consolidated_trial_balance` must BUILD on these rows.
 --
 -- Rule under test: a Closing-type period has no governed rates of its own; it translates at the

@@ -1,3 +1,5 @@
+-- gate: build +assert_scenario_rows_declared
+-- gate: expect assert_scenario_rows_declared flag 1
 -- assert_scenario_rows_declared: must FAIL with exactly 1 result (PR #211 review 2, konsolidat#206).
 -- Entity ZZE1 uploads a FY2026 P1 trial balance, so gold_scenario_trial_balance carries GL rows
 -- (data_source 'gl'). The site declares TWO active actual-type scenarios, ACTUAL and ZZ_ACT, so the model

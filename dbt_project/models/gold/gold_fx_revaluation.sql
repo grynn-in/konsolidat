@@ -21,10 +21,16 @@
    retranslation difference, so the consolidated TB did not balance for
    multi-currency groups (#66).
 
-   CTA is computed on the GROUP's share (group_amount); the NCI share of the
-   translation difference rides with nci_amount and is handled by the NCI
-   schedule. A same-currency entity translates at 1.0, so its residual — and
+   CTA is the WHOLE entity's residual (translated_amount, 100%, konsol#117 pair 2
+   K1: a full-method subsidiary is consolidated at 100%). The minority's share of
+   the translation difference is moved to the NCI line by the attribution journal
+   (gold_nci_attribution_journal, K2: (1 - ownership) x this plug); it used to be
+   computed on the GROUP's share (group_amount) and left to the NCI schedule. A same-currency entity translates at 1.0, so its residual — and
    therefore its CTA — is zero.
+
+   Proportional (konsol#117 pair 3, IFRS 11.20): for a joint operation group_amount
+   is the operator's share, so the plug -sum(group_amount) is the operator's share
+   of the CTA. No attribution row follows: a joint operation has no minority.
 
    CTA is a WHOLE-ENTITY residual, never a per-account figure. This model emits
    one plug row per entity/period carrying the literal 'CTA' in main_account —

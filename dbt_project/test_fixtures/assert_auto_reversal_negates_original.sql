@@ -1,3 +1,4 @@
+-- gate: build +assert_auto_reversal_negates_original
 -- V04 fixture (konsol#305-D2-2/D2-11, batch review 27 Sep finding 1): copy of
 -- the V01 fixture assert_auto_reversal_generated.sql — tables
 -- epm_staging.consolidation_adjustments

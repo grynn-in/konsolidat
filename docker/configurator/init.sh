@@ -5,7 +5,6 @@ set -e
 cd /home/frappe/frappe-bench
 
 SITE_NAME="${SITE_NAME:-konsolidat.local}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 DB_HOST="${DB_HOST:-mariadb}"
 DB_PORT="${DB_PORT:-3306}"
 DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-rootpassword}"
@@ -75,6 +74,8 @@ if [ -d "sites/${SITE_NAME}" ]; then
     echo "Site ${SITE_NAME} already exists. Running migrations..."
     bench --site "$SITE_NAME" migrate
 else
+    # A new site never gets a known Administrator password (check-admin-password.sh).
+    bash "$(dirname "$0")/check-admin-password.sh"
     echo "Creating new site: ${SITE_NAME}..."
     bench new-site "$SITE_NAME" \
         --db-host "$DB_HOST" \
@@ -114,6 +115,16 @@ bench --site "$SITE_NAME" execute konsol.install.setup_epm_settings \
     --kwargs "{\"ch_host\": \"${CH_HOST}\", \"ch_port\": ${CH_PORT}, \"ch_user\": \"${CLICKHOUSE_USER:-default}\", \"ch_password\": \"${CLICKHOUSE_PASSWORD:-open_epm_dev}\"}" \
     2>/dev/null || echo "EPM Settings setup skipped (install.py may not exist yet)"
 
+# konsol#229: the least-privilege user the Measure expression check runs as,
+# when the stack defines it (clickhouse/set-password.sh). A call of its own,
+# so a konsol that predates it skips only this step. Unset, konsol leaves the
+# check user blank and reports every expression "not checked".
+if [ -n "${CLICKHOUSE_MEASURE_CHECK_PASSWORD:-}" ]; then
+    bench --site "$SITE_NAME" execute konsol.install.setup_measure_check_user \
+        --kwargs "{\"user\": \"konsol_measure_check\", \"password\": \"${CLICKHOUSE_MEASURE_CHECK_PASSWORD}\"}" \
+        2>/dev/null || echo "Measure-check ClickHouse user not set in EPM Settings (konsol predates konsol#229)"
+fi
+
 # Sync scheduled jobs from app hooks.
 # `bench migrate` does not reliably create the Scheduled Job Type rows for an
 # app's scheduler_events crons on an existing site, so konsol's cron jobs
@@ -145,4 +156,4 @@ bash /home/frappe/refresh-assets.sh || true
 echo ""
 echo "=== Configurator Complete ==="
 echo "Site: ${SITE_NAME}"
-echo "Admin: Administrator / ${ADMIN_PASSWORD}"
+echo "Admin: Administrator (password from ADMIN_PASSWORD, not printed)"

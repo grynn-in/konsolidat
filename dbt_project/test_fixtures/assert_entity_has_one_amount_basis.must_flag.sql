@@ -1,3 +1,5 @@
+-- gate: build +assert_entity_has_one_amount_basis
+-- gate: expect assert_entity_has_one_amount_basis flag 1
 -- assert_entity_has_one_amount_basis: must FAIL with exactly 1 result (konsolidat#199).
 -- One entity, ZZOP, with two claimed batches that declare different bases:
 --   ZZM1 (FY2026 P1) 'Period-end balance'  and  ZZM2 (FY2026 P2) 'Year-to-date movement'.

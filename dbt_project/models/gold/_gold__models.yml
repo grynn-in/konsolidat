@@ -55,9 +55,9 @@ models:
       - name: translated_amount
         description: "local_amount * translation_rate + retranslation_amount (konsolidat#257): summed to a period, a balance sheet key declared at closing gives its local balance at that period's closing rate"
       - name: group_amount
-        description: "translated_amount * ownership_pct"
+        description: "consolidation_method 'full': equals translated_amount, a controlled subsidiary carried line by line at 100% (IFRS 10.B86, konsolidat#204 option (a), konsol#117 pair 2); the minority is the single NCI line in equity. 'proportional': translated_amount * ownership_pct, the operator's share of a joint operation (IFRS 11.20, konsol#117 pair 3)."
       - name: nci_amount
-        description: "translated_amount * (1 - ownership_pct)"
+        description: "consolidation_method 'full': attribution amount, translated_amount * (1 - ownership_pct), the minority share of the line; not the complement of group_amount (konsolidat#204 option (a)); the NCI line in equity is posted from it (konsol#117 pair 2). 'proportional': 0, a joint operation has no minority (IFRS 11.20, konsol#117 pair 3)."
       - name: retranslation_amount
         description: >
           konsolidat#257: the retranslation of the key's balance brought forward,
@@ -77,30 +77,36 @@ models:
       net to zero. Balance rows come from gold_ic_reconciliation (konsolidat#148):
       the matched amount of each pair, and the difference moved to the group's
       intercompany-difference account. Unrealized-profit rows come from IC
-      Elimination Rules. The minority owners' portion (decision 12) posts to
-      the NCI Account the group declares on its Consolidation Group root
-      (konsolidat#208), or to the 'NCI' placeholder (ic_nci_placeholder())
-      until it declares one; assert_ic_nci_account_declared names such a group.
+      Elimination Rules. Eliminations are posted in full (IFRS 10.B86(c);
+      konsol#117 pair 2 K3, konsolidat#204 (a)): both sides at 100%, whatever
+      the holding. The minority's share is the NCI line of the NCI attribution
+      journal (K2), not part of an elimination. This supersedes decision 12.
+      Where a side is a joint operation (consolidation_method proportional,
+      IFRS 11), the pair is eliminated at the operator's share instead
+      (IFRS 11.B34-B37; konsol#117 pair 3): matched legs, difference legs and
+      unrealized profit are scaled by least(share_a, share_b), share being
+      effective_ownership_pct for a proportional side and 1.0 otherwise.
+      The difference legs are scaled by the same factor: for S receivable 100 against J (joint operation, 50%) payable 90, the matched 45 is eliminated on both sides, S's residual 10 x 0.5 = 5 goes to the difference account, and S keeps 50, the co-operator's share of the receivable, which from the group's view is the external claim whatever J's books say.
     columns:
       - name: rule_id
         tests:
           - not_null
       - name: elimination_amount
-        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit"
+        description: "The amount of the entry: a pair's matched amount, a side's difference, or the unrealized profit. In full, except at the operator's share (least of the two sides' shares) where a side is a joint operation (IFRS 11.B34-B37)"
       - name: elimination_kind
-        description: "matched, nci (decision 12: the minority owners' portion, to the NCI line), difference or unrealized_profit"
+        description: "matched, difference or unrealized_profit (the 'nci' kind of decision 12 is retired: eliminations are in full)"
         tests:
           - accepted_values:
               arguments:
-                values: ['matched', 'nci', 'difference', 'unrealized_profit']
+                values: ['matched', 'difference', 'unrealized_profit']
       - name: difference_cause
         description: "On difference rows, the pair's cause (booking or fx, decision 13); '' otherwise"
       - name: elimination_view
-        description: "group (the group view, booked by gold_fully_consolidated_tb) or nci (the minority's share, added by the consolidation report for its 100% column)"
+        description: "Always 'group'. The column is kept for readers that filter on it; the NCI view of decision 12 is retired (konsol#117 pair 2 K3)"
         tests:
           - accepted_values:
               arguments:
-                values: ['group', 'nci']
+                values: ['group']
       - name: basis
         description: "balance (balance-sheet pair, eliminations posted as the change to date) or movement (P&L pair), decision 14; '' for unrealized profit"
       - name: debit_entity
@@ -180,7 +186,7 @@ models:
           - not_null
       - name: adjustment_type
         description: >
-          Layer: entity, ic_elimination, ic_elimination_nci, cta, equity_method,
+          Layer: entity, ic_elimination, cta, equity_method,
           pnl_proration, acquisition, goodwill_amortisation, disposal, or the
           topside adjustment type
         tests:
@@ -350,9 +356,11 @@ models:
     description: >
       F2: the one resolved answer to how much of an entity a group owns in a
       period, and how it is consolidated. One row per (ancestor group, entity,
-      period): the effective share is the product of each link's dated
-      percentage along the consolidation_ancestry chain, which is what makes
-      consolidation multi-level.
+      period): the effective share is the SUM over the paths from the group to
+      the entity of the product of each path's dated link percentages
+      (konsol#117: ownership is a graph; the closure in consolidation_ancestry
+      carries one row per path and link), which is what makes consolidation
+      multi-level and lets a direct and an indirect holding add up.
     columns:
       - name: consolidation_group
         tests:
@@ -360,29 +368,96 @@ models:
       - name: data_area_id
         tests:
           - not_null
+      - name: period_date
+        description: "konsolidat#171 / #252: the period's DECLARED end_date (epm_staging.fiscal_periods; a Closing period takes its year's last Regular period's; an Opening or Adjustment period, the end of the Regular period before it (the eve of the year boundary it sits on). The holding is read at period_date (macros/ownership_resolution.sql, THE WINDOW). Before, the first of calendar month P."
+      - name: period_start_date
+        description: "konsolidat#171 / #252: the period's DECLARED start_date (a Closing period: its year's last Regular period's; an Opening or Adjustment period: the start of the Regular period after it)."
       - name: effective_ownership_pct
-        description: "Chain product, as a fraction. 0 when the chain is incomplete."
+        description: "Sum over paths of each path's link product, as a fraction. 0 when a path has an unrecorded link or no path resolves."
       - name: direct_ownership_pct
-        description: "What the entity's IMMEDIATE parent owns of it, as a fraction."
+        description: "The sum of the DISTINCT links into the entity's own node (what its immediate owners hold of it), as a fraction; at most 1."
       - name: has_complete_chain
-        description: "0 when some link has no Ownership Period covering the period."
+        description: "1 when at least one path resolves and no path has a link with no Ownership Period at all."
       - name: consolidation_method
-        description: "The weakest method on the chain: full < proportional < equity < none."
+        description: >
+          One path: the weakest method on it (full < proportional < equity <
+          none). Several paths: the links' agreed method, or the group's
+          declaration where the rule requires one; 'none' when a required
+          declaration is missing (method_source 'undeclared'). 'full' is
+          consolidated at 100% with the minority as nci_amount (IFRS 10.B86);
+          'proportional' is a joint operation (IFRS 11.20), consolidated at the
+          operator's share with nci_amount 0 (konsol#117 pair 3); 'equity' and
+          'none' are not line-consolidated.
+      - name: method_source
+        description: "'link' (derived from the links), 'declared' (read from consolidation_method_declarations), 'undeclared' (required and absent: nothing consolidates)."
+        tests:
+          - accepted_values:
+              values: ['link', 'declared', 'undeclared']
+      - name: path_count
+        description: "How many paths from the group reach the entity (resolved or not)."
+      - name: direct_owner_count
+        description: "How many distinct nodes hold a link into the entity's own node."
+      - name: has_partial_full_link
+        description: "1 when any resolved path from the group carries a full link below 100%. With consolidation_method 'proportional' that is a full link below 100% mixed with a proportional holding, not necessarily on the same path: refused by name (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3 finding A)."
+      - name: owner_group
+        description: "The consolidation_group of the entity's own tree node (its Historical Equity Rates are declared under it); the same on every path, unchanged by konsol#117. Whether the rate join needs a group at all is open on konsol#117."
+
+  - name: gold_nci_attribution_journal
+    description: >
+      konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): the minority's
+      share of a full-method subsidiary's result and CTA, one balanced journal per
+      (group, entity, FY, period) for a subsidiary held below 100%. Lines: retained
+      earnings (minus the result share), 'CTA' (minus the CTA share) and the group's
+      nci_account (their sum). Year-end close rows are excluded from the result.
+      A chart without a retained-earnings account, or a group without nci_account,
+      gets no journal. Layer 'nci_attribution' of gold_fully_consolidated_tb.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: main_account
+        tests:
+          - not_null
+      - name: journal_id
+        tests:
+          - not_null
 
   - name: gold_equity_method_associates
-    description: "PRD-14: Equity method entries for associates (20-50% ownership)"
+    description: >
+      PRD-14: the equity-method journal for associates (20-50% ownership): one
+      two-line entry per associate per period, balanced by construction. The
+      share of the result is translated from the associate's accounting
+      currency into the group's reporting currency at the period's governed
+      Average rate (1.0 when they are the same; a Closing period reads its
+      year's last Regular period's rate); a missing rate stops the build.
     columns:
       - name: consolidation_group
         tests:
           - not_null
       - name: main_account
-        description: "EQ_INCOME or EQ_INVEST"
+        description: "EQ_INCOME (share of profit) or EQ_INVEST (investment movement)"
       - name: amount
-        description: "Equity income or investment movement amount"
+        description: >
+          Signed, debit positive, in reporting_currency. EQ_INCOME carries the
+          translated share of the result (a profit is a credit, negative);
+          EQ_INVEST carries its negation, so each journal sums to 0
+          (assert_equity_method_journal_balances).
 
   - name: gold_acquisition_adjustments
     description: >
-      PRD-11: P&L proration of an acquisition year to the post-acquisition months.
+      konsolidat#171 2c: the partial-period P&L of an acquisition, by the
+      treatment the group root declares (partial_period_treatment). Only
+      'Pro-rate by days' produces rows: for a deal dated after the start of its
+      period, each P&L account of the acquired entity gets
+      -group_amount x the fraction of the period before the acquisition date,
+      and one balancing line on the retained-earnings account (an is_pnl = 0
+      account) carries the opposite sum, so the rows sum to 0 per group, entity,
+      year and period. 'Whole period' and 'Stub trial balance' produce no rows;
+      an undeclared treatment with a mid-period deal fails
+      assert_partial_period_treatment_declared.
       konsolidat#198: the goodwill and fair-value lines it used to post one-sided
       to '1800'/'1900' moved to gold_business_combination_journal.
     columns:
@@ -425,7 +500,7 @@ models:
         description: "The acquired entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Closing periods skipped)"
+        description: "The acquisition period from epm_staging.fiscal_periods (start_date <= acquisition_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null
@@ -516,7 +591,7 @@ models:
       konsolidat#198 (design §5): the balanced disposal journal per submitted
       Business Disposal (epm_staging.business_disposals and its proceeds lines),
       journal_id DSP-<group>-<entity>-<date>, group currency, posted once in the
-      disposal period; full disposals only (retained_interest_pct = 0). Lines: (0)
+      disposal period; full disposals of wholly owned subsidiaries only (refused otherwise, see below). Lines: (0)
       every non-equity balance-sheet account of the entity derecognised at
       -(cumulative balance at the disposal period-end) x 100% (from
       gold_trial_balance, at the period's Closing rate; the equity accounts stay,
@@ -532,8 +607,12 @@ models:
       governed Closing rate for its period posts nothing, and
       assert_deal_rate_resolved names the pair (row J9). assert_disposal_accounts_declared
       stops the build on a disposal whose group has not declared an account this journal
-      posts to, and refuses a partial share by name (retained_interest_pct > 0 or
-      share_disposed_pct < 100: partial-share deals wait for konsolidat#204, row J12);
+      posts to, and refuses by name a disposal of a partly owned subsidiary, a partial
+      disposal and a retained interest (the entity is held below 100% in
+      gold_entity_ownership at the disposal period, or share_disposed_pct is below the
+      holding, or retained_interest_pct > 0: the journal derecognises the deal's opening
+      NCI only, not the nci_attribution layer's, and recycles the whole CTA where IAS 21.48B
+      recycles the parent's share; not implemented, konsolidat#310, row J12);
       assert_disposal_has_balances warns on a disposal whose entity has no
       trial-balance row through the disposal period (nothing to derecognise); the root
       row is read with any() per column and assert_consolidation_group_root_unique stops
@@ -548,7 +627,7 @@ models:
         description: "The disposed entity"
       - name: fiscal_year
       - name: fiscal_period
-        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Closing periods skipped)"
+        description: "The disposal period from epm_staging.fiscal_periods (start_date <= disposal_date <= end_date, Regular periods only: deal_period_holds())"
       - name: main_account
         tests:
           - not_null
@@ -567,13 +646,13 @@ models:
         tests:
           - not_null
       - name: line_no
-        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 110+idx proceeds (110 for the header figure), 199 gain_loss"
+        description: "0 for every derecognised line; 101 goodwill, 102 fva, 103 cta, 104 nci, 105 post_disposal_pnl (Pro-rate by days, #171), 110+idx proceeds (110 for the header figure), 199 gain_loss"
       - name: account_role
-        description: "derecognised, goodwill, fva, cta, nci, proceeds, gain_loss"
+        description: "derecognised, goodwill, fva, cta, nci, post_disposal_pnl, proceeds, gain_loss"
         tests:
           - accepted_values:
               arguments:
-                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'proceeds', 'gain_loss']
+                values: ['derecognised', 'goodwill', 'fva', 'cta', 'nci', 'post_disposal_pnl', 'proceeds', 'gain_loss']
       - name: deal
         description: "The Business Disposal document name"
 
@@ -604,7 +683,7 @@ models:
       - name: difference
         description: "balance_a + balance_b: booked to ic_difference_account when the group has one"
       - name: balance_a
-        description: "Side a at 100% (translated_amount), decision 12: pairs match on this, never on group_balance_a"
+        description: "Side a at 100% (translated_amount): pairs match on this (past decision 12). group_balance_a/b and share_a/b are kept for compatibility: since konsol#117 pair 2 they equal the translated balance and 1.0"
       - name: basis
         description: "balance (balance-sheet pair: to date) or movement (P&L pair: the period), decision 14"
         tests:

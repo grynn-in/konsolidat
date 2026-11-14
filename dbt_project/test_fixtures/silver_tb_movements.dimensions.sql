@@ -1,3 +1,6 @@
+-- gate: build +assert_tb_movements_balance +assert_tb_movements_cumulate_to_source
+-- gate: expect assert_tb_movements_balance pass
+-- gate: expect assert_tb_movements_cumulate_to_source pass
 -- konsol#255: a submitted trial balance that carries DECLARED DIMENSION VALUES.
 --
 -- One entity ZZDM, FY2026 periods 1 and 2, basis 'Period movement'. The point of

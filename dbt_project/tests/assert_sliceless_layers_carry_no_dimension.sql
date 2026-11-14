@@ -1,6 +1,6 @@
 -- konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a
 -- consolidation entry carries the dimension values of whatever knows them. The
--- four deal-journal layers of gold_fully_consolidated_tb — acquisition,
+-- deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition,
 -- business combination, goodwill amortisation and disposal — know none. Their
 -- inputs are the Business Combination and Business Disposal documents, which
 -- carry no dimension fields and have no slice to inherit from. The CTA is
@@ -36,12 +36,13 @@ select
     '{{ dims | map(attribute="name") | join(", ") }}' as checked_dimensions,
     count() as rows_carrying_a_value
 from {{ ref('gold_fully_consolidated_tb') }}
--- The four values the deal models emit, read from them rather than guessed:
--- gold_acquisition_adjustments 'pnl_proration', gold_business_combination_journal
--- 'acquisition', gold_goodwill_amortisation_journal 'goodwill_amortisation',
+-- The three values the deal journals emit, read from them rather than guessed.
+-- 'pnl_proration' (gold_acquisition_adjustments) is NOT here: konsolidat#345
+-- made that layer real, it carries the dimension slice of the P&L it prorates.
+-- gold_business_combination_journal 'acquisition', gold_goodwill_amortisation_journal 'goodwill_amortisation',
 -- gold_business_disposal_journal 'disposal'.
 where adjustment_type in (
-        'pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
+        'acquisition', 'goodwill_amortisation', 'disposal',
         -- the CTA, blank by arithmetic: an entity-level residual has no slice
         'cta',
         -- and equity method, blank by decision (Claude, 6 Oct 2026, under

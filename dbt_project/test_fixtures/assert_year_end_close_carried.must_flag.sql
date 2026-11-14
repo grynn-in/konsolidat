@@ -1,3 +1,5 @@
+-- gate: build +assert_year_end_close_carried
+-- gate: expect assert_year_end_close_carried flag 1
 -- assert_year_end_close_carried: must WARN with exactly 1 result (konsolidat#199, PR 200 re-review finding 2).
 -- The two period-end-balance files of silver_tb_movements.year_end_close.sql (ZZOP, FY2025 P12 then
 -- FY2026 P1) with the FY2026 P1 retained-earnings row (ZZ3100 100 Cr) REMOVED: the chart flags ZZ3100

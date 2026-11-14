@@ -1,3 +1,7 @@
+-- gate: build +assert_hierarchy_closure_windows +assert_hierarchy_node_as_of +assert_unassigned_as_of
+-- gate: expect assert_hierarchy_closure_windows pass
+-- gate: expect assert_hierarchy_node_as_of pass
+-- gate: expect assert_unassigned_as_of pass
 -- konsolidat#220: a reporting hierarchy whose members are dated. A member row is one tranche of a code, valid
 -- from member_effective_from to member_effective_to (open = 2299-12-31); a renamed, moved or ended node is a
 -- second tranche of the same code. The closure and every node model must resolve the tree as it was in a period.
@@ -20,6 +24,11 @@ ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_ef
 -- A table that already has them as plain Date (1970-01-01..2149-06-06 clamps both ends) becomes Date32.
 ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_to Date32 DEFAULT '2299-12-31';
+-- konsol#287: the budget input tables name no dimension; konsol adds the site's
+-- declared ones. These rows carry dim_cost_center and dim_department, so the
+-- columns are added first, for a stack whose site declares neither.
+ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
+ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_staging.reporting_hierarchies
   (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
 VALUES

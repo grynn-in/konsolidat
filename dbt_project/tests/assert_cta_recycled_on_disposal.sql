@@ -12,7 +12,7 @@
 -- Flags a submitted disposal of an entity whose accumulated CTA in the group, from gold_fx_revaluation
 -- up to and including the disposal period, is not zero, when the disposal journal has no `cta` line.
 -- The disposal period is the calendar period (epm_staging.fiscal_periods, start_date <= date <=
--- end_date, Closing periods skipped) holding the disposal date, exactly as the journal maps it, and
+-- end_date, Regular periods only) holding the disposal date, exactly as the journal maps it, and
 -- the CTA is summed by (fiscal_year, fiscal_period) tuple, never by date or month. A disposal with a
 -- retained interest posts no journal at all, so a non-zero CTA names it here as well as in
 -- assert_disposal_gain_loss_exists. A disposal date outside the declared calendar has no period and
@@ -24,9 +24,7 @@ with disposal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 

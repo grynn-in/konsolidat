@@ -1,8 +1,8 @@
+-- gate: build gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta
 -- assert_year_end_close_carries_no_cta (konsolidat#259-1): must PASS once the close is translated
 -- as a close. Seeds silver_gl_entries (with the 'Year-end close' posting layer), rates, calendar
 -- and ownership, so the gate builds the partner TB, the consolidation and the CTA itself:
---   gate-x.sh <wt> dbt_project/test_fixtures/assert_year_end_close_carries_no_cta.sql \
---     "gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta"
+--   selector "gold_trial_balance_by_partner gold_consolidated_trial_balance gold_fx_revaluation assert_year_end_close_carries_no_cta" (the `-- gate: build` line at the top)
 --
 -- Two EUR entities in a USD group (ZZG), 100% owned. Calendar: FY2025 P11, P12 (Regular),
 -- P13 (Closing, so it translates at P12's rates), FY2026 P1.
@@ -28,10 +28,10 @@ VALUES
   ('ZZ3100', 'ZZ retained earnings', 'Equity', 'Equity', 0, 1, 1, 'historical', 1, 1, 1),
   ('ZZ4000', 'ZZ revenue', 'Revenue', 'Revenue', 1, 0, 0, 'average', 1, 0, 0);
 INSERT INTO epm_silver.silver_entity_currencies
-  (data_area_id, accounting_currency, currency_source, governed_currency, erp_currency, in_konsol, in_erp)
+  (data_area_id, accounting_currency)
 VALUES
-  ('ZZE1', 'EUR', 'konsol', 'EUR', '', 1, 0),
-  ('ZZE2', 'EUR', 'konsol', 'EUR', '', 1, 0);
+  ('ZZE1', 'EUR'),
+  ('ZZE2', 'EUR');
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency)
 VALUES
@@ -49,10 +49,12 @@ VALUES
   ('ZZG', 'ZZE2', 2025, 12, '2025-12-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full'),
   ('ZZG', 'ZZE2', 2025, 13, '2025-12-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full'),
   ('ZZG', 'ZZE2', 2026, 1, '2026-01-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full');
+-- The live table may predate to_currency (konsol#374): add it to the scratch clone first.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
 VALUES
-  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90);
+  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90, 'USD');
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES

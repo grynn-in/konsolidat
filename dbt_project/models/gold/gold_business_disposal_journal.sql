@@ -99,14 +99,40 @@
    period) before this model runs.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
-   end_date, never from the month: a Closing period (one day inside the last
-   Regular period) is skipped, so the disposal lands in the Regular period.
+   end_date, never from the month: only a Regular period holds a deal
+   (deal_period_holds(): an Opening, Closing or Adjustment period sharing the
+   day is skipped), so the disposal lands in the Regular period.
    Balances, journals and CTA are compared by (fiscal_year, fiscal_period)
    tuple, never by date.
 
+     (105) post_disposal_pnl  the group's declared partial_period_treatment
+                        'Pro-rate by days' (the root row), a full disposal
+                        dated before its period's end_date: for every P&L
+                        account of the entity in the disposal period, a line
+                        of -(its group_amount) x the share of the period
+                        after the disposal date (partial_period_removed_
+                        fraction('disposal', ...), inclusive days: the
+                        disposal day stays with the group). Line (0) removes
+                        the balances at the period END, so the net assets it
+                        derecognises include the profit earned after the
+                        disposal date; this line takes that profit out of
+                        the operating P&L and the gain or loss (6) absorbs it
+                        as the counterpart, so the gain is proceeds less the
+                        net assets AT THE DISPOSAL DATE (IFRS 10.B88). The
+                        period's total P&L is unchanged and the journal still
+                        balances. 'Whole period', 'Stub trial balance' (the
+                        uploaded period is the stub, used unscaled), an
+                        undeclared treatment, and a disposal on the period's
+                        last day post no line 105.
+                        Decided by Deepak Pai: konsolidat#171, 18 Sep 2026
+                        (treatment declared by the group root), 10 Nov 2026
+                        Q2 C (the disposal period is inside the window).
+                        Sign: adjustment_amount is Dr positive / Cr negative,
+                        added to the consolidated amount.
+
    line_no: 0 for every derecognised line, 101 goodwill, 102 fva, 103 cta,
-   104 nci, 110 + idx for a proceeds line (110 for the header figure),
-   199 gain_loss. #}
+   104 nci, 105 post_disposal_pnl, 110 + idx for a proceeds line (110 for
+   the header figure), 199 gain_loss. #}
 
 {# the submitted disposals in scope: full disposals only (retained_interest_pct
    = 0). Filtered here, on the source alone, so that no multi-join CTE below
@@ -135,25 +161,26 @@ group_policy as (
         any(fair_value_adjustment_account) as fair_value_adjustment_account,
         any(nci_account) as nci_account,
         any(disposal_proceeds_account) as disposal_proceeds_account,
-        any(disposal_gain_loss_account) as disposal_gain_loss_account
+        any(disposal_gain_loss_account) as disposal_gain_loss_account,
+        any(partial_period_treatment) as partial_period_treatment
     from {{ source('epm_gold', 'consolidation_groups') }}
     where data_area_id = ''
     group by consolidation_group
 ),
 
 {# the calendar period holding the disposal date; the lowest-numbered
-   non-Closing period whose span holds it. A range condition is not a
+   Regular period whose span holds it. A range condition is not a
    ClickHouse join key, so the calendar is cross-joined and filtered. #}
 disposal_period as (
     select
         bd.name as deal,
         argMin(toUInt16(fp.fiscal_year), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_year,
-        argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
+        argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period,
+        argMin(fp.start_date, (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as period_start,
+        argMin(fp.end_date, (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as period_end
     from full_disposals as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
     group by bd.name
 ),
 
@@ -175,6 +202,9 @@ disposals_all as (
         bd.proceeds_currency as proceeds_currency,
         dp.fiscal_year as fiscal_year,
         dp.fiscal_period as fiscal_period,
+        dp.period_start as period_start,
+        dp.period_end as period_end,
+        gp.partial_period_treatment as partial_period_treatment,
         if(rpm.mapped = 1, rpm.rate_year, dp.fiscal_year) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, dp.fiscal_period) as rate_period,
         ec.accounting_currency as entity_currency,
@@ -252,6 +282,9 @@ disposals as (
         d.proceeds_currency as proceeds_currency,
         d.fiscal_year as fiscal_year,
         d.fiscal_period as fiscal_period,
+        d.period_start as period_start,
+        d.period_end as period_end,
+        d.partial_period_treatment as partial_period_treatment,
         d.rate_year as rate_year,
         d.rate_period as rate_period,
         d.entity_currency as entity_currency,
@@ -575,10 +608,54 @@ fixed_lines as (
         on ch.main_account_id = l.line_account
 ),
 
+{# line (105): the entity's P&L after the disposal date, taken out of the
+   operating accounts under 'Pro-rate by days' (see the header). The P&L
+   accounts are the entity's rows in gold_consolidated_trial_balance for the
+   disposal period (is_pnl = 1, group_amount); a fraction of 0 (disposal on
+   the period's last day) posts nothing. #}
+post_disposal_pnl_lines as (
+    select
+        d.deal as deal,
+        d.consolidation_group as consolidation_group,
+        d.data_area_id as data_area_id,
+        d.fiscal_year as fiscal_year,
+        d.fiscal_period as fiscal_period,
+        p.main_account as main_account,
+        p.account_name as account_name,
+        -(p.group_amount * {{ partial_period_removed_fraction('disposal', 'd.disposal_date', 'd.period_start', 'd.period_end') }}) as adjustment_amount,
+        d.disposal_date as disposal_date,
+        d.journal_id as journal_id,
+        toUInt16(105) as line_no,
+        'post_disposal_pnl' as account_role
+    from disposals as d
+    inner join (
+        select
+            consolidation_group,
+            data_area_id,
+            toUInt16(fiscal_year) as fiscal_year,
+            toUInt16(fiscal_period) as fiscal_period,
+            main_account,
+            any(account_name) as account_name,
+            sum(coalesce(group_amount, 0.0)) as group_amount
+        from {{ ref('gold_consolidated_trial_balance') }}
+        where is_pnl = 1
+        group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account
+    ) as p
+        on p.consolidation_group = d.consolidation_group
+        and p.data_area_id = d.data_area_id
+        and p.fiscal_year = d.fiscal_year
+        and p.fiscal_period = d.fiscal_period
+    where d.partial_period_treatment = 'Pro-rate by days'
+      and d.disposal_date < d.period_end
+      and abs(p.group_amount * {{ partial_period_removed_fraction('disposal', 'd.disposal_date', 'd.period_start', 'd.period_end') }}) > {{ materiality_floor() }}
+),
+
 other_lines as (
     select * from derecognised_lines
     union all
     select * from fixed_lines
+    union all
+    select * from post_disposal_pnl_lines
 ),
 
 {# line (6): the counterpart of everything else. Its own alias, so no HAVING

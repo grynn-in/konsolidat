@@ -13,30 +13,30 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **132** |
-| carrying their reasoning | 114 |
-| citing the issue that caused them | 90 |
-| severity `warn` (reports, does not stop a build) | 20 |
-| severity `error` (stops the build, and its children) | 112 |
+| assertions | **150** |
+| carrying their reasoning | 129 |
+| citing the issue that caused them | 122 |
+| severity `warn` (reports, does not stop a build) | 21 |
+| severity `error` (stops the build, and its children) | 129 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
 
 ## Contents
 
-- [Trial balance intake](#trial-balance-intake) — 18
-- [Currency and translation](#currency-and-translation) — 22
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 20
+- [Trial balance intake](#trial-balance-intake) — 19
+- [Currency and translation](#currency-and-translation) — 24
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 23
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 11
-- [Equity method](#equity-method) — 2
+- [Intercompany](#intercompany) — 12
+- [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 7
+- [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 4
+- [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
-- [Other](#other) — 1
+- [Other](#other) — 4
 
 ---
 
@@ -58,9 +58,9 @@ silver_tb_movements normalises each batch to period movements from its declared 
 
 **konsol#110 — every entity with trial-balance rows must resolve a currency.**
 
-gold_consolidated_trial_balance joins only entities whose currency silver_entity_currencies resolved, so an entity that is in neither konsol's Entity master nor the ERP's company master — or is in either with no currency set — is left out of consolidation. Leaving it out is deliberate (joining it with '' would translate at the 1.0 parity fallback); this test is what stops that being silent. Replaces assert_tb_submission_entities_consolidatable, the interim guard F8 shipped: it checked submitted entities against silver_legal_entities alone, because the ERP was then the only place a currency could come from. Submitted batches are checked as well as gold_trial_balance, so an entity lost between bronze and gold is still caught. NOT IN rather than a LEFT JOIN: with join_use_nulls=0 an unmatched row fills with '' and `where x is null` never fires.
+gold_consolidated_trial_balance joins only entities whose currency silver_entity_currencies resolved, so an entity that is not in konsol's Entity master, or is in it with no Functional Currency, is left out of consolidation (konsolidat#255: there is no ERP fallback). Leaving it out is deliberate (joining it with '' would translate at the 1.0 parity fallback); this test is what stops that being silent. Replaces assert_tb_submission_entities_consolidatable, the interim guard F8 shipped: it checked submitted entities against silver_legal_entities alone, because the ERP was then the only place a currency could come from. Submitted batches are checked as well as gold_trial_balance, so an entity lost between bronze and gold is still caught. NOT IN rather than a LEFT JOIN: with join_use_nulls=0 an unmatched row fills with '' and `where x is null` never fires.
 
-<sub>`error (default)` · `tests/assert_every_tb_entity_has_a_currency.sql` · konsol#110</sub>
+<sub>`error (default)` · `tests/assert_every_tb_entity_has_a_currency.sql` · konsol#110 konsolidat#255</sub>
 
 ### `fctb_entity_layer_ties`
 
@@ -106,9 +106,9 @@ silver_tb_movements turns a 'Year-to-date movement' or 'Period-end balance' file
 
 **Every claimed trial-balance batch must balance: sum(debit) = sum(credit) within a small rounding tolerance.**
 
-konsol validates this before a submission can be submitted (on the SAME rounded-to-cents values that land here), so a failure means rows were landed or altered outside the doctype flow. Defense in depth for the one property that makes a trial balance a trial balance. Aliases are defined once and reused — the displayed difference is by construction the number the HAVING fired on.
+konsol validates this exactly, at the currency's own minor unit, before a submission can be submitted (konsol#180), so a failure means rows were landed or altered outside the doctype flow. Defense in depth for the one property that makes a trial balance a trial balance. #256: bronze keeps amounts at amount_scale() (4 places), and the sums are not rounded here, so a three-decimal currency's (BHD, KWD) third decimal reaches the comparison. Before #256 bronze rounded each line to cents: a balanced BHD batch could arrive unbalanced, and an unbalanced one could arrive balanced (fixtures assert_tb_submission_batches_balance.three_decimal*). The 0.01 tolerance is unchanged; a sub-cent imbalance is still below it. Aliases are defined once and reused — the displayed difference is by construction the number the HAVING fired on.
 
-<sub>`error (default)` · `tests/assert_tb_submission_batches_balance.sql`</sub>
+<sub>`error (default)` · `tests/assert_tb_submission_batches_balance.sql` · konsol#180 konsolidat#256</sub>
 
 ### `tb_submission_has_basis`
 
@@ -144,9 +144,11 @@ Two claimed batches for the same entity-period flow ADDITIVELY into silver_gl_en
 
 ### `topside_journal_balanced`
 
-**PRD-5 Test: Each top-side journal must be balanced (debits = credits)**
+**PRD-5 Test: Each top-side journal must be balanced (debits = credits).**
 
-<sub>`error (default)` · `tests/assert_topside_journal_balanced.sql`</sub>
+konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency. A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
+
+<sub>`error (default)` · `tests/assert_topside_journal_balanced.sql` · konsol#353 konsolidat#209</sub>
 
 ### `trial_balance_balances`
 
@@ -163,6 +165,14 @@ n fail
 silver_tb_movements closes a period-end-balance year by moving the P&L balances into the chart's flagged retained-earnings account in the Closing period. The next year's first file must then list that account with the result in it. When it does not — the ERP keeps the result in another equity code, or the flag sits on the wrong account — the spine reads the flagged account as 0 in that first period and reverses the close as activity. The symptom: retained earnings shows minus the year's result at P1 while another equity code shows plus the result, and every statement still balances, so nothing else names it. One row per year-end close on the retained-earnings key whose entity's first claimed period after the close has no source row for that key (data_area_id, fiscal_year = the closed year, main_account). Warn severity: the figures are wrong for two equity lines, not for the build, and the fix is in konsol (flag the account the files really use) or in the upload, not in the warehouse.
 
 <sub>`warn` · `tests/assert_year_end_close_carried.sql` · konsolidat#199</sub>
+
+### `year_end_close_carries_no_cta`
+
+**konsolidat#259 (option #259-1, decided by Deepak Pai, 6 Oct 2026): the year-end close moves amounts that are already translated, so it creates no exchange difference.**
+
+silver_tb_movements closes a period-end-balance year in the year's Closing period: every P&L key is reversed and the result moves into the retained-earnings account (posting_layer 'Year-end close' in silver_gl_entries). Translated naively, the reversal goes at the period's average rate and retained earnings at its own declared rate, so the close leaves -(the year's P&L) x (average - closing) in that period's CTA, which cancels the year's CTA and moves it into retained earnings every year. Under #259-1 retained earnings is credited with the year's TRANSLATED result, whatever the account's fx_method declares, and the P&L reversal returns each P&L key's translated year to exactly zero. So, for every (group, entity, Closing-type period) that carries a year-end close: | CTA of that period |                                   <= 0.01 | the year's translated P&L, summed through that period | <= 0.01 It also names an ERP-POSTED close: a Closing period with no 'Year-end close' rows but P&L activity, whose CTA is not zero. The warehouse cannot tell such a close from ordinary activity, so it translates it as activity and does not guess; this test says where that happened. Warn severity (plan §3 R3): the consolidated statements still balance, the split between retained earnings and CTA is what is wrong. Kinds: year_end_close    the synthesized close, checked on both conditions erp_posted_close  P&L activity in a Closing period, checked on CTA
+
+<sub>`warn` · `tests/assert_year_end_close_carries_no_cta.sql` · konsolidat#259</sub>
 
 ### `year_end_close_declared`
 
@@ -184,6 +194,14 @@ silver_tb_movements synthesises a post-close period for a 'Period-end balance' e
 
 ## Currency and translation
 
+### `bs_translated_at_closing_rate`
+
+**konsolidat#257: a balance-sheet balance is translated at the CLOSING rate of the reporting date (IAS 21.39(a)), not as the sum of each period's movement at that period's own closing rate.**
+
+gold_consolidated_trial_balance keeps the movement grain: one row per (group, entity, period, account, partner, dimensions) carrying that period's translated movement. Every reader sums those movements to get a balance. So for every key of a balance sheet account that is translated at the closing rate, the translated movements summed to period p must equal the local movements summed to p times p's closing rate: | sum(translated_amount to p) - sum(local_amount to p) x closing(p) | <= 0.01 Which keys: a balance sheet account (is_balance_sheet = 1) that is not equity (is_equity = 0; equity is never revalued, decided on #257 Q2, 6 Oct 2026) and whose chart declares fx_method = 'closing' or declares nothing (an undeclared account translates at the closing rate). An account declared 'average' or 'historical' is out of scope. The declaration comes from the chart (silver_main_accounts), not from the rate the row happens to carry. Which periods: EVERY period in which the entity has any row for the group (the entity's spine), from the key's first row on - not only the periods the key itself moved in. A balance that did not move in a period still has to be retranslated there; checking only the key's own rows would miss exactly that case. The closing rate of a spine period is read from the entity's rows in that period (one currency pair per entity and group, so one closing rate). Same-currency entities translate at 1.0 and are skipped.
+
+<sub>`error (default)` · `tests/assert_bs_translated_at_closing_rate.sql` · konsolidat#257</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -196,15 +214,15 @@ The adapter's else-branch passes an unrecognised factor through unscaled — the
 
 **PRD-2 Test: CTA must be non-zero when an entity-period translated at more than one rate.**
 
-What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translation, -sum(group_amount) per entity-period. Balance-sheet rows translate at the closing rate, P&L rows at the average rate and (with an approved Historical Equity Rate) equity rows at that historical rate. Because the local trial balance sums to zero, the translated one only fails to sum to zero when more than one rate was applied; that gap is the CTA. When CTA must be non-zero: an entity-period in which at least one row translated at a rate other than its closing_rate. A zero CTA there means gold_fx_revaluation lost the residual, and this test flags it. Why a rate difference alone is not enough: closing_rate != average_rate only says two rates were *available*. A balance-sheet-only entity (no P&L rows, no historical equity rate) translates every row at closing_rate, so its CTA is 0 by construction and must not be flagged (konsolidat#195). Since konsolidat#176 a missing historical equity rate is a warning, not an error, and such equity rows fall back to the closing rate, which makes balance-sheet-only entities with CTA 0 a normal case. Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0` condition below (a row that put nothing into the group translated nothing, whatever its rate).
+What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translation, -sum(group_amount) per entity-period. Balance-sheet rows translate at the closing rate, P&L rows at the average rate and (with an approved Historical Equity Rate) equity rows at that historical rate. Because the local trial balance sums to zero, the translated one only fails to sum to zero when more than one rate was applied; that gap is the CTA. When CTA must be non-zero: an entity-period in which at least one row translated at a rate other than its closing_rate. A zero CTA there means gold_fx_revaluation lost the residual, and this test flags it. Why a rate difference alone is not enough: closing_rate != average_rate only says two rates were *available*. A balance-sheet-only entity (no P&L rows, no historical equity rate) translates every row at closing_rate, so its CTA is 0 by construction and must not be flagged (konsolidat#195). Since konsolidat#176 a missing historical equity rate is a warning, not an error, and such equity rows fall back to the closing rate, which makes balance-sheet-only entities with CTA 0 a normal case. Hence the extra `countIf(translation_rate != closing_rate and group_amount != 0) > 0` condition below (a row that put nothing into the group translated nothing, whatever its rate). konsolidat#259 (option #259-1, 6 Oct 2026): an entity-period that carries the year-end close silver_tb_movements synthesizes is not checked. Its P&L reversal translates at the average rate, but retained earnings takes exactly the translated result, so its CTA is 0 by construction; assert_year_end_close_carries_no_cta requires that 0.
 
-<sub>`error (default)` · `tests/assert_cta_not_zero_when_rates_differ.sql` · konsolidat#176 konsolidat#195</sub>
+<sub>`error (default)` · `tests/assert_cta_not_zero_when_rates_differ.sql` · konsolidat#176 konsolidat#195 konsolidat#259</sub>
 
 ### `cta_recycled_on_disposal`
 
 **CTA must be recycled to P&L on disposal (IAS 21.48).**
 
-(IAS 21.48). konsolidat#198 (row J6b): rewritten to read epm_staging.business_disposals instead of ownership_periods, and gold_business_disposal_journal instead of gold_disposal_adjustments. Why: since konsolidat#198 the disposal lives on the submitted Business Disposal document (submit = approval), and gold_business_disposal_journal recycles the disposed entity's accumulated CTA as its `cta` line (account_role 'cta', main_account 'CTA'); gold_disposal_adjustments, which posted the one-sided 'cta_recycling' row this test used to look for, is gone. The Ownership Period only carries the effective share and the consolidation window, so an is_disposal Ownership Period is no longer a deal the warehouse must account for (on the stack the deals are still Drafts: nothing submitted). Flags a submitted disposal of an entity whose accumulated CTA in the group, from gold_fx_revaluation up to and including the disposal period, is not zero, when the disposal journal has no `cta` line. The disposal period is the calendar period (epm_staging.fiscal_periods, start_date <= date <= end_date, Closing periods skipped) holding the disposal date, exactly as the journal maps it, and the CTA is summed by (fiscal_year, fiscal_period) tuple, never by date or month. A disposal with a retained interest posts no journal at all, so a non-zero CTA names it here as well as in assert_disposal_gain_loss_exists. A disposal date outside the declared calendar has no period and is not checked here (row J7's guard names it). A same-currency entity's CTA is 0 and is never owed.
+(IAS 21.48). konsolidat#198 (row J6b): rewritten to read epm_staging.business_disposals instead of ownership_periods, and gold_business_disposal_journal instead of gold_disposal_adjustments. Why: since konsolidat#198 the disposal lives on the submitted Business Disposal document (submit = approval), and gold_business_disposal_journal recycles the disposed entity's accumulated CTA as its `cta` line (account_role 'cta', main_account 'CTA'); gold_disposal_adjustments, which posted the one-sided 'cta_recycling' row this test used to look for, is gone. The Ownership Period only carries the effective share and the consolidation window, so an is_disposal Ownership Period is no longer a deal the warehouse must account for (on the stack the deals are still Drafts: nothing submitted). Flags a submitted disposal of an entity whose accumulated CTA in the group, from gold_fx_revaluation up to and including the disposal period, is not zero, when the disposal journal has no `cta` line. The disposal period is the calendar period (epm_staging.fiscal_periods, start_date <= date <= end_date, Regular periods only) holding the disposal date, exactly as the journal maps it, and the CTA is summed by (fiscal_year, fiscal_period) tuple, never by date or month. A disposal with a retained interest posts no journal at all, so a non-zero CTA names it here as well as in assert_disposal_gain_loss_exists. A disposal date outside the declared calendar has no period and is not checked here (row J7's guard names it). A same-currency entity's CTA is 0 and is never owed.
 
 <sub>`error (default)` · `tests/assert_cta_recycled_on_disposal.sql` · konsolidat#198</sub>
 
@@ -218,29 +236,21 @@ What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translat
 
 **konsolidat#198 (row J9;**
 
-PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the group has not published for its period. gold_business_combination_journal and gold_business_disposal_journal INNER JOIN every rate they translate at, so such a deal posts NOTHING (never a 0: a LEFT JOIN miss read 0 under join_use_nulls = 0 and booked a false bargain gain, or goodwill = consideration, or a false disposal loss). Silence is not an answer either: this test stops the build and names the pair. One row per submitted deal and (from_currency, to_currency) it needs with no Closing rate for its period. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.must_flag.sql. The currencies a deal needs, exactly the ones the journals translate: the entity's accounting currency (epm_staging.entities; '' when the entity is not in the registry, and that is reported as such): the acquired balances, the opening balances, the derecognised balances each consideration / acquisition-costs / proceeds line's own currency the header's consideration_currency / proceeds_currency, when the document has no consideration (proceeds) lines and the header amount is not zero (the journals fall back to the header figure then). Row J13 (PR #203 second review 1): the acquisition-costs lines do NOT count here — the journal's consideration_line_count reads only business_combination_consideration, so a combination with a header amount, no consideration line and one cost line falls back to the header and needs its rate; counting the cost row as "a line" left that header unchecked while the journal dropped the deal silently. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.header.must_flag.sql. a combination's consideration_currency when it measures NCI at 'full' and share_acquired_pct < 100 (konsol#204, row M2b): the journal translates the declared NCI fair value at that currency's rate and drops the deal when it is missing, even when every consideration line is in another currency. Row M4 (PR #205 review): whatever nci_fair_value says, exactly the journal's condition. Fixtures: dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql, dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value_zero.must_flag.sql. into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period: epm_staging.fiscal_periods by start_date <= date <= end_date (Closing periods skipped), then rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every trial-balance translation does). A currency equal to the group currency translates at 1 and needs no rate. Scope follows the journals: every submitted Business Combination; a Business Disposal with retained_interest_pct = 0 (a disposal that keeps an interest posts nothing and is named by assert_disposal_gain_loss_exists). A deal whose group has no root row or whose date is outside the declared calendar has no period to look a rate up for; assert_acquisition_accounts_declared names those. Reported: deal, kind ('business_combination' | 'business_disposal'), from_currency, to_currency, and the deal's fiscal_year / fiscal_period. NOT IN rather than a LEFT JOIN null test (join_use_nulls = 0).
+PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the group has not published for its period. gold_business_combination_journal and gold_business_disposal_journal INNER JOIN every rate they translate at, so such a deal posts NOTHING (never a 0: a LEFT JOIN miss read 0 under join_use_nulls = 0 and booked a false bargain gain, or goodwill = consideration, or a false disposal loss). Silence is not an answer either: this test stops the build and names the pair. One row per submitted deal and (from_currency, to_currency) it needs with no Closing rate for its period. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.must_flag.sql. The currencies a deal needs, exactly the ones the journals translate: the entity's accounting currency (epm_staging.entities; '' when the entity is not in the registry, and that is reported as such): the acquired balances, the opening balances, the derecognised balances each consideration / acquisition-costs / proceeds line's own currency the header's consideration_currency / proceeds_currency, when the document has no consideration (proceeds) lines and the header amount is not zero (the journals fall back to the header figure then). Row J13 (PR #203 second review 1): the acquisition-costs lines do NOT count here — the journal's consideration_line_count reads only business_combination_consideration, so a combination with a header amount, no consideration line and one cost line falls back to the header and needs its rate; counting the cost row as "a line" left that header unchecked while the journal dropped the deal silently. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.header.must_flag.sql. a combination's consideration_currency when it measures NCI at 'full' and share_acquired_pct < 100 (konsol#204, row M2b): the journal translates the declared NCI fair value at that currency's rate and drops the deal when it is missing, even when every consideration line is in another currency. Row M4 (PR #205 review): whatever nci_fair_value says, exactly the journal's condition. Fixtures: dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql, dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value_zero.must_flag.sql. into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period: epm_staging.fiscal_periods by start_date <= date <= end_date (Regular periods only, deal_period_holds()), then rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every trial-balance translation does). A currency equal to the group currency translates at 1 and needs no rate. Scope follows the journals: every submitted Business Combination; a Business Disposal with retained_interest_pct = 0 (a disposal that keeps an interest posts nothing and is named by assert_disposal_gain_loss_exists). A deal whose group has no root row or whose date is outside the declared calendar has no period to look a rate up for; assert_acquisition_accounts_declared names those. Reported: deal, kind ('business_combination' | 'business_disposal'), from_currency, to_currency, and the deal's fiscal_year / fiscal_period. NOT IN rather than a LEFT JOIN null test (join_use_nulls = 0).
 
 <sub>`error (default)` · `tests/assert_deal_rate_resolved.sql` · konsol#204 konsolidat#198 konsolidat#203 konsolidat#205</sub>
 
 ### `declared_historical_has_a_rate`
 
-<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsolidat#213 konsolidat#218 konsolidat#92</sub>
-
-### `entity_currency_sources_agree`
-
-**konsol#110 — konsol's Entity master and the ERP must not disagree about the currency an entity keeps its books in.**
-
-silver_entity_currencies prefers konsol's answer, so a disagreement would otherwise be settled silently: the entity translates from the currency konsol names while its ledger is in the one the ERP names, and every translated balance is wrong by the cross rate. Fix whichever side is wrong; this test does not pick one.
-
-<sub>`error (default)` · `tests/assert_entity_currency_sources_agree.sql` · konsol#110</sub>
+<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#92</sub>
 
 ### `equity_historical_rate_is_asof`
 
 **grynn-in/konsolidat#92 finding #2: the historical equity rate applied to a period must be the AS-OF rate (the latest tranche whose rate_date <= period_date), not the most-recent-ever rate.**
 
-The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. Fails (returns rows) when, for a row that applied a historical rate: * no tranche actually qualifies as-of the period (rate borrowed from the future — the exact pre-fix bug), or * the applied rate differs from the as-of expected rate.
+The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
 
-<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsolidat#92</sub>
+<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#374 konsolidat#92</sub>
 
 ### `equity_rate_coverage`
 
@@ -294,6 +304,22 @@ The SAME case table runs through konsol's konsol.group_rates.magnitude_problem, 
 
 <sub>`warn` · `tests/assert_governed_rate_sane.sql` · konsol#103 konsolidat#138 konsolidat#174</sub>
 
+### `group_equals_translated_for_full`
+
+**konsolidat#204 option (a), konsol#117 pair 2 (IFRS 10.B86): layer 1 carries a controlled subsidiary line by line at 100%.**
+
+group_amount therefore equals translated_amount on every row the model emits; the minority is not a share of each line but the one NCI line in equity that konsol#117 pair 2 task K2 posts from nci_amount. A joint operation (proportional, IFRS 11.20) is carried at the operator's share and has its own test, assert_group_equals_translated_times_share_for_proportional.
+
+<sub>`error (default)` · `tests/assert_group_equals_translated_for_full.sql` · konsol#117 konsolidat#204</sub>
+
+### `group_equals_translated_times_share_for_proportional`
+
+**IFRS 11.20, konsol#117 pair 3: a joint operation (consolidation_method 'proportional') is carried line by line at the operator's share, so group_amount = translated_amount x ownership_pct.**
+
+A controlled subsidiary (full) is at 100% and has its own test, assert_group_equals_translated_for_full.
+
+<sub>`error (default)` · `tests/assert_group_equals_translated_times_share_for_proportional.sql` · konsol#117</sub>
+
 ### `historical_is_equity_only`
 
 **konsolidat#92, finding 4 — the half the warehouse owns.**
@@ -302,17 +328,21 @@ konsol translates and does not remeasure. fx_method = 'historical' is therefore 
 
 <sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsolidat#213 konsolidat#92</sub>
 
-### `nci_plus_group_equals_translated`
+### `nci_equals_translated_times_minority`
 
-**PRD-4 Test: group_amount + nci_amount must equal translated_amount**
+**konsolidat#204 option (a), konsol#117 pair 2: nci_amount is the attribution amount, the minority's share of each translated line: translated_amount x (1 - ownership_pct).**
 
-<sub>`error (default)` · `tests/assert_nci_plus_group_equals_translated.sql`</sub>
+It is no longer the complement of group_amount (group_amount is 100% of translated_amount for a controlled subsidiary); task K2 posts the sum of it as the single NCI line in equity. Proportional rows are excluded: their oracle is not an attribution amount (a joint operation has no minority, nci_amount 0, konsol#117 pair 3; see assert_nci_zero_for_proportional).
+
+<sub>`error (default)` · `tests/assert_nci_equals_translated_times_minority.sql` · konsol#117 konsolidat#204</sub>
 
 ### `translated_amount_formula`
 
-**PRD-1 Test: translated_amount must equal local_amount × translation_rate**
+**PRD-1 Test: translated_amount must equal local_amount × translation_rate + retranslation_amount.**
 
-<sub>`error (default)` · `tests/assert_translated_amount_formula.sql`</sub>
+konsolidat#257: a balance sheet key declared at closing also carries its retranslation, cum_local(prev) × (closing(p) − closing(prev)), on its own row; every other row carries 0.
+
+<sub>`error (default)` · `tests/assert_translated_amount_formula.sql` · konsolidat#257</sub>
 
 ### `translation_follows_fx_method`
 
@@ -332,9 +362,15 @@ Two failure modes, both of which silently misstate translated balances: 1. trans
 
 ### `all_layers_present`
 
-**PRD-22 Test: All expected consolidation layers must be present in the FCTB At minimum: entity, ic_elimination, cta, topside (layers 1-4 always expected)**
+**PRD-22: no consolidation layer the models computed is lost on its way into gold_fully_consolidated_tb, and none appears there without its source.**
 
-<sub>`error (default)` · `tests/assert_all_layers_present.sql`</sub>
+Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severity. It supersedes #238-1, which conditioned the layers on declarations (Published IC accounts, partner membership, more than one currency). A review of PR #261 measured that this did not match the models: an unmatched IC pair, with no ic_difference_account, is eliminated by nothing, and CTA does not depend on how many currencies the group has. Whether an elimination SHOULD exist stays with gold_ic_reconciliation and gold_ic_unmatched. Rejected: #238-1 as worded, and #238-2 (warn and keep asserting all four). A layer must appear for a group exactly when its source model has rows for that group. Each source is mapped to the adjustment_type gold_fully_consolidated_tb gives it: - entity:              gold_consolidated_trial_balance (layer 1); - ic_elimination:      gold_ic_eliminations (layer 2). Every kind, including unrealized_profit from ic_elimination_rules, lands as ic_elimination. There is no ic_elimination_nci layer any more (eliminations are posted in full: konsol#117 pair 2 K3, konsolidat#204 (a)); - topside:             gold_consolidation_adjustments, adjustment_type 'topside' (layer 4 passes adjustment_type through); - cta:                 gold_fx_revaluation (layer 3); - nci_attribution:     gold_nci_attribution_journal (the minority's share of a full-method subsidiary's result and CTA, konsol#117 pair 2 K2, konsolidat#204 (a)). Every model carries the group in consolidation_group. Two directions, one row per (group, layer): - missing_layer: the source has rows, the consolidated TB has none; - unexpected_layer: the consolidated TB has the layer, the source has no rows (a stale or misattributed layer). konsolidat#238 / #249: NOT IN, not a LEFT JOIN. adjustment_type is a String, and under join_use_nulls = 0 (the server default; a singular test carries no settings clause) an unmatched LEFT JOIN fills it with '' rather than NULL. The former `where actual.layer is null` therefore matched nothing, and the test could never fail.
+
+<sub>`error (default)` · `tests/assert_all_layers_present.sql` · konsol#117 konsolidat#204 konsolidat#238 konsolidat#249 konsolidat#261</sub>
+
+### `cash_flow_excludes_nci_attribution`
+
+<sub>`error` · `tests/assert_cash_flow_excludes_nci_attribution.sql` · konsol#117</sub>
 
 ### `consolidated_cf_reconciles`
 
@@ -360,19 +396,19 @@ PR #203 review 6): a consolidation group with more than one root row in epm_gold
 
 ### `effective_ownership_in_range`
 
-**PRD-8 / F2: a resolved ownership share must be a fraction between 0 and 1, and the effective share can never exceed the direct one.**
+**PRD-8 / F2 / konsol#117: a resolved ownership share is a fraction between 0 and 1, and the direct links into an entity's node sum to at most 1.**
 
-Was "gold_consolidation_hierarchy.effective_ownership_pct is between 0 and 100" — a column that held the DIRECT percentage despite its name, and which F2 deleted along with the second grain it represented. The range check moves to where ownership now lives, and gains the invariant that makes the chain product meaningful: multiplying by another link's share can only shrink it, so effective <= direct always. A chain arithmetic bug that inverted or dropped a link shows up here.
+Was "gold_consolidation_hierarchy.effective_ownership_pct is between 0 and 100" — a column that held the DIRECT percentage despite its name, and which F2 deleted along with the second grain it represented. Until konsol#117 this test also asserted effective <= direct: true for one chain, where every further link can only shrink the share, and false for a graph, where a second path adds to it (shape 1: direct links into D sum to 0.80, the effective share at P is 0.68, at A it is 0.60 — but P→A 80% and P→D 20% with A→D 100% would give effective 1.0 against a direct 1.0, and three paths can put effective above any single direct link). What holds for a graph: eff(G, E) <= 1 (konsol refuses issued shares past 100%, validate refusal 4), and direct_ownership_pct — the sum of the DISTINCT links into E's node — is at most 1 for the same reason.
 
-<sub>`error (default)` · `tests/assert_effective_ownership_in_range.sql`</sub>
+<sub>`error (default)` · `tests/assert_effective_ownership_in_range.sql` · konsol#117</sub>
 
-### `effective_ownership_is_chain_product`
+### `effective_ownership_is_path_sum`
 
-**F2: the effective share must be the PRODUCT of every link's dated percentage along the consolidation chain.**
+**konsol#117: the effective share is the SUM over paths of the PRODUCT of each path's dated link percentages.**
 
-This replaces assert_ownership_fallback, which asserted the behaviour F2 deleted — that an entity with no temporal ownership row falls back to the consolidation_groups seed. There is no fallback and no seed any more. Independent of the model's arithmetic: gold_entity_ownership multiplies with arrayProduct over a groupArray; this recomputes the same product as exp(sum(log(...))) directly from the ancestry closure and the periods, so a bug in either aggregation shows up as a disagreement rather than cancelling out. Rows with a zero link are excluded because log(0) is undefined — the has_complete_chain / zero case is covered by assert_ownership_chain_complete.
+Replaces assert_effective_ownership_is_chain_product, which took one product over every link of a (group, entity) and so would have multiplied two paths into each other (shape 1: 0.8 x 0.6 x 0.2 = 0.096 instead of 0.48 + 0.20 = 0.68). An independent oracle (PR #345 reviews). It shares no macro with gold_entity_ownership: the period dates come straight from epm_staging.fiscal_periods, the disposals straight from epm_staging.business_disposals, each link's Ownership Period is picked with ONE argMaxIf over a plain join (the model uses an ASOF join), so its end date, share and method come from the same row, and each path is a product of exp(log) (the model uses arrayProduct). The rule, restated: the dates a period is read on, from the calendar source: Regular                 its declared start S and end E Closing                 its year's last Regular period's S and E Opening, Adjustment     E = end of the latest Regular period before it, S = start of the earliest Regular period after it: a BOUNDARY period (S > E), between two Regular periods A link's Ownership Period is the latest one that started by E. held at E               it has not ended before E; and, in a boundary period, it was not ended by a disposal: a full disposal (retained interest 0, as gold_business_disposal_journal posts it) of the entity in the group, dated on its end date. A boundary period carries the state of the period before it: a change dated E + 1 posts in the next Regular period and is not seen yet, a disposal dated on or before E has already been derecognised. some path held at E     sum the held paths no path held at E       sum the paths whose links had not ended before S (a full disposal inside a Regular period stays in it) For a (group, entity, period) reached by exactly one counted path, the method is that path's weakest link (full < proportional < equity < anything else). Fails loudly, never silently: a trial-balance period the calendar gives no dates (its year, and every other, has no Regular period to read it against) is a row ('no Regular period to read the period on'). assert_trial_balance_period_declared only checks that the period is declared, not that a Regular period exists. Skipped: a (group, entity, period) with a link that has no Ownership Period at all (assert_ownership_chain_complete's case) or a zero link on a counted path (log(0)). Fixtures: assert_effective_ownership_is_path_sum.*.sql, and every window fixture builds this test too.
 
-<sub>`error (default)` · `tests/assert_effective_ownership_is_chain_product.sql`</sub>
+<sub>`error (default)` · `tests/assert_effective_ownership_is_path_sum.sql` · konsol#117 konsolidat#345</sub>
 
 ### `end_to_end_bs_balances`
 
@@ -390,12 +426,6 @@ Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG
 
 <sub>`error (default)` · `tests/assert_entity_in_one_consolidation_node.sql`</sub>
 
-### `group_amount_formula`
-
-**PRD-1 Test: group_amount must equal translated_amount × ownership_pct**
-
-<sub>`error (default)` · `tests/assert_group_amount_formula.sql`</sub>
-
 ### `hierarchy_rollup_ties`
 
 **A group node's amount must equal the sum of its descendant leaves for the same slice: hierarchy, node, entity, period, account and every other dimension.**
@@ -412,43 +442,49 @@ Each pair's two sides are recomputed from gold_consolidated_trial_balance at 100
 
 <sub>`error (default)` · `tests/assert_ic_difference_not_from_ownership.sql`</sub>
 
-### `ic_nci_account_declared`
-
-<sub>`warn` · `tests/assert_ic_nci_account_declared.sql` · konsolidat#208</sub>
-
-### `ic_nci_leg_entity`
-
-**#175 third review L2: an NCI-line leg is attributed to the entity whose minority owners hold it.**
-
-- Group view, 'nci': one leg takes a pair side (its account and entity) down to the share the other side is held at; the other leg is on the NCI line, attributed to the OTHER side's entity, the partly owned one. - NCI view, 'matched': one leg eliminates a side's minority share; the other is on the NCI line, attributed to that same side's entity. Each entry has exactly one NCI leg, and its other leg is one of the pair's two sides.
-
-<sub>`error (default)` · `tests/assert_ic_nci_leg_entity.sql` · konsolidat#175 konsolidat#208</sub>
-
-### `ic_nci_line_nets_zero`
-
-**#175 third review L2: the NCI line, summed over both views, is 0 per group and period.**
-
-Decision 12 moves the minority's share of an intragroup balance to the NCI line twice: the group view's 'nci' entries (the better-owned side's excess share) and the NCI view's 'matched' entries (each side's minority share). Across the two they cancel: in the full (100%) consolidation an intragroup balance leaves nothing on the NCI line. A leg sent anywhere else (the difference account, a wrong sign) leaves the line unbalanced.
-
-<sub>`error (default)` · `tests/assert_ic_nci_line_nets_zero.sql` · konsolidat#175 konsolidat#208</sub>
-
 ### `ic_reconciliation_matched`
 
 **PRD-15 Test: Matched IC balances must have net_balance ≈ 0**
 
 <sub>`error (default)` · `tests/assert_ic_reconciliation_matched.sql`</sub>
 
+### `nci_account_declared_for_partial_subs`
+
+<sub>`error` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
+
+### `nci_attribution_equals_minority_result`
+
+**konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): each line of the NCI attribution journal posted for a partly owned full-method subsidiary equals the minority's share of its result and CTA.**
+
+Oracle, built from the consolidated TB rows and never from the journal's own CTEs or from gold_fx_revaluation. Per (group, entity, FY, period), with m = 1 - effective_ownership_pct: P   = sum of translated P&L, year-end close rows excluded (gold_trial_balance_by_partner. is_year_end_close, by account, as gold_equity_method_associates does) A   = sum of translated amounts of ALL the entity's rows (the CTA plug restores the entity to zero, so plug = -A) retained-earnings line  expected = -m x P CTA line                expected = +m x A          (= -m x plug) NCI line                expected = -(RE line + CTA line) = m x (P - A), on the declared nci_account Each line is compared on its own (konsol#117 pair 2 review, finding 8a): the former assert_nci_attribution_balances could not fail, because the NCI line is built as the sum of the other two. Here a wrong RE line or a wrong CTA line fails even when the journal still sums to zero. One row per entity-period, naming the lines that differ. A missing journal where an expected figure is non-zero flags too: that is how a chart without a retained-earnings account, or a group whose root declares no nci_account, is named. That cause is ALSO named, once per group, by assert_nci_account_declared_for_partial_subs (error): the same cause twice is accepted, the group row says why, this row says which entity-period and how much. Rows the model does not attribute (method other than full, ownership 1, incomplete chain) are not expected. Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql (+ .no_nci_account.must_flag).
+
+<sub>`error` · `tests/assert_nci_attribution_equals_minority_result.sql` · konsol#117 konsolidat#204</sub>
+
 ### `nci_movement_reconciles`
 
-**PRD-13 Test: NCI movement — share of profit must be consistent with the NCI amount from consolidated TB P&L entries**
+**PRD-13 Test: NCI movement.**
 
-<sub>`error (default)` · `tests/assert_nci_movement_reconciles.sql`</sub>
+Two checks, one row each per entity-period that breaks them: share_of_profit   equals the sum of nci_amount over the consolidated TB's P&L rows with the synthesized year-end close left out, exactly as gold_nci_attribution_journal excludes it (konsol#117 pair 2 review, finding 5): the close moves the year's result to retained earnings and is no profit of the period; closing_balance   equals the minority's share of net assets at the closing rate: the sum of nci_amount over the entity's balance-sheet rows that are not equity, for every period up to and including this one (a self-join, not the model's window). Fixture: dbt_project/test_fixtures/nci_attribution_journal.sql.
+
+<sub>`error (default)` · `tests/assert_nci_movement_reconciles.sql` · konsol#117</sub>
 
 ### `nci_zero_for_full_ownership`
 
 **PRD-4 Test: NCI amount must be zero for fully-owned entities**
 
 <sub>`error (default)` · `tests/assert_nci_zero_for_full_ownership.sql`</sub>
+
+### `nci_zero_for_proportional`
+
+**IFRS 11.20, konsol#117 pair 3: the operator carries only its own share of a joint operation's assets and liabilities, so no one holds a minority in it and nci_amount is 0.**
+
+(A controlled subsidiary's nci_amount is the attribution amount; see assert_nci_equals_translated_times_minority.)
+
+<sub>`error (default)` · `tests/assert_nci_zero_for_proportional.sql` · konsol#117</sub>
+
+### `no_ownership_step_on_partial_full_subsidiary`
+
+<sub>`error` · `tests/assert_no_ownership_step_on_partial_full_subsidiary.sql` · konsol#117 konsolidat#318</sub>
 
 ### `ownership_chain_complete`
 
@@ -458,11 +494,29 @@ Ownership Period is the only grain now, so a node with no period covering the da
 
 <sub>`error (default)` · `tests/assert_ownership_chain_complete.sql`</sub>
 
+### `ownership_paths_acyclic`
+
+**konsol#117 (design section 3): a path from a group to an entity never visits a node twice.**
+
+konsol refuses a cycle at Ownership Period validate and build_rows raises on one; this is the warehouse backstop for a closure row that slipped past both (a patch, a hand-written row). One result per cyclic path, naming it. `path` (the tree path, kept for readers) is checked too, so a volume whose closure predates path_id is covered. Fixture: assert_ownership_paths_acyclic.must_flag.sql seeds ZZA/ZZB/ZZA (flags 1).
+
+<sub>`error (default)` · `tests/assert_ownership_paths_acyclic.sql` · konsol#117</sub>
+
 ### `ownership_uses_effective_date`
 
-**PRD-9 Test: When temporal ownership exists, the consolidated TB must use it Check that ownership_pct matches the temporal staging record for the period**
+**PRD-9 Test: When temporal ownership exists, the consolidated TB must use it Check that ownership_pct matches the temporal staging record for the period.**
 
-<sub>`error (default)` · `tests/assert_ownership_uses_effective_date.sql`</sub>
+konsolidat#171 / #252: the period an Ownership Period applies to is read from the DECLARED calendar (epm_staging.fiscal_periods), never built from the period number. Before, this test judged fiscal period P at the first of calendar month P, the same macro the model used, so it could not catch the model being wrong: on a fiscal year starting in April it checked P1 against 1 January. The expectation is computed here, independently of the window's macros, by the deal journals' span rule (deal_period_holds()): a date belongs to the lowest Regular period whose declared span holds it. An Ownership Period applies from the period holding its effective_date through the period holding its end_date; a date before the calendar is before every period, and a date after it (or the open end, 9999-12-31 stored as 2149-06-06) is after every period. A Closing period compares as its year's last Regular period. Where several Ownership Periods of one entity apply to one period (a change dated inside it), the latest one is the holding at the period's end and is the one expected. Fixture: assert_ownership_uses_effective_date.april_fiscal_year.sql.
+
+<sub>`error (default)` · `tests/assert_ownership_uses_effective_date.sql` · konsolidat#171 konsolidat#252</sub>
+
+### `ownership_window_matches_deal_period`
+
+**konsolidat#171 / #252 / #278 (task 2b): the ownership window and the deal journals put a deal in the SAME period.**
+
+gold_business_combination_journal posts an acquisition, and gold_business_disposal_journal a full disposal, in the Regular period whose declared span holds the deal date (deal_period_holds(), the one mapping rule; the lowest period tuple). The test checks the journals against that rule too: a journal posted in any other period is named ('journal posts in another period'), so the journals, the window and this test cannot use different rules. The acquisition journal's line (0) brings the balance sheet in up to the period BEFORE that one, so the entity's own movements must be consolidated from the acquisition period on. The disposal journal's line (0) derecognises the cumulative balances UP TO AND INCLUDING the disposal period, so the entity's movements must be consolidated up to and including the disposal period, and not after it. The expectation is computed here from the calendar source, by the journals' own span rule, and never through the window's macros. A Closing period is compared as its year's last Regular period (the rule rate_period_map() declares for rates): a year-end close posts in it, and it is consolidated exactly when that last Regular period is. Opening and Adjustment periods are compared by their own tuple, as the disposal journal's line (0) compares them: an Opening P0 is before P1, an Adjustment P14 after P12. Faults, one row each: acquisition period not consolidated   the entity has trial-balance rows in the acquisition period and gold_consolidated_trial_balance has none (#278: a deal dated 2024-06-15 lost June because the window was judged on 1 June) consolidated before acquisition       consolidated rows in a period before the acquisition period, when no Ownership Period of the entity starts before the deal disposal period not consolidated      the entity has trial-balance rows in the disposal period and the consolidated trial balance has none (the journal would derecognise balances the group never carried) consolidated after disposal           consolidated rows in a period after the disposal period, when no later Business Combination re-acquires the entity journal posts in another period       a deal journal posted in a period other than the one deal_period_holds() gives its date Fixtures: assert_ownership_window_matches_deal_period.*.sql.
+
+<sub>`error (default)` · `tests/assert_ownership_window_matches_deal_period.sql` · konsolidat#171 konsolidat#252 konsolidat#278</sub>
 
 ### `waterfall_reconciles`
 
@@ -482,9 +536,9 @@ Ownership Period is the only grain now, so a node with no period covering the da
 
 **konsolidat#198 (design §1/§1a, row J7): a submitted Business Combination whose group has not declared something the acquisition journal needs.**
 
-gold_business_combination_journal never assumes an account code or a policy (design §1: "dbt never assumes a code"), so an undeclared field either drops the deal (no root row, no calendar period) or posts to main_account '' / reads the policy as its fallback. Both are silent; this test stops the build and names them: one row per deal and field, with the value found and why it is not acceptable. Fixture: dbt_project/test_fixtures/assert_acquisition_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "every setting is required once the group has a Business Combination; there are no defaults"): root_row                     the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts and the policy; without it nothing else of the group is checked (one line says it all) acquisition_period           a non-Closing epm_staging.fiscal_periods row spanning acquisition_date accounting_framework         IFRS | US GAAP | Local nci_measurement              partial | full, the DEAL's (konsol#205: its override or the group's value, resolved by konsol into business_combinations), when share_acquired_pct < 100 (at 100% the journal posts no NCI) nci_fair_value               > 0 when the deal's nci_measurement = 'full' and share_acquired_pct < 100 (konsol#204: line (5) is this declared figure; undeclared it would post NCI 0) goodwill_treatment           Impairment only | Amortise acquisition_costs_treatment  Expense | Capitalise measurement_period           Off | 12 months bargain_purchase             Recognise gain | Refuse (a policy must be present AND one of its options: the journal reads any other value as 'partial' / 'Expense' / 'Recognise gain', the fallback this test stops) goodwill_amortisation_years > 0 and goodwill_amortisation_expense_account when goodwill_treatment = 'Amortise' goodwill_account, investment_account         when total_consideration > 0 fair_value_adjustment_account                when the header or an acquired-balance row carries a fair-value adjustment nci_account                                  when share_acquired_pct < 100 bargain_purchase_gain_account                when konsol's Result shows a bargain (goodwill < 0 or bargain_purchase_gain > 0) under 'Recognise gain' disposal_proceeds_account                    when the deal has acquisition costs (the account the group settles deal cash through; the journal's settlement side) acquisition_costs_account                    when it has costs and acquisition_costs_treatment = 'Expense' is_retained_earnings                         the chart flags a retained-earnings account (silver_main_accounts.is_retained_earnings) when the entity has trial-balance rows before the acquisition period: line (0)'s balancing line goes there A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1): share_acquired_pct < 100      layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the parent's share, while the IFRS 3 template posts 100% of the net assets plus an NCI line, so a partial-share deal would count the minority twice. One row per such deal, whatever the root row declares; the balance tests still prove the NCI arithmetic on business_combination_80pct.sql, selected without this guard (see that fixture's header). Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local -> framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal journal's accounts are assert_disposal_accounts_declared's (row J10); a duplicated root row is assert_consolidation_group_root_unique's (the root CTE below reads any() per column, as the journals do).
+gold_business_combination_journal never assumes an account code or a policy (design §1: "dbt never assumes a code"), so an undeclared field either drops the deal (no root row, no calendar period) or posts to main_account '' / reads the policy as its fallback. Both are silent; this test stops the build and names them: one row per deal and field, with the value found and why it is not acceptable. Fixture: dbt_project/test_fixtures/assert_acquisition_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "every setting is required once the group has a Business Combination; there are no defaults"): root_row                     the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts and the policy; without it nothing else of the group is checked (one line says it all) acquisition_period           a Regular epm_staging.fiscal_periods row spanning acquisition_date accounting_framework         IFRS | US GAAP | Local nci_measurement              partial | full, the DEAL's (konsol#205: its override or the group's value, resolved by konsol into business_combinations), when share_acquired_pct < 100 (at 100% the journal posts no NCI) nci_fair_value               > 0 when the deal's nci_measurement = 'full' and share_acquired_pct < 100 (konsol#204: line (5) is this declared figure; undeclared it would post NCI 0) goodwill_treatment           Impairment only | Amortise acquisition_costs_treatment  Expense | Capitalise measurement_period           Off | 12 months bargain_purchase             Recognise gain | Refuse (a policy must be present AND one of its options: the journal reads any other value as 'partial' / 'Expense' / 'Recognise gain', the fallback this test stops) goodwill_amortisation_years > 0 and goodwill_amortisation_expense_account when goodwill_treatment = 'Amortise' goodwill_account, investment_account         when total_consideration > 0 fair_value_adjustment_account                when the header or an acquired-balance row carries a fair-value adjustment nci_account                                  when share_acquired_pct < 100 bargain_purchase_gain_account                when konsol's Result shows a bargain (goodwill < 0 or bargain_purchase_gain > 0) under 'Recognise gain' disposal_proceeds_account                    when the deal has acquisition costs (the account the group settles deal cash through; the journal's settlement side) acquisition_costs_account                    when it has costs and acquisition_costs_treatment = 'Expense' is_retained_earnings                         the chart flags a retained-earnings account (silver_main_accounts.is_retained_earnings) when the entity has trial-balance rows before the acquisition period: line (0)'s balancing line goes there A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Partial-share deals (share_acquired_pct < 100) are accepted since konsolidat#204 (a) (konsol#117 pair 2, 8 Nov 2026): layer 1 carries a controlled subsidiary at 100% and the NCI attribution layer carries the minority's share of its result, so the IFRS 3 template's NCI line is no longer counted twice. What a partial share needs is declared above (nci_account, and nci_fair_value for a 'full' deal). Refused by name (konsol#117 pair 3, row K3): a business combination into a joint operation, i.e. an acquired entity whose ownership_periods say 'proportional' at the deal (its own link, or a step from one). One row, field consolidation_method, whatever else the deal declares: a business combination into a joint operation (consolidation_method proportional) is not implemented (IFRS 11.21A): record the interest as an Ownership Period The acquisition journal builds goodwill and an NCI line for a controlled subsidiary; IFRS 11.21A (an interest in a joint operation that is a business) is a different accounting, and a joint operation carries no NCI at all. An entity with no ownership period is not a joint operation here. Fixtures: .joint_operation.must_flag, .joint_operation_step.must_flag (a step on a period's first day), .joint_operation_gap (a whole period between: passes). Not checked here: konsol's framework constraints (US GAAP -> full NCI, IFRS -> Impairment only, Local -> framework_note) are the document's validate() rules; the warehouse posts what is declared. The disposal journal's accounts are assert_disposal_accounts_declared's (row J10); a duplicated root row is assert_consolidation_group_root_unique's (the root CTE below reads any() per column, as the journals do).
 
-<sub>`error (default)` · `tests/assert_acquisition_accounts_declared.sql` · konsol#204 konsol#205 konsolidat#198 konsolidat#203 konsolidat#204</sub>
+<sub>`error (default)` · `tests/assert_acquisition_accounts_declared.sql` · konsol#117 konsol#204 konsol#205 konsolidat#198 konsolidat#204</sub>
 
 ### `acquisition_journal_balances`
 
@@ -518,9 +572,9 @@ Both are the same deal's figure in group currency (_staging__sources.yml: "the h
 
 **konsolidat#198 (design §1/§5, row J10;**
 
-PR #203 review 2): a submitted Business Disposal whose group has not declared an account the disposal journal posts to. gold_business_disposal_journal never assumes an account code (design §1: "dbt never assumes a code"), so an undeclared account either drops the disposal (no root row, no calendar period) or posts to main_account ''. Both are silent; this test stops the build and names them: one row per disposal and field, with the value found and why it is not acceptable. It mirrors assert_acquisition_accounts_declared for the acquisition journal. Fixture: dbt_project/test_fixtures/assert_disposal_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "there are no defaults"): root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts; without it nothing else of the group is checked (one line says it all) disposal_period                a non-Closing epm_staging.fiscal_periods row spanning disposal_date disposal_gain_loss_account     always: the balancing line of every disposal journal disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through) goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal fair_value_adjustment_account  with none posts a zero, but the account must still be known) nci_account                    when a minority exists: retained_interest_pct > 0 or share_disposed_pct < 100 A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1): share_disposed_pct < 100 or retained_interest_pct > 0 layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the parent's share, while the disposal template derecognises 100% of the balance sheet against an NCI line, so a partial disposal (or one leaving a retained interest) would count the minority twice. One row per such disposal, whatever the root row declares; the disposal journal posts nothing for it either (design §5/§7), which assert_disposal_gain_loss_exists also names. Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
+PR #203 review 2): a submitted Business Disposal whose group has not declared an account the disposal journal posts to. gold_business_disposal_journal never assumes an account code (design §1: "dbt never assumes a code"), so an undeclared account either drops the disposal (no root row, no calendar period) or posts to main_account ''. Both are silent; this test stops the build and names them: one row per disposal and field, with the value found and why it is not acceptable. It mirrors assert_acquisition_accounts_declared for the acquisition journal. Fixture: dbt_project/test_fixtures/assert_disposal_accounts_declared.must_flag.sql. What is required, and when (design §1 "Required when"; §1a "there are no defaults"): root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''), where konsol syncs the accounts; without it nothing else of the group is checked (one line says it all) disposal_period                a Regular epm_staging.fiscal_periods row spanning disposal_date disposal_gain_loss_account     always: the balancing line of every disposal journal disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through) goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal fair_value_adjustment_account  with none posts a zero, but the account must still be known) nci_account                    when a minority exists: retained_interest_pct > 0 or share_disposed_pct < 100 A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal would otherwise post to a code the chart does not know. Refused by name (row J12; reworded in the konsol#117 pair 2 review, finding 2): a disposal of a partly owned subsidiary, a partial disposal or a retained interest. Refused when the entity is HELD below 100% (gold_entity_ownership.effective_ownership_pct x 100 at the disposal period, the latest row at or before it) OR share_disposed_pct is below that holding OR retained_interest_pct > 0: disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the disposal journal derecognises the deal's opening NCI only and recycles the whole CTA (konsolidat#310) Why a full sale of a 70% holding (konsol requires Share Disposed = the current holding, 70) is refused too: the journal would derecognise only the deal journal's NCI, not the attribution layer's (nci_attribution), and would recycle 100% of the CTA where IAS 21.48B recycles only the parent's share. The old test compared share_disposed_pct with 100 and so refused that sale under a misleading reason, and let share 100 against a 70% holding through. Also refused by name (konsol#117 pair 3, row K3): a disposal of an interest in a joint operation, i.e. the entity's ownership_periods (the row covering the disposal date) or its latest gold_entity_ownership row at or before the disposal period say 'proportional'. One more row, field consolidation_method (so a joint operation held below 100% shows both rows): disposal of an interest in a joint operation (consolidation_method proportional) is not implemented: end the Ownership Period instead Fixture: .joint_operation.must_flag (expects 2 rows, the holding row and this one). An entity with no ownership row at all is taken as held at 100%. One row per such disposal, whatever the root row declares. Fixtures: .partial_share, .partly_owned, .held_below_100 (.must_flag). Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 
-<sub>`error (default)` · `tests/assert_disposal_accounts_declared.sql` · konsolidat#198 konsolidat#203 konsolidat#204</sub>
+<sub>`error (default)` · `tests/assert_disposal_accounts_declared.sql` · konsol#117 konsolidat#198 konsolidat#203 konsolidat#310</sub>
 
 ### `disposal_gain_loss_exists`
 
@@ -558,17 +612,21 @@ l calculated. konsolidat#198 (row J2b): rewritten to read epm_staging.business_c
 
 <sub>`error (default)` · `tests/assert_goodwill_calculated.sql` · konsolidat#198</sub>
 
+### `pnl_proration_inherits_grain`
+
+**konsolidat#171 step 2c review F1: the partial-period P&L proration inherits the dimension grain of its source.**
+
+Decided by Deepak Pai, 3 Oct 2026 (consolidation entry dimensions are hybrid: inherit where derivable, declare on journal lines, blank only on deal journals). gold_acquisition_adjustments is not a deal journal and its source, gold_consolidated_trial_balance, carries a dimension value on every row, so its rows must too. Without that, a dimension report shows the full-period P&L per member and one blank-dimension negative lump. The dimensions are read from gold_fully_consolidated_tb (the layer a report reads), so the test judges what a report sees; the partner, which that layer sums away, from gold_acquisition_adjustments. Faults, one row each: grain not in the trial balance   a pnl_proration row on a P&L account sits on a dimension grain that gold_consolidated_trial_balance does not have for that entity, period and account (the blank lump) partner not in the trial balance a P&L proration row carries an intercompany partner that the trial balance does not have on that entity, period and account (the partner blanked) dimension grain unbalanced       the pnl_proration rows of a (group, entity, year, period, dimensions) do not sum to 0: the retained-earnings line must sit on the same dimensions as the P&L it balances Fixtures: assert_partial_period_pnl_matches_treatment.acquisition_pro_rate_dimensions.sql.
+
+<sub>`error (default)` · `tests/assert_pnl_proration_inherits_grain.sql` · konsolidat#171</sub>
+
 ### `post_disposal_excluded`
 
-**PRD-12 Test: Post-disposal periods must have zero ownership (entity excluded) When temporal ownership records a disposal, no consolidated TB rows should exist for that entity in periods after the disposal**
+**PRD-12 Test: Post-disposal periods must have zero ownership (entity excluded) When temporal ownership records a disposal, no consolidated TB rows should exist for that entity in periods after the disposal konsolidat#171 / #252: "after the disposal" means after the period whose DECLARED span holds the disposal date (deal_period_holds(): the Regular period holding it, the lowest tuple), the rule gold_business_disposal_journal posts by.**
 
-<sub>`error (default)` · `tests/assert_post_disposal_excluded.sql`</sub>
+Before, this test judged fiscal period P at the first of calendar month P, the same macro the model used. The disposal period itself is consolidated: the disposal journal derecognises the balances through it. A Closing period compares as its year's last Regular period.
 
-### `proration_pre_acquisition_excluded`
-
-**PRD-11 Test: Pre-acquisition P&L amounts must be excluded (adjustment_amount < 0)**
-
-<sub>`error (default)` · `tests/assert_proration_pre_acquisition_excluded.sql`</sub>
+<sub>`error (default)` · `tests/assert_post_disposal_excluded.sql` · konsolidat#171 konsolidat#252</sub>
 
 ---
 
@@ -602,21 +660,29 @@ An account paired with two counterparts would have one side matched twice, which
 
 <sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsol#305 konsolidat#175</sub>
 
+### `ic_eliminated_in_full`
+
+**konsol#117 pair 2 K3 (konsolidat#204 option (a);**
+
+Deepak Pai, 8 Nov 2026): intercompany eliminations are posted IN FULL. IFRS 10.B86(c): intragroup assets and liabilities, equity, income, expenses and cash flows are eliminated in full. Layer 1 carries a full method subsidiary at 100%, so the matched amount of each side is eliminated at 100% whatever the group's holding in it; the minority's share is one NCI line (gold_nci_movement_schedule), not a part of the elimination. This supersedes decision 12 (13 Sep 2026), which eliminated at the share both sides hold and sent the rest to an NCI leg. Per (group, period, pair), the 'matched' legs on each side's own account and entity, on the pair's basis (decision 14: to date for a balance-sheet pair, in the period for a P&L pair), equal minus the matched amount in the direction of that side's balance, full_a = -sign(balance_a) * matched and full_b likewise (gold_ic_reconciliation). A share other than 100% leaves a side eliminated by less. In full, except where a side is a joint operation (konsol#117 pair 3, IFRS 11.B34-B37): layer 1 carries a `proportional` entity at the operator's share, so a transaction with it is eliminated to the extent of that interest. The expected amount of both sides is multiplied by one factor per pair, least(share_a, share_b), share = effective_ownership_pct for a `proportional` side and 1.0 otherwise (an entity with no ownership row in the group and period keeps 1.0). The factor is computed here from gold_entity_ownership, not read from the model.
+
+<sub>`error (default)` · `tests/assert_ic_eliminated_in_full.sql` · konsol#117 konsolidat#204</sub>
+
 ### `ic_elimination_nets_zero`
 
 **Intercompany elimination nets to zero, three ways (konsolidat#148).**
 
-Every elimination row carries both legs, so "debit + credit = 0" per row is true by construction and proves little on its own. The checks that can fail: 1. entry: each row's two legs net to zero (kept: it is what the layer relies on); 2. layer: the ic_elimination layer of gold_fully_consolidated_tb nets to zero per group and period, so both legs of every entry (the NCI line's included, decision 12) reached it; 3. pair: on the pair's basis (decision 14: to date for a balance-sheet pair, the period for a P&L pair), what the GROUP VIEW holds of the two sides plus its eliminations nets to zero (the 100% view is assert_ic_full_view_nets_zero) when the group has an intercompany-difference account, and to exactly the group share of the residuals when it has none (only the matched amount is eliminated then).
+Every elimination row carries both legs, so "debit + credit = 0" per row is true by construction and proves little on its own. The checks that can fail: 1. entry: each row's two legs net to zero (kept: it is what the layer relies on); 2. layer: the ic_elimination layer of gold_fully_consolidated_tb nets to zero per group and period, so both legs of every entry reached it; 3. pair: on the pair's basis (decision 14: to date for a balance-sheet pair, the period for a P&L pair), what the two sides hold (in full, translated: konsol#117 pair 2 K3, eliminations are posted at 100%) plus the eliminations nets to zero when the group has an intercompany-difference account, and to exactly the residuals when it has none (only the matched amount is eliminated then).
 
-<sub>`error (default)` · `tests/assert_ic_elimination_nets_zero.sql` · konsolidat#148</sub>
+<sub>`error (default)` · `tests/assert_ic_elimination_nets_zero.sql` · konsol#117 konsolidat#148</sub>
 
 ### `ic_elimination_within_balance`
 
 **konsolidat#148 / konsol#159 (decision 1, 13 Sep 2026): elimination never exceeds the balance it cancels.**
 
-The engine this replaced joined every ordered entity pair and eliminated 2.61M against a 2.56M intercompany revenue balance, and 31.5M against a 14.5M payables balance. This is the invariant that would have caught both. Balance eliminations only (unrealized profit is a margin on inventory, not a balance being cancelled), in the group view, on each pair's basis (decision 14): a balance-sheet account to date, from inception, as the group view carries it; a P&L account in the period. 1. account: per (group, period, account), total elimination does not exceed the account's consolidated balance. The balance is taken gross, as the sum of |balance| per (entity, partner): a partnerless row or an entity with the opposite sign stays on the account after elimination, and a net figure would flag a correct elimination of the rest. The difference account's and the NCI line's legs are destinations, not eliminations of their balances, so they are left out. 2. side: per pair, each side is eliminated by no more than the group view holds of it (group_balance_*), in the direction that reduces it. An elimination whose pair key matches no pair is flagged (side_without_pair).
+The engine this replaced joined every ordered entity pair and eliminated 2.61M against a 2.56M intercompany revenue balance, and 31.5M against a 14.5M payables balance. This is the invariant that would have caught both. Balance eliminations only (unrealized profit is a margin on inventory, not a balance being cancelled), in the group view, on each pair's basis (decision 14): a balance-sheet account to date, from inception, as the group view carries it; a P&L account in the period. 1. account: per (group, period, account), total elimination does not exceed the account's consolidated balance. The balance is taken gross, as the sum of |balance| per (entity, partner): a partnerless row or an entity with the opposite sign stays on the account after elimination, and a net figure would flag a correct elimination of the rest. The difference account's legs are destinations, not eliminations of their balances, so they are left out. 2. side: per pair, each side is eliminated by no more than the group view holds of it (group_balance_*), in the direction that reduces it. An elimination whose pair key matches no pair is flagged (side_without_pair).
 
-<sub>`error (default)` · `tests/assert_ic_elimination_within_balance.sql` · konsol#159 konsolidat#148 konsolidat#208</sub>
+<sub>`error (default)` · `tests/assert_ic_elimination_within_balance.sql` · konsol#159 konsolidat#148</sub>
 
 ### `ic_full_view_nets_zero`
 
@@ -646,29 +712,59 @@ A P&L pair matches on the period's movement. 1. basis: a pair on a balance-sheet
 
 **#175 third review M1: while a balance-sheet pair is not live in a group, nothing of it is eliminated there.**
 
-Every elimination posted while both sides were in the group has been reversed. Membership is resolved here from the ownership data itself, not from gold_entity_ownership or the model's spine: an entity line-consolidates into a group at a date when EVERY link of its chain to that group (consolidation_ancestry) has an ownership period covering the date with method full or proportional. So a partner that was disposed of, a sub-group sold while its own entity's ownership stays open, and a stake moved to equity all count as having left, per group. For every balance-sheet pair, and every period the warehouse holds from the pair's first reconciliation row to the group's latest period, in which either side is not a member: the pair's eliminations to date, per view, account and entity, are 0. That covers the periods before a pair joins (nothing posted yet) and every period after it left (all reversed).
+Every elimination posted while both sides were in the group has been reversed. Membership is resolved here from the ownership data itself, not from gold_entity_ownership or the model's spine: an entity line-consolidates into a group at a date when EVERY link of its chain to that group (consolidation_ancestry) has an ownership period covering the date with method full or proportional. So a partner that was disposed of, a sub-group sold while its own entity's ownership stays open, and a stake moved to equity all count as having left, per group. For every balance-sheet pair, and every period the warehouse holds from the pair's first reconciliation row to the group's latest period, in which either side is not a member: the pair's eliminations to date, per account and entity, are 0. That covers the periods before a pair joins (nothing posted yet) and every period after it left (all reversed).
 
-<sub>`error (default)` · `tests/assert_ic_pair_left_is_reversed.sql` · konsolidat#175</sub>
+<sub>`error (default)` · `tests/assert_ic_pair_left_is_reversed.sql` · konsolidat#171 konsolidat#175 konsolidat#252</sub>
 
-### `unrealized_profit_elimination`
+### `unrealized_profit_at_operator_share`
 
-**PRD-15 Test: Unrealized profit elimination = ending_inventory × margin_pct**
+**konsol#117 pair 3 K2 (IFRS 11.B34-B37): unrealised profit on intragroup inventory is eliminated to the extent of the operator's interest.**
 
-<sub>`error (default)` · `tests/assert_unrealized_profit_elimination.sql`</sub>
+Per unrealized_profit row of gold_ic_eliminations, the amount must equal ending_inventory_from_ic x margin_pct / 100 x least(share_seller, share_buyer), share = effective_ownership_pct where the entity is `proportional` in that group and period, else 1.0 (an entity with no ownership row there keeps 1.0; join_use_nulls=0 fills a miss with method '', which is not 'proportional'). The oracle reads the staging inputs and gold_entity_ownership, not the model's own factor. Returns the rows that differ. A LEFT JOIN from `expected`: a missing model row fills elimination_amount with 0 (join_use_nulls=0) and is flagged whenever expected > 0. Membership (konsolidat#336) is an explicit allow-list written here, not the model's expression: the buyer must be line-consolidated in the group (full or proportional, the set gold_consolidated_trial_balance keeps). A buyer resolved `none` or `equity` has no expected row, so a model row for it is the second branch below (an unexpected row, expected_amount 0).
+
+<sub>`error (default)` · `tests/assert_unrealized_profit_at_operator_share.sql` · konsol#117 konsolidat#336</sub>
 
 ---
 
 ## Equity method
 
+### `equity_associate_has_average_rate`
+
+**konsolidat#279 / PRD-14: every equity-method associate with a non-zero result in a period, whose accounting currency differs from its group's reporting currency, has exactly one usable governed Average rate for that period into the group currency (epm_staging.group_exchange_rates, konsolidat#93), keyed through rate_period_map() exactly as gold_equity_method_associates keys it (a Closing-type period reads its year's last Regular period, konsolidat#199 row D9).**
+
+Why a sibling test and not the model's own stop. gold_equity_method_associates refuses to build when an associate's Average rate is missing, duplicated or invalid (throwIf in its `translated` CTE), but ClickHouse's throwIf takes a constant message, so the stop names no key, and the line-consolidation guards do not cover an associate at all: governed_translated_keys() (the pre_hook guard, assert_every_translated_currency_has_a_governed_rate, deploy.sh's fx_precheck) excludes consolidation_method = 'equity' on purpose. Without this test an operator got "some associate, some period". This lists every key, in the shape a person fixes it: approve the Average rate in konsol Group Exchange Rate (or cancel the extra one). reason is one of: missing (no approved Average rate for the rate key); duplicate (more than one approved Average rate: the model's anyIf would pick one); invalid (an Average rate that is zero, negative or not finite); no_reporting_currency (the group has no root row in epm_gold.consolidation_groups, data_area_id = '', or its reporting_currency is blank, so there is no currency to translate INTO: not a rate problem, fix the Consolidation Group in konsol. The model stops on this first, with its own message, and the row is labelled so it is never read as a missing rate). Built from the model's own inputs (never from the model: a refused build must still let this run and name the key). A zero result needs no rate (0 x anything is 0), and the model does not stop on one either, so a zero-result period is not listed. join_use_nulls=0: a rate miss fills n_average = 0 on the LEFT JOIN, so the count is the signal, never a NULL test across the join; a group-root miss fills to_currency = ''. severity warn, on purpose, as assert_every_translated_currency_has_a_governed_rate: this test sits on the model's INPUTS, and at error severity a flag made `dbt build` SKIP gold_equity_method_associates and everything below it before the model ran, so its throwIf never decided and the fixture gate saw SKIPPED where it expected REFUSED (CI run 42393401046 on 34eaddf). The model decides: its throwIf stops the build; this test, in the same run, names the keys. A WARN here is never "fine": it is the list of what the refused build needs. Fixtures: dbt_project/test_fixtures/assert_equity_associate_has_average_rate.must_flag.sql (SEK associate in a EUR group with a Closing rate but no Average rate: 2 rows, FY2026 P12 and the Closing period P13 that reads P12), ...no_reporting_currency.must_flag.sql (no root row: 2 rows), and assert_equity_method_journal_balances.sql (the balanced case: passes).
+
+<sub>`warn` · `tests/assert_equity_associate_has_average_rate.sql` · konsolidat#199 konsolidat#279 konsolidat#93</sub>
+
 ### `equity_income_formula`
 
-**PRD-14 Test: Equity income = net_income × ownership_pct The EQ_INCOME entry should match the formula**
+**PRD-14 Test: Equity income = net_income × ownership_pct × the period's governed Average rate from the associate's accounting currency into the group's reporting currency (1.0 when they are the same).**
 
-<sub>`error (default)` · `tests/assert_equity_income_formula.sql`</sub>
+The EQ_INCOME entry should match the formula. 7 Nov 2026: the oracle translates, as the model does since the same day. It compared the entry with net_income × ownership_pct in the associate's OWN currency, so it passed on a SEK associate in a EUR group whose figure had never been translated (the defect it should have caught). A Closing-type period reads its year's last Regular period's rate (rate_period_map(), konsolidat#199 row D9), the same rule the model applies. join_use_nulls=0: an entry whose rate key has no Average rate reads 0 here, so its expected value is 0 and the entry (never 0 itself, the model drops |amount| <= 0.01) is flagged rather than excused. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql.
+
+<sub>`error (default)` · `tests/assert_equity_income_formula.sql` · konsolidat#199 konsolidat#279</sub>
+
+### `equity_method_ignores_close_rows`
+
+**PRD-14 / konsolidat#279 defect 3: an associate's result for a period is its OWN activity there, never the year-end close silver_tb_movements synthesizes in the Closing period (konsolidat#259).**
+
+The close moves the year's P&L into retained earnings, so read as "net income of P13" it posts an equity-method entry equal and opposite to the year's result. The marker is gold_trial_balance_by_partner.is_year_end_close (posting_layer 'Year-end close' in silver_gl_entries), the one gold_consolidated_trial_balance reads. Oracle: for every equity associate period, EQ_INCOME must equal the PRE-CLOSE P&L movement (close rows excluded) x effective ownership x the governed Average rate (1.0 in the same currency; a Closing-type period reads its year's last Regular period, rate_period_map()). A share of 0.01 or less posts no journal, so it is expected as 0. A Closing period with no activity of its own is therefore expected as no journal at all. Built from the model's inputs, never from its CTEs. Fixture: dbt_project/test_fixtures/assert_equity_method_ignores_close_rows.sql.
+
+<sub>`error` · `tests/assert_equity_method_ignores_close_rows.sql` · konsolidat#259 konsolidat#279</sub>
+
+### `equity_method_journal_balances`
+
+**PRD-14: every equity-method journal (EQ_<group>_<entity>_<year>_P<period>) the warehouse posts sums to zero in its period: the EQ_INCOME line and the EQ_INVEST line are the two sides of one entry (Cr share of profit, Dr investment), so a row here is a model bug, not a data problem.**
+
+Found 7 Nov 2026 building the aquila-bike example: gold_equity_method_associates put the SAME signed figure on both lines, so a profit of X posted -X twice (net -2X) into layer 5 of gold_fully_consolidated_tb, and assert_end_to_end_bs_balances (PRD-22) failed for any group with an associate in every period the associate had a result. Same pattern as the deal-journal tests (assert_acquisition_journal_balances and siblings): one test, ref-ing only its own model, so `gold_equity_method_associates assert_equity_method_journal_balances` is selectable on its own. Fixture: dbt_project/test_fixtures/assert_equity_method_journal_balances.sql (SEK associate at 30% in a EUR group; a 1,000 SEK profit at a 0.09 Average rate is EQ_INCOME -27.00 / EQ_INVEST +27.00).
+
+<sub>`error` · `tests/assert_equity_method_journal_balances.sql`</sub>
 
 ### `equity_method_single_line`
 
-**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation)**
+**PRD-14 Test: Equity method entities must appear as single-line entries (not full line-by-line consolidation).**
+
+The two accounts allowed are the two sides of the one journal gold_equity_method_associates posts per associate per period: EQ_INCOME (the translated share of the result) and its negation on EQ_INVEST (assert_equity_method_journal_balances).
 
 <sub>`error (default)` · `tests/assert_equity_method_single_line.sql`</sub>
 
@@ -688,9 +784,9 @@ This holds by construction: gold_cash_flow_indirect sums −(period_debit − pe
 
 **#175 third review L1: the cash flow's net income is the group view's consolidated P&L, every layer included.**
 
-The group view's P&L is gold_fully_consolidated_tb's P&L accounts (silver is_pnl = 1), per group and period. The statement reports them on its "Net Income (Consolidated)" line, except an account the cash-flow mapping gives a line of its own (a Published row with a line item), which is reported there. So those accounts are left out of both sides. It fails when the statement drops a P&L entry. The case it was written for: the minority's part of a P&L pair's elimination (decision 12, the group view's 'nci' entries, ic_elimination_nci) is in the P&L, and the statement once left it out with the balance-sheet pairs' ones.
+The group view's P&L is gold_fully_consolidated_tb's P&L accounts (silver is_pnl = 1), per group and period. The statement reports them on its "Net Income (Consolidated)" line, except an account the cash-flow mapping gives a line of its own (a Published row with a line item), which is reported there. So those accounts are left out of both sides. It fails when the statement drops a P&L entry. The case it was written for: a P&L pair's elimination is in the P&L, and the statement once left it out with the balance-sheet pairs' ones. (The minority's part of a P&L pair used to be a separate ic_elimination_nci entry, decision 12; it is retired, konsol#117 pair 2 K3.)
 
-<sub>`error (default)` · `tests/assert_cf_net_income_equals_group_pnl.sql` · konsolidat#175</sub>
+<sub>`error (default)` · `tests/assert_cf_net_income_equals_group_pnl.sql` · konsol#117 konsolidat#175</sub>
 
 ### `scoped_cash_flow_ytd_confined`
 
@@ -741,6 +837,14 @@ On the fixture hierarchy_dated.sql (hierarchy ZZ_DIV over dim_business_unit, ent
 Each selects it from the leaf closure (lc) in a join whose other side (the long form of the TB / variance / budget) has a hierarchy_dimension column too; unaliased, ClickHouse keeps the qualifier and the column comes out as `lc.hierarchy_dimension`, which no reader can select by its plain name. One row per model with no column named hierarchy_dimension.
 
 <sub>`error (default)` · `tests/assert_hierarchy_node_columns.sql` · konsolidat#206</sub>
+
+### `tree_node_reached_by_links`
+
+**konsol#117 (design section 1): the Consolidation Group tree stays the reporting structure, the links say what is owned.**
+
+The one rule tying them together: every non-root tree node is reached from its tree parent by at least one link path. Paths compose, so this local rule covers every ancestor. What "reached" reads as here: - an ENTITY node: epm_staging.consolidation_ancestry has a (tree parent group, entity) row — konsol's path enumeration writes one per path from each group node to each entity it reaches, so no row means no path; - a pure GROUP node (no entity): at least one Ownership Period names it as the owned node. The closure carries no rows for group nodes (a group is a destination, never a contributor), so which owner holds it is not checked here; konsol's validate refuses an owner outside the same root. A node with no path gives its tree ancestors nothing: its numbers never reach the consolidated result, silently. This fails the build naming it. Fixtures: assert_tree_node_reached_by_links.sql (pass), .must_flag.sql (flags 2: one unreached entity node, one unlinked group node).
+
+<sub>`error (default)` · `tests/assert_tree_node_reached_by_links.sql` · konsol#117</sub>
 
 ### `unassigned_as_of`
 
@@ -882,6 +986,10 @@ konsol checks this when the journal is approved; this catches a calendar changed
 
 <sub>`error (default)` · `tests/assert_auto_reversal_period_declared.sql` · konsol#305</sub>
 
+### `closing_period_activity_on_partial_subsidiary`
+
+<sub>`error` · `tests/assert_closing_period_activity_on_partial_subsidiary.sql` · konsol#117 konsolidat#204 konsolidat#259</sub>
+
 ### `fiscal_calendar_is_loaded`
 
 **#77 — Guard against the silent fiscal-calendar fallback (FY0/P0 regression).**
@@ -890,6 +998,22 @@ silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, 
 
 <sub>`error (default)` · `tests/assert_fiscal_calendar_is_loaded.sql` · konsolidat#65 konsolidat#76 konsolidat#77</sub>
 
+### `partial_period_pnl_matches_treatment`
+
+**konsolidat#171 step 2c (T4): mid-period profit and loss follows the treatment the group root declares.**
+
+Decided by Deepak Pai: 18 Sep 2026 (mid-period P&L follows partial_period_treatment: Whole period | Pro-rate by days | Stub trial balance), 10 Nov 2026 Q2 C (the disposal period is inside the window and its P&L follows the treatment too, IFRS 10.B88). The expectation is computed here from the sources, never through partial_period_removed_fraction() or deal_period_holds(): the deal's Regular period is re-derived from epm_staging.fiscal_periods (the lowest tuple whose declared span holds the date), so the model and this test cannot share a mistake. Sign convention: an adjustment is ADDED to the consolidated amount, so it removes the share of the period that the group did not hold: adjustment = -group_amount * removed_fraction      (on every P&L account of the deal period) acquisition: removed_fraction = days from the period start up to the day before the deal date, over the period's days (an acquisition on the 11th of a 31-day month removes 10/31); none when the deal is on the first day. full disposal: removed_fraction = days after the deal date to the period end, over the period's days; none when the deal is on the last day. The deal day belongs to the group on both sides. Expected 0 (no adjustment at all) for 'Whole period', 'Stub trial balance' (the uploaded period is the stub, used unscaled), an undeclared treatment, every other period, and a deal on a boundary day. The model's amount is the P&L lines of gold_acquisition_adjustments (pnl_proration) plus the lines of gold_business_disposal_journal with account_role 'post_disposal_pnl' (line_no 105). A model line counts only on a P&L account (silver_main_accounts.is_pnl), so the retained-earnings line that balances the adjustment is not judged as an amount. Faults, one row each: amount differs          per (group, entity, year, period, account), model minus expected is more than 0.01 (expected_amount, model_amount) acquisition unbalanced  gold_acquisition_adjustments does not sum to 0 for a (group, entity, year, period): the proration must balance through a retained-earnings line Fixtures: assert_partial_period_pnl_matches_treatment.*.sql.
+
+<sub>`error (default)` · `tests/assert_partial_period_pnl_matches_treatment.sql` · konsolidat#171</sub>
+
+### `partial_period_treatment_declared`
+
+**konsolidat#171 step 2c.**
+
+Decisions: Deepak Pai, 18 Sep 2026 (mid-period P&L follows the group root's declared partial_period_treatment: Whole period | Pro-rate by days | Stub trial balance; no default, required once a business combination exists) and 10 Nov 2026 Q1 A (an undeclared treatment with a mid-period deal is a build ERROR naming the group and the deal, never a silent default). One row per submitted business combination, or full disposal (retained_interest_pct <= 0), that falls mid-period and whose group root row (epm_gold.consolidation_groups, data_area_id = '') does not carry one of the three exact values: blank, no root row, or a typo such as 'Pro rata'. The deal period is the Regular period deal_period_holds() gives (lowest tuple, as both deal journals pick it). Mid-period: an acquisition dated after the period's start_date; a full disposal dated before the period's end_date. A deal on the first day (acquisition) or last day (disposal) is a whole-period deal and needs no treatment. A partial disposal (control retained) is out of scope. A date no Regular period holds is not judged here: assert_acquisition_accounts_declared already names it. Fixtures: dbt_project/test_fixtures/assert_partial_period_treatment_declared.must_flag.sql (flags 3) and assert_partial_period_treatment_declared.sql (all three declared, passes).
+
+<sub>`error (default)` · `tests/assert_partial_period_treatment_declared.sql` · konsolidat#171</sub>
+
 ### `period_net_equals_debit_minus_credit`
 
 **period_net_amount must equal period_debit - period_credit per trial balance row.**
@@ -897,6 +1021,14 @@ silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, 
 e row. Fails on pre-fix gold until a full refresh rebuilds gold_trial_balance with the new measure.
 
 <sub>`error (default)` · `tests/assert_period_net_equals_debit_minus_credit.sql`</sub>
+
+### `trial_balance_period_declared`
+
+**konsolidat#171 / #252 (task 2a): every (fiscal_year, fiscal_period) that gold_trial_balance carries is declared in konsol's fiscal calendar (epm_staging.fiscal_periods), and declared with one span.**
+
+The ownership window is judged on the declared period dates (macros/declared_periods.sql). A period the calendar does not declare has no dates, so there is nothing true to judge it on: it is refused here, at ERROR severity, and never judged at a date invented from the period number (the first of calendar month P, or the last day of that month). An undeclared period drops out of gold_entity_ownership, and so out of the consolidated trial balance; this test is what makes that drop a failed build instead of a silent one. A period declared on several rows with different start or end dates is refused for the same reason: the window would have to pick one span. One row per (entity, period) not declared, and one row per period declared with conflicting spans. Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql.
+
+<sub>`error (default)` · `tests/assert_trial_balance_period_declared.sql` · konsolidat#171 konsolidat#252</sub>
 
 ### `ytd_at_last_regular_period_equals_annual`
 
@@ -932,9 +1064,9 @@ Key a line by (consolidation_group, journal_id, data_area_id, main_account); sum
 
 **depends_on: {{ ref('bronze_trial_balance_submissions') }} konsolidat#191: cast_to_decimal128(expr, scale) must recover the exact decimal value that was submitted, not truncate it.**
 
-toDecimal128(Float64, scale) truncates toward zero on the binary double, which is usually a hair below the decimal the value was entered as (e.g. 0.29 becomes 0.28). Summed over a trial-balance batch, balanced raw batches arrive unbalanced in bronze (konsolidat#191). A float *sum* (e.g. two submitted amounts added together, as gold_scenario_trial_balance.sql does) has the same problem even after the text-route fix, because the shortest text form of the sum itself can sit a hair below the cent (0.7 + 0.1 = 0.7999999999999999) — the macro now rounds to the target scale before the text step so this casts exactly too. Cases: an ordinary two-decimal amount, a large amount from the reported batch (177,485,814.95), a negative amount, a Nullable(Float64) input (assumeNotNull must still work through toString), a float sum whose binary result is a hair short of the cent, and a very small value at scale 12 (the exchange-rate caller's scale). Depends on bronze_trial_balance_submissions (not read otherwise) purely so CI's indirect test selection picks this test up whenever that model is selected — see dbt_project/tests/assert_ic_difference_account_in_chart.sql for the same pattern. bronze_trial_balance_submissions feeds silver_gl_entries -> gold_trial_balance_by_partner -> gold_consolidated_trial_balance, which is in tb_only_first_build.py's MUST_CREATE, so `dbt build --select @silver_main_accounts` (the tb-only-first-build CI job) now selects this test too.
+toDecimal128(Float64, scale) truncates toward zero on the binary double, which is usually a hair below the decimal the value was entered as (e.g. 0.29 becomes 0.28). Summed over a trial-balance batch, balanced raw batches arrive unbalanced in bronze (konsolidat#191). A float *sum* (e.g. two submitted amounts added together, as gold_scenario_trial_balance.sql does) has the same problem even after the text-route fix, because the shortest text form of the sum itself can sit a hair below the cent (0.7 + 0.1 = 0.7999999999999999) — the macro now rounds to the target scale before the text step so this casts exactly too. Cases: an ordinary two-decimal amount, a large amount from the reported batch (177,485,814.95), a negative amount, a Nullable(Float64) input (assumeNotNull must still work through toString), a float sum whose binary result is a hair short of the cent, a very small value at scale 12 (the exchange-rate caller's scale), and #256's cases at the TB amount scale, amount_scale(): a three-decimal amount (BHD, KWD), a four-decimal one, and a three-decimal float sum. At scale 2 each of the last three loses a digit and is listed. Depends on bronze_trial_balance_submissions (not read otherwise) purely so CI's indirect test selection picks this test up whenever that model is selected — see dbt_project/tests/assert_ic_difference_account_in_chart.sql for the same pattern. bronze_trial_balance_submissions feeds silver_gl_entries -> gold_trial_balance_by_partner -> gold_consolidated_trial_balance, which is in tb_only_first_build.py's MUST_CREATE, so `dbt build --select @silver_main_accounts` (the tb-only-first-build CI job) now selects this test too.
 
-<sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191</sub>
+<sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191 konsolidat#256</sub>
 
 ### `d365_gl_vouchers_balance`
 
@@ -1002,9 +1134,9 @@ A misconfigured/unknown entity_scope code would match nothing in gold_consolidat
 
 **Fails when a write-through table's contents no longer match what its last successful sync says about it.**
 
-Background: D11 wanted ClickHouse to read Frappe's MariaDB directly so metadata could never go stale. F4 reversed that — write-through avoids making every dbt run a live dependency on the Frappe database. The cost of reversing it is losing D11's one real benefit, "never stale". This is how that comes back without the coupling. konsol's clickhouse.sync_table() stamps epm_staging.sync_watermark on every successful sync, and reconcile_all() re-stamps every table after migrate. Two things can then be detected: EMPTIED — the watermark promises rows the table no longer has. A wiped ClickHouse, a restore in the wrong order, a half-finished migration. LAGGING — one table's watermark is far older than the newest. Because reconcile stamps them all together, a straggler means the reconcile could not reach that doctype while the others synced fine. This is the case that matters most: epm_staging.ownership_periods held three rows dated 2026-06-19 for records Frappe no longer had, and AMDE at 75% from that ghost row drove every consolidated statement while Frappe's own Consolidation Group said 100%. Deliberately NOT dbt's built-in source freshness. That keys on the data's own updated_at, so a table nobody edited reads as stale and an empty table reads as stale — on this project it marks most of epm_staging red, which is why nobody runs it. The watermark records when the *sync* ran, not when the data changed, so "unchanged" and "not syncing" stop looking alike. Tune the lag with --vars '{"watermark_lag_hours": N}'. Returns one row per problem — dbt fails the run when any row comes back.
+Background: D11 wanted ClickHouse to read Frappe's MariaDB directly so metadata could never go stale. F4 reversed that — write-through avoids making every dbt run a live dependency on the Frappe database. The cost of reversing it is losing D11's one real benefit, "never stale". This is how that comes back without the coupling. konsol's clickhouse.sync_table() stamps epm_staging.sync_watermark on every successful sync, and reconcile_all() re-stamps every table after migrate. Two things can then be detected: EMPTIED — the watermark promises rows the table no longer has. A wiped ClickHouse, a restore in the wrong order, a half-finished migration. LAGGING — a table missing from the latest reconcile run. reconcile_all() stamps every watermark it writes with one run id; a write-through stamps none (''). Every table with a watermark row and no row from the latest run is one that run could not reach, including a table no reconcile has ever stamped: one that has failed in every reconcile since the upgrade keeps only its old '' stamp, and is exactly the case below. (Retired tables lose their rows in konsol's _retired_watermark_cleanup; on 11 Oct 2026 every live table was in the 7 Oct reconcile, none is write-through only.) This is the case that matters most: epm_staging.ownership_periods held three rows dated 2026-06-19 for records Frappe no longer had, and AMDE at 75% from that ghost row drove every consolidated statement while Frappe's own Consolidation Group said 100%. konsolidat#246, option #246-1 (Deepak Pai, 11 Oct 2026). LAGGING used to mean "more than lag_hours older than the newest watermark of any table". One write-through edit then made every untouched table look stale: publishing one Reporting Hierarchy gave 26 LAGGING rows for tables whose rows were current. A write-through neither joins nor leaves a run, so it can no longer do that. Rejected: #246-2 (drop LAGGING) and #246-3 (raise the lag hours). The latest run is the settled run that started last (its earliest stamp). A run is settled once its newest stamp is at least watermark_run_settle_seconds (default 60) old: a reconcile still running when dbt tests (a fresh install's queued reconcile_warehouse can overlap one) has stamped only the tables it has reached so far, and judging it would report the rest LAGGING for the second or so it takes to finish. Until it settles, the run before it is judged. A run that failed or was killed partway is the latest run once settled, so every table it did not reach is LAGGING, even one a write-through has refreshed since: the rule asks whether the reconcile reached the table, not whether the table is recent. NO_RECONCILE_RUN — no reconcile has stamped a run id yet. An upgrading site is in this state from the moment the watermark gains its reconcile_run_id column (konsol's ensure_reference_tables(), or sync_watermark_upgrade() in on-run-start) until the first reconcile after it, which konsol's migrate runs. That window must not go red, and must not pass for ever either: the test allows lag_hours from the column's arrival, read from system.tables.metadata_modification_time, then fails. Both writers issue that ALTER only when the column is missing, because an ALTER that changes nothing still moves that time. Deliberately NOT dbt's built-in source freshness. That keys on the data's own updated_at, so a table nobody edited reads as stale and an empty table reads as stale — on this project it marks most of epm_staging red, which is why nobody runs it. The watermark records when the *sync* ran, not when the data changed, so "unchanged" and "not syncing" stop looking alike. Tune the grace with --vars '{"watermark_lag_hours": N}'. It now bounds only NO_RECONCILE_RUN; LAGGING has no time threshold. Returns one row per problem — dbt fails the run when any row comes back.
 
-<sub>`error (default)` · `tests/assert_staging_not_stale.sql`</sub>
+<sub>`error (default)` · `tests/assert_staging_not_stale.sql` · konsolidat#246</sub>
 
 ### `ytd_trial_balance_grain`
 
@@ -1025,4 +1157,28 @@ With a row per intercompany partner, each got a partial running total (250 inste
 Before the fix, layer 4 of gold_fully_consolidated_tb sums topside/reclassification/auto_reversal lines to the account grain and reports any(journal_id) for the group — one journal name survives when two journals post to the same account in the same period (batch review 27 Sep finding 2: ZZJ-00001 and ZZJ-00002 on one key became one row labelled with only one of them). This test returns every journal_id present in gold_consolidation_adjustments (the topside/reclassification/ auto_reversal rows, none of them 'entity') that is absent from gold_consolidation_journal. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql (reused from V03, not copied): ZZJ-00001 and ZZJ-00002, both Dr ZZ1100 / Cr ZZ2100, ZZG/ZZS FY2026 P3.
 
 <sub>`error (default)` · `tests/assert_consolidation_journal_names_every_journal.sql` · konsol#305</sub>
+
+### `equity_never_revalued`
+
+**konsolidat#257 Q2 (decided by Deepak Pai, 6 Oct 2026): equity is never revalued.**
+
+An equity account's translated movement is its local movement at the rate the row declares (historical, else the closing rate of the period it was posted in), whatever its fx_method. A balance sheet balance is retranslated at each closing rate (#257), but an equity balance is not: retranslating it would bury the exchange difference in equity lines and leave no separate component to recycle on disposal (IAS 21.39(c), .48). So on every equity row (is_equity = 1, from the chart): | translated_amount - local_amount x translation_rate | <= 0.01 A revaluation shows up as exactly that difference: a filler row with local_amount = 0 and a translated amount, or a retranslation_amount on a row that moved. The one declared exception is the year-end close leg of the retained-earnings account (konsolidat#259-1, decided 6 Oct 2026): in a Closing-type period, retained earnings is credited with the year's translated result, not its local result at a rate. That leg is governed by assert_year_end_close_carries_no_cta, so this test leaves the retained-earnings account's rows in Closing periods to it. Nothing else is exempt: another equity account in a Closing period is still checked.
+
+<sub>`error (default)` · `tests/assert_equity_never_revalued.sql` · konsolidat#257 konsolidat#259</sub>
+
+### `joint_operation_path_has_no_partial_full_link`
+
+**IFRS 11.20 / IFRS 10, konsol#117 pair 3 review finding A (refused by name, not computed).**
+
+A joint operation reached through a partly owned FULL link is carried at the wrong share and with no NCI. P -> S full 80%, S -> J proportional 50%: the weakest link is proportional and the path sum is 0.40, so layer 1 posts 40% of J's lines with nci 0. S itself recognises 50% of J's lines (IFRS 11.20) and P consolidates S in full with a 20% minority, so the group should carry 50% of J's lines with NCI = 10% (20% x 50%). Computing that needs an NCI attribution for the intermediary's minority of a joint operation, which is a later pair. The flag is entity-wide: any resolved path with a partial full link on a proportional entity fires it, even when that path has no proportional link itself (several paths), hence the general sentence. Until then the case is refused: the build fails naming the entity. A path of all-100% full links plus proportional links (P -> S full 100, S -> J proportional 50) stays allowed: 0.50 is exactly the operator's share.
+
+<sub>`error (default)` · `tests/assert_joint_operation_path_has_no_partial_full_link.sql` · konsol#117 konsolidat#331</sub>
+
+### `method_declared_for_multi_path`
+
+**konsol#117 (design section 2): when a group reaches an entity along several paths and the links do not settle the method — their weakest-link methods disagree, or no path is all-`full` and the paths sum past DECLARATION_TRIGGER_PCT (50%, the IFRS 10.B35 presumption of control) — the group must DECLARE the method (Consolidation Method Declaration on the group node, synced to epm_staging.consolidation_method_declarations).**
+
+The macro resolves such a row as method_source = 'undeclared' and consolidation_method 'none', so nothing consolidates for (group, entity); this test fails the build naming the group, the entity, the period, the sum and the paths. The percentage decides nothing here: 60% held as two 30% equity stakes may be joint control (IFRS 11) or control (IFRS 10); only the group can say. Fixtures: assert_method_declared_for_multi_path.undeclared.must_flag.sql (flags 1), .declared_full.sql and .declared_equity.sql (pass).
+
+<sub>`error (default)` · `tests/assert_method_declared_for_multi_path.sql` · konsol#117</sub>
 

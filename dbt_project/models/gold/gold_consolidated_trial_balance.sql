@@ -8,12 +8,31 @@
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT ''{% endif %}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS uses_historical_rate UInt8 DEFAULT 0{% endif %}",
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS retranslation_amount Float64 DEFAULT 0{% endif %}",
+            "{{ widen_amount_columns(['local_amount']) }}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE 1 = 1 {{ period_filter() }} {{ scope_filter() }}{% endif %}"
         ],
         engine='MergeTree()',
         order_by='tuple()'
     )
 }}
+
+{# konsolidat#204 (a), konsol#117 pairs 2 and 3. A controlled subsidiary
+   (consolidation_method 'full', IFRS 10.B86): group_amount is 100% of
+   translated_amount; nci_amount is the minority's attribution (translated x
+   (1 - ownership_pct)) that the NCI line in equity carries. A joint operation
+   ('proportional', IFRS 11.20): group_amount is the operator's share
+   (translated x ownership_pct) and nci_amount is 0, as nobody holds a minority
+   in it. 'equity' and 'none' are not line-consolidated. Pinned by
+   assert_group_equals_translated_for_full,
+   assert_group_equals_translated_times_share_for_proportional,
+   assert_nci_equals_translated_times_minority and
+   assert_nci_zero_for_proportional. #}
+
+{# #256: the widen_amount_columns pre_hook (macros/amount_scale.sql) runs before
+   the DELETE and the append. A table built before #256 holds its amounts as
+   Decimal(38, 2), and an append into it would cut a three-decimal amount (BHD,
+   KWD) to two places, without an error. The hook widens those columns to
+   amount_type() once; after that it finds nothing to widen and renders nothing. #}
 
 {# The query_settings line (konsolidat PR "Fix the TB-only first build after
    #262"): `retranslated`, `close_pnl` and `closed` below are three window steps,
@@ -138,12 +157,12 @@ with entity_tb as (
        gold_trial_balance_by_partner. #}
     from {{ ref('gold_trial_balance_by_partner') }} as tb
     {# konsol#110: the currency comes from silver_entity_currencies — konsol's
-       Entity master first, the ERP's company master second. This used to join
+       Entity master, and since konsolidat#255 nothing else. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a
        connector-less entity's submitted trial balance reached gold_trial_balance
        and then vanished here with nothing failing.
 
-       Resolved currencies only. An entity with no currency on either side
+       Resolved currencies only. An entity with no Functional Currency
        would otherwise join with '', miss every rate key, and translate at the
        1.0 parity fallback — a JPY ledger landing as CHF, ~170x. Dropping it is
        the lesser wrong, and not a silent one: assert_every_tb_entity_has_a_currency
@@ -216,17 +235,6 @@ entity_ownership as (
     left join {{ source('epm_gold', 'consolidation_groups') }} as grp
         on grp.consolidation_group = eo.consolidation_group
         and grp.data_area_id = ''
-),
-
-{# PRD-10: Historical equity rates from staging #}
-historical_rates as (
-    select
-        consolidation_group,
-        data_area_id,
-        main_account,
-        rate_date,
-        toFloat64(historical_rate) as historical_rate
-    from {{ source('epm_staging', 'historical_equity_rates') }}
 ),
 
 {# konsolidat#93 / konsol#103: translation reads ONLY the group's governed
@@ -368,6 +376,7 @@ rated as (
             consolidation_group,
             data_area_id,
             main_account,
+            to_currency,
             rate_date,
             {# Nullable so an ASOF miss (period before the first tranche) yields
                NULL, not 0.0 — a non-nullable column would default to 0 on a
@@ -384,12 +393,24 @@ rated as (
            fan-out missed at every ancestor above it, so the same equity account
            translated at the acquisition rate in the sub-group and silently fell
            through to the closing rate in the parent — two different CTAs for
-           one entity. #}
+           one entity.
+           konsol#374 (option b; Deepak Pai, 7 Nov 2026): AND on the
+           consolidating group's presentation currency. A rate converts the
+           entity's currency into ONE currency (to_currency); a sub-group that
+           presents in EUR and its parent that presents in USD each need their
+           own rate for the same entity and account, and keyed without the
+           currency the two tranches were one as-of series, the later one
+           winning at both levels. A missing (group, currency) pair is a
+           closing-rate fallback here and a named row in
+           assert_declared_historical_has_a_rate, as a missing rate always was. #}
         on eo.owner_group = hr.consolidation_group
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
+        and eo.reporting_currency = hr.to_currency
         and etb.period_date >= hr.rate_date
-    {# PRD-14: equity-method entities are handled in a separate model. The
+    {# Line consolidation takes 'full' (100%, pair 2) and 'proportional' (the
+       operator's share, a joint operation, IFRS 11.20, konsol#117 pair 3).
+       PRD-14: equity-method entities are handled in a separate model. The
        method is the WEAKEST link on the chain, so an entity below an
        equity-held sub-group is excluded from that group's line consolidation
        too — while still line-consolidating into the sub-group itself.
@@ -397,7 +418,8 @@ rated as (
        'none' is excluded as well: it is a real option on Ownership Period, and
        it is also gold_entity_ownership's catch-all rank for an unrecognised
        method — so a typo must not line-consolidate an entity at its full share
-       with no NCI schedule row behind it (that model filters on 'full').
+       with no NCI schedule row behind it (that model filters on 'full'; a
+       proportional row needs none, its nci_amount is 0).
 
        A chain with an unresolved link consolidates nothing rather than
        something plausible; assert_ownership_chain_complete names it. #}
@@ -541,7 +563,7 @@ densified as (
         account_name, account_type_name, is_balance_sheet, is_pnl, is_equity,
         partner_data_area_id,
         {{ dim_select(trailing=true) }}
-        toDecimal128(0, 2) as local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
+        toDecimal128(0, {{ amount_scale() }}) as local_amount, accounting_currency, reporting_currency, ownership_pct, consolidation_method,
         closing_rate, average_rate,
         cast(null as Nullable(Float64)) as historical_equity_rate,
         cast(closing_rate as Nullable(Float64)) as translation_rate,
@@ -666,10 +688,19 @@ consolidated as (
            retranslation (konsolidat#257; 0 on every row that is not
            retranslated) #}
         local_amount * translation_rate + translation_adjustment as translated_amount,
-        {# PRD-4: Group amount = translated x ownership_pct #}
-        (local_amount * translation_rate + translation_adjustment) * ownership_pct as group_amount,
-        {# PRD-4: NCI amount = translated x (1 - ownership_pct) #}
-        (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct) as nci_amount
+        {# konsolidat#204 option (a), konsol#117 pair 2 (IFRS 10.B86): a controlled
+           subsidiary (full) is consolidated line by line at 100%, whatever the
+           group's share. konsol#117 pair 3 (IFRS 11.20): a joint operation
+           (proportional) is carried at the operator's share, translated x
+           ownership_pct. The where above drops equity and none. #}
+        (local_amount * translation_rate + translation_adjustment)
+            * if(consolidation_method = 'proportional', ownership_pct, 1.0) as group_amount,
+        {# nci_amount of a controlled subsidiary (PRD-4, kept) = translated x
+           (1 - ownership_pct), the ATTRIBUTION amount: the minority is one NCI
+           line in equity, which konsol#117 pair 2 task K2 posts from this column.
+           A joint operation has no minority (IFRS 11.20): 0, konsol#117 pair 3. #}
+        if(consolidation_method = 'proportional', 0,
+           (local_amount * translation_rate + translation_adjustment) * (1.0 - ownership_pct)) as nci_amount
     from adjusted
     {# konsolidat#93: a missing governed rate fails the build loudly, never a
        0 or a 1.0 translation. throwIf takes a per-row condition (a constant

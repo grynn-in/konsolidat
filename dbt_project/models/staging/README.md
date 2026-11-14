@@ -41,9 +41,9 @@ extra ERP-specific columns. Bronze joins those from the adapter directly
 
 | Canonical model | Adapter columns |
 |---|---|
-| `stg_gl_entries` | `erp_source, record_id, entity_id, posting_date, fiscal_year, fiscal_period, main_account, account_name, amount, transaction_currency_amount, transaction_currency, description, journal_number, posting_type, ledger_account, partner_data_area_id, dim_cost_center, dim_department, dim_business_unit, _loaded_at, _raw_id` |
+| `stg_gl_entries` | `erp_source, record_id, entity_id, posting_date, fiscal_year, fiscal_period, main_account, account_name, amount, transaction_currency_amount, transaction_currency, description, journal_number, posting_type, ledger_account, partner_data_area_id, _loaded_at, _raw_id`, plus one column per declared dimension (`var('dimensions')`) |
 | `stg_trial_balance` | `erp_source, entity_id, main_account, account_name, fiscal_year, opening_balance, debit_amount, credit_amount, closing_balance, currency_code, account_type, partner_data_area_id, _loaded_at, _raw_id` |
-| `stg_budget_entries` | `erp_source, record_id, entity_id, posting_date, main_account, amount, transaction_amount, transaction_currency, budget_model, budget_status, dim_cost_center, dim_department, _loaded_at, _raw_id` |
+| `stg_budget_entries` | `erp_source, record_id, entity_id, posting_date, main_account, amount, transaction_amount, transaction_currency, budget_model, budget_status, _loaded_at, _raw_id`, plus one column per declared `in_budget` dimension |
 | `stg_accounts` | `erp_source, account_id, account_name, account_type, account_category, debit_credit_default, chart_of_accounts, is_suspended, _loaded_at, _raw_id` |
 | `stg_legal_entities` | `erp_source, entity_id, entity_name, accounting_currency, reporting_currency, party_number, country_region, _loaded_at, _raw_id` |
 | `stg_exchange_rates` | `erp_source, from_currency, to_currency, valid_from, valid_to, exchange_rate, rate_type, _loaded_at, _raw_id` |

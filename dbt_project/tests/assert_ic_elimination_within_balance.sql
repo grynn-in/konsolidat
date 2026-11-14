@@ -16,8 +16,8 @@
        sum of |balance| per (entity, partner): a partnerless row or an entity
        with the opposite sign stays on the account after elimination, and a
        net figure would flag a correct elimination of the rest. The difference
-       account's and the NCI line's legs are destinations, not eliminations of
-       their balances, so they are left out.
+       account's legs are destinations, not eliminations of their balances,
+       so they are left out.
     2. side: per pair, each side is eliminated by no more than the group view
        holds of it (group_balance_*), in the direction that reduces it.
        An elimination whose pair key matches no pair is flagged
@@ -26,13 +26,9 @@
 
 {% set pair = "consolidation_group, entity_a, account_a, entity_b, account_b" %}
 
-with group_nci as (
-    {{ ic_group_nci_accounts() }}
-),
-
-eliminations as (
+with eliminations as (
     select * from {{ ref('gold_ic_eliminations') }}
-    where rule_type = 'balance' and elimination_view = 'group'
+    where rule_type = 'balance'
 ),
 
 legs as (
@@ -51,12 +47,6 @@ destinations as (
     select distinct consolidation_group, ic_difference_account as main_account
     from {{ ref('gold_ic_reconciliation') }}
     where ic_difference_account != ''
-    union distinct
-    {# the group's NCI line: its declared NCI Account, or the placeholder
-       (konsolidat#208), resolved as gold_ic_eliminations does #}
-    select distinct r.consolidation_group, {{ ic_nci_account_or_placeholder('gn.declared_nci_account') }}
-    from {{ ref('gold_ic_reconciliation') }} as r
-    left join group_nci as gn on gn.nci_group = r.consolidation_group
 ),
 
 account_basis as (

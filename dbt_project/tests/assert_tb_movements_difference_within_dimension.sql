@@ -83,11 +83,11 @@ select
     '' as predecessor_dimension_key,
     amount_basis,
     source_net_amount,
-    toDecimal128(0, 2) as previous_net_used,
-    toDecimal128(0, 2) as previous_net_within_dimension,
+    toDecimal128(0, {{ amount_scale() }}) as previous_net_used,
+    toDecimal128(0, {{ amount_scale() }}) as previous_net_within_dimension,
     movement_amount,
-    toDecimal128(0, 2) as movement_within_dimension,
-    toDecimal128(0, 2) as difference
+    toDecimal128(0, {{ amount_scale() }}) as movement_within_dimension,
+    toDecimal128(0, {{ amount_scale() }}) as difference
 from {{ ref('silver_tb_movements') }}
 where 0
 
@@ -121,12 +121,12 @@ compared as (
         *,
         {# the previous figure the FULL key implies: the model's windows widened
            with the declared dimensions #}
-        lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
+        lagInFrame(source_net_amount, 1, toDecimal128(0, {{ amount_scale() }})) over (
             partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and current row
         ) as within_previous_net_any_year,
-        lagInFrame(source_net_amount, 1, toDecimal128(0, 2)) over (
+        lagInFrame(source_net_amount, 1, toDecimal128(0, {{ amount_scale() }})) over (
             partition by data_area_id, main_account, partner_data_area_id{{ dim_partition_by(leading=true) }}, fiscal_year
             order by fiscal_period
             rows between unbounded preceding and current row
@@ -171,7 +171,7 @@ select
        within_previous_net_any_year) as previous_net_within_dimension,
     movement_amount,
     source_net_amount - previous_net_within_dimension as movement_within_dimension,
-    round(movement_amount - movement_within_dimension, 2) as difference
+    movement_amount - movement_within_dimension as difference
 from compared
 where movement_kind = 'activity'
   and model_previous_movement_kind != 'year_end_close'

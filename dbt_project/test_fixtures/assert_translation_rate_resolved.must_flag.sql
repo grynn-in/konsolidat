@@ -1,3 +1,4 @@
+-- gate: expect assert_translation_rate_resolved flag 2
 -- assert_translation_rate_resolved: must FAIL with exactly 2 results.
 -- ZZZ0: cross-currency row whose translation_rate collapsed to 0 (join miss under join_use_nulls=0).
 -- ZZNL: cross-currency row whose translation_rate is NULL (escaped every rate branch).

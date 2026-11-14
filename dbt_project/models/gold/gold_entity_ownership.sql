@@ -45,17 +45,32 @@
    period during a scoped close would rebuild both holding that period alone and
    silently drop every prior period's NCI schedule and equity entries. The
    consolidation chokepoint downstream still applies its own filter, and
-   gold_trial_balance is deliberately unscoped. #}
+   gold_trial_balance is deliberately unscoped.
+
+   konsolidat#171 / #252 / #278: each period is judged on the dates konsol's
+   calendar DECLARES for it (declared_periods(): epm_staging.fiscal_periods),
+   never on the first of calendar month P. period_date is the period's declared
+   end_date (a Closing period: its year's last Regular period's), the date the
+   holding is read at; period_start_date is its declared start_date. Before,
+   period_date was the first of calendar month P, clamped to 1..12: a deal
+   dated inside a period shifted the window by a period, and a fiscal year
+   starting in April resolved P1 as of 1 January. A period the calendar does
+   not declare is dropped by the inner join and refused by
+   assert_trial_balance_period_declared (ERROR). #}
 with entity_periods as (
     select distinct
-        data_area_id,
-        fiscal_year,
-        fiscal_period,
-        {{ build_date_from_year_period('fiscal_year', 'fiscal_period') }} as period_date
-    from {{ ref('gold_trial_balance') }}
+        tb.data_area_id as data_area_id,
+        tb.fiscal_year as fiscal_year,
+        tb.fiscal_period as fiscal_period,
+        dp.window_start_date as period_start_date,
+        dp.window_end_date as period_date
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
 ),
 
-{# The chain itself is resolved by ownership_resolution_ctes (macros/
+{# The graph itself is resolved by ownership_resolution_ctes (macros/
    ownership_resolution.sql), which gold_ic_reconciliation also uses on a
    period spine of its own. What each step does, and why:
 
@@ -64,26 +79,46 @@ with entity_periods as (
      with no ownership period would read as a real 0%, indistinguishable from
      a deliberate deconsolidation. The same defaulting trap the FX and
      historical-rate blocks in gold_consolidated_trial_balance guard against.
-   - entity_windows: does the ENTITY's own node have any ownership history at
-     all, and does it cover this period? "We know when we owned it and this is
-     not it" (before an acquisition, after a disposal) is a deliberate 0, not a
-     missing percentage. Consolidation excludes it either way, but only the
-     latter is worth failing a build over.
-   - links: ASOF picks the latest period whose effective_date <= period_date;
-     end_date is then checked explicitly, because ASOF cannot carry a second
-     inequality and would otherwise keep applying an expired period forever.
-   - resolved: owner_group is the entity's IMMEDIATE parent group (a
-     historical equity rate and an entity name are recorded once, under the
-     node that owns the entity, not under every ancestor that consolidates
-     it); direct_pct is the entity's own link, what its immediate parent owns
-     of it; and the weakest link's method governs: a sub-group held at equity
-     is not line consolidated into its parent, so nothing beneath it is
-     either. An unrecognised method is treated as the strictest rather than
-     silently as 'full'.
-   - resolution: outside_ownership_window is 1 when the entity's node HAS
-     ownership history but none of it covers this period, i.e. we did not own
-     it then. It distinguishes a deliberate gap from an unrecorded one;
-     assert_ownership_chain_complete only fails on the latter. #}
+   - link_history: does this LINK (owned node, owner node) have any ownership
+     history at all? "We know when we held it and this is not it" (before an
+     acquisition, after a disposal) is a deliberate 0, not a missing
+     percentage. Consolidation excludes it either way, but only the latter is
+     worth failing a build over.
+   - links: ASOF picks the latest period whose effective_date <= period_date
+     (the period's declared end), matched on both the owned and the owning node
+     (konsol#117: two owners of one node are two links); end_date is then
+     checked explicitly against period_start_date (the link had not ended
+     before the period began), because ASOF cannot carry a second inequality
+     and would otherwise keep applying an expired period forever. The window is
+     the deal journals' span rule (macros/ownership_resolution.sql, THE
+     WINDOW).
+   - paths: one row per path_id: the product of its links, the weakest link's
+     method (a sub-group held at equity is not line consolidated into its
+     parent, so nothing beneath it is either; an unrecognised or unresolved
+     method ranks as the strictest rather than silently as 'full'), and its
+     direct link, the one into the entity's own node.
+   - resolved: the paths summed. effective = sum of the resolved paths'
+     products; direct = the sum of the DISTINCT links into the entity's node;
+     owner_group is the consolidation_group of the entity's own node, as
+     before (a historical equity rate is recorded once, under that node, and
+     konsol validates it against it); path_count and direct_owner_count tell
+     a reader how the number was reached and how many nodes hold the entity.
+   - ruled / resolution: the method rule of design section 2 (konsol#117).
+     One path, or several whose links agree with an all-full path among them
+     or a sum within DECLARATION_TRIGGER_PCT: the links decide ('link').
+     Otherwise the group's declaration decides ('declared'), read ASOF from
+     consolidation_method_declarations; required and absent is 'undeclared'
+     with method 'none', so nothing consolidates and
+     assert_method_declared_for_multi_path names it. has_complete_chain is 1
+     when at least one path resolves and no path has an unrecorded link;
+     outside_ownership_window is 1 when no path resolves but every link has
+     history, i.e. we did not own it then. It distinguishes a deliberate gap
+     from an unrecorded one; assert_ownership_chain_complete only fails on
+     the latter. has_partial_full_link is 1 when any resolved path carries a
+     full link below 100%; with method proportional that is refused by name
+     (assert_joint_operation_path_has_no_partial_full_link, konsol#117 pair 3
+     finding A): the joint operation's share and the intermediary's minority in
+     it are not computed. #}
 {{ ownership_resolution_ctes('entity_periods') }}
 
 select * from resolution

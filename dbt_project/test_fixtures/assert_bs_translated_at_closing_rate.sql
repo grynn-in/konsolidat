@@ -1,8 +1,8 @@
+-- gate: build gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate
 -- assert_bs_translated_at_closing_rate (konsolidat#257): must PASS once the model retranslates.
 --
 -- Seeds gold_consolidated_trial_balance's direct inputs, so the gate builds the model itself:
---   gate-v.sh <wt> dbt_project/test_fixtures/assert_bs_translated_at_closing_rate.sql \
---     "gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate"
+--   selector "gold_consolidated_trial_balance gold_fx_revaluation assert_bs_translated_at_closing_rate" (the `-- gate: build` line at the top)
 --
 -- One EUR entity (ZZE1) in a USD group (ZZG), 100% owned, FY2026 P1 and P2.
 -- Governed EUR->USD: P1 closing 1.10 / average 1.05; P2 closing 1.20 / average 1.15.
@@ -24,9 +24,9 @@ VALUES
   ('ZZ3000', 'ZZ share capital', 'Equity', 'Equity', 0, 1, 1, 'closing', 1, 0, 0),
   ('ZZ4000', 'ZZ revenue', 'Revenue', 'Revenue', 1, 0, 0, 'average', 1, 0, 0);
 INSERT INTO epm_silver.silver_entity_currencies
-  (data_area_id, accounting_currency, currency_source, governed_currency, erp_currency, in_konsol, in_erp)
+  (data_area_id, accounting_currency)
 VALUES
-  ('ZZE1', 'EUR', 'konsol', 'EUR', '', 1, 0);
+  ('ZZE1', 'EUR');
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency)
 VALUES

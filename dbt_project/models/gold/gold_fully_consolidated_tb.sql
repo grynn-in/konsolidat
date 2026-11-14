@@ -58,13 +58,10 @@ with entity_balances as (
         reporting_currency
 ),
 
-{# Layer 2: IC eliminations, the group view (gold_ic_eliminations also holds
-   the NCI view's entries, which the consolidation report adds for its 100%
-   column). The 'nci' entries (decision 12) are tagged ic_elimination_nci and
-   carry the entity on each leg: the NCI line's leg is the partly owned
-   entity whose minority holds that share (#175 re-review L2). The cash flow
-   statement leaves out a balance-sheet pair's ones and keeps a P&L pair's
-   (third review L1). #}
+{# Layer 2: IC eliminations. Posted in full (IFRS 10.B86(c); konsol#117
+   pair 2 K3), so every entry is an ic_elimination with no entity on its legs:
+   the minority's share is the NCI line of the NCI movement schedule, not part
+   of the elimination. #}
 {# konsolidat#245 option C, rewritten after PR #260 review findings F1 and F2.
 
    A leg of gold_ic_eliminations belongs to ONE SIDE OF ONE PAIR, keyed
@@ -193,7 +190,7 @@ ic_elims as (
    "every row nets to zero" invariant completely untouched. #}
     select
         e.consolidation_group as consolidation_group,
-        if(e.elimination_kind = 'nci', e.debit_entity, '') as data_area_id,
+        '' as data_area_id,
         e.fiscal_year as fiscal_year,
         e.fiscal_period as fiscal_period,
         e.debit_account as main_account,
@@ -205,15 +202,8 @@ ic_elims as (
         {# matched = 0 is a join miss (join_use_nulls=0 gives defaults, never
            NULL), and then the whole leg lands on a blank slice.
 
-           CORRECTION (re-review finding 4): an earlier note here said an NCI
-           or IC-difference leg "posts to a non-IC account and always misses".
-           That is wrong. gold_ic_eliminations pairs (account_a, entity_a) with
-           (nci_account, entity_b) — only the SECOND leg is on a non-IC
-           account. The first is on the real IC account at the real entity
-           against the real partner, so it matches and IS apportioned, and
-           ic_elimination_nci rows do carry dimension values. That is
-           defensible (a side's NCI residual split over that side's own
-           slices), but it is not what the note claimed.
+           (The NCI legs this note once discussed are retired: IC is eliminated
+           in full, konsol#117 pair 2 K3, so every leg is an ic_elimination.)
 
            The fallback is still SILENT, and it has THREE causes the output
            cannot tell apart (round 4, F6 — the previous note said two):
@@ -226,7 +216,7 @@ ic_elims as (
            column on this site is blank. Naming them needs a reason column on
            the layer, which is not in this change. #}
         e.debit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
-        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        'ic_elimination' as adjustment_type,
         e.rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }} as e
     left join side_slice_shares as sl
@@ -245,13 +235,12 @@ ic_elims as (
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
 
-    where e.elimination_view = 'group'
 
     union all
 
     select
         e.consolidation_group as consolidation_group,
-        if(e.elimination_kind = 'nci', e.credit_entity, '') as data_area_id,
+        '' as data_area_id,
         e.fiscal_year as fiscal_year,
         e.fiscal_period as fiscal_period,
         e.credit_account as main_account,
@@ -259,7 +248,7 @@ ic_elims as (
         {{ dim_select_or_blank('sl.', available=var('dimensions'), trailing=true) }}
         '' as reporting_currency,
         e.credit_elimination * if(sl.matched = 0, 1.0, sl.share) as amount,
-        if(e.elimination_kind = 'nci', 'ic_elimination_nci', 'ic_elimination') as adjustment_type,
+        'ic_elimination' as adjustment_type,
         e.rule_id as journal_id
     from {{ ref('gold_ic_eliminations') }} as e
     left join side_slice_shares as sl
@@ -278,7 +267,6 @@ ic_elims as (
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
 
-    where e.elimination_view = 'group'
 ),
 
 {# Layer 3: CTA entries #}
@@ -369,15 +357,38 @@ equity_method as (
     from {{ ref('gold_equity_method_associates') }}
 ),
 
+{# Layer 7: NCI attribution (konsol#117 pair 2 K2, konsolidat#204 (a)): the minority's
+   share of a full-method subsidiary's result and CTA, one balanced journal per
+   (group, entity, period). #}
+nci_attribution as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        account_name,
+        {{ dim_empty_strings(trailing=true) }}
+        reporting_currency,
+        amount,
+        adjustment_type,
+        journal_id
+    from {{ ref('gold_nci_attribution_journal') }}
+),
+
 {# Layer 6: Acquisition & disposal adjustments (PRD-11/12).
    #175 re-review F3: the pnl_proration rows are one per consolidated row,
    and gold_consolidated_trial_balance has a row per intercompany partner,
-   so they are summed to the account grain here, like layer 1. Otherwise
+   so they are summed to the account grain here, like layer 1 (the
+   proration rows inherit the dimensions of their source row, review F1; the
+   partner is summed away). Otherwise
    gold_consolidated_ytd ran a separate running total per row.
    konsolidat#198: the goodwill and fair-value lines come from the balanced
    acquisition journal (gold_business_combination_journal, posted from the
    submitted Business Combination), not from gold_acquisition_adjustments,
-   which keeps only the P&L proration. Row J5: the monthly goodwill
+   which keeps only the partial-period P&L adjustment (#171 2c: it follows
+   the group's declared partial_period_treatment, and its balancing line sits
+   on the retained-earnings account). Row J5: the monthly goodwill
    amortisation journal (gold_goodwill_amortisation_journal, empty unless the
    group's goodwill_treatment is 'Amortise') joins the layer. Row J6: the
    disposal journal (gold_business_disposal_journal, posted from the
@@ -409,14 +420,14 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
         concat('ACQ_', data_area_id) as journal_id
     from {{ ref('gold_acquisition_adjustments') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
-             account_name, adjustment_type
+             account_name, adjustment_type{{ dim_group_by(leading=true) }}
 
     union all
 
@@ -486,6 +497,8 @@ all_layers as (
     select * from equity_method
     union all
     select * from acquisition_disposal
+    union all
+    select * from nci_attribution
 )
 
 select * from all_layers

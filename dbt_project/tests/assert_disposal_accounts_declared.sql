@@ -10,7 +10,7 @@
 --   root_row                       the group's root row in epm_gold.consolidation_groups (data_area_id = ''),
 --                                  where konsol syncs the accounts; without it nothing else of the group is
 --                                  checked (one line says it all)
---   disposal_period                a non-Closing epm_staging.fiscal_periods row spanning disposal_date
+--   disposal_period                a Regular epm_staging.fiscal_periods row spanning disposal_date
 --   disposal_gain_loss_account     always: the balancing line of every disposal journal
 --   disposal_proceeds_account      always: the proceeds debit (the account the group settles deal cash through)
 --   goodwill_account               always: the goodwill the acquisition booked is derecognised here (a deal
@@ -19,14 +19,23 @@
 -- A declared account must also be a Published posting leaf of the chart (silver_main_accounts): the journal
 -- would otherwise post to a code the chart does not know.
 --
--- Refused by name until konsolidat#204 is decided (row J12, PR #203 review 1):
---   share_disposed_pct < 100 or retained_interest_pct > 0
---                                  layer 1 of gold_fully_consolidated_tb carries a full-method subsidiary at the
---                                  parent's share, while the disposal template derecognises 100% of the balance
---                                  sheet against an NCI line, so a partial disposal (or one leaving a retained
---                                  interest) would count the minority twice. One row per such disposal, whatever
---                                  the root row declares; the disposal journal posts nothing for it either
---                                  (design §5/§7), which assert_disposal_gain_loss_exists also names.
+-- Refused by name (row J12; reworded in the konsol#117 pair 2 review, finding 2): a disposal of a partly owned
+-- subsidiary, a partial disposal or a retained interest. Refused when the entity is HELD below 100%
+-- (gold_entity_ownership.effective_ownership_pct x 100 at the disposal period, the latest row at or before it)
+-- OR share_disposed_pct is below that holding OR retained_interest_pct > 0:
+--   disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the
+--   disposal journal derecognises the deal's opening NCI only and recycles the whole CTA (konsolidat#310)
+-- Why a full sale of a 70% holding (konsol requires Share Disposed = the current holding, 70) is refused too: the
+-- journal would derecognise only the deal journal's NCI, not the attribution layer's (nci_attribution), and would
+-- recycle 100% of the CTA where IAS 21.48B recycles only the parent's share. The old test compared share_disposed_pct
+-- with 100 and so refused that sale under a misleading reason, and let share 100 against a 70% holding through.
+-- Also refused by name (konsol#117 pair 3, row K3): a disposal of an interest in a joint operation, i.e. the entity's
+-- ownership_periods (the row covering the disposal date) or its latest gold_entity_ownership row at or before the disposal period say 'proportional'. One more
+-- row, field consolidation_method (so a joint operation held below 100% shows both rows):
+--   disposal of an interest in a joint operation (consolidation_method proportional) is not implemented: end the Ownership Period instead
+-- Fixture: .joint_operation.must_flag (expects 2 rows, the holding row and this one).
+-- An entity with no ownership row at all is taken as held at 100%. One row per such disposal, whatever the root row
+-- declares. Fixtures: .partial_share, .partly_owned, .held_below_100 (.must_flag).
 --
 -- Not checked here: the acquisition journal's accounts and policies are assert_acquisition_accounts_declared's.
 with root as (
@@ -50,9 +59,57 @@ deal_period as (
         count() as n_periods
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bd.disposal_date
-      and fp.end_date >= bd.disposal_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
+    group by bd.name
+),
+
+-- the entity's holding at the disposal period: the latest gold_entity_ownership row at or before it, in percent
+deal_holding as (
+    select
+        bd.name as deal,
+        argMax(eo.effective_ownership_pct, toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) * 100.0 as holding_pct,
+        argMax(eo.consolidation_method, toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period) as holding_method
+    from {{ source('epm_staging', 'business_disposals') }} as bd
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    inner join {{ ref('gold_entity_ownership') }} as eo
+        on eo.consolidation_group = bd.consolidation_group
+        and eo.data_area_id = bd.disposed_entity
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
+      and toUInt32(eo.fiscal_year) * 1000 + eo.fiscal_period <= toUInt32(fp.fiscal_year) * 1000 + fp.fiscal_period
+    group by bd.name
+),
+
+-- the disposed holding's method from epm_staging.ownership_periods (konsol#117 pair 3 review, finding B): a
+-- proportional period of the entity, any owner, that has started by the disposal date and still runs at the first day of the
+-- fiscal period before the disposal's (the period the disposal ends or links, or one ended within the previous period). gold_entity_ownership's argMax alone misses an entity with no
+-- trial-balance row yet and a joint operation inside a sub-group held at equity.
+disposal_window as (
+    select
+        d.name as deal,
+        min(cur.start_date) as cur_start,
+        countIf(prev.period_type = 'Regular' and prev.end_date = subtractDays(cur.start_date, 1)) as n_prev,
+        minIf(prev.start_date, prev.period_type = 'Regular') as prev_start
+    from {{ source('epm_staging', 'business_disposals') }} as d
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as cur
+    left join {{ source('epm_staging', 'fiscal_periods') }} as prev
+        on prev.end_date = subtractDays(cur.start_date, 1)
+    where {{ deal_period_holds('cur', 'd.disposal_date') }}
+    group by d.name
+),
+
+disposal_joint as (
+    select
+        bd.name as deal,
+        toUInt8(count() > 0) as is_joint_operation
+    from {{ source('epm_staging', 'business_disposals') }} as bd
+    inner join {{ source('epm_staging', 'ownership_periods') }} as op
+        on op.consolidation_group = bd.consolidation_group
+        and op.data_area_id = bd.disposed_entity
+    inner join disposal_window as w
+        on w.deal = bd.name
+    where op.consolidation_method = 'proportional'
+      and op.effective_date <= bd.disposal_date
+      and op.end_date >= if(w.n_prev > 0, w.prev_start, w.cur_start)
     group by bd.name
 ),
 
@@ -64,10 +121,17 @@ deals_base as (
         bd.disposal_date as disposal_date,
         toFloat64(bd.share_disposed_pct) as share_disposed_pct,
         toFloat64(bd.retained_interest_pct) as retained_interest_pct,
-        toUInt64(coalesce(dp.n_periods, 0)) as n_periods
+        toUInt64(coalesce(dp.n_periods, 0)) as n_periods,
+        -- no ownership row: taken as held at 100%, so a share below 100 is still refused
+        if(dh.deal = '', 100.0, dh.holding_pct) as holding_pct,
+        toUInt8(dh.holding_method = 'proportional' or dj.is_joint_operation = 1) as is_joint_operation
     from {{ source('epm_staging', 'business_disposals') }} as bd
     left join deal_period as dp
         on dp.deal = bd.name
+    left join deal_holding as dh
+        on dh.deal = bd.name
+    left join disposal_joint as dj
+        on dj.deal = bd.name
 ),
 
 chart as (
@@ -87,6 +151,11 @@ deals as (
         d.share_disposed_pct as share_disposed_pct,
         d.retained_interest_pct as retained_interest_pct,
         d.n_periods as n_periods,
+        toUInt8(d.holding_pct < 100.0 - 0.000001
+                or d.share_disposed_pct < d.holding_pct - 0.000001
+                or d.retained_interest_pct > 0.0) as is_refused,
+        d.holding_pct as holding_pct,
+        d.is_joint_operation as is_joint_operation,
         toUInt8(coalesce(r.n_root, 0) > 0) as has_root,
         coalesce(r.goodwill_account, '') as goodwill_account,
         coalesce(r.fair_value_adjustment_account, '') as fair_value_adjustment_account,
@@ -115,25 +184,27 @@ checks as (
         ['root_row', 'disposal_period',
          'disposal_gain_loss_account', 'disposal_proceeds_account',
          'goodwill_account', 'fair_value_adjustment_account', 'nci_account',
-         'share_disposed_pct'] as field,
+         'share_disposed_pct', 'consolidation_method'] as field,
         [if(has_root = 1, 'declared', ''), if(n_periods > 0, 'declared', ''),
          disposal_gain_loss_account, disposal_proceeds_account,
          goodwill_account, fair_value_adjustment_account, nci_account,
-         concat(toString(share_disposed_pct), ' disposed, ', toString(retained_interest_pct), ' retained')] as value,
+         concat(toString(share_disposed_pct), ' disposed of a holding of ', toString(round(holding_pct, 4)), ', ', toString(retained_interest_pct), ' retained'),
+         if(is_joint_operation = 1, 'proportional', 'not proportional')] as value,
         [toUInt8(1), toUInt8(1),
          has_root, has_root,
          has_root, has_root,
-         toUInt8(has_root = 1 and (retained_interest_pct > 0.0 or share_disposed_pct < 100.0)),
-         toUInt8(retained_interest_pct > 0.0 or share_disposed_pct < 100.0)] as required,
+         toUInt8(has_root = 1 and is_refused = 1),
+         is_refused,
+         is_joint_operation] as required,
         [0, 0,
          1, 1,
          1, 1, 1,
-         0] as is_account,
-        -- the partial-share refusal (row J12): the value is present, the disposal is still refused
+         0, 0] as is_account,
+        -- the partly-owned / partial-disposal refusal (row J12): the value is present, the disposal is still refused
         [0, 0,
          0, 0,
          0, 0, 0,
-         1] as is_refusal
+         1, 1] as is_refusal
 ),
 
 judged as (
@@ -146,7 +217,8 @@ judged as (
         c.value as declared_value,
         multiIf(
             c.required = 0, '',
-            c.is_refusal = 1, 'partial-share deals wait for konsolidat#204: layer 1 carries the entity at its share',
+            c.is_refusal = 1 and c.field = 'consolidation_method', 'disposal of an interest in a joint operation (consolidation_method proportional) is not implemented: end the Ownership Period instead',
+            c.is_refusal = 1, 'disposal of a partly owned subsidiary, a partial disposal or a retained interest is not implemented: the disposal journal derecognises the deal''s opening NCI only and recycles the whole CTA (konsolidat#310)',
             c.value = '', 'missing',
             c.is_account = 1 and coalesce(ch.main_account_id, '') = '', 'not a posting account of the chart',
             ''

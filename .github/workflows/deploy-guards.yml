@@ -46,10 +46,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # konsolidat#239: `mktemp -t` needs three X's on GNU coreutils, so step 5
       # of deploy.sh — the dbt build — had never run on a Linux host. The runner
       # is ubuntu, so the behavioural half of this test executes here rather
       # than declaring the skip it must declare on a Mac.
       - name: deploy.sh creates its temp files portably
         run: python -m unittest -v tests.test_deploy_portability
+      - name: deploy.sh refuses a .env naming an unsupported Frappe branch (konsol#358)
+        run: python -m unittest -v tests.test_deploy_frappe_branch

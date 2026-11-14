@@ -1,3 +1,5 @@
+-- gate: build +assert_tb_submission_has_basis
+-- gate: expect assert_tb_submission_has_basis flag 2
 -- assert_tb_submission_has_basis: must FAIL with exactly 2 results (konsolidat#199).
 -- ZZB1: claim with an empty amount_basis (an undeclared batch, e.g. claimed before the column existed).
 -- ZZB2: claim with 'Balances', which is not one of the three declared bases.

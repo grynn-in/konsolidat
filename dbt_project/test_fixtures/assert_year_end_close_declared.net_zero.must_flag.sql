@@ -1,3 +1,5 @@
+-- gate: build +assert_year_end_close_declared
+-- gate: expect assert_year_end_close_declared flag 1
 -- assert_year_end_close_declared: must FAIL with exactly 1 result (konsolidat#199, row D8b).
 -- The D7 must_flag case (ZZOP, period-end balances, FY2025 P12 then FY2026 P1, no retained-earnings
 -- flag, no Closing period) with a second P&L account so the year's P&L NETS TO 0: revenue ZZ4000

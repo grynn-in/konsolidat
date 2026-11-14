@@ -5,7 +5,7 @@
 
 {# Unpivot published dimensions on trial balance for hierarchy joins. #}
 {% macro tb_dimension_long_sql(tb_alias='tb') %}
-    {% if var('dimensions') | length == 0 %}
+    {% if var('dimensions', []) | length == 0 %}
     {# konsolidat#220: one branch per declared dimension means zero dimensions emits
        nothing at all, and the CTE that wraps this is then empty — not a SELECT query,
        which ClickHouse rejects outright (Code: 62) and takes every dependent with it.
@@ -21,7 +21,7 @@
     from {{ ref('gold_trial_balance') }} as {{ tb_alias }}
     where 0
     {% else %}
-    {% for d in var('dimensions') %}
+    {% for d in var('dimensions', []) %}
     select
         {{ tb_alias }}.*,
         '{{ d.name }}' as hierarchy_dimension,

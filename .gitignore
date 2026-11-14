@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.prebak
+.env.v16
 deploy.log
 *.pyc
 __pycache__/
@@ -25,10 +26,6 @@ dbt_project/target/
 dbt_project/logs/
 dbt_project/dbt_packages/
 dbt_project/.user.yml
-
-# Cube
-cube/node_modules/
-cube/.cubestore/
 
 # Python
 *.egg-info/

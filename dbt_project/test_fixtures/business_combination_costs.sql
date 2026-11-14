@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal with ACQUISITION COSTS, `acquisition_costs_treatment` Expense vs Capitalise (konsolidat#198 row J4, design §1a):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows.
 --

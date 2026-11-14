@@ -1,3 +1,5 @@
+-- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget
+-- gate: expect assert_variance_node_single_budget pass
 -- konsolidat#206: gold_variance_at_hierarchy_node keeps each budget scenario apart. gold_variance_analysis has
 -- one set of rows per active budget-type scenario (budget_scenario_id), so a node model that groups without it
 -- counts the actuals once per budget scenario and adds the budgets together.
@@ -25,6 +27,11 @@
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
+-- konsol#287: the budget input tables name no dimension; konsol adds the site's
+-- declared ones. These rows carry dim_cost_center and dim_department, so the
+-- columns are added first, for a stack whose site declares neither.
+ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
+ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES

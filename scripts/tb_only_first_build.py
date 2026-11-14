@@ -54,6 +54,61 @@ ERP_QUOTE_TESTS = ("assert_exchange_rate_currencies_are_iso", "assert_exchange_r
 CAST_TEST = "assert_cast_to_decimal128_is_exact"
 
 
+#: konsol#287: the budget input tables name no dimension in init-db.sql; konsol
+#: adds the site's Published in_budget dimensions by ALTER. A fresh site built
+#: here has no konsol, so these stand in for it.
+BUDGET_INPUT_TABLES = ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input")
+DIM_NAME_RE = re.compile(r"dim_[a-z0-9_]+\Z")
+
+
+#: konsol#287: konsolidat ships no dimensions (decided 17 Sep 2026), so
+#: dbt_project.yml's default is empty and a site's own declaration is written
+#: there by konsol. The test fixtures are not a site: they declare here the
+#: dimensions their rows carry, and the builds that run them (ci_full_build.py's
+#: first leg, fixture_gate.py) pass this with --vars. These are TEST data; the
+#: names are the ones the fixtures were written against (konsol#287 S2 re-points
+#: them to ZZ names).
+FIXTURE_DIMENSIONS = [
+    {"name": "dim_business_unit", "source_column": "dim_business_unit",
+     "label": "Business Unit", "cube_type": "string", "in_budget": False},
+    {"name": "dim_cost_center", "source_column": "dim_cost_center",
+     "label": "Cost Center", "cube_type": "string", "in_budget": True,
+     "allocation_role": "cost_center"},
+    {"name": "dim_department", "source_column": "dim_department",
+     "label": "Department", "cube_type": "string", "in_budget": True},
+]
+
+
+def fixture_dimension_vars():
+    """dbt arguments that build at the fixtures' declared dimensions."""
+    import json
+
+    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS})]
+
+
+def project_dimensions():
+    """The `dimensions` var of dbt_project.yml: what the build will read."""
+    import yaml  # dbt-core brings it; imported here so the module needs none
+
+    with open(os.path.join(REPO, "dbt_project", "dbt_project.yml"), encoding="utf-8") as f:
+        return (yaml.safe_load(f).get("vars") or {}).get("dimensions") or []
+
+
+def budget_dimension_columns(dims, prefix="epm"):
+    """The ALTERs konsol runs on a site declaring ``dims`` (the dimensions var).
+
+    One ADD COLUMN per budget input table per dimension marked in_budget, the
+    set gold_spread_budget reads through get_budget_dimensions(). Names are
+    validated before they are interpolated, as konsol does.
+    """
+    names = [d["name"] for d in dims if d.get("in_budget")]
+    bad = [n for n in names if not DIM_NAME_RE.match(n)]
+    if bad:
+        raise SystemExit(f"refusing budget dimension names {bad}: not dim_[a-z0-9_]+")
+    return [rewrite(f"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS {n} String DEFAULT ''", prefix)
+            for t in BUDGET_INPUT_TABLES for n in names]
+
+
 def rewrite(text, prefix):
     text = SCHEMA_RE.sub(prefix + "_", text)
     return BARE_DB_RE.sub(prefix, text)
@@ -149,9 +204,14 @@ def fixture_sql(p):
         "('ZZGRP', '', 'ZZ Group', 'USD'), ('ZZGRP', 'ZZOP', 'ZZ Operating', 'USD')",
         f"INSERT INTO {p}_staging.consolidation_hierarchy (consolidation_group, data_area_id, parent_group, hierarchy_level, path) VALUES "
         "('ZZGRP', 'ZZOP', '', 1, 'ZZGRP')",
-        f"INSERT INTO {p}_staging.consolidation_ancestry VALUES ('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP')",
-        f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method) VALUES "
-        "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full')",
+        # columns named (tests/test_ownership_graph_ddl.py): the graph columns default to ''
+        f"INSERT INTO {p}_staging.consolidation_ancestry (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id) VALUES "
+        "('ZZGRP', 'ZZOP', 'ZZGRP', 'ZZOP', 1, 1, 'ZZGRP/ZZOP', 'ZZGRP/ZZOP', 'ZZGRP', '')",
+        # konsol#117 pair 1: a period is a link and names its owner; the macro
+        # matches a closure link on the owned AND the owner node, so this row's
+        # owner must be the ancestry row's link_owner_group above.
+        f"INSERT INTO {p}_staging.ownership_periods (consolidation_group, data_area_id, effective_date, ownership_pct, consolidation_method, owner_group, owner_data_area_id) VALUES "
+        "('ZZGRP', 'ZZOP', '2020-01-01', 100, 'full', 'ZZGRP', '')",
         f"INSERT INTO {p}_gold.currencies VALUES ('USD', 'US Dollar', '$', 2, 0)",
         # konsolidat#206: the scenarios a real site gets from konsol's Scenario
         # fixtures (synced to epm_gold.scenario_definitions); the GL branch of
@@ -249,6 +309,8 @@ def main():
                     if re.search(r"\bepm_", stmt):
                         raise SystemExit(f"unrewritten epm_ reference in {name}: {stmt[:120]}")
                     client.command(stmt)
+        for stmt in budget_dimension_columns(project_dimensions(), a.prefix):
+            client.command(stmt)
         copy_project(a.prefix, project)
         print(f"fresh TB-only shape created under {a.prefix}*; project copy at {project}")
 

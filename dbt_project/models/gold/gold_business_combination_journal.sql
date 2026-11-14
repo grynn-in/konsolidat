@@ -141,8 +141,9 @@
    from, to, period) before this model runs.
 
    Periods come from epm_staging.fiscal_periods by start_date <= date <=
-   end_date, never from the month: a Closing period (one day inside the last
-   Regular period) is skipped, so the deal lands in the Regular period.
+   end_date, never from the month: only a Regular period holds a deal
+   (deal_period_holds(): an Opening, Closing or Adjustment period sharing the
+   day is skipped), so the deal lands in the Regular period.
 
    line_no: 0 for every opening-balance line, the child table's idx for the
    equity lines, then 101 fva, 102 goodwill, 103 investment, 104 nci,
@@ -172,7 +173,7 @@ with group_policy as (
 ),
 
 {# the calendar period holding the acquisition date; the lowest-numbered
-   non-Closing period whose span holds it. A range condition is not a
+   Regular period whose span holds it. A range condition is not a
    ClickHouse join key, so the calendar is cross-joined and filtered. #}
 deal_period as (
     select
@@ -181,9 +182,7 @@ deal_period as (
         argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as fiscal_period
     from {{ source('epm_staging', 'business_combinations') }} as bc
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-    where fp.start_date <= bc.acquisition_date
-      and fp.end_date >= bc.acquisition_date
-      and fp.period_type != 'Closing'
+    where {{ deal_period_holds('fp', 'bc.acquisition_date') }}
     group by bc.name
 ),
 

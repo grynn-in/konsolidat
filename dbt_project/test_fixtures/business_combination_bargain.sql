@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal, a BARGAIN PURCHASE under `bargain_purchase = 'Recognise gain'` (konsolidat#198 row J4, design §4 line 3b):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows,
 -- and the journal must carry a `bargain_gain` credit and NO `goodwill` line.

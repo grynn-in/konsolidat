@@ -51,10 +51,19 @@
 #   shard.  Consider composite key (entity_id, fiscal_year) for largest tenants.
 # - Rebalancing: accept distribution skew on new-LE onboarding or run
 #   periodic reshard.
-# - Cube.js pre-aggregation: confirm shard-aware refresh key for pre-agg layer.
 # - ON CLUSTER correctness for cross-shard gold models (consolidated TB, IC
 #   eliminations, NCI) — requires end-to-end cluster test.
 # =============================================================================
+
+x-logging: &default-logging
+  # Cap every container's Docker log. On 6 Oct 2026 ClickHouse's own log
+  # channel broke and wrote a stack trace to stderr for every message; the
+  # uncapped json-file log reached 28.6 GB and filled the disk, after which
+  # every ClickHouse write failed. 3 x 100 MB per container is plenty to debug.
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
 
 x-clickhouse-common: &ch-common
   image: clickhouse/clickhouse-server:24.8-alpine
@@ -72,6 +81,7 @@ x-clickhouse-common: &ch-common
 
 services:
   clickhouse:
+    logging: *default-logging
     <<: *ch-common
     container_name: konsolidat_ch_shard${SHARD_ID:-1}_replica${REPLICA_ID:-1}
     environment:
@@ -103,6 +113,7 @@ services:
       - ./clickhouse/cluster/macros-shard${SHARD_ID:-1}-replica${REPLICA_ID:-1}.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       # PostgreSQL wire protocol for Excel/ODBC (optional)
       - ./clickhouse/postgres_compat.xml:/etc/clickhouse-server/config.d/postgres_compat.xml:ro
+      - ./clickhouse/access_control.xml:/etc/clickhouse-server/config.d/access_control.xml:ro
     extra_hosts:
       # Map shard hostnames to actual IPs.
       # Replace with real IPs or use a DNS / overlay network.

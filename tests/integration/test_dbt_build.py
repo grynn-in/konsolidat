@@ -10,6 +10,11 @@ assertions over the gold_ic_* models otherwise run on an empty table and report
 green. Live data cannot substitute: all 329 ownership rows are 100%, nci_amount
 is 0 on all 45,928 rows, and there are no deal journals.
 
+test_ic_decisions_12_to_14_on_data proves intercompany eliminations are posted IN
+FULL (IFRS 10.B86(c)) against a 100% layer 1; decision 12 (eliminate at the
+group's share, ic_elimination_nci, an 'nci' view) is superseded (konsolidat#204
+(a), konsol#117 pair 2, Deepak Pai, 8 Nov 2026).
+
 What this file used to assert and no longer does (konsolidat#227 row 3): that
 the build succeeds, that its output has no ERROR lines, that nine gold tables
 exist afterwards, and two row-count checks. scripts/ci_full_build.py:97-115
@@ -119,8 +124,18 @@ def test_ic_decisions_12_to_14_on_data(dbt_run, ch, ic_decisions_data):
     """An 80%-owned side, 70% against 80%, a balance-sheet pair booked in P1
     and P2, a second functional currency, a mid-year acquisition, a disposal,
     a sub-group sale, a stake moved to equity and a quiet partner: the exact
-    reconciliation rows and entries, and the 100% view clear."""
-    result = dbt_run("+gold_ic_eliminations+ gold_ic_unmatched",
+    reconciliation rows, every elimination posted IN FULL (no share, no NCI
+    leg, no 'nci' view), and the group view alone equal to the 100%
+    consolidation. Decision 12 (eliminate at the share) is superseded:
+    konsolidat#204 (a), konsol#117 pair 2, Deepak Pai, 8 Nov 2026."""
+    # konsolidat#238-4: `@`, not `+…+`. `+gold_ic_eliminations+` rebuilds the
+    # descendants (gold_fully_consolidated_tb among them) but not their other
+    # parents, so gold_fx_revaluation and gold_consolidation_adjustments kept
+    # whatever an earlier build left. Measured: 1 stale gold_fx_revaluation row
+    # (the ZZ CI fixture's entity) against 18 entity-periods here, and
+    # assert_all_layers_present judged that leftover. `@` adds every ancestor
+    # of every descendant: 18 rows, 0 stale.
+    result = dbt_run("@gold_ic_eliminations gold_ic_unmatched",
                      indirect_selection="cautious")
     assert result.returncode == 0, result.stdout[-3000:]
     problems = ic_decisions_data.check(ch)

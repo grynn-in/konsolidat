@@ -1,3 +1,5 @@
+-- gate: build +gold_business_disposal_journal assert_disposal_accounts_declared assert_acquired_balances_complete assert_disposal_has_balances assert_consolidation_group_root_unique
+-- gate: expect assert_consolidation_group_root_unique flag 1
 -- Must-flag fixture for assert_consolidation_group_root_unique (konsolidat#198 row J10, design §1; PR #203 review 6):
 -- `+gold_business_disposal_journal assert_disposal_accounts_declared assert_acquired_balances_complete
 --  assert_disposal_has_balances assert_consolidation_group_root_unique` must BUILD and the test must FAIL with

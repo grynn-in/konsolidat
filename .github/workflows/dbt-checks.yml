@@ -10,14 +10,20 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
+      - 'tests/test_consolidation_adjustments_ddl.py'
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
+      - 'tests/test_sync_watermark_ddl.py'
+      - 'tests/test_historical_equity_rates_ddl.py'
+      - 'tests/test_ownership_graph_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
+      - 'scripts/fixture_gate.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
       - 'scripts/report_subsections.py'
@@ -32,14 +38,20 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
+      - 'tests/test_consolidation_adjustments_ddl.py'
       - 'tests/test_reporting_hierarchies_ddl.py'
       - 'tests/test_cash_flow_categories_ddl.py'
+      - 'tests/test_sync_watermark_ddl.py'
+      - 'tests/test_historical_equity_rates_ddl.py'
+      - 'tests/test_ownership_graph_ddl.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
+      - 'scripts/fixture_gate.py'
       - 'tests/test_ci_full_build.py'
       - 'tests/integration/**'
       - 'scripts/report_subsections.py'
@@ -58,7 +70,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - run: pip install pyyaml
       - name: Every gold model has a known Build Governance domain
         run: python scripts/check_gold_domains.py dbt_project/dbt_project.yml
@@ -74,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # Pinned to what the running stack installs (docker/frappe/Dockerfile).
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       # No connection needed: parse compiles the DAG without touching
@@ -97,7 +109,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # konsol#182: the governed chart's DDL is byte-identical to konsol's, and
       # silver and the guard read every one of its columns. Plain unittest, no
       # installs: nothing else in tests/ runs in CI.
@@ -106,6 +118,10 @@ jobs:
       # #191: the TB-only first build runs the cast test by name.
       - name: first-build script runs the cast test
         run: python -m unittest -v tests.test_tb_only_first_build
+      # konsol#287: the shipped dimensions default is empty, the canonical union
+      # names no dimension, and the fixture builds declare their own.
+      - name: no shipped dimensions
+        run: python -m unittest -v tests.test_no_shipped_dimensions
       # konsolidat#199: the TB submission control table's DDL is konsol's,
       # including amount_basis, and the CI fixture claims its batch by name.
       - name: raw submission control DDL and CI claim
@@ -118,6 +134,10 @@ jobs:
       # columns are konsol's DDL, verbatim, and declared dbt sources.
       - name: deal tables DDL and sources
         run: python -m unittest -v tests.test_deal_tables_ddl
+      # konsol#353 option C: Consolidation Journal amounts are konsol's DDL,
+      # verbatim, at Decimal(20,4), so a 3-decimal currency is stored exactly.
+      - name: consolidation journal DDL keeps 4 decimal places
+        run: python -m unittest -v tests.test_consolidation_adjustments_ddl
       # konsol#220: reporting_hierarchies is konsol's DDL, verbatim, including
       # the dated member tranche columns, declared on the dbt source.
       - name: reporting hierarchies DDL and tranche columns
@@ -126,6 +146,21 @@ jobs:
       # `sign` column that nothing read.
       - name: cash flow categories DDL without the retired sign
         run: python -m unittest -v tests.test_cash_flow_categories_ddl
+      # konsolidat#246: the sync watermark is konsol's DDL, verbatim, with the
+      # reconcile run id in its sort key, and the upgrade is asked first.
+      - name: sync watermark DDL carries the reconcile run id
+        run: python -m unittest -v tests.test_sync_watermark_ddl
+      # konsol#374: a Historical Equity Rate is keyed by the presentation
+      # currency it converts into; init-db.sql, konsol's DDL, the model's join
+      # and every fixture agree on the column.
+      - name: historical equity rates DDL carries the To currency
+        run: python -m unittest -v tests.test_historical_equity_rates_ddl
+      # konsol#117 pair 1: ownership is a graph. The link's owner is in the
+      # periods table's key, the closure carries path_id and the link owner,
+      # the method declarations table exists, and every INSERT into the two
+      # widened tables names its columns.
+      - name: ownership graph DDL, sources and column-named inserts
+        run: python -m unittest -v tests.test_ownership_graph_ddl
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
@@ -176,7 +211,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       # pytest and requests are what tests/integration/conftest.py imports.
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3" pytest requests
       - name: full dbt build at real and zero dimensions, then the integration suite
@@ -192,6 +227,62 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: full-build-logs
+          path: ci-logs/
+          if-no-files-found: ignore
+
+  fixture-gate:
+    name: test fixtures make their tests pass or flag
+    runs-on: ubuntu-latest
+    # 75, raised from 45 on 11 Nov 2026: #345 took the fixtures from 153 to 186
+    # and the job from ~26 min to 35-45 min; on main it was cancelled at 45 min
+    # after 175 of 186 fixtures, twice. The fixtures run one by one (~14 s each).
+    timeout-minutes: 75
+    # konsolidat#266 (Deepak Pai, 11 Oct 2026, option G-1). Every fixture in
+    # dbt_project/test_fixtures runs: a `.must_flag.` fixture must make its
+    # test FAIL or WARN, any other must make it PASS. A test that cannot fail
+    # passes both, and this is the job that notices. konsolidat#249 and #238
+    # were tests that could not fail; #261 added fixtures nothing ran.
+    #
+    # The fixtures are cloned into zzg_* scratch databases with the epm_*
+    # DDL. A throwaway has no live stack, so --prepare-ci builds one first:
+    # clickhouse/*.sql for the sources, then `dbt run` for the model tables,
+    # which those files do not declare (scripts/fixture_gate.py says why).
+    # That prepare step is a full `dbt run`: a model that does not build
+    # stops this job there, before any fixture runs, and the full-build job
+    # names the model.
+    #
+    # Memory: gold_business_combination_journal uses ~1.3 GiB per query even
+    # on a one-deal fixture (konsolidat#269). On a 3 GB ClickHouse seven deal
+    # fixtures failed MEMORY_LIMIT_EXCEEDED; a hosted runner has room.
+    services:
+      clickhouse:
+        # Pinned to the running stack's major version (24.8).
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_PASSWORD: ci
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8123/ping"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: '8123'
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
+      - name: every fixture, against the DDL of a fresh build
+        run: python scripts/fixture_gate.py --all --prepare-ci --log-dir ci-logs/fixtures
+      - name: upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-gate-logs
           path: ci-logs/
           if-no-files-found: ignore
 
@@ -225,7 +316,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       - name: dbt build --select @silver_main_accounts (empty, then ZZ fixture)
         run: python scripts/tb_only_first_build.py --prefix ci_fb --fixture

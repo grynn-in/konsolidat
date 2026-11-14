@@ -1,4 +1,4 @@
-.PHONY: setup up down dbt seed test logs status clean cube-schema check-gold-domains
+.PHONY: setup up down dbt seed test logs status clean check-gold-domains
 
 COMPOSE = docker compose
 COMPOSE_INIT = $(COMPOSE) --profile init
@@ -26,8 +26,6 @@ up: ## Bring up the full stack (dbt init → all services)
 	@echo "=== Open EPM is starting ==="
 	@echo "  ClickHouse:  http://localhost:8123"
 	@echo "  Dagster:     http://localhost:3000"
-	@echo "  Cube API:    http://localhost:4000"
-	@echo "  Cube SQL:    localhost:15432"
 	@echo "  FastAPI:     http://localhost:8080"
 	@echo "  Streamlit:   http://localhost:8501"
 
@@ -41,9 +39,6 @@ dbt: ## Run dbt build inside container
 
 seed: ## Run dbt seed only
 	$(COMPOSE_INIT) run --rm dbt_init bash -c "dbt deps --profiles-dir /app && dbt seed --profiles-dir /app"
-
-cube-schema: ## Regenerate Cube YAML schemas from dbt_project.yml vars
-	python scripts/generate_cube_schemas.py
 
 check-gold-domains: ## Assert every gold model carries a known Build Governance domain
 	python scripts/check_gold_domains.py dbt_project/dbt_project.yml

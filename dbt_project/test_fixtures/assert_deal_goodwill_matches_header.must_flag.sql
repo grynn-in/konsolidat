@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_deal_goodwill_matches_header
+-- gate: expect assert_deal_goodwill_matches_header flag 1
 -- assert_deal_goodwill_matches_header (konsolidat#213 row D4): must FAIL with exactly 1 result.
 -- business_combination_100pct.sql with ONE figure moved: the ZZG deal's header `goodwill` reads 7,220
 -- where the journal posts 6,720, a 500 gap far above materiality_floor(). Nothing else about the rows
@@ -5,10 +7,8 @@
 -- of the same test:
 --   ('BC-ZZG-ZZS-2026-03-15', 'ZZG', 'ZZS', 7220, 6720, -500)
 --
--- Why this fixture and not business_combination_80pct.sql: assert_acquisition_accounts_declared REFUSES
--- every deal with share_acquired_pct < 100 by name (row J12, until konsolidat#204), and it reads only the
--- sources, so on 80% rows it FAILs before the journal builds and dbt SKIPs the journal and this test with
--- it. At 100% that guard passes and the journal builds.
+-- Why a 100% deal here: the fixture was written when assert_acquisition_accounts_declared refused every
+-- share_acquired_pct < 100 deal (lifted by konsolidat#204 (a)); the 100% rows still isolate the goodwill guard.
 --
 -- Group ZZG (USD; IFRS, NCI partial, goodwill Impairment only, costs Expense, measurement period Off,
 -- bargain purchase Recognise gain) with its accounts declared on the root row:

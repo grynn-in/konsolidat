@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_goodwill_calculated
+-- gate: expect assert_goodwill_calculated flag 1
 -- assert_goodwill_calculated (PRD-11, konsolidat#198 row J2b): must FAIL with exactly 1 result.
 -- `+gold_business_combination_journal assert_goodwill_calculated` BUILDs; the test flags the one deal.
 --

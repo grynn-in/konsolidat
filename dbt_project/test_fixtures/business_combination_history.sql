@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_journal_balances
+-- gate: expect assert_acquisition_journal_balances pass
 -- Acquisition journal with PRE-ACQUISITION TB HISTORY (konsolidat#198 row J3, design §3-4 line 0):
 -- `+gold_business_combination_journal assert_acquisition_journal_balances` must BUILD and PASS on these rows,
 -- and so must `+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`

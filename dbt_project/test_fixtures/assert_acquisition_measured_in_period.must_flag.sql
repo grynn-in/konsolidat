@@ -1,3 +1,5 @@
+-- gate: build +gold_business_combination_journal assert_acquisition_measured_in_period
+-- gate: expect assert_acquisition_measured_in_period flag 1
 -- Must-flag fixture for assert_acquisition_measured_in_period (konsolidat#198 row J7, design §3):
 -- `+gold_business_combination_journal assert_acquisition_measured_in_period` must BUILD and the test must
 -- WARN with `Got 1 result` on these rows.
