@@ -16,6 +16,9 @@
 
 services:
   mariadb:
+    # Frappe v16's install requirement. The live compose stays on mariadb:10.11;
+    # only this side-by-side stack moves.
+    image: mariadb:11.8
     container_name: konsolidat16_mariadb
   redis_cache:
     container_name: konsolidat16_redis_cache
