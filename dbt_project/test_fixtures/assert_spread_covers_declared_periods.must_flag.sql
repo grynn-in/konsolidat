@@ -2,7 +2,7 @@
 -- gate: expect assert_spread_covers_declared_periods flag 1
 -- A 13-period fiscal year (13 declared Regular periods, plus a Closing period 14) and a 12-weight profile: the annual
 -- input spreads into 12 periods and misses period 13, one line, so the test must FLAG 1.
--- epm_gold.budget_monthly_input is read too, empty here, so it is named to exist (empty).
+-- epm_raw.budget_entries is read too, empty here, so it is created empty.
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, annual_amount, spread_profile_id, submitted_by)
 VALUES
