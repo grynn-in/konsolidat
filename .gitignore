@@ -53,3 +53,4 @@ docker/frappe/konsol/
 excel/*.xlsm
 excel/*_Report_*.xlsx
 excel/AMG_*.xlsx
+ci-logs/

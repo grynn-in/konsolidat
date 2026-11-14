@@ -185,6 +185,11 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_ytd_trial_balance:
         +tags: ['gold', 'domain:actuals']
+      # --- Domain: allocation ---
+      gold_cost_allocation:
+        +tags: ['gold', 'domain:allocation']
+      gold_cost_allocation_frozen:
+        +tags: ['gold', 'domain:allocation']
       # --- Domain: consolidation ---
       gold_acquisition_adjustments:
         +tags: ['gold', 'domain:consolidation']
@@ -259,3 +264,10 @@ models:
         +tags: ['gold', 'domain:staging']
       # --- END konsol-managed model domains ---
 
+# Singular tests tagged with their domain. The allocation tests read the
+# isolated allocation scope (konsol#269); builds that exclude that scope
+# exclude them by this tag.
+tests:
+  open_epm:
+    cost_allocation:
+      +tags: ['domain:allocation']
