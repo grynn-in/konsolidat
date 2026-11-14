@@ -68,8 +68,11 @@ profiles as (
    one as landed. A 'Year-to-date movement' line is converted within the Cycle
    year by the rule silver_tb_movements uses for actuals, written once in
    macros/period_movements.sql: movement(p) = YTD(p) - YTD(previous period),
-   the first period of the year is its YTD, and a key missing in a later period
-   reads YTD 0, so its movement reverses the previous YTD. The series is
+   period 1's movement is its YTD, and a key missing in a later period reads
+   YTD 0, so its movement reverses the previous YTD. A YTD slice must state
+   every period from 1 to its last (Q21-a, konsol#348): konsol refuses a late
+   start or a gap at intake, and assert_budget_ytd_periods_contiguous is the
+   build-time backstop. The series is
    (cycle, scenario, layer, entity, account, budget dims): a layer is never
    differenced against another, nor against actuals. A 'Period-end balance'
    line is NOT read: it needs an opening balance, which is an open policy
