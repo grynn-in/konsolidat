@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **169** |
-| carrying their reasoning | 148 |
-| citing the issue that caused them | 141 |
+| assertions | **170** |
+| carrying their reasoning | 149 |
+| citing the issue that caused them | 142 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 147 |
+| severity `error` (stops the build, and its children) | 148 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -114,7 +114,7 @@ konsol validates this exactly, at the currency's own minor unit, before a submis
 
 **konsolidat#189 PR3 (konsol#348, QA1 c / A10): a trial-balance submission row in silver_gl_entries is dated at the start_date its period declares in konsol's fiscal calendar (epm_staging.fiscal_periods).**
 
-silver_gl_entries used to date a submission row from the entity's own ERP calendar and, when that was not loaded, at the first day of the CALENDAR month the period number names (a macro since retired). An April-March site's FY2026 P1 is 2025-04-01; the macro made it 2026-01-01. The declared calendar is the one source of period dates (macros/declared_periods.sql), so the row's accounting_date is that period's start_date, and this test fails the build when it is not. One row per (entity, period) whose submission rows carry a date other than the declared start_date. A period the calendar does not declare has no declared date and is not judged here (assert_trial_balance_period_declared refuses it). Fixture: dbt_project/test_fixtures/assert_tb_submission_date_is_declared.sql.
+silver_gl_entries used to date a submission row from the entity's own ERP calendar and, when that was not loaded, at the first day of the CALENDAR month the period number names (a macro since retired). An April-March site's FY2026 P1 is 2025-04-01; the macro made it 2026-01-01. The declared calendar is the one source of period dates (macros/declared_periods.sql), so the row's accounting_date is that period's start_date, and this test fails the build when it is not. What this test is: a regression pin. silver_gl_entries and this test compute the SAME join (declared_periods() on the period key, reading start_date), so a row the model builds carries the declared date by construction and the test cannot fail on it. It fails only when a future change dates a submission any other way; its must_flag fixture seeds silver_gl_entries directly to prove it can. The guards that fail the build on a wrongly dated or undeclared submission period are assert_trial_balance_period_declared (the period is not declared) and assert_tb_submission_period_start_not_epoch (the row kept at 1970-01-01). One row per (entity, period) whose submission rows carry a date other than the declared start_date. A period the calendar does not declare has no declared date and is not judged here. Fixtures: dbt_project/test_fixtures/assert_tb_submission_date_is_declared*.sql.
 
 <sub>`error (default)` · `tests/assert_tb_submission_date_is_declared.sql` · konsol#348 konsolidat#189</sub>
 
@@ -454,7 +454,7 @@ Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG
 
 **A group node's amount must equal the sum of its descendant leaves for the same slice: hierarchy, node, entity, period, account and every other dimension.**
 
-Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods). A period the calendar does not declare is not judged: its leaf rows drop out here, as they do from the node model (QA3 a), and assert_hierarchy_node_period_declared names it. So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
+Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods). A period the calendar does not declare is not judged: its leaf rows drop out here, as they do from the node model (QA3 a). assert_trial_balance_period_declared names the period on gold_trial_balance, where the row is kept; assert_hierarchy_node_period_declared cannot (it reads the same declared keys the node model does) and is only a pin against a change to that model. So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
 <sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#220</sub>
 
@@ -866,7 +866,7 @@ Each selects it from the leaf closure (lc) in a join whose other side (the long 
 
 **konsolidat#189 PR3 (konsol#348, decision QA3 a): every period a hierarchy-node model carries is a period konsol's fiscal calendar declares (epm_staging.fiscal_periods).**
 
-The node models date a period by its declared calendar, and they used to fall back, for a period the calendar does not list, to the last day of the calendar month the period number names. That date is invented: an April-March year's P5 is August, not May, and a period with no declaration has no true date. Each node model now inner-joins the declared periods, so an undeclared period drops out; this test is what turns that drop into a failed build, the way assert_trial_balance_period_declared does for gold_trial_balance. One row per (model, fiscal_year, fiscal_period) that a node model carries and the calendar does not declare. Models: gold_tb_at_hierarchy_node, gold_unassigned_hierarchy_members, gold_budget_at_hierarchy_node, gold_variance_at_hierarchy_node. Fixture: dbt_project/test_fixtures/assert_hierarchy_node_period_declared.sql.
+The node models date a period by its declared calendar, and they used to fall back, for a period the calendar does not list, to the last day of the calendar month the period number names. That date is invented: an April-March year's P5 is August, not May, and a period with no declaration has no true date. Each node model now inner-joins the declared periods, so an undeclared period drops out of them silently. This test does NOT turn that drop into a failure: the models and the test read the same declared-period key set, so a row a model builds is declared by construction. The guards that fail the build on an undeclared period are upstream, where the row is kept: assert_trial_balance_period_declared (gold_trial_balance keeps the row) and assert_budget_period_declared (the raw budget lines and gold_spread_budget). What this test is: a regression pin. It fails only when a future change to a node model lets an undeclared period through (a LEFT JOIN, a coalesce, a guessed date); its must_flag fixture seeds the node tables directly to prove it can. One row per (model, fiscal_year, fiscal_period) that a node model carries and the calendar does not declare. Models: gold_tb_at_hierarchy_node, gold_unassigned_hierarchy_members, gold_budget_at_hierarchy_node, gold_variance_at_hierarchy_node. Fixtures: dbt_project/test_fixtures/assert_hierarchy_node_period_declared*.sql.
 
 <sub>`error (default)` · `tests/assert_hierarchy_node_period_declared.sql` · konsol#348 konsolidat#189</sub>
 
@@ -913,6 +913,14 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
+
+### `budget_entries_one_row_per_line`
+
+**konsol#348 PR3 (A12;**
+
+PR #360 review, finding 5): silver_budget_entries carries exactly one row per ERP budget line (recid). The model puts a line in the declared Regular period that holds its transaction_date through a date spine arrayJoined from epm_staging.fiscal_periods. The spine must hold each date once: a period declared on two rows (a calendar loaded twice) must be grouped to one (fiscal_year, fiscal_period) before its dates are spun out, as declared_periods() does. Spun out ungrouped, every date of that period appears twice and every budget line dated in it comes out twice: the budget doubles with no error. This test fails the build on any line with more than one row. One row per duplicated recid. Error severity: a doubled budget is a wrong number. Fixtures: dbt_project/test_fixtures/assert_budget_entries_one_row_per_line*.sql.
+
+<sub>`error` · `tests/assert_budget_entries_one_row_per_line.sql` · konsol#348 konsolidat#360</sub>
 
 ### `budget_fact_grain_unique`
 

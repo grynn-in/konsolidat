@@ -18,7 +18,8 @@ with fiscal_dates as (
 )
 
 select
-    btl.recid,
+    {# aliased: a qualified column with no alias is named `btl.recid` in ClickHouse (PR #360 review, finding 5) #}
+    btl.recid as recid,
     bre.data_area_id,
     btl.transaction_date,
     coalesce(fp.fiscal_year, {{ extract_year('btl.transaction_date') }}) as fiscal_year,
