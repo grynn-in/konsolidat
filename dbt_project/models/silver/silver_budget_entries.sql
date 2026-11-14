@@ -7,14 +7,29 @@
 
 {# Date-level fiscal lookup for ClickHouse (no range joins). konsol#348 (A12): the declared Regular periods
    of konsol's fiscal calendar, since silver_fiscal_periods (the ERP calendar) is removed. This model reads the
-   ERP budget tables and leaves with them in stage B (B2). #}
-with fiscal_dates as (
+   ERP budget tables and leaves with them in stage B (B2).
+
+   PR #360 review, finding 5: the calendar is grouped to one row per (fiscal_year, fiscal_period) BEFORE its
+   dates are spun out (min start_date, max end_date, as declared_periods() does). Spun out from the raw rows, a
+   period declared twice put every one of its dates on the spine twice, and each budget line dated in it came
+   out twice. assert_budget_entries_one_row_per_line (ERROR) names a line that still does. #}
+with declared_regular as (
     select
-        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(start_date, x), range(toUInt32(dateDiff(\'day\', start_date, end_date) + 1))))') }} as calendar_date,
         toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period
+        toUInt16(fiscal_period) as fiscal_period,
+        min(start_date) as start_date,
+        max(end_date) as end_date
     from {{ source('epm_staging', 'fiscal_periods') }}
     where period_type = 'Regular'
+    group by fiscal_year, fiscal_period
+),
+
+fiscal_dates as (
+    select
+        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(start_date, x), range(toUInt32(dateDiff(\'day\', start_date, end_date) + 1))))') }} as calendar_date,
+        fiscal_year,
+        fiscal_period
+    from declared_regular
 )
 
 select
