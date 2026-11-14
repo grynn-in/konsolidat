@@ -9,7 +9,7 @@
 -- -103.50, P3 -100 x 0.30 x 1.22 = -36.60, so EQ_INVEST carries +140.10 at the end of P3. The exit reverses it:
 -- Cr EQ_INVEST 140.10 / Dr ZZ4960 140.10 (no CTA leg: the model translates at the Average rate).
 -- The associate still has a result in P4 (revenue 700), after the end: the model must post no EQ line for it (an
--- ended link is no longer 'equity' in gold_entity_ownership), so EQ_INVEST is 0, not 245.70 (700 x 0.30 x 1.28 = 268.80 more).
+-- ended link is no longer 'equity' in gold_entity_ownership), so EQ_INVEST is 0, not 408.90 (268.80 more: 700 x 0.30 x 1.28).
 -- Expected: the oracle passes (EQ_INVEST is 0 from P4) and the group TB balances; on the base (equity posts nothing)
 -- EQ_INVEST stays at 140.10 in P4 and P5: the oracle flags it.
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
