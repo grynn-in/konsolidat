@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **151** |
-| carrying their reasoning | 130 |
-| citing the issue that caused them | 123 |
+| assertions | **152** |
+| carrying their reasoning | 131 |
+| citing the issue that caused them | 124 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 130 |
+| severity `error` (stops the build, and its children) | 131 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -33,7 +33,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 9
-- [The chart of accounts](#the-chart-of-accounts) — 7
+- [The chart of accounts](#the-chart-of-accounts) — 8
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 4
@@ -955,6 +955,14 @@ appear
 ### `every_account_is_pnl_or_balance_sheet`
 
 <sub>`warn` · `tests/assert_every_account_is_pnl_or_balance_sheet.sql` · konsol#182</sub>
+
+### `exit_accounts_declared`
+
+**konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X2: an ownership exit whose group root has not declared the accounts the exit journal (gold_ownership_exit_journal, tasks X3-X5) will post to.**
+
+dbt never assumes an account code (design §1), so an undeclared account would post to main_account '' or be dropped; this test stops the build and names it. One row per exit event and field: group, entity, exit period, field, the value found, and why it is not acceptable. It mirrors assert_disposal_accounts_declared, whose rule it reuses. Fixtures: test_fixtures/assert_exit_accounts_declared.must_flag.sql (expects 4 rows) and .declared.sql (passes). Exit events come from macros/ownership_exits() (X1): E live in G the previous declared period, not live in P, not ended by its own full Business Disposal. SCOPE: every exit event requires the account. The test is NOT restricted to exits with carried balances: that would read the exit journal, which is not built yet (X3); once it is, narrowing is a follow-up. What is required: root_row                  the group's root row in epm_gold.consolidation_groups (data_area_id = ''), read with any() per column as gold_business_disposal_journal reads it; without it nothing else of the group is checked exit_gain_loss_account    always: the balancing line of every exit journal. May equal the disposal account; never falls back to it nci_account               when the entity carried NCI: method_before 'full' and share_before below 1 (ownership_exits() carries effective_ownership_pct, 0..1) A declared account must be a Published posting leaf of the chart: the same rule as assert_disposal_accounts_declared, membership in silver_main_accounts (status 'Published', is_group = 0, main_account_id != '').
+
+<sub>`error (default)` · `tests/assert_exit_accounts_declared.sql` · konsolidat#335</sub>
 
 ### `governed_chart_declarations_usable`
 
