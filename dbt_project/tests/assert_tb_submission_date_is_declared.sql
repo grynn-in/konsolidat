@@ -2,7 +2,7 @@
    the start_date its period declares in konsol's fiscal calendar (epm_staging.fiscal_periods).
 
    silver_gl_entries used to date a submission row from the entity's own ERP calendar and, when that was not
-   loaded, at the first day of the CALENDAR month the period number names (build_date_from_year_period). An
+   loaded, at the first day of the CALENDAR month the period number names (a macro since retired). An
    April-March site's FY2026 P1 is 2025-04-01; the macro made it 2026-01-01. The declared calendar is the one
    source of period dates (macros/declared_periods.sql), so the row's accounting_date is that period's
    start_date, and this test fails the build when it is not.

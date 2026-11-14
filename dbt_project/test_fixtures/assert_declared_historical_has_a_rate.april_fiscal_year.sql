@@ -3,7 +3,7 @@
 -- assert_declared_historical_has_a_rate, April fiscal year (konsolidat#189 PR3, konsol#348 QA2 c): must PASS
 -- once the test dates a period by its DECLARED window_end_date. FY2025 runs Apr 2025 - Mar 2026, so P1 is
 -- 2025-04-01 .. 2025-04-30 and P2 is May 2025. ZZ3000's only Historical Equity Rate is dated 2025-04-15: it covers
--- P1 (declared end 2025-04-30). The macro build_date_from_year_period() dates P1 at 2025-01-01, before the
+-- P1 (declared end 2025-04-30). The retired calendar-month macro dated P1 at 2025-01-01, before the
 -- tranche, so a test reading the macro names P1 as a gap although a rate covers it (red on the old test).
 -- ZZ3100's tranche (2024-01-01) covers both periods. Expected: nothing flagged.
 --

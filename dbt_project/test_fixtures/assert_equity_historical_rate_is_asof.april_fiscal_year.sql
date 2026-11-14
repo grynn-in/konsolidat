@@ -2,7 +2,7 @@
 -- assert_equity_historical_rate_is_asof, April fiscal year (konsolidat#189 PR3, konsol#348 QA2 c): must PASS
 -- once the model dates a period by its DECLARED window_end_date. FY2026 runs Apr 2025 - Mar 2026, so P1 is
 -- 2025-04-01 .. 2025-04-30 and a rate tranche dated 2025-06-15 must NOT apply to it. Today the model dates P1
--- at 2026-01-01 (build_date_from_year_period), the 2025-06-15 tranche applies, and the test (which reads the
+-- at 2026-01-01 (the retired calendar-month macro), the 2025-06-15 tranche applies, and the test (which reads the
 -- declared date) flags the row.
 --
 -- Same shape as assert_equity_historical_rate_is_asof.presentation_currency.sql: ZZE1 (GBP) under ZZSUB (EUR)

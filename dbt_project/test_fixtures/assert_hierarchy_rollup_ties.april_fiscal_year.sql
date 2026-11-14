@@ -2,8 +2,8 @@
 -- gate: expect assert_hierarchy_rollup_ties pass
 -- konsolidat#189 PR3 (konsol#348, A6): the rollup test dates a period by the declared calendar only, as the
 -- node models do since A2 (QA3 a). It must PASS. Before A6 it FAILED with 2 rows: a period the calendar
--- does not declare was dated at the last day of the calendar month its number names
--- (build_date_from_year_period), and its leaf counted towards whatever groups held on that invented date.
+-- does not declare was dated at the last day of the calendar month its number names (the retired
+-- calendar-month macro), and its leaf counted towards whatever groups held on that invented date.
 --
 -- The calendar is an April fiscal year: FY2026 P1 is April 2025, P2 May 2025. P10 is not declared.
 -- Hierarchy ZZ_RT over dim_business_unit: ZZ_ROOT and ZZ_E and ZZ_B (groups, open-ended); leaf ZZ_X under ZZ_E

@@ -4,7 +4,7 @@
 -- KEEPS its rows in silver_gl_entries, dated 1970-01-01 (Date's default: the declared-periods LEFT JOIN
 -- misses under join_use_nulls=0), and this test names both of them. Nothing is invented for the period.
 -- Before A11, silver_gl_entries dated the period at the first day of the calendar month its number names
--- (build_date_from_year_period), so the rows carried a plausible date and this test passed.
+-- (the retired calendar-month macro), so the rows carried a plausible date and this test passed.
 --
 -- The calendar declares FY2026 P1 only (April 2025); the submission is for FY2026 P2. silver_tb_movements is
 -- seeded (it is not in the selector).
