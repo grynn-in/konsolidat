@@ -198,6 +198,19 @@ CREATE TABLE IF NOT EXISTS epm_raw.trial_balance_submission_control (
     claimed_at DateTime, amount_basis String DEFAULT ''
 ) ENGINE = ReplacingMergeTree(claimed_at) ORDER BY batch_id;
 
+-- Budget S2 (R1): the approved budget lines, one row per Budget Entry Line of
+-- a submitted Budget Cycle. Written through from konsol (Budget Entry Line);
+-- tests/test_budget_raw_ddl.py pins this body to konsol's
+-- _REFERENCE_TABLE_DDL. No partner column (#427); dim_* columns are added by
+-- ALTER ... ADD COLUMN IF NOT EXISTS when a dimension is published in_budget.
+CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
+    entry_name String, cycle String, scenario_id String, layer String,
+    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
+    main_account String, debit Decimal(18,4), credit Decimal(18,4),
+    currency String, amount_basis String
+) ENGINE = MergeTree
+ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
+
 -- F3: governed reference data written through from konsol (Dimension Mapping,
 -- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated
 -- into the dbt repo on every save and migrate. One metadata path now: Frappe
@@ -382,26 +395,22 @@ CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
     data_area_id String, fiscal_calendar_id String
 ) ENGINE = MergeTree ORDER BY data_area_id;
 
--- konsolidat#146: the two halves of budget input, both from konsol.
--- budget_annual_input was seeds/budget_annual_input.csv — a top-down annual
--- figure that gold_spread_budget spreads into months by profile.
--- budget_monthly_input is the bottom-up half, written by Budget Sheet; it has
--- always been a konsol write-through with nothing that creates it, which is why
--- gold_spread_budget has been failing every build.
+-- konsolidat#146: budget_annual_input was seeds/budget_annual_input.csv, a
+-- top-down annual figure that gold_spread_budget spreads into months by profile.
+-- The bottom-up monthly half is epm_raw.budget_entries (konsol#348); the old
+-- monthly table of epm_gold is gone from this contract.
 -- konsol#287: neither table names a dimension. Which dim_* columns they carry is
 -- the site's Published Dimensions ticked in_budget, which konsol adds by ALTER
 -- (schema_apply._sync_budget_dimension_columns); gold_spread_budget reads that
 -- same set through get_budget_dimensions(). They used to be created with two
 -- customers' dimensions as literal columns.
+-- Budget S2 R6 (Q13-a): every annual row declares its layer and currency.
+-- tests/test_budget_annual_input_ddl.py pins this body to konsol's
+-- _REFERENCE_TABLE_DDL; konsol adds the two columns to an existing table on
+-- migrate (ALTER ... ADD COLUMN IF NOT EXISTS ... AFTER).
 CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
     scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String,
+    main_account String, layer String, currency String,
     annual_amount Decimal(18,2), spread_profile_id String, submitted_by String
 ) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, main_account);
-
-CREATE TABLE IF NOT EXISTS epm_gold.budget_monthly_input (
-    scenario_id String, data_area_id String, fiscal_year UInt16,
-    main_account String,
-    fiscal_period UInt8, amount Decimal(18,2), layer String
-) ENGINE = MergeTree ORDER BY (scenario_id, data_area_id, fiscal_year, layer);
 
