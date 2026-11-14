@@ -89,7 +89,10 @@ class Offline:
     # ---- calendar helpers ------------------------------------------------------------------------
     @staticmethod
     def period_date(p):
-        return dt.date(p[0], min(max(p[1], 1), 12), 1)          # build_date_from_year_period
+        """The period's declared end date (the warehouse's period_date, konsolidat#171 2d). The aquila calendar is
+        a calendar year, so period P ends on the last day of month P; the Closing period 13 ends with period 12."""
+        m = min(max(p[1], 1), 12)
+        return dt.date(p[0] + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1)
 
     def rate_period(self, p):
         return (p[0], 12) if p[1] == 13 else p                      # a Closing period uses the last Regular period's rates
