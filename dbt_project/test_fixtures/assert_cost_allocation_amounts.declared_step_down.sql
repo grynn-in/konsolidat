@@ -1,4 +1,5 @@
--- gate: build gold_cost_allocation assert_cost_allocation_amounts
+-- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_amounts
+-- gate: expect gold_cost_allocation_frozen built
 -- gate: expect gold_cost_allocation built
 -- gate: expect assert_cost_allocation_amounts pass
 -- konsol#269 WF3 built fixture: amounts in Declared Allocation Account mode with a
