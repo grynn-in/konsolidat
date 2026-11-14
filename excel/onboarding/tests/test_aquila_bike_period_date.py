@@ -17,6 +17,10 @@ class PeriodDate(unittest.TestCase):
     def test_closing_period_ends_with_period_12(self):
         self.assertEqual(ab.Offline.period_date((2024, 13)), dt.date(2024, 12, 31))
 
+    def test_opening_period_is_the_prior_year_end(self):
+        # the ownership window reads an Opening P0 at the last day of the prior year (declared_periods window_end_date)
+        self.assertEqual(ab.Offline.period_date((2024, 0)), dt.date(2023, 12, 31))
+
 
 if __name__ == "__main__":
     unittest.main()
