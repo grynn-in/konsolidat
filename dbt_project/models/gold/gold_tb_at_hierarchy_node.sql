@@ -13,7 +13,7 @@
    trial-balance row joins only the leaf tranche and the closure rows whose windows cover its period's end_date:
    a moved leaf rolls to the parent it had then, an ended node carries no later period, and a renamed node
    carries the label of that period. The period's end_date comes from the declared calendar
-   (epm_staging.fiscal_periods); a period the calendar does not list is judged at the last day of its month. #}
+   (epm_staging.fiscal_periods); a period the calendar does not declare drops out of this model (an inner join). #}
 
 with tb_long as (
     {{ tb_dimension_long_sql('tb') }}
@@ -31,14 +31,10 @@ periods as (
 tb_dated as (
     select
         tb.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        {# inner join: a period the calendar does not declare drops out (QA3 a); the ERROR tests name it #}
+        p.end_date as period_end_date
     from tb_long as tb
-    left join periods as p
+    inner join periods as p
         on p.fiscal_year = toUInt16(tb.fiscal_year)
         and p.fiscal_period = toUInt16(tb.fiscal_period)
 ),
