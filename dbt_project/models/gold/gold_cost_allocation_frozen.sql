@@ -37,6 +37,10 @@
 -- re-freeze of one run means cancelling and re-approving it: the cancel removes its
 -- rows (pre_hook above), the new approval is frozen afresh. A column change needs a
 -- manual DROP of this table, which discards every frozen amount.
+-- Concurrency: two builds appending the same new run would duplicate it. konsol
+-- makes governed builds single-flight (konsol tasks.py: single_flight_lock +
+-- _assert_no_active_run around every governed build), so this model never runs
+-- twice at once; assert_cost_allocation_frozen_consistent fails loudly if it did.
 -- It must not ref gold_cost_allocation (which unions this table): that is a cycle.
 {{ cost_allocation_lines(
     runs_predicate="r.amounts_after_approval = 'Freeze at Approval'"
