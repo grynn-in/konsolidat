@@ -91,7 +91,11 @@ class Offline:
     def period_date(p):
         """The period's declared end date (the warehouse's period_date, konsolidat#171 2d). The aquila calendar is
         a calendar year, so period P ends on the last day of month P; the Closing period 13 ends with period 12."""
-        m = min(max(p[1], 1), 12)
+        if p[1] == 0:
+            # an Opening P0 carries the state before the year: the ownership window reads it at the last day of the
+            # prior year (declared_periods window_end_date), so the replica does too
+            return dt.date(p[0] - 1, 12, 31)
+        m = min(p[1], 12)
         return dt.date(p[0] + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1)
 
     def rate_period(self, p):
