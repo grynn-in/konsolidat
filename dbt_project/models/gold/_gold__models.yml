@@ -154,6 +154,10 @@ models:
         data_type: String
       - name: main_account
         data_type: String
+        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but the origin's own relief"
+      - name: pool_account
+        data_type: String
+        description: "Account of the origin pool this line distributes (the run account it was read from)"
       - name: allocation_dimension
         data_type: String
       - name: member
@@ -161,7 +165,7 @@ models:
         description: "Dimension member the line is booked to: the sender on a sent line, the receiver on a received line"
       - name: line_type
         data_type: String
-        description: "sent (negative, at the sender, in the pool's account) or received (positive, at the receiver)"
+        description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -213,6 +217,10 @@ models:
         data_type: String
       - name: main_account
         data_type: String
+        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but the origin's own relief"
+      - name: pool_account
+        data_type: String
+        description: "Account of the origin pool this line distributes (the run account it was read from)"
       - name: allocation_dimension
         data_type: String
       - name: member
@@ -220,7 +228,7 @@ models:
         description: "Dimension member the line is booked to: the sender on a sent line, the receiver on a received line"
       - name: line_type
         data_type: String
-        description: "sent (negative, at the sender, in the pool's account) or received (positive, at the receiver)"
+        description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
