@@ -13,7 +13,7 @@
 
    konsolidat#220: the tree is resolved per period, as in gold_tb_at_hierarchy_node. A variance row joins only
    the leaf tranche and the closure rows whose windows cover its period's end_date (declared calendar,
-   epm_staging.fiscal_periods; declared_periods()); a period the calendar does not list has no date and is dropped, as in
+   epm_staging.fiscal_periods, declared_periods()); a period the calendar does not list has no date and is dropped, as in
    gold_tb_at_hierarchy_node (konsolidat#171 2d). #}
 
 with variance_long as (
