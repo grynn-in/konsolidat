@@ -7,9 +7,13 @@ Requires: running ClickHouse instance (docker compose up clickhouse)
 """
 import os
 import subprocess
+import sys
 
 import pytest
 import requests
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts"))
+from tb_only_first_build import fixture_dimension_vars  # noqa: E402
 
 
 def _ch_url():
@@ -68,10 +72,14 @@ def dbt_run(dbt_project_dir):
         data passes a full build with ERROR=0. Not the default here, because the
         two-partner test needs the grain assertions to run indirectly.
         """
+        # konsol#287: build at the fixtures' declared dimensions, the shape
+        # ci_full_build.py's first leg built these tables at. The shipped
+        # default declares none, and a build at it would reshape them.
         cmd = [
             "dbt", "build",
             "--project-dir", dbt_project_dir,
             "--profiles-dir", dbt_project_dir,
+            *fixture_dimension_vars(),
         ]
         if select:
             cmd.extend(["--select", select])

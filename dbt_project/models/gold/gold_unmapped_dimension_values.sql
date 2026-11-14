@@ -25,13 +25,10 @@
    literals here meant a site declaring a different set (or none) died with
    `UNKNOWN_IDENTIFIER`.
 
-   One limit, narrowed after the PR #222 review: that is true of what
-   `stg_gl_entries` PUBLISHES, not of what it reads. With `erp_sources` non-empty
-   its `unioned` CTE still selects `dim_cost_center, dim_department,
-   dim_business_unit` from each adapter by name, so a site that declares a fourth
-   dimension AND runs an ERP connector fails inside `stg_gl_entries` before this
-   model is reached. That branch is ERP staging, which konsolidat#221 is removing
-   wholesale — so it is not repaired here. #}
+   The same holds for what it reads: since konsol#287 its `unioned` CTE selects
+   each adapter's dimension columns through `dim_select()` too, so with an ERP
+   connector on, every adapter must emit one column per declared dimension
+   (models/staging/README.md). #}
 with vals as (
     {% if var('dimensions') | length == 0 %}
     {# No declared dimensions means no values to harmonize. A typed, row-less

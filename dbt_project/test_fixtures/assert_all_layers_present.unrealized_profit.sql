@@ -6,12 +6,12 @@
 CREATE TABLE IF NOT EXISTS epm_gold.gold_nci_attribution_journal (consolidation_group String, data_area_id String, fiscal_year UInt16, fiscal_period UInt16, main_account String, account_name String, reporting_currency String, amount Float64, adjustment_type String, journal_id String, account_role String) ENGINE = MergeTree ORDER BY tuple();
 INSERT INTO epm_gold.gold_consolidated_trial_balance
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name,
-   is_balance_sheet, is_pnl, is_equity, dim_business_unit, dim_cost_center, dim_department, local_amount,
+   is_balance_sheet, is_pnl, is_equity, local_amount,
    accounting_currency, reporting_currency, ownership_pct, consolidation_method, closing_rate, average_rate,
    historical_equity_rate, translation_rate, translated_amount, group_amount, nci_amount, partner_data_area_id)
 VALUES
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'cash', 'Asset', 1, 0, 0, '', '', '', 100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, 100, 100, 0, ''),
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1500', 'ic receivable', 'Asset', 1, 0, 0, '', '', '', -100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, -100, -100, 0, 'ZZE2');
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'cash', 'Asset', 1, 0, 0, 100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, 100, 100, 0, ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1500', 'ic receivable', 'Asset', 1, 0, 0, -100.00, 'USD', 'USD', 1, 'full', 1, 1, NULL, 1, -100, -100, 0, 'ZZE2');
 INSERT INTO epm_gold.gold_ic_eliminations
   (rule_id, rule_name, rule_type, consolidation_group, fiscal_year, fiscal_period, debit_account, credit_account,
    debit_entity, credit_entity, elimination_amount, debit_elimination, credit_elimination, elimination_kind,
@@ -29,8 +29,8 @@ INSERT INTO epm_gold.gold_fx_revaluation
 VALUES ('ZZG', 'ZZE1', 2026, 1, 'USD', 'USD', 'CTA', 'CTA', 1, 1, 0);
 INSERT INTO epm_gold.gold_fully_consolidated_tb
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account, account_name,
-   dim_business_unit, dim_cost_center, dim_department, reporting_currency, amount, adjustment_type, journal_id)
+   reporting_currency, amount, adjustment_type, journal_id)
 VALUES
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'entity', ''),
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'cta', ''),
-  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', '', '', '', 'USD', 1, 'ic_elimination', '');
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', 'USD', 1, 'entity', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', 'USD', 1, 'cta', ''),
+  ('ZZG', 'ZZE1', 2026, 1, 'ZZ1000', 'x', 'USD', 1, 'ic_elimination', '');

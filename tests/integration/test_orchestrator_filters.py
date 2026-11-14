@@ -9,16 +9,20 @@ Run with: pytest tests/integration/test_orchestrator_filters.py -v
 Requires: dbt on PATH + a reachable ClickHouse (same as the other integration
 tests). Tests skip cleanly if either is unavailable.
 """
+import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 
 import pytest
 
 DBT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "dbt_project")
 )
+sys.path.insert(0, os.path.join(os.path.dirname(DBT_DIR), "scripts"))
+from tb_only_first_build import fixture_dimension_vars  # noqa: E402
 
 _MARKER = "Compiled inline node is:"
 _LOGLINE = re.compile(r"^\d{2}:\d{2}:\d{2}\b")
@@ -26,12 +30,19 @@ _LOGLINE = re.compile(r"^\d{2}:\d{2}:\d{2}\b")
 
 def _compile_inline(sql, dbt_vars=None):
     """Run `dbt compile --inline` and return (returncode, compiled_sql, full_output)."""
+    # konsol#287: the shipped default declares no dimension, and this suite runs
+    # on tables built at the fixtures' declaration, so every call passes it; a
+    # test's own vars are merged on top.
+    merged = json.loads(fixture_dimension_vars()[1])
+    if dbt_vars:
+        import yaml  # dbt-core brings it
+
+        merged.update(yaml.safe_load(dbt_vars))
     cmd = [
         "dbt", "compile", "--inline", sql,
         "--project-dir", DBT_DIR, "--profiles-dir", DBT_DIR,
+        "--vars", json.dumps(merged),
     ]
-    if dbt_vars:
-        cmd += ["--vars", dbt_vars]
     proc = subprocess.run(
         cmd, capture_output=True, text=True, timeout=180, cwd=DBT_DIR
     )
