@@ -258,7 +258,7 @@ PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the g
 
 ### `declared_historical_has_a_rate`
 
-<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#92</sub>
+<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#189 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#92</sub>
 
 ### `equity_historical_rate_is_asof`
 
