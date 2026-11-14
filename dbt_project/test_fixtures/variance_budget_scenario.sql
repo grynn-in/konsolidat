@@ -6,7 +6,7 @@
 --
 -- Entity ZZE1 (USD), FY2026 P1 trial balance (period movement): ZZ1000 cash Dr 1000 | ZZ4000 revenue Cr 1000.
 -- Declared scenarios: ACTUAL (actual), ZZ_PLAN_2026 (budget, active), ZZ_FCST_2026 (forecast, active).
--- Budget Sheet (epm_gold.budget_monthly_input), base layer, FY2026 P1 on ZZ4000:
+-- Budget Entry lines (epm_raw.budget_entries, debit/credit, Period movement), base layer, FY2026 P1 on ZZ4000:
 --   ZZ_PLAN_2026 -1200 | ZZ_FCST_2026 -900
 -- gold_variance_analysis must carry variance rows for ZZ_PLAN_2026 (its budget_scenario_id); the forecast is not
 -- a budget and is not compared.
@@ -24,8 +24,6 @@ ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earni
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
@@ -51,8 +49,8 @@ VALUES
   ('ACTUAL', 'Actual', 'actual', 1),
   ('ZZ_PLAN_2026', 'ZZ plan 2026', 'budget', 1),
   ('ZZ_FCST_2026', 'ZZ forecast 2026', 'forecast', 1);
-INSERT INTO epm_gold.budget_monthly_input
-  (scenario_id, data_area_id, fiscal_year, main_account, dim_cost_center, dim_department, fiscal_period, amount, layer)
+INSERT INTO epm_raw.budget_entries
+  (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', '', '', 1, -1200, 'base'),
-  ('ZZ_FCST_2026', 'ZZE1', 2026, 'ZZ4000', '', '', 1, -900, 'base');
+  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1200, 'USD', 'Period movement', '', ''),
+  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_FCST_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 900, 'USD', 'Period movement', '', '');

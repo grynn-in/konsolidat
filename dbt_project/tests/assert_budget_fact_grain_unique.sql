@@ -1,8 +1,9 @@
 -- grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row
 -- per (scenario, entity, year, period, account, budget dims). The two entry
 -- methods (annual×profile spread and manual monthly identity-spread) are
--- UNIONed, with manual overriding annual-spread on the same grain — this asserts
--- the precedence actually dedups and nothing double-counts. `layer` is part of the
+-- UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c,
+-- backstopped by assert_budget_one_writer_per_grain), so nothing double-counts
+-- and this asserts it. `layer` is part of the
 -- grain: gold_spread_budget emits one row per layer (konsolidat#300).
 
 select
