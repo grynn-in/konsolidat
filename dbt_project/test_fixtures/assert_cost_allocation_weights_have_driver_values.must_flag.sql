@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_weights (parent Strin
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistics (name String, driver String, dimension String, data_area_id String, scenario_id String, fiscal_year UInt16) ENGINE = MergeTree ORDER BY name;
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistic_values (parent String, idx UInt32, fiscal_period UInt8, member String, value Decimal(38,9)) ENGINE = MergeTree ORDER BY (parent, idx);
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
-('ZZR1','ZZRS1','Direct','dim_cost_center','Same Account','','Follow Latest Data','ZZE1','ZZSC',2026,3);
+('ZZR1','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Follow Latest Data','ZZE1','ZZSC',2026,3);
 INSERT INTO epm_staging.cost_allocation_statistics (name, driver, dimension, data_area_id, scenario_id, fiscal_year) VALUES
 ('ZZ Headcount','ZZ Headcount','dim_cost_center','ZZE1','ZZSC',2026),
 ('ZZ HC Scenario','ZZ Headcount','dim_cost_center','ZZE1','ZZSD',2026),

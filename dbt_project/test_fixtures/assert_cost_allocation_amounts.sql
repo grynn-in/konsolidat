@@ -7,9 +7,9 @@
 -- frozen now at current data (600). All stamps match the policy.
 -- tables epm_gold.gold_scenario_trial_balance, epm_gold.gold_cost_allocation_frozen
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
-('ZZRL','ZZRS1','Direct','dim_cost_center','Same Account','','Follow Latest Data','ZZE1','ZZSC',2026,1),
-('ZZRF','ZZRS1','Direct','dim_cost_center','Same Account','','Freeze at Approval','ZZE3','ZZSC',2026,2),
-('ZZRN','ZZRS1','Direct','dim_cost_center','Same Account','','Freeze at Approval','ZZE2','ZZSC',2026,1);
+('ZZRL','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Follow Latest Data','ZZE1','ZZSC',2026,1),
+('ZZRF','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Freeze at Approval','ZZE3','ZZSC',2026,2),
+('ZZRN','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Freeze at Approval','ZZE2','ZZSC',2026,1);
 INSERT INTO epm_staging.cost_allocation_run_accounts (parent, idx, main_account, declared_account) VALUES
 ('ZZRL',1,'ZZ6000',''),('ZZRF',1,'ZZ6000',''),('ZZRN',1,'ZZ6000','');
 INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES

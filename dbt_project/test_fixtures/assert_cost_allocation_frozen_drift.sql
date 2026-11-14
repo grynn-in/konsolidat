@@ -3,7 +3,7 @@
 -- ZZOT has TB data but no coefficients for the run: it gets no lines, so it is not flagged (M3).
 -- tables epm_gold.gold_scenario_trial_balance, epm_gold.gold_cost_allocation_frozen
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
-('ZZRP','ZZRS1','Direct','dim_cost_center','Same Account','','Freeze at Approval','ZZE1','ZZSC',2026,1);
+('ZZRP','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Freeze at Approval','ZZE1','ZZSC',2026,1);
 INSERT INTO epm_staging.cost_allocation_run_accounts (parent, idx, main_account, declared_account) VALUES
 ('ZZRP',1,'ZZ6000','');
 INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES
