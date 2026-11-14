@@ -5,71 +5,10 @@
     )
 }}
 
-{# Build a date-keyed fiscal lookup: one row per calendar date with fiscal_year/period.
-   ClickHouse doesn't support range joins or correlated subqueries, so we pre-expand
-   the fiscal calendar into a date-level lookup table. #}
-with fiscal_dates as (
-    select
-        calendar_id,
-        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(period_start_date, x), range(toUInt32(dateDiff(\'day\', period_start_date, period_end_date) + 1))))') }} as calendar_date,
-        {{ extract_year('year_start_date') }} as fiscal_year,
-        calendar_month as fiscal_period
-    from {{ ref('silver_fiscal_periods') }}
-)
-
-select
-    gae.recid as recid,
-    gae.data_area_id as data_area_id,
-    gae.accounting_date as accounting_date,
-    {# ClickHouse LEFT JOIN fills an unmatched fp row with the column default
-       (0 for UInt), NOT NULL — so coalesce() never falls through. When the
-       entity's fiscal calendar isn't present in silver_fiscal_periods (e.g. the
-       seed maps entities to 'Fiscal' but only 'Standard' is loaded), fp.* is 0;
-       derive the period from accounting_date in that case. #}
-    if(fp.fiscal_year != 0, fp.fiscal_year, {{ extract_year('gae.accounting_date') }}) as fiscal_year,
-    if(fp.fiscal_period != 0, fp.fiscal_period, {{ extract_month('gae.accounting_date') }}) as fiscal_period,
-    gae.main_account as main_account,
-    ma.account_name as account_name,
-    ma.account_type_name as account_type_name,
-    ma.is_balance_sheet as is_balance_sheet,
-    ma.is_pnl as is_pnl,
-    gae.accounting_currency_amount as accounting_currency_amount,
-    gae.reporting_currency_amount as reporting_currency_amount,
-    gae.transaction_currency_amount as transaction_currency_amount,
-    gae.transaction_currency_code as transaction_currency_code,
-    -- konsolidat#112: derive debit/credit from the SIGN of the (already-signed)
-    -- accounting_currency_amount. The raw signed amount provably balances (every
-    -- voucher nets to 0), so the sign is the source of truth: positive = debit,
-    -- negative = credit. (abs() would discard the sign on contra/reversal lines.)
-    case
-        when gae.accounting_currency_amount < 0 then -gae.accounting_currency_amount
-        else 0
-    end as credit_amount,
-    case
-        when gae.accounting_currency_amount > 0 then gae.accounting_currency_amount
-        else 0
-    end as debit_amount,
-    gae.posting_type as posting_type,
-    gae.description as description,
-    {# konsol#159: the intercompany partner entity, '' = none #}
-    gae.partner_data_area_id as partner_data_area_id,
-    {{ dim_select(prefix='gae.', trailing=true) }}
-    gje.journal_number as journal_number,
-    gje.journal_category as journal_category,
-    gje.document_number as document_number,
-    gje.document_date as document_date,
-    gje.posting_layer as posting_layer
-from {{ ref('bronze_general_journal_account_entries') }} as gae
-left join {{ ref('bronze_general_journal_entries') }} as gje
-    on gae.general_journal_entry_recid = gje.recid
-    and gae.data_area_id = gje.data_area_id
-left join {{ ref('silver_main_accounts') }} as ma
-    on gae.main_account = ma.main_account_id
-left join {{ source('epm_gold', 'entity_fiscal_calendars') }} as efc
-    on gae.data_area_id = efc.data_area_id
-left join fiscal_dates as fp
-    on gae.accounting_date = fp.calendar_date
-    and fp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
+{# konsol#348 (QA1 c, konsolidat#221): the ledger flow is the trial-balance submission alone. The ERP branch
+   (bronze_general_journal_account_entries, dated through the ERP fiscal calendar in silver_fiscal_periods)
+   is removed: every ERP bronze table held 0 rows, and the declared calendar is the one source of period
+   dates. The column list and order are the ones the two branches shared, so no reader changes. #}
 
 {# F8: submitted trial balances enter the ledger flow HERE, as one GL-shaped
    row per account. A submission is already at trial-balance grain (period
@@ -89,14 +28,9 @@ left join fiscal_dates as fp
    silver_tb_movements, so cancellation removes a submission from here
    without any delete.
 
-   POSITIONAL TWIN: UNION ALL binds by position and ignores aliases — this
-   column list MUST mirror the select above exactly, in order and type. Any
-   column added there needs its twin here, or TBS values land in the wrong
-   columns silently. konsol#255: dimensions come from dim_select() on the
-   submission row, the same macro the branch above uses on the ERP row, so the
-   dimension block stays width-aligned and in the same position from one source
-   of truth. (It was dim_empty_strings() until #255: a submitted trial balance
-   carried no dimensions at all.)
+   konsol#255: dimensions come from dim_select() on the submission row. (It was
+   dim_empty_strings() until #255: a submitted trial balance carried no
+   dimensions at all.)
 
    accounting_date is the declared start_date of the period in konsol's fiscal
    calendar (konsol#348): an April-March site's FY2026 P1 is 2025-04-01, not
@@ -104,12 +38,10 @@ left join fiscal_dates as fp
    named by the tests (see period_start below). One computed date serves
    accounting_date and document_date. #}
 
-union all
-
 {% set tbs_marker = 'Trial Balance Submission' %}
 select
-    -- strictly negative synthetic id: no collision with real (positive) ERP
-    -- recids. silver_tb_movements is one row per (entity, period, account,
+    -- strictly negative synthetic id (it was kept apart from the positive ERP
+    -- recids, and stays negative so no existing recid changes). silver_tb_movements is one row per (entity, period, account,
     -- partner, <declared dimensions>) whatever the batch held, so that key IS
     -- the identity: batch_id left the hash because a spine row (an account that
     -- vanished from a balance file) belongs to the period, not to a row of the
@@ -124,16 +56,17 @@ select
     -toInt64(bitShiftRight(cityHash64(tbs.data_area_id, tbs.fiscal_year, tbs.fiscal_period, tbs.main_account, tbs.partner_data_area_id{{ dim_select(prefix='tbs.', leading=true) }}), 1)) as recid,
     tbs.data_area_id as data_area_id,
     tbs.period_start as accounting_date,
-    tbs.fiscal_year as fiscal_year,
-    tbs.fiscal_period as fiscal_period,
+    toUInt16(tbs.fiscal_year) as fiscal_year,
+    {# UInt16, the type the ERP branch fixed for this column; silver_tb_movements carries UInt8 #}
+    toUInt16(tbs.fiscal_period) as fiscal_period,
     tbs.main_account as main_account,
     ma.account_name as account_name,
     ma.account_type_name as account_type_name,
     ma.is_balance_sheet as is_balance_sheet,
     ma.is_pnl as is_pnl,
     tbs.net_amount as accounting_currency_amount,
-    {# ERP rows carry D365's already-translated figure here; a submission has
-       none, and the non-D365 convention is 0 — NOT the local amount, which
+    {# a submission has no already-translated figure (an ERP row carried
+       D365's here); the convention is 0 — NOT the local amount, which
        would let a consumer sum untranslated currencies believing them
        translated. Consolidation retranslates from debit/credit itself. #}
     toDecimal128(0, {{ amount_scale() }}) as reporting_currency_amount,
@@ -145,10 +78,8 @@ select
     tbs.debit_amount as debit_amount,
     '{{ tbs_marker }}' as posting_type,
     tbs.description as description,
-    {# positional twin of gae.partner_data_area_id above #}
     tbs.partner_data_area_id as partner_data_area_id,
-    {# positional twin of gae.<dimensions> above — the submitted file's own
-       declared dimension values (konsol#255) #}
+    {# the submitted file's own declared dimension values (konsol#255) #}
     {{ dim_select(prefix='tbs.', trailing=true) }}
     concat('TBS-', tbs.batch_id) as journal_number,
     '{{ tbs_marker }}' as journal_category,

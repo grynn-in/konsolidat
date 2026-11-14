@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **160** |
-| carrying their reasoning | 139 |
-| citing the issue that caused them | 132 |
+| assertions | **159** |
+| carrying their reasoning | 138 |
+| citing the issue that caused them | 131 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 139 |
+| severity `error` (stops the build, and its children) | 138 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -34,7 +34,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Reporting hierarchies](#reporting-hierarchies) — 9
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 15
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 8
+- [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 4
 
@@ -128,11 +128,11 @@ An ERP exports period movements, year-to-date movements or period-end balances, 
 
 ### `tb_submission_period_start_not_epoch`
 
-**Guard against the join_use_nulls=0 default silently winning over the TBS coalesce fallback.**
+**A trial-balance submission row in silver_gl_entries dated 1970-01-01.**
 
-silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to build_date_from_year_period() when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
+silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8), dated at the declared start_date of its period (declared_periods(), konsol's fiscal calendar; konsol#348). A period the calendar does not declare misses that LEFT JOIN, and under join_use_nulls=0 ClickHouse fills Date's default, toDate(0) = 1970-01-01, not NULL. The row is kept, not dated by a guess, and this test names it. (Before konsol#348 the date came from the ERP calendar, silver_fiscal_periods, with a calendar-month fallback, and the epoch was the coalesce trap.) Fails if any Trial Balance Submission row carries the Date zero-value, which is never a legitimate posting date for a submitted batch. Fixture: test_fixtures/assert_tb_submission_period_start_not_epoch.undeclared.must_flag.sql.
 
-<sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#182</sub>
+<sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#348</sub>
 
 ### `tb_submission_rows_complete`
 
@@ -1071,14 +1071,6 @@ konsol checks this when the journal is approved; this catches a calendar changed
 ### `closing_period_activity_on_partial_subsidiary`
 
 <sub>`error` · `tests/assert_closing_period_activity_on_partial_subsidiary.sql` · konsol#117 konsolidat#204 konsolidat#259</sub>
-
-### `fiscal_calendar_is_loaded`
-
-**#77 — Guard against the silent fiscal-calendar fallback (FY0/P0 regression).**
-
-silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, ClickHouse fills fp.* with 0 and the model falls back to deriving the period from the posting date (see #65). That fallback is correct for calendar fiscal years but silently wrong for offset ones — and a missed join is exactly what put every row in FY0/P0 before #65/#76. This test fails if any entity that actually has GL activity points (via entity_fiscal_calendars) at a fiscal calendar that ISN'T loaded in silver_fiscal_periods. That is the precise condition under which the join silently misses, turning a future re-break (e.g. a seed pointing an active entity back at a non-existent calendar, or a calendar dropping out of the raw load) into a failing test instead of quietly-wrong numbers.
-
-<sub>`error (default)` · `tests/assert_fiscal_calendar_is_loaded.sql` · konsolidat#65 konsolidat#76 konsolidat#77</sub>
 
 ### `partial_period_pnl_matches_treatment`
 

@@ -104,9 +104,6 @@ models:
       - name: accounting_currency
         description: "konsol's Functional Currency; '' when the Entity has none"
 
-  - name: silver_fiscal_periods
-    description: "Standardized period lookup"
-
   - name: silver_financial_dimensions
     description: "Clean dimension values with active status"
 

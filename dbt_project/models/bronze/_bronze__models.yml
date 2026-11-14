@@ -13,13 +13,6 @@ models:
         tests:
           - not_null
 
-  - name: bronze_general_journal_entries
-    description: "Journal headers - raw from D365"
-    columns:
-      - name: recid
-        tests:
-          - not_null
-
   - name: bronze_main_accounts
     description: "Chart of accounts master"
     columns:
@@ -44,9 +37,6 @@ models:
 
   - name: bronze_fiscal_calendars
     description: "Fiscal calendar definitions"
-
-  - name: bronze_fiscal_calendar_years
-    description: "Fiscal year definitions"
 
   - name: bronze_financial_dimensions
     description: "Financial dimension definitions"

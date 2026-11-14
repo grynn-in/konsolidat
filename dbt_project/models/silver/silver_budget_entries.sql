@@ -5,13 +5,16 @@
     )
 }}
 
-{# Date-level fiscal lookup for ClickHouse (no range joins) #}
+{# Date-level fiscal lookup for ClickHouse (no range joins). konsol#348 (A12): the declared Regular periods
+   of konsol's fiscal calendar, since silver_fiscal_periods (the ERP calendar) is removed. This model reads the
+   ERP budget tables and leaves with them in stage B (B2). #}
 with fiscal_dates as (
     select
-        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(period_start_date, x), range(toUInt32(dateDiff(\'day\', period_start_date, period_end_date) + 1))))') }} as calendar_date,
-        {{ extract_year('year_start_date') }} as fiscal_year,
-        calendar_month as fiscal_period
-    from {{ ref('silver_fiscal_periods') }}
+        {{ cast_to_date('arrayJoin(arrayMap(x -> addDays(start_date, x), range(toUInt32(dateDiff(\'day\', start_date, end_date) + 1))))') }} as calendar_date,
+        toUInt16(fiscal_year) as fiscal_year,
+        toUInt16(fiscal_period) as fiscal_period
+    from {{ source('epm_staging', 'fiscal_periods') }}
+    where period_type = 'Regular'
 )
 
 select

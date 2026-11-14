@@ -5,9 +5,7 @@
 -- and the entity has NO row in epm_gold.entity_fiscal_calendars. Today silver_gl_entries falls back to the
 -- macro, which dates P1 at 2026-01-01, so the test flags the row.
 --
--- silver_tb_movements is seeded (it is not in the selector). Also named so they exist, empty: the ERP branch
--- inputs epm_silver.silver_fiscal_periods, epm_bronze.bronze_general_journal_account_entries and
--- epm_bronze.bronze_general_journal_entries.
+-- silver_tb_movements is seeded (it is not in the selector).
 INSERT INTO epm_silver.silver_main_accounts
   (main_account_id, account_name, account_type, account_type_name, is_pnl, is_balance_sheet, is_equity, fx_method, is_posting, is_retained_earnings, uses_historical_rate)
 VALUES

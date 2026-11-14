@@ -7,9 +7,7 @@
 -- (build_date_from_year_period), so the rows carried a plausible date and this test passed.
 --
 -- The calendar declares FY2026 P1 only (April 2025); the submission is for FY2026 P2. silver_tb_movements is
--- seeded (it is not in the selector). Also named so they exist, empty: the ERP branch inputs
--- epm_silver.silver_fiscal_periods, epm_bronze.bronze_general_journal_account_entries and
--- epm_bronze.bronze_general_journal_entries.
+-- seeded (it is not in the selector).
 INSERT INTO epm_silver.silver_main_accounts
   (main_account_id, account_name, account_type, account_type_name, is_pnl, is_balance_sheet, is_equity, fx_method, is_posting, is_retained_earnings, uses_historical_rate)
 VALUES
