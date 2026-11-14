@@ -1,13 +1,6 @@
 -- gate: expect assert_budget_basis_supported pass
--- konsol#348 S2 (R9): every budget line is a 'Period movement' line, the one basis gold_spread_budget
--- reads (R2), so the test flags nothing. Replaced or narrowed when R10 lands.
-CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
-    entry_name String, cycle String, scenario_id String, layer String,
-    data_area_id String, fiscal_year UInt16, fiscal_period UInt8,
-    main_account String, debit Decimal(18,4), credit Decimal(18,4),
-    currency String, amount_basis String
-) ENGINE = MergeTree
-ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
+-- konsol#348 S2 (R9, narrowed by R10): every budget line is a 'Period movement' line, one of the two
+-- bases gold_spread_budget reads, and each (cycle, entity, layer, year) has one basis: nothing flagged.
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis)
 VALUES

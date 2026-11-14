@@ -64,14 +64,76 @@ profiles as (
    net = debit - credit, debit positive, signed like actuals (BUD-7), summed to
    one value per (scenario, entity, year, period, account, budget dims, layer):
    several lines on one grain are one fact row.
-   Only 'Period movement' lines are read (Q15-c). A 'Year-to-date movement' or
-   'Period-end balance' line needs a conversion that is not built yet (R10);
-   assert_budget_basis_supported (R9) names every such line, so none is dropped
-   silently.
+   The fact holds period MOVEMENTS (Q15-c, R10). A 'Period movement' line is
+   one as landed. A 'Year-to-date movement' line is converted within the Cycle
+   year by the rule silver_tb_movements uses for actuals, written once in
+   macros/period_movements.sql: movement(p) = YTD(p) - YTD(previous period),
+   the first period of the year is its YTD, and a key missing in a later period
+   reads YTD 0, so its movement reverses the previous YTD. The series is
+   (cycle, scenario, layer, entity, account, budget dims): a layer is never
+   differenced against another, nor against actuals. A 'Period-end balance'
+   line is NOT read: it needs an opening balance, which is an open policy
+   question. assert_budget_basis_supported names every such line, and every
+   (cycle, entity, layer, year) that mixes bases, so none is dropped or
+   combined silently. Keep the literals below identical to that test's.
    ALL layers are carried (challenge/management/board as well as base); the
    per-layer monthly values normalize within their own layer (window partitions
    on layer too). annual_amount / period_weight are derived from the monthly
    values so the row shape matches the annual-spread branch. #}
+{%- set budget_dim_names = get_budget_dimensions() | map(attribute='name') | list -%}
+{%- set ytd_scope = ['cycle', 'scenario_id', 'layer', 'data_area_id'] -%}
+{%- set ytd_key_columns = ['main_account'] + budget_dim_names %}
+ytd_lines as (
+    {# the stated year-to-date figure per key and period #}
+    select
+        cycle,
+        scenario_id,
+        layer,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account,
+        {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
+        sum(debit - credit) as source_net_amount,
+        toUInt8(1) as has_source
+    from {{ source('budget_raw', 'budget_entries') }}
+    where amount_basis = 'Year-to-date movement'
+    group by
+        cycle,
+        scenario_id,
+        layer,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        main_account
+        {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
+),
+
+{# the periods a (cycle, scenario, layer, entity) states a YTD figure for: the
+   budget's analogue of an entity's claimed TB periods #}
+ytd_periods as (
+    select distinct cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period
+    from ytd_lines
+),
+
+ytd_keys as (
+    select distinct
+        cycle, scenario_id, layer, data_area_id, main_account
+        {{- dim_select(dims=get_budget_dimensions(), leading=true) }}
+    from ytd_lines
+),
+
+ytd_spine as (
+    {{ movement_spine('ytd_periods', 'ytd_keys', 'ytd_lines', scope=ytd_scope, key_columns=ytd_key_columns) }}
+),
+
+ytd_movements as (
+    select
+        *,
+        {{ ytd_movement(ytd_scope + ytd_key_columns) }} as net_amount
+    from ytd_spine
+),
+
 manual_lines as (
     select
         scenario_id,
@@ -81,9 +143,36 @@ manual_lines as (
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
-        sum(debit - credit) as net_amount
-    from {{ source('budget_raw', 'budget_entries') }}
-    where amount_basis = 'Period movement'
+        sum(net_amount) as net_amount
+    from (
+        select
+            scenario_id,
+            data_area_id,
+            fiscal_year,
+            fiscal_period,
+            main_account,
+            {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
+            layer,
+            toDecimal128(debit - credit, {{ amount_scale() }}) as net_amount
+        from {{ source('budget_raw', 'budget_entries') }}
+        where amount_basis = 'Period movement'
+
+        union all
+
+        {# a spine row that differences to 0 and has no stated figure is dropped,
+           as in silver_tb_movements #}
+        select
+            scenario_id,
+            data_area_id,
+            fiscal_year,
+            fiscal_period,
+            main_account,
+            {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
+            layer,
+            net_amount
+        from ytd_movements
+        where not (net_amount = 0 and has_source = 0)
+    )
     group by
         scenario_id,
         data_area_id,

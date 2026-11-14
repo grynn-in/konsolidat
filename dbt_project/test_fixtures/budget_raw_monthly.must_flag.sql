@@ -4,8 +4,8 @@
 -- balance. Scenario ZZ_B1 has 'Period movement' lines and is declared nowhere, so
 -- assert_scenario_rows_declared names ('ZZ_B1', 'budget', 'undeclared'): 1 result. On a model that does
 -- not read epm_raw.budget_entries it names nothing.
--- ZZ_B2, also undeclared, has only a 'Year-to-date movement' line. R2 reads 'Period movement' rows only
--- (Q15-c), so ZZ_B2 has no rows and is not named: a second result means the basis is not filtered.
+-- ZZ_B2, also undeclared, has only a 'Period-end balance' line. The spread does not read that basis
+-- (Q15-c, R10), so ZZ_B2 has no rows and is not named: a second result means the basis is not filtered.
 --
 -- The lineage reads these tables too, empty here, so they are named to exist (empty):
 -- epm_gold.budget_annual_input, epm_gold.spread_profiles,
@@ -18,4 +18,4 @@ INSERT INTO epm_raw.budget_entries
 VALUES
   ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_B1', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 600, 'USD', 'Period movement'),
   ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_B1', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 600, 0, 'USD', 'Period movement'),
-  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_B2', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 1800, 'USD', 'Year-to-date movement');
+  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_B2', 'base', 'ZZE1', 2026, 3, 'ZZ4000', 0, 1800, 'USD', 'Period-end balance');
