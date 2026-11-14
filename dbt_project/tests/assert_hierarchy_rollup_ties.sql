@@ -4,8 +4,7 @@
 
    konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group
    only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared
-   calendar, epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its
-   month). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later.
+   calendar, epm_staging.fiscal_periods; a period it does not list has no date and is dropped). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later.
 
    Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both
    show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier
@@ -27,28 +26,17 @@ with rolled as (
     from {{ ref('gold_tb_at_hierarchy_node') }}
 ),
 
-periods as (
-    select
-        toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period,
-        max(end_date) as end_date
-    from {{ source('epm_staging', 'fiscal_periods') }}
-    group by fiscal_year, fiscal_period
-),
-
 leaf_rows as (
     select
         r.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('r.fiscal_year', 'r.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        {# konsolidat#171 step 2d: the DECLARED period end_date, as gold_tb_at_hierarchy_node reads it. INNER on
+           purpose: a period the calendar does not declare has no date and is dropped, not given a calendar-month
+           one; assert_trial_balance_period_declared (ERROR) names it. #}
+        dp.end_date as period_end_date
     from rolled as r
-    left join periods as p
-        on p.fiscal_year = toUInt16(r.fiscal_year)
-        and p.fiscal_period = toUInt16(r.fiscal_period)
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(r.fiscal_year)
+        and dp.fiscal_period = toUInt16(r.fiscal_period)
     where r.hierarchy_is_group = 0
 ),
 
