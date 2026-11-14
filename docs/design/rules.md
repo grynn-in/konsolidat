@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **159** |
-| carrying their reasoning | 138 |
-| citing the issue that caused them | 131 |
+| assertions | **160** |
+| carrying their reasoning | 139 |
+| citing the issue that caused them | 132 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 138 |
+| severity `error` (stops the build, and its children) | 139 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 14
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 15
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -929,6 +929,14 @@ decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums m
 konsol's intake refuses an Annual Input and a manual Budget Entry line on the same grain, so gold_spread_budget is a plain UNION ALL of the two branches with no precedence rule. This test is the warehouse backstop: it flags every grain fed by both, naming the annual side (spread profile, submitter) and the manual side (Budget Entries and cycles). Any amount_basis counts: every manual line is a writer. Flags one row per doubly-written grain.
 
 <sub>`error` · `tests/assert_budget_one_writer_per_grain.sql` · konsol#348</sub>
+
+### `budget_period_declared`
+
+**konsol#348 PR3 (BUD-10-1, no silent fallback): a budget line is stated against a declared Regular period.**
+
+A budget belongs to a period the calendar declares (epm_staging.fiscal_periods, period_type 'Regular'). A line in a Closing, Opening or Adjustment period, or in a period the calendar does not declare, has no window to be judged against: the hierarchy-node models inner-join the declared periods, so such a line would drop out of the node reports unnamed. This test names it. Checked on the raw lines (epm_raw.budget_entries) and on the fact (gold_spread_budget). One row per (source, scenario, entity, year, period). Error severity: the budget would be wrong. Fixtures: dbt_project/test_fixtures/assert_budget_period_declared*.sql.
+
+<sub>`error` · `tests/assert_budget_period_declared.sql` · konsol#348</sub>
 
 ### `budget_ytd_hand_table`
 
