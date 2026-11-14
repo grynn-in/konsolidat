@@ -18,7 +18,7 @@ COL = "exit_gain_loss_account"
 class ExitGainLossAccount(unittest.TestCase):
     def test_template_declares_the_column_optional_with_help(self):
         sheet = BY_NAME["Consolidation_Groups"]
-        col = [c for c in sheet.columns if c.name == COL]
+        col = [c for c in sheet.cols if c.name == COL]
         self.assertEqual(len(col), 1)
         self.assertFalse(col[0].required)
         self.assertIn("without a Business Disposal", col[0].help)
