@@ -4,9 +4,9 @@
 -- input spreads into every declared Regular period, so the test must PASS.
 -- epm_raw.budget_entries is read too, empty here, so it is created empty.
 INSERT INTO epm_gold.budget_annual_input
-  (scenario_id, data_area_id, fiscal_year, main_account, annual_amount, spread_profile_id, submitted_by)
+  (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', 1300, 'ZZ_W', 'zz');
+  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', 'base', 'USD', 1300, 'ZZ_W', 'zz');
 INSERT INTO epm_gold.spread_profiles (profile_id, profile_name, fiscal_period, weight) VALUES
   ('ZZ_W', 'ZZ weights', 1, 1),
   ('ZZ_W', 'ZZ weights', 2, 1),
