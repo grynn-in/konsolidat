@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **157** |
-| carrying their reasoning | 136 |
-| citing the issue that caused them | 129 |
-| severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 136 |
+| assertions | **159** |
+| carrying their reasoning | 138 |
+| citing the issue that caused them | 131 |
+| severity `warn` (reports, does not stop a build) | 22 |
+| severity `error` (stops the build, and its children) | 137 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,9 +32,9 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 14
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 15
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 8
+- [Calendar and periods](#calendar-and-periods) — 9
 - [Platform and data integrity](#platform-and-data-integrity) — 14
 - [Other](#other) — 4
 
@@ -122,7 +122,7 @@ An ERP exports period movements, year-to-date movements or period-end balances, 
 
 **Guard against the join_use_nulls=0 default silently winning over the TBS coalesce fallback.**
 
-silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to build_date_from_year_period() when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
+silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to the declared calendar's start_date (declared_periods()) when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
 
 <sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#182</sub>
 
@@ -256,9 +256,9 @@ PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the g
 
 **grynn-in/konsolidat#92 finding #2: the historical equity rate applied to a period must be the AS-OF rate (the latest tranche whose rate_date <= period_date), not the most-recent-ever rate.**
 
-The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
+The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. period_date is read from gold_entity_ownership (the ownership window date), not recomputed from declared_periods(): a test that recomputed the model's own date would pass a date error both share (konsolidat#171 2d, review F3). Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
 
-<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#374 konsolidat#92</sub>
+<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#374 konsolidat#171 konsolidat#92</sub>
 
 ### `equity_rate_coverage`
 
@@ -446,9 +446,9 @@ Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG
 
 **A group node's amount must equal the sum of its descendant leaves for the same slice: hierarchy, node, entity, period, account and every other dimension.**
 
-Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its month). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
+Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods; a period it does not list has no date and is dropped). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
-<sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#220</sub>
+<sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#171 konsolidat#220</sub>
 
 ### `ic_difference_not_from_ownership`
 
@@ -876,7 +876,7 @@ On the fixture hierarchy_dated.sql (ZZ_DIV over dim_business_unit, entity ZZE1):
 
 gold_variance_analysis has one set of rows per active budget-type scenario (budget_scenario_id), the actuals repeated against each. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's actual_amount for a (budget_scenario_id, entity, year, period, account) must equal gold_variance_analysis' actual_amount over the rows whose dimension value is a leaf of that hierarchy. So must its budget_amount (PR #211 review 4): a node that adds two budget scenarios together, or shows one scenario's budget under another, fails. The budget is compared NULL-safely: two missing budgets (null) agree, and a null against a number differs. A node model that does not carry budget_scenario_id is compared on the rest of the key, so each budget scenario's actuals meet the node's sum across scenarios: with two budget scenarios the actuals are counted twice and the test fails rather than erroring. One row per mismatched key. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
-<sub>`error (default)` · `tests/assert_variance_node_single_budget.sql` · konsolidat#206 konsolidat#211 konsolidat#220</sub>
+<sub>`error (default)` · `tests/assert_variance_node_single_budget.sql` · konsolidat#171 konsolidat#206 konsolidat#211 konsolidat#220</sub>
 
 ---
 
@@ -913,6 +913,14 @@ decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums m
 konsol's intake refuses an Annual Input and a manual Budget Entry line on the same grain, so gold_spread_budget is a plain UNION ALL of the two branches with no precedence rule. This test is the warehouse backstop: it flags every grain fed by both, naming the annual side (spread profile, submitter) and the manual side (Budget Entries and cycles). Any amount_basis counts: every manual line is a writer. Flags one row per doubly-written grain.
 
 <sub>`error` · `tests/assert_budget_one_writer_per_grain.sql` · konsol#348</sub>
+
+### `budget_period_declared`
+
+**konsolidat#171 2d (#355 re-review F1-a): a budget fact in a fiscal year/period the declared calendar does not have is invisible in the hierarchy budget/variance views (gold_budget_at_hierarchy_node and the budget-only rows of gold_variance_at_hierarchy_node inner-join declared_periods()).**
+
+Budget Cycle and Budget Annual Input carry fiscal_year as a plain Int, so nothing else forces the year to exist. It is named here as a WARN, not an ERROR, so a budget for a year not yet declared never blocks the consolidation chain (an ERROR test with gold_trial_balance as a second parent would skip every child of gold_trial_balance under `dbt build`). Chosen under the 5 Nov 2026 standing rule (refuse / report: report); see #171 2d and the PR #355 re-review. One row per (scenario, entity, period) of budget not declared in epm_staging.fiscal_periods. Fixture: dbt_project/test_fixtures/assert_budget_period_declared.undeclared_year.must_flag.sql.
+
+<sub>`warn` · `tests/assert_budget_period_declared.sql` · konsolidat#171 konsolidat#355</sub>
 
 ### `budget_ytd_hand_table`
 
@@ -1056,6 +1064,14 @@ silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, 
 
 <sub>`error (default)` · `tests/assert_fiscal_calendar_is_loaded.sql` · konsolidat#65 konsolidat#76 konsolidat#77</sub>
 
+### `gl_period_start_is_declared`
+
+**konsolidat#171 step 2d (task 5d): a Trial Balance Submission row whose entity has no fiscal calendar of its own is dated from konsol's declared calendar (declared_periods().start_date), the same calendar every other period-dated reader uses.**
+
+This catches the wrong-but-not-epoch date that assert_tb_submission_period_start_not_epoch cannot see: an April-March site's FY2026 P1 is 2025-04-01, and a calendar-month fallback said 2026-01-01. Mirrors the join in silver_gl_entries (entity_fiscal_calendars -> silver_fiscal_periods): a row is judged here only when that join finds no own-calendar period. A period the declared calendar does not list is not judged here (it has no date: the epoch test and assert_trial_balance_period_declared name it).
+
+<sub>`error (default)` · `tests/assert_gl_period_start_is_declared.sql` · konsolidat#171</sub>
+
 ### `partial_period_pnl_matches_treatment`
 
 **konsolidat#171 step 2c (T4): mid-period profit and loss follows the treatment the group root declares.**
@@ -1084,9 +1100,9 @@ e row. Fails on pre-fix gold until a full refresh rebuilds gold_trial_balance wi
 
 **konsolidat#171 / #252 (task 2a): every (fiscal_year, fiscal_period) that gold_trial_balance carries is declared in konsol's fiscal calendar (epm_staging.fiscal_periods), and declared with one span.**
 
-The ownership window is judged on the declared period dates (macros/declared_periods.sql). A period the calendar does not declare has no dates, so there is nothing true to judge it on: it is refused here, at ERROR severity, and never judged at a date invented from the period number (the first of calendar month P, or the last day of that month). An undeclared period drops out of gold_entity_ownership, and so out of the consolidated trial balance; this test is what makes that drop a failed build instead of a silent one. A period declared on several rows with different start or end dates is refused for the same reason: the window would have to pick one span. One row per (entity, period) not declared, and one row per period declared with conflicting spans. Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql.
+The ownership window is judged on the declared period dates (macros/declared_periods.sql). A period the calendar does not declare has no dates, so there is nothing true to judge it on: it is refused here, at ERROR severity, and never judged at a date invented from the period number (the first of calendar month P, or the last day of that month). An undeclared period drops out of gold_entity_ownership, and so out of the consolidated trial balance; this test is what makes that drop a failed build instead of a silent one. A period declared on several rows with different start or end dates is refused for the same reason: the window would have to pick one span. One row per (entity, period) not declared, and one row per period declared with conflicting spans. Column `source` says which: trial_balance, calendar. Budget facts are judged separately, at WARN, in assert_budget_period_declared (#355 re-review F1-a). Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql.
 
-<sub>`error (default)` · `tests/assert_trial_balance_period_declared.sql` · konsolidat#171 konsolidat#252</sub>
+<sub>`error (default)` · `tests/assert_trial_balance_period_declared.sql` · konsolidat#171 konsolidat#252 konsolidat#355</sub>
 
 ### `ytd_at_last_regular_period_equals_annual`
 

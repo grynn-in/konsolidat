@@ -15,7 +15,7 @@
 --   ZZ1000 asset,  closing     -- not declared historical, never a candidate
 --   ZZ3000 equity, historical  -- rate tranche starts 2026-02-01, i.e. P2 ONLY
 --   ZZ3100 equity, historical  -- rate tranche from 2025-01-01, covers BOTH periods
--- period_date = build_date_from_year_period(): P1 -> 2026-01-01, P2 -> 2026-02-01.
+-- period_date = the declared window end date (the ownership window's date): P1 -> 2026-01-31, P2 -> 2026-02-28.
 -- So ZZ3000's own tranche (2026-02-01) covers P2 and NOT P1.
 --
 -- Expected: exactly ONE flagged row -- ZZGRP / ZZOP / ZZ3000 / FY2026 P1. It must name the EARLIER

@@ -101,10 +101,12 @@ left join fiscal_dates as fp
    accounting_date comes from the entity's OWN fiscal calendar
    (entity_fiscal_calendars -> silver_fiscal_periods.period_start_date), the
    same machinery the branch above uses in reverse — an April-March entity's
-   FY2026 P1 is 2025-04-01, not 2026-01-01. When the calendar or period is not
-   loaded, build_date_from_year_period() is the guarded fallback (it clamps,
-   so an out-of-range period from a manual insert cannot make an invalid
-   date). One computed date serves accounting_date and document_date. #}
+   FY2026 P1 is 2025-04-01, not 2026-01-01. When the entity has no calendar
+   row for the period, konsol's declared calendar (declared_periods().start_date)
+   is the fallback; a period neither lists keeps the sentinel toDate(0), which
+   assert_tb_submission_period_start_not_epoch catches
+   (konsolidat#171 2d). One computed date serves accounting_date and
+   document_date. #}
 
 union all
 
@@ -190,7 +192,7 @@ from (
            above. #}
         if(
             sfp.period_start_date = toDate(0),
-            {{ build_date_from_year_period('m.fiscal_year', 'm.fiscal_period') }},
+            dp.start_date,
             sfp.period_start_date
         ) as period_start
     from {{ ref('silver_tb_movements') }} as m
@@ -200,6 +202,11 @@ from (
         on sfp.calendar_id = coalesce(efc.fiscal_calendar_id, 'Fiscal')
         and {{ extract_year('sfp.year_start_date') }} = m.fiscal_year
         and sfp.calendar_month = m.fiscal_period
+    {# LEFT: the entity calendar is the primary source. An undeclared period gives toDate(0) here
+       (join_use_nulls=0), the sentinel the epoch test catches. #}
+    left join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(m.fiscal_year)
+        and dp.fiscal_period = toUInt16(m.fiscal_period)
 ) as tbs
 left join {{ ref('silver_main_accounts') }} as ma
     on tbs.main_account = ma.main_account_id

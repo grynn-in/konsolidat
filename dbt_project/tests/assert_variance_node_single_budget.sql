@@ -32,32 +32,19 @@ with leaves as (
 ),
 
 {# konsolidat#220: a code may be a leaf in several dated tranches (a moved leaf). A variance row matches only the
-   leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period
-   the calendar does not list is judged at the last day of its month), or its amount is counted once per tranche. #}
-periods as (
-    select
-        toUInt16(fiscal_year) as fiscal_year,
-        toUInt16(fiscal_period) as fiscal_period,
-        max(end_date) as end_date
-    from {{ source('epm_staging', 'fiscal_periods') }}
-    group by fiscal_year, fiscal_period
-),
-
+   leaf tranche whose window covers its period's end_date (declared calendar, declared_periods()), or its amount is
+   counted once per tranche. A period the calendar does not declare has no date and is dropped (konsolidat#171 2d),
+   as in gold_variance_at_hierarchy_node. #}
 variance_dated as (
     select
         vd.*,
-        {# an unmatched LEFT JOIN row carries Date's default (1970-01-01), not NULL #}
-        if(
-            p.end_date = toDate(0),
-            toLastDayOfMonth({{ build_date_from_year_period('vd.fiscal_year', 'vd.fiscal_period') }}),
-            p.end_date
-        ) as period_end_date
+        dp.end_date as period_end_date
     from (
         {{ variance_dimension_long_sql('v') }}
     ) as vd
-    left join periods as p
-        on p.fiscal_year = toUInt16(vd.fiscal_year)
-        and p.fiscal_period = toUInt16(vd.fiscal_period)
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(vd.fiscal_year)
+        and dp.fiscal_period = toUInt16(vd.fiscal_period)
 ),
 
 expected as (

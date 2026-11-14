@@ -11,8 +11,12 @@
    the window would have to pick one span.
 
    One row per (entity, period) not declared, and one row per period declared with conflicting spans.
+   Column `source` says which: trial_balance, calendar. Budget facts are judged separately, at WARN, in
+   assert_budget_period_declared (#355 re-review F1-a).
    Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql. #}
 select
+    'trial_balance' as source,
+    '' as scenario_id,
     tb.data_area_id as data_area_id,
     toUInt16(tb.fiscal_year) as fiscal_year,
     toUInt16(tb.fiscal_period) as fiscal_period,
@@ -28,6 +32,8 @@ group by tb.data_area_id, tb.fiscal_year, tb.fiscal_period
 union all
 
 select
+    'calendar' as source,
+    '' as scenario_id,
     '' as data_area_id,
     toUInt16(fiscal_year) as fiscal_year,
     toUInt16(fiscal_period) as fiscal_period,
