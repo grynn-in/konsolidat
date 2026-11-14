@@ -13,3 +13,8 @@ INSERT INTO epm_gold.budget_monthly_input
 VALUES
   ('ZZ_PLAN', 'ZZE1', 2026, 'ZZ4000', 1, -100, 'base'),
   ('ZZ_PLAN', 'ZZE1', 2027, 'ZZ4000', 1, -100, 'base');
+-- The test also reads gold_trial_balance; one declared TB row (ZZE1 FY2026 P1) keeps that branch clean.
+INSERT INTO epm_gold.gold_trial_balance
+  (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
+VALUES
+  ('ZZE1', 2026, 1, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 50, 0, 50, 1);
