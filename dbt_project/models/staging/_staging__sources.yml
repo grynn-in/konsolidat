@@ -5,11 +5,6 @@ sources:
     schema: epm_gold
     description: "Gold tables the konsol app writes directly (not dbt-materialized)"
     tables:
-      - name: budget_monthly_input
-        description: >
-          Manually-entered monthly budgets synced from Budget Sheets on cycle
-          lock (konsol budget_sheet._sync_to_clickhouse). UNIONed into
-          gold_spread_budget as an identity spread (grynn-in/konsolidat#94).
       - name: budget_annual_input
         description: >
           Top-down annual budget figures from konsol's Budget Annual Input
@@ -132,6 +127,26 @@ sources:
             description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
           - name: partial_period_treatment
             description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the uploaded period trial balance is the stub, used unscaled). Declared by the group, no default; '' until declared. Read by gold_acquisition_adjustments and gold_business_disposal_journal (the P&L adjustments) and by assert_partial_period_treatment_declared and assert_partial_period_pnl_matches_treatment (tests)."
+
+  - name: budget_raw
+    description: >
+      konsol#348 S2: budget lines landed by konsol's Budget Entry (one row per
+      line: debit, credit, layer, currency, amount_basis). gold_spread_budget
+      reads them as its manual branch. The table is created by
+      clickhouse/init-db.sql and by konsol; konsol adds the site's in_budget
+      dimensions by ALTER.
+    database: epm_raw
+    schema: ""
+    tables:
+      - name: budget_entries
+        columns:
+          - name: amount_basis
+            description: >
+              'Period movement', 'Year-to-date movement' or 'Period-end
+              balance'. gold_spread_budget reads 'Period movement' rows as
+              landed and 'Year-to-date movement' rows converted to movements
+              within the Cycle year; 'Period-end balance' is not read
+              (assert_budget_basis_supported names it).
 
   - name: epm_staging
     schema: epm_staging
