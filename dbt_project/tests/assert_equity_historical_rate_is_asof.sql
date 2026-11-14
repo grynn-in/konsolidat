@@ -31,7 +31,7 @@ with applied as (
         ctb.data_area_id as data_area_id,
         ctb.main_account as main_account,
         ctb.reporting_currency as reporting_currency,
-        {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }} as period_date,
+        dp.end_date as period_date,
         ctb.historical_equity_rate as historical_equity_rate
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     inner join {{ ref('gold_entity_ownership') }} as eo
@@ -39,6 +39,9 @@ with applied as (
         and eo.data_area_id = ctb.data_area_id
         and eo.fiscal_year = ctb.fiscal_year
         and eo.fiscal_period = ctb.fiscal_period
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = ctb.fiscal_year
+        and dp.fiscal_period = ctb.fiscal_period
     where ctb.historical_equity_rate is not null
 ),
 
