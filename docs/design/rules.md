@@ -14,7 +14,7 @@ consolidation engine with every defect this one has already paid for.
 | | |
 |---|---|
 | assertions | **158** |
-| carrying their reasoning | 135 |
+| carrying their reasoning | 136 |
 | citing the issue that caused them | 130 |
 | severity `warn` (reports, does not stop a build) | 22 |
 | severity `error` (stops the build, and its children) | 136 |
@@ -878,7 +878,7 @@ The two entry methods (annual×profile spread and manual monthly identity-spread
 
 **The amounts of a published cost allocation follow the run's policy (konsol#269, W5b).**
 
-A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
+A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. The stamp check can fire on a real build only if a model's stamp expression changes. The `stale` check compares the model with the macro's pools, so within one full build it cannot fire; it fires when gold_scenario_trial_balance is rebuilt without rebuilding this model (a partial build) or on a seeded table. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_amounts.sql` · konsol#269</sub>
 
@@ -886,7 +886,7 @@ A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals
 
 **Allocation coefficients close (konsol#269, T5).**
 
-Per run, origin member, step and sender, the receivers' coefficients sum to the hop's pool_coefficient exactly (konsol rounds to 12 places by largest remainder so they do). A hop whose rows disagree about pool_coefficient is flagged too.
+Per run, origin member, step and sender, the receivers' coefficients sum to the hop's pool_coefficient exactly (konsol rounds to 12 places by largest remainder so they do). A hop whose rows disagree about pool_coefficient is flagged too, and so is the origin's own step (sender_member = origin_member) unless its pool_coefficient is exactly 1: the origin sends its whole pool there, and a hop that closes against another pool would still lose or invent money.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_coefficients_close.sql` · konsol#269</sub>
 
@@ -894,7 +894,7 @@ Per run, origin member, step and sender, the receivers' coefficients sum to the 
 
 **Cost allocation conserves money (konsol#269, T1).**
 
-Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
+Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry the same hop_amount, so each hop sums to zero); it stays as the tripwire for a macro change that rounds or filters one side, and fires on a seeded table. Part 2 can fire on a real build: a coefficient chain that parks money at a sender, or receives at a member that does not close. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_conserved.sql` · konsol#269</sub>
 
@@ -912,6 +912,10 @@ A run's allocation_dimension must be one of the site's In Budget dimensions, com
 
 ### `cost_allocation_frozen_drift`
 
+**Frozen cost allocations whose origin pool no longer matches the trial balance (konsol#269, T6, W6).**
+
+A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
+
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
 
 ### `cost_allocation_sender_relieved_once`
@@ -926,7 +930,7 @@ An origin member's pool in an account is relieved by one run only, per scenario,
 
 **Weights match submitted driver values (konsol#269, T2).**
 
-Every weight row of a run must equal a value of the named statistic at value_period and receiver_member. A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period.
+Every weight row of a run must equal a value of the named statistic at value_period and receiver_member, and the statistic must belong to the run: same scenario, entity and fiscal year as the run, and the weight's own driver (decision Q3: a weight never borrows another scenario's, entity's or year's statistic). A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weights_have_driver_values.sql` · konsol#269</sub>
 
