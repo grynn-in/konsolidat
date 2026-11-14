@@ -1,7 +1,11 @@
--- gate: build gold_spread_budget assert_budget_ytd_reconciles assert_budget_fact_grain_unique assert_spread_sums_to_annual
+-- gate: build gold_spread_budget assert_budget_ytd_reconciles assert_budget_fact_grain_unique assert_spread_sums_to_annual assert_budget_ytd_hand_table assert_budget_one_cycle_per_scenario_year assert_budget_ytd_periods_contiguous assert_budget_blank_layer_currency
 -- gate: expect assert_budget_ytd_reconciles pass
 -- gate: expect assert_budget_fact_grain_unique pass
 -- gate: expect assert_spread_sums_to_annual pass
+-- gate: expect assert_budget_ytd_hand_table pass
+-- gate: expect assert_budget_one_cycle_per_scenario_year pass
+-- gate: expect assert_budget_ytd_periods_contiguous pass
+-- gate: expect assert_budget_blank_layer_currency pass
 -- konsol#348 S2 (R10, Q15-c): epm_raw.budget_entries lines on 'Year-to-date movement' reach
 -- gold_spread_budget as period movements, converted within the Cycle year by the rule
 -- silver_tb_movements uses (macros/period_movements.sql). One cycle ZZ-CY-2026, scenario ZZ_PLAN_2026,
