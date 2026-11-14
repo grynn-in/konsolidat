@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **157** |
-| carrying their reasoning | 136 |
-| citing the issue that caused them | 129 |
+| assertions | **158** |
+| carrying their reasoning | 137 |
+| citing the issue that caused them | 130 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 136 |
+| severity `error` (stops the build, and its children) | 137 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 14
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 15
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -881,6 +881,14 @@ gold_variance_analysis has one set of rows per active budget-type scenario (budg
 ---
 
 ## Budget, forecast and variance
+
+### `budget_annual_input_has_spread_profile`
+
+**konsol#525: every annual budget input names a Spread Profile that exists.**
+
+gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_profile_id, so an input whose spread_profile_id matches no profile has no row in the budget fact: the annual figure is dropped without a word, and assert_spread_sums_to_annual passes because it reads only the fact. Flags one row per input (the annual-input table is read, not the join, so a profile's several periods cannot multiply a row). The match is exact, as the model's join is. Error severity: a missing budget is a wrong budget. konsol refuses the value at intake; this is the backstop for a row that reached the warehouse any other way. join_use_nulls=0: the comparison uses NOT IN, never a LEFT JOIN.
+
+<sub>`error` · `tests/assert_budget_annual_input_has_spread_profile.sql` · konsol#525</sub>
 
 ### `budget_basis_supported`
 
