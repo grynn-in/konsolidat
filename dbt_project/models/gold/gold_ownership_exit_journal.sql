@@ -34,9 +34,9 @@
    (a WARN names it, task X8). Layer 2 (IC) is never read: its 'left' row reverses the eliminations
    (gold_ic_reconciliation); gold_fully_consolidated_tb is never read (it unions this model).
 
-   Methods. Only method_before 'full' posts here (full_exits). A proportional exit (task X4) and an
-   equity-method exit (task X5, EQ_INVEST) post NOTHING yet: they are not refused and not posted wrong;
-   assert_exit_derecognises_carried flags their carried balances until those tasks land.
+   Methods. method_before 'full' (full_exits) and 'proportional' (proportional_exits, task X4) post here. An
+   equity-method exit (task X5, EQ_INVEST) posts NOTHING yet: they are not refused and not posted wrong;
+   assert_exit_derecognises_carried flags their carried balances until task X5 lands.
 
    The accounts come from the group's root row (data_area_id = ''), read with any() per column as
    gold_business_disposal_journal reads it. A group without a root row, or whose root declares no
@@ -81,10 +81,20 @@ full_exits as (
     select * from exit_events where method_before = 'full'
 ),
 
-{# task X4 adds proportional_exits (layer 1 at the carried share, incl. a prior step), task X5 equity_exits
-   (EQ_INVEST against the exit account, no CTA leg). Until then they post nothing. #}
+{# task X4: a proportional exit (IFRS 11 joint operation) reverses what layer 1 carried at the carried share.
+   Layer 1 already carries group_amount = translated x share of each period (nci_amount 0), so reversing the
+   to-date group_amount is exactly the carried share, including after an earlier share step; gold_fx_revaluation's
+   plug is on the group share too (its header, proportional), so the 'CTA' line needs no minority leg. No goodwill,
+   FVA or NCI: a deal into a joint operation is refused. Same lines, same balancing line (199) as full. #}
+proportional_exits as (
+    select * from exit_events where method_before = 'proportional'
+),
+
+{# task X5 adds equity_exits (EQ_INVEST against the exit account, no CTA leg). Until then it posts nothing. #}
 posting_exits_all as (
     select * from full_exits
+    union all
+    select * from proportional_exits
 ),
 
 {# What an earlier journal already derecognised is not carried any more: after a re-entry (the
