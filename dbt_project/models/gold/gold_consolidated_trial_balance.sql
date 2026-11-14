@@ -151,7 +151,11 @@ with entity_tb as (
            by position, so no column may be added before partner_data_area_id. #}
         if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
-        {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
+        {# konsolidat#171 step 2d: the period's DECLARED end_date, the date the ownership
+           window reads (gold_entity_ownership.period_date, #345), not the first of
+           calendar month P, which is wrong for a non-calendar fiscal year. The
+           historical-rate ASOF join below reads it. #}
+        dp.end_date as period_date
     {# konsol#159: the partner-grained twin of gold_trial_balance. That model
        stays at the account grain for its own readers; see
        gold_trial_balance_by_partner. #}
@@ -193,6 +197,12 @@ with entity_tb as (
     left join {{ rate_period_map() }} as rpm
         on rpm.fiscal_year = tb.fiscal_year
         and rpm.fiscal_period = tb.fiscal_period
+    {# konsolidat#171 step 2d: INNER on purpose, as in gold_entity_ownership. A period
+       the calendar does not declare has no date and is dropped here, not given a
+       calendar-month one; assert_trial_balance_period_declared (ERROR) names it. #}
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = tb.fiscal_year
+        and dp.fiscal_period = tb.fiscal_period
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
        Applied at the consolidation chokepoint so every downstream

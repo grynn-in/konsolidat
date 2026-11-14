@@ -38,7 +38,7 @@
 --            first tranche yields no rate — the case the ASOF join was fixed for
 --            (konsolidat#92 finding 2: the old row_number()/rn=1 join took the most
 --            recent tranche EVER and silently borrowed a future rate).
---   * period_date from build_date_from_year_period(), as the model builds it.
+--   * period_date the declared period end_date (declared_periods()), as the model builds it.
 --
 -- Same-currency entities are skipped (konsolidat#295). An entity whose functional currency
 -- (accounting_currency) equals the presentation currency of the row (reporting_currency)
@@ -73,7 +73,7 @@ candidates as (
         ctb.reporting_currency as reporting_currency,
         ctb.fiscal_year as fiscal_year,
         ctb.fiscal_period as fiscal_period,
-        {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }} as period_date
+        dp.end_date as period_date
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     inner join declared as d
         on ctb.main_account = d.main_account_id
@@ -83,6 +83,9 @@ candidates as (
         and eo.data_area_id = ctb.data_area_id
         and eo.fiscal_year = ctb.fiscal_year
         and eo.fiscal_period = ctb.fiscal_period
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = ctb.fiscal_year
+        and dp.fiscal_period = ctb.fiscal_period
 ),
 
 rates as (
