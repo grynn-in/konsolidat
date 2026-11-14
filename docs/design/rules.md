@@ -13,10 +13,10 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **151** |
-| carrying their reasoning | 130 |
-| citing the issue that caused them | 123 |
-| severity `warn` (reports, does not stop a build) | 21 |
+| assertions | **152** |
+| carrying their reasoning | 131 |
+| citing the issue that caused them | 124 |
+| severity `warn` (reports, does not stop a build) | 22 |
 | severity `error` (stops the build, and its children) | 130 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 9
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 10
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 9
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -874,6 +874,14 @@ The two entry methods (annual×profile spread and manual monthly identity-spread
 
 <sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
 
+### `budget_period_declared`
+
+**konsolidat#171 2d (#355 re-review F1-a): a budget fact in a fiscal year/period the declared calendar does not have is invisible in the hierarchy budget/variance views (gold_budget_at_hierarchy_node and the budget-only rows of gold_variance_at_hierarchy_node inner-join declared_periods()).**
+
+Budget Cycle and Budget Annual Input carry fiscal_year as a plain Int, so nothing else forces the year to exist. It is named here as a WARN, not an ERROR, so a budget for a year not yet declared never blocks the consolidation chain (an ERROR test with gold_trial_balance as a second parent would skip every child of gold_trial_balance under `dbt build`). Chosen under the 5 Nov 2026 standing rule (refuse / report: report); see #171 2d and the PR #355 re-review. One row per (scenario, entity, period) of budget not declared in epm_staging.fiscal_periods. Fixture: dbt_project/test_fixtures/assert_budget_period_declared.undeclared_year.must_flag.sql.
+
+<sub>`warn` · `tests/assert_budget_period_declared.sql` · konsolidat#171 konsolidat#355</sub>
+
 ### `favorable_expense`
 
 **PRD-7 Test: Expense accounts where actual < budget should be marked favorable**
@@ -1036,7 +1044,7 @@ e row. Fails on pre-fix gold until a full refresh rebuilds gold_trial_balance wi
 
 **konsolidat#171 / #252 (task 2a): every (fiscal_year, fiscal_period) that gold_trial_balance carries is declared in konsol's fiscal calendar (epm_staging.fiscal_periods), and declared with one span.**
 
-The ownership window is judged on the declared period dates (macros/declared_periods.sql). A period the calendar does not declare has no dates, so there is nothing true to judge it on: it is refused here, at ERROR severity, and never judged at a date invented from the period number (the first of calendar month P, or the last day of that month). An undeclared period drops out of gold_entity_ownership, and so out of the consolidated trial balance; this test is what makes that drop a failed build instead of a silent one. A period declared on several rows with different start or end dates is refused for the same reason: the window would have to pick one span. The budget facts are judged the same way (#355 review F1). gold_budget_at_hierarchy_node and the budget-only rows of gold_variance_at_hierarchy_node inner-join the declared calendar, and Budget Cycle / Budget Annual Input carry fiscal_year as a plain Int, so nothing else forces the year to exist. A budget in an undeclared (fiscal_year, fiscal_period) would vanish from the hierarchy views without a word; here it is named, with its scenario and entity (source 'budget', read from gold_spread_budget). One row per (entity, period) not declared, per (scenario, entity, period) of budget not declared, and one row per period declared with conflicting spans. Column `source` says which: trial_balance, budget, calendar. Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql.
+The ownership window is judged on the declared period dates (macros/declared_periods.sql). A period the calendar does not declare has no dates, so there is nothing true to judge it on: it is refused here, at ERROR severity, and never judged at a date invented from the period number (the first of calendar month P, or the last day of that month). An undeclared period drops out of gold_entity_ownership, and so out of the consolidated trial balance; this test is what makes that drop a failed build instead of a silent one. A period declared on several rows with different start or end dates is refused for the same reason: the window would have to pick one span. One row per (entity, period) not declared, and one row per period declared with conflicting spans. Column `source` says which: trial_balance, calendar. Budget facts are judged separately, at WARN, in assert_budget_period_declared (#355 re-review F1-a). Fixture: dbt_project/test_fixtures/assert_trial_balance_period_declared.must_flag.sql.
 
 <sub>`error (default)` · `tests/assert_trial_balance_period_declared.sql` · konsolidat#171 konsolidat#252 konsolidat#355</sub>
 

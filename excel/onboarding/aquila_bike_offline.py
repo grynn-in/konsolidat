@@ -89,8 +89,8 @@ class Offline:
     # ---- calendar helpers ------------------------------------------------------------------------
     @staticmethod
     def period_date(p):
-        """The period's declared end date (the warehouse's period_date, konsolidat#171 2d). The aquila calendar is
-        a calendar year, so period P ends on the last day of month P; the Closing period 13 ends with period 12."""
+        """The period's date (the ownership window's date, declared window_end_date; the
+        warehouse's period_date, konsolidat#171 2d). The aquila calendar is a calendar year, so period P ends on the last day of month P; the Closing period 13 ends with period 12."""
         if p[1] == 0:
             # an Opening P0 carries the state before the year: the ownership window reads it at the last day of the
             # prior year (declared_periods window_end_date), so the replica does too
