@@ -10,6 +10,10 @@
 --   ZZ_EX leaf under ZZ_E 2017-01-01 .. 2025-12-31 | ZZ_EX leaf under ZZ_B 2026-01-01 .. open
 -- Entity ZZE1 posts 100 to ZZ1000 on ZZ_EX in FY2026 P1 (April 2025). On its declared end (2025-04-30) ZZ_EX
 -- rolls to ZZ_E and ZZ_ROOT; on the calendar-month date (2026-01-31) it would roll to ZZ_B.
+-- FY2026 P2 is NOT declared. The model used to give it the calendar-month date (build_date_from_year_period,
+-- 2026-02-28, so ZZ_B) and the test now drops it; a period the calendar does not list has no date, so neither
+-- side carries it (assert_trial_balance_period_declared, ERROR, names it). Red on the old model: ZZ_B group row
+-- with no leaf row beside it.
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
 INSERT INTO epm_staging.reporting_hierarchies
@@ -27,4 +31,5 @@ VALUES
 INSERT INTO epm_gold.gold_trial_balance
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, dim_business_unit, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES
-  ('ZZE1', 2026, 1, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, 'ZZ_EX', 100, 0, 100, 1);
+  ('ZZE1', 2026, 1, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, 'ZZ_EX', 100, 0, 100, 1),
+  ('ZZE1', 2026, 2, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, 'ZZ_EX', 50, 0, 50, 1);
