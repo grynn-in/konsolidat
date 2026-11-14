@@ -5,6 +5,7 @@
 -- posts an opening-balance line 0 with a retained-earnings residual) with a SECOND chart account (ZZ3200) flagged
 -- is_retained_earnings. Before 7c the journal's residual line picked one of the two by anyIf (silent policy); now it
 -- posts on '' and assert_retained_earnings_account_unique names group ZZG (count 2). The journal stays balanced.
+-- (The root declares partial_period_treatment: the 2026-03-15 deal is mid-period, so the build needs it, konsolidat#171 2c.)
 -- Not red on the base: the 7a test already flags a combination row with count 2 whichever account anyIf picked;
 -- the change is pinned by the balance test passing and a grep that the anyIf pick is gone.
 -- Acquisition journal with PRE-ACQUISITION TB HISTORY (konsolidat#198 row J3, design §3-4 line 0):
@@ -113,17 +114,18 @@ INSERT INTO epm_staging.entities
   (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
 VALUES
   ('ZZS', 'ZZ Subsidiary', 'ZZG', 0, 'Active', 'EUR', 'DE', '');
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS partial_period_treatment String DEFAULT '';
 INSERT INTO epm_gold.consolidation_groups
-  (consolidation_group, data_area_id, entity_name, reporting_currency,
+  (consolidation_group, data_area_id, entity_name, reporting_currency, partial_period_treatment,
    nci_measurement, accounting_framework, goodwill_treatment, acquisition_costs_treatment, measurement_period, bargain_purchase,
    goodwill_account, fair_value_adjustment_account, investment_account, nci_account, bargain_purchase_gain_account,
    disposal_gain_loss_account, disposal_proceeds_account, goodwill_amortisation_expense_account, acquisition_costs_account)
 VALUES
-  ('ZZG', '', 'ZZ Group', 'USD',
+  ('ZZG', '', 'ZZ Group', 'USD', 'Whole period',
    'partial', 'IFRS', 'Impairment only', 'Expense', 'Off', 'Recognise gain',
    'ZZ1800', 'ZZ1900', 'ZZ3500', 'ZZ3400', 'ZZ4900',
    'ZZ4950', 'ZZ1000', 'ZZ6900', 'ZZ6950'),
-  ('ZZG', 'ZZS', 'ZZ Subsidiary', 'USD',
+  ('ZZG', 'ZZS', 'ZZ Subsidiary', 'USD', '',
    '', '', '', '', '', '',
    '', '', '', '', '',
    '', '', '', '');
