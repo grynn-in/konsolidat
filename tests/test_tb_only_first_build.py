@@ -241,9 +241,16 @@ class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
                 {"name": "dim_tb_only", "in_budget": False}]
         self.assertEqual(_load_script().budget_dimension_columns(dims, "zz"), [
             "ALTER TABLE zz_gold.budget_annual_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
-            "ALTER TABLE zz_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
             "ALTER TABLE zz_raw.budget_entries ADD COLUMN IF NOT EXISTS dim_region String DEFAULT ''",
         ])
+
+    def test_budget_monthly_input_is_gone_from_the_contract(self):
+        # R4: epm_raw.budget_entries replaced it (R2/R3 moved the readers).
+        mod = _load_script()
+        self.assertNotIn("epm_gold.budget_monthly_input", mod.BUDGET_INPUT_TABLES)
+        self.assertIn("epm_raw.budget_entries", mod.BUDGET_INPUT_TABLES)
+        with open(INIT_DB, encoding="utf-8") as f:
+            self.assertNotIn("budget_monthly_input", f.read())
 
     def test_no_budget_dimension_means_no_alter(self):
         self.assertEqual(_load_script().budget_dimension_columns([], "zz"), [])
@@ -265,7 +272,6 @@ class FreshSiteGetsTheDeclaredBudgetColumns(unittest.TestCase):
     def test_init_db_names_no_budget_dimension(self):
         with open(INIT_DB, encoding="utf-8") as f:
             sql = f.read()
-        for table in ("epm_gold.budget_annual_input", "epm_gold.budget_monthly_input",
-                      "epm_raw.budget_entries"):
+        for table in ("epm_gold.budget_annual_input", "epm_raw.budget_entries"):
             body = sql.split(f"CREATE TABLE IF NOT EXISTS {table} (")[1].split(") ENGINE")[0]
             self.assertNotRegex(body, r"\bdim_\w+", table)
