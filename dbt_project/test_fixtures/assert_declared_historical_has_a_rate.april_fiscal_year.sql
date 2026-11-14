@@ -68,8 +68,8 @@ VALUES
   ('USD', 'EUR', 2025, 2, 'Average', 1.15, 'ZZ-GER-2025-02');
 -- The rates themselves, keyed (consolidation_group, data_area_id, main_account, to_currency) on the
 -- entity's OWNING group and the consolidating group's presentation currency (konsol#374). ZZ3000's
--- only tranche starts in P2, so P1 resolves to no rate; ZZ3100's predates both periods, so neither
--- of its periods may be named.
+-- only tranche is dated 2025-04-15, inside P1 (declared end 2025-04-30), so it covers P1 and P2 at the
+-- declared as-of date; ZZ3100's predates both periods. Nothing may be named.
 INSERT INTO epm_staging.historical_equity_rates
   (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
 VALUES
