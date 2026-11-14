@@ -18,7 +18,8 @@
       'topside': ['topside', 'reclassification', 'auto_reversal'],
       'equity_method': ['equity_method'],
       'acq_disposal': ['pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
-                       'goodwill', 'fair_value_adjustment', 'disposal_gain_loss', 'cta_recycling']
+                       'goodwill', 'fair_value_adjustment', 'disposal_gain_loss', 'cta_recycling'],
+      'journal_close': ['journal_close']
   }) }}
 {% endmacro %}
 
