@@ -1,9 +1,13 @@
 {#
     konsolidat#335, option A (Deepak Pai, 14 Nov 2026), task X1: the exit events of macros/ownership_exits().
 
-    An exit event (G, E, P): E is live in G (complete chain, method full, proportional or equity) in the
-    previous declared period, is not live in P, and was not ended by a full Business Disposal. A successor
+    An exit event: E is live in G (complete chain, method full, proportional or equity) in the previous
+    declared period, is not live in a period F, and was not ended by a full Business Disposal. A successor
     period or an owner-to-owner transfer keeps E live, so it is not an exit (konsol#305-Q1-1).
+    The event's period P (#358 review F1) is the Regular period whose declared span holds the end date that
+    caused it (lowest tuple), as a full disposal's period holds its disposal_date: E is derecognised by the end
+    of the period the group last held it in (IFRS 10.25). With no such end date, or none a Regular period
+    before F holds, P = F.
 
     One check, one row per failure. ORACLE: for every entity whose chain is a single direct link (no
     sub-group above it) the exit events are recomputed here from epm_staging.ownership_periods, business_disposals and the fiscal
@@ -102,14 +106,44 @@ chained as (
     window w2 as (partition by lg, le order by lfy, lfp rows between unbounded preceding and current row)
 ),
 
-candidates as (
+candidates0 as (
     select lg, le, lfy, lfp, lwe, p_fy, p_fp, least(p_ws, p_we) as p_from
     from chained
     where is_live = 0 and p_live = 1
 ),
 
+{# the end that caused the event: the link's latest end from the previous period's window start to F's end #}
+cand_ends as (
+    select c.lg as eg, c.le as ee, c.lfy as efy, c.lfp as efp, max(o.o_to) as last_end
+    from candidates0 as c
+    inner join links as l on l.g = c.lg and l.ent = c.le
+    inner join own as o
+        on o.og = l.link_group and o.oe = l.link_data_area_id
+        and o.oog = l.link_owner_group and o.ooe = l.link_owner_data_area_id
+    where o.o_to >= c.p_from and o.o_to < c.lwe
+    group by c.lg, c.le, c.lfy, c.lfp
+),
+
+{# the Regular period holding that end, before F; join_use_nulls = 0: no end reads 1970-01-01, held by none #}
+cand_holding as (
+    select c.lg as hg, c.le as he, c.lfy as hfy, c.lfp as hfp,
+        countIf(r.rs <= ce.last_end and r.re >= ce.last_end and (r.rfy, r.rfp) < (c.lfy, c.lfp)) as n_h,
+        argMinIf(r.rfy, (r.rfy, r.rfp), r.rs <= ce.last_end and r.re >= ce.last_end and (r.rfy, r.rfp) < (c.lfy, c.lfp)) as h_fy,
+        argMinIf(r.rfp, (r.rfy, r.rfp), r.rs <= ce.last_end and r.re >= ce.last_end and (r.rfy, r.rfp) < (c.lfy, c.lfp)) as h_fp
+    from candidates0 as c
+    left join cand_ends as ce on ce.eg = c.lg and ce.ee = c.le and ce.efy = c.lfy and ce.efp = c.lfp
+    cross join regs as r
+    group by c.lg, c.le, c.lfy, c.lfp
+),
+
+candidates as (
+    select c.*, if(h.n_h = 0, c.lfy, h.h_fy) as xfy, if(h.n_h = 0, c.lfp, h.h_fp) as xfp
+    from candidates0 as c
+    left join cand_holding as h on h.hg = c.lg and h.he = c.le and h.hfy = c.lfy and h.hfp = c.lfp
+),
+
 oracle as (
-    select c.lg as g, c.le as ent, c.lfy as fy, c.lfp as fp, c.p_fy as pfy, c.p_fp as pfp
+    select c.lg as g, c.le as ent, c.xfy as fy, c.xfp as fp, c.p_fy as pfy, c.p_fp as pfp
     from candidates as c
     left join (
         select l.g as dg, l.ent as de, o.o_to as d_end
@@ -120,7 +154,7 @@ oracle as (
         where o.o_disposed = 1
     ) as d
         on d.dg = c.lg and d.de = c.le
-    group by c.lg, c.le, c.lfy, c.lfp, c.p_fy, c.p_fp, c.p_from, c.lwe
+    group by c.lg, c.le, c.xfy, c.xfp, c.lfy, c.lfp, c.p_fy, c.p_fp, c.p_from, c.lwe
     {# ended by a full disposal inside the window of the exit; join_use_nulls=0: a miss reads d_end = 1970-01-01 #}
     having countIf(d.dg != '' and d.d_end >= c.p_from and d.d_end < c.lwe) = 0
 ),

@@ -2,12 +2,14 @@
 -- konsolidat#335 (option A, Deepak Pai, 14 Nov 2026), task X1: the exit events macro ownership_exits().
 -- April fiscal years FY2024-FY2025 with Opening P0, Closing P13 and Adjustment P14, as .disposal_last_day.
 -- Group ZZXG holds, all direct links at 100% full unless stated:
---   ZZXB bare end:    ends 2024-08-15 (inside FY2024 P5), no deal, no successor.  EXPECT one exit, FY2024 P6 (prev P5).
+--   ZZXB bare end:    ends 2024-08-15 (inside FY2024 P5), no deal, no successor.  EXPECT one exit in FY2024 P5, the
+--                     Regular period holding the end (#358 review F1; was P6); first not live P6, prev P5.
 --   ZZXS successor:   ends 2024-08-15, a second full period starts 2024-08-16.       EXPECT none.
 --   ZZXT transfer:    ZZXH1 holds it to 2024-08-15, ZZXH2 from 2024-08-16 (both nodes held by ZZXG). EXPECT none.
 --   ZZXD disposal:    ends 2024-08-15 by a full Business Disposal.                   EXPECT none (the disposal journal derecognises it).
 --   ZZXE boundary:    ends 2025-03-31, the last day of FY2024 P12, before Closing P13, Adjustment P14 and Opening P0.
---                     EXPECT one exit in the next Regular period, FY2025 P1 (prev FY2025 P0).
+--                     EXPECT one exit in FY2024 P12, the Regular period holding the end (#358 review F1; was the
+--                     next Regular period, FY2025 P1); first not live FY2025 P1, prev FY2025 P0.
 --   ZZXL live:        never ends.                                                   EXPECT none.
 -- The test also checks every direct-link entity against an oracle built from ownership_periods and the calendar.
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
