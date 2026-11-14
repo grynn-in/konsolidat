@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **157** |
-| carrying their reasoning | 136 |
-| citing the issue that caused them | 129 |
+| assertions | **162** |
+| carrying their reasoning | 141 |
+| citing the issue that caused them | 134 |
 | severity `warn` (reports, does not stop a build) | 21 |
-| severity `error` (stops the build, and its children) | 136 |
+| severity `error` (stops the build, and its children) | 141 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -28,7 +28,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Currency and translation](#currency-and-translation) — 25
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 12
+- [Intercompany](#intercompany) — 16
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
@@ -36,7 +36,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
-- [Other](#other) — 4
+- [Other](#other) — 5
 
 ---
 
@@ -692,6 +692,22 @@ Every elimination row carries both legs, so "debit + credit = 0" per row is true
 
 <sub>`error (default)` · `tests/assert_ic_elimination_nets_zero.sql` · konsol#117 konsolidat#148</sub>
 
+### `ic_elimination_share_is_bounded`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than its own leg. THE BOUND IS 1, which is what the code guarantees: layer 2 weights by abs(slice)/gross, so shares lie in [0,1] and sum to 1. The previous version of this test asserted 100x while the code of the day guaranteed 50.5x, so it was slack by a factor of two and could not fail on any input — the exact tautology it was written to replace (re-review round 3, F2). A test whose threshold trails the code does not pin the code. KEYED ON THE PAIR, not the account (re-review round 3, F3). Keyed on account alone, a small leg exploded on an account that also carries a large leg was invisible to max(): one measured fixture hid a 100,000x violation on an account whose other leg was 5,000,000. Real intercompany control accounts carry many legs of very different sizes, so account-level max() is the wrong grain. Error severity: a slice moved further than its leg is a wrong consolidated number, and every total-based check passes while it happens.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_share_is_bounded.sql` · konsolidat#245</sub>
+
+### `ic_elimination_slices_sum_to_the_leg`
+
+**konsolidat#245 option C.**
+
+PR #260 review finding F4: nothing tested what layer 2 actually does. The old test asserted sum(slice_mov) = side_mov per side, which the window function produces and so cannot fail arithmetically. The two things that CAN go wrong were untested, and both were real: F1  a side whose slices summed to zero took factor 1.0 on EVERY slice, so the leg was emitted N times at full amount; F2  the apportionment denominator omitted the partner, so a leg was split over balances owed to other partners — totals right, slices wrong. Totals and "nets to zero" cannot see F2 at all. This asserts the thing that can: for each elimination leg, layer 2's per-slice amounts must sum to the leg amount gold_ic_eliminations published, within materiality. WHAT THIS TEST IS AND IS NOT, corrected after the re-review said so. It CANNOT FAIL on the current code. Shares are normalised in all three branches (apportionable sums to 1, flat is one row at 1.0, a join miss is one row at 1.0), so sum(emitted) = leg for every possible input. It is a REGRESSION GUARD — it would have caught the original defect, where a side whose slices cancelled emitted the leg N times at full amount — and it is NOT evidence that layer 2 is right today. It is also BLIND TO MISATTRIBUTION. An earlier version of this header claimed it was "paired with the per-pair grain below"; there is no pair grain below. legs_by_account groups on (group, year, period, account) only: entity is dropped and partner was never carried, so a leg split across the wrong partner's slices reconciles here perfectly. That defect is prevented by the join carrying partner, not detected here. And legs_by_account's netting hides one case by construction: when counterpart_account is blank both legs of a pair land on one account, so a symmetric error on both sides nets to zero on both sides of the comparison. assert_ic_elimination_share_is_bounded is the REGRESSION GUARD for the magnification defects. Round 4 is explicit that it, too, cannot fail on correct code: shares are in [0,1] and sum to 1, so no slice can exceed its leg. It goes red on the round-2 and round-3 code (and on its committed .must_flag fixture), which is what it is for. No test in this layer proves today's attribution is RIGHT; they prove it has not regressed. Error severity: a leg that does not reconcile is a wrong consolidated number. One row per offending leg.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_slices_sum_to_the_leg.sql` · konsolidat#245 konsolidat#260</sub>
+
 ### `ic_elimination_within_balance`
 
 **konsolidat#148 / konsol#159 (decision 1, 13 Sep 2026): elimination never exceeds the balance it cancels.**
@@ -731,6 +747,22 @@ A P&L pair matches on the period's movement. 1. basis: a pair on a balance-sheet
 Every elimination posted while both sides were in the group has been reversed. Membership is resolved here from the ownership data itself, not from gold_entity_ownership or the model's spine: an entity line-consolidates into a group at a date when EVERY link of its chain to that group (consolidation_ancestry) has an ownership period covering the date with method full or proportional. So a partner that was disposed of, a sub-group sold while its own entity's ownership stays open, and a stake moved to equity all count as having left, per group. For every balance-sheet pair, and every period the warehouse holds from the pair's first reconciliation row to the group's latest period, in which either side is not a member: the pair's eliminations to date, per account and entity, are 0. That covers the periods before a pair joins (nothing posted yet) and every period after it left (all reversed).
 
 <sub>`error (default)` · `tests/assert_ic_pair_left_is_reversed.sql` · konsolidat#171 konsolidat#175 konsolidat#252</sub>
+
+### `ic_side_slices_sum_to_the_side`
+
+**konsolidat#245 option D / layer 2 option C (Deepak Pai, 6 Oct 2026).**
+
+gold_ic_side_slices must be gold_ic_reconciliation's `sides` CTE split by the declared dimensions and NOTHING ELSE: same source, same filters, same join. Every slice of a side must therefore sum to exactly that side's movement. Round 4, F7: this identity is NOT what makes the split exact — layer 2 weights by magnitude, which is an allocation, and is bounded regardless. What the identity buys is that the apportionment base is the same movement gold_ic_reconciliation reconciles, so the two cannot drift apart. If it breaks — a different filter, a join that fans out, a dimension column that is NULL rather than '' — the split silently redistributes an elimination across slices whose amounts no longer add up to what was eliminated, and every row still balances. This test is the guard against that, so it is error severity, not warn. One row per side whose slices do not reconcile, with both figures. Compared with materiality_floor(), not exact equality: both sides are Float64 sums and a slice split changes the summation order.
+
+<sub>`error (default)` · `tests/assert_ic_side_slices_sum_to_the_side.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_not_moved_past_its_own`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than it moved itself. THE ASSERTION NO TEST IN THIS LAYER MAKES, and the reason five rounds of guards all passed while the numbers were wrong. Every existing assertion here is satisfied by construction: shares lie in [0,1] and sum to 1, so "the slices sum to the leg" and "no slice exceeds the leg" cannot fail. The quantity that CAN be wrong is the one none of them compares — a slice's share of the leg against that slice's OWN movement. amount_i = |leg| x aligned_i / aligned_gross, so amount_i <= aligned_i holds exactly when aligned_gross >= |leg|. At leg_coverage() = 0.5 the gate allowed |leg| <= 2 x aligned_gross, so a slice could take twice what it booked: measured through the real chain, a cost centre that ever booked +100 ended at -100, on an intercompany receivable, with the account total exactly right. That is what this test exists to catch. Only the SLICED rows are checked. A whole-leg row is blank-dimensioned by design and carries the entire leg, which is the declared answer when the side cannot account for it. Error severity: a slice moved past its own movement is a wrong consolidated number that every total-based check accepts. Two passes, because ClickHouse refuses a window function inside an aggregate (ILLEGAL_AGGREGATION) — the same limit the model hit.
+
+<sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245</sub>
 
 ### `unrealized_profit_at_operator_share`
 
@@ -1239,4 +1271,12 @@ A joint operation reached through a partly owned FULL link is carried at the wro
 The macro resolves such a row as method_source = 'undeclared' and consolidation_method 'none', so nothing consolidates for (group, entity); this test fails the build naming the group, the entity, the period, the sum and the paths. The percentage decides nothing here: 60% held as two 30% equity stakes may be joint control (IFRS 11) or control (IFRS 10); only the group can say. Fixtures: assert_method_declared_for_multi_path.undeclared.must_flag.sql (flags 1), .declared_full.sql and .declared_equity.sql (pass).
 
 <sub>`error (default)` · `tests/assert_method_declared_for_multi_path.sql` · konsol#117</sub>
+
+### `sliceless_layers_carry_no_dimension`
+
+**konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a consolidation entry carries the dimension values of whatever knows them.**
+
+The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
+
+<sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#345</sub>
 
