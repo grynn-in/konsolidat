@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **158** |
-| carrying their reasoning | 136 |
-| citing the issue that caused them | 130 |
+| assertions | **159** |
+| carrying their reasoning | 138 |
+| citing the issue that caused them | 131 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 136 |
+| severity `error` (stops the build, and its children) | 137 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 17
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 18
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -878,9 +878,17 @@ The two entry methods (annual×profile spread and manual monthly identity-spread
 
 **The amounts of a published cost allocation follow the run's policy (konsol#269, W5b).**
 
-A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. The stamp check can fire on a real build only if a model's stamp expression changes. The `stale` check compares the model with the macro's pools, so within one full build it cannot fire; it fires when gold_scenario_trial_balance is rebuilt without rebuilding this model (a partial build) or on a seeded table. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
+A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. The stamp check can fire on a real build only if a model's stamp expression changes. The `stale` check compares the model with the macro's pools, so within one full build it cannot fire; it fires when gold_scenario_trial_balance is rebuilt without rebuilding this model (a partial build) or on a seeded table. Pools come from the origin's own sent lines (sender = origin), not the declared-mode pass-through lines on the allocation account. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_amounts.sql` · konsol#269</sub>
+
+### `cost_allocation_balanced_per_account`
+
+**Cost allocation balances per account (konsol#269, WF1).**
+
+T1 sums an origin's lines across accounts, so a line booked on the wrong account passes it. Per run this test checks each account and member (worked example: the header of macros/cost_allocation.sql). Rows returned are violations: 1. origin relief: per account, the lines at the origin member itself sum to minus its pool on that account. An overflowed hop amount fails here. So does a line at the origin on an account that holds no pool of it. 2. pass-through: a member that sends on an origin's cost it received nets to zero for that origin on every account. 3. declared placement: in 'Declared Allocation Account' mode every line that is not at the origin itself is on the run's allocation account. 4. account balance: per run x account, the net is minus the pools held on the account plus the pools it receives. The receiving account is the pool's own account in "Sender's Own Accounts" mode (so each account nets to zero) and the allocation account in declared mode. So the pool account is relieved by exactly the origin pools, and the allocation account carries all of them. A pool is read from the origin's own sent lines (sender = origin), which sit on the pool account: one value per run x origin x account. UNION ALL + GROUP BY and inner joins only: join_use_nulls=0 would fill a missing side with 0.
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_balanced_per_account.sql` · konsol#269</sub>
 
 ### `cost_allocation_coefficients_close`
 
@@ -894,7 +902,7 @@ Per run, origin member, step and sender, the receivers' coefficients sum to the 
 
 **Cost allocation conserves money (konsol#269, T1).**
 
-Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry the same hop_amount, so each hop sums to zero); it stays as the tripwire for a macro change that rounds or filters one side, and fires on a seeded table. Part 2 can fire on a real build: a coefficient chain that parks money at a sender, or receives at a member that does not close. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
+Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry the same hop_amount, so each hop sums to zero); it stays as the tripwire for a macro change that rounds or filters one side, and fires on a seeded table. Part 2 can fire on a real build: a coefficient chain that parks money at a sender, or receives at a member that does not close. The pool is read from the origin's own `sent` lines (sender = origin): in Declared Allocation Account mode a pass-through `sent` line sits on the allocation account, and its origin_amount is the same pool again. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_conserved.sql` · konsol#269</sub>
 
@@ -908,13 +916,17 @@ A run's allocation_dimension must be one of the site's In Budget dimensions, com
 
 ### `cost_allocation_frozen_consistent`
 
+**Cost allocation lines agree with their run (konsol#269, W5).**
+
+Three ways the published lines can disagree with epm_staging.cost_allocation_runs: 1. duplicate line: the same hop of the same pool appears twice (a frozen run frozen again). pool_account is in the key: in declared mode the received lines of two pools share the allocation account (review M1); 2. run not in staging: lines of a cancelled run were not removed; 3. freeze stamp does not match the policy: a 'Freeze at Approval' run with a NULL frozen_at, or a 'Follow Latest Data' run with one. Inner joins and IN only: join_use_nulls=0 would fill an unmatched side.
+
 <sub>`error` · `tests/cost_allocation/assert_cost_allocation_frozen_consistent.sql` · konsol#269</sub>
 
 ### `cost_allocation_frozen_drift`
 
 **Frozen cost allocations whose origin pool no longer matches the trial balance (konsol#269, T6, W6).**
 
-A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
+A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (sender = origin): a declared-mode pass-through sent line sits on the allocation account. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
 

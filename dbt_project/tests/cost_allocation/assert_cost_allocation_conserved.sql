@@ -7,6 +7,9 @@
 -- macro change that rounds or filters one side, and fires on a seeded table.
 -- Part 2 can fire on a real build: a coefficient chain that parks money at a
 -- sender, or receives at a member that does not close.
+-- The pool is read from the origin's own `sent` lines (sender = origin): in
+-- Declared Allocation Account mode a pass-through `sent` line sits on the
+-- allocation account, and its origin_amount is the same pool again.
 -- The pool is read from the `sent` lines, one value per (run, origin, account);
 -- origin_amount repeats on every line of that origin, so it is taken once per
 -- account and summed across accounts. Exact comparison, no tolerance: the model
@@ -37,7 +40,7 @@ pools as (
     from (
         select run, origin_member, main_account, max(origin_amount) as account_pool
         from lines
-        where line_type = 'sent'
+        where line_type = 'sent' and sender_member = origin_member
         group by run, origin_member, main_account
     )
     group by run, origin_member

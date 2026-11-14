@@ -8,6 +8,8 @@
 -- changes. The `stale` check compares the model with the macro's pools, so within
 -- one full build it cannot fire; it fires when gold_scenario_trial_balance is
 -- rebuilt without rebuilding this model (a partial build) or on a seeded table.
+-- Pools come from the origin's own sent lines (sender = origin), not the declared-mode
+-- pass-through lines on the allocation account.
 -- Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 with runs as (
     select * from {{ source('epm_staging', 'cost_allocation_runs') }}
@@ -20,7 +22,7 @@ published as (
         countIf(a.frozen_at is null) as unstamped, countIf(a.frozen_at is not null) as stamped
     from {{ ref('gold_cost_allocation') }} a
     inner join runs r on r.name = a.run
-    where a.line_type = 'sent'
+    where a.line_type = 'sent' and a.sender_member = a.origin_member
     group by a.run, a.main_account, a.origin_member
 ),
 
