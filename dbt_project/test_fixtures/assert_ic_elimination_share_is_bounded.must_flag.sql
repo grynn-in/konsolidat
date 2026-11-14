@@ -1,3 +1,4 @@
+-- gate: expect assert_ic_elimination_share_is_bounded flag 1
 -- konsolidat#245. Rows assert_ic_elimination_share_is_bounded MUST flag.
 --
 -- The red evidence for this test, committed rather than quoted in a commit
