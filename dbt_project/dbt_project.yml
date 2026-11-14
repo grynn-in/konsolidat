@@ -222,6 +222,8 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_nci_movement_schedule:
         +tags: ['gold', 'domain:consolidation']
+      gold_ownership_exit_journal:
+        +tags: ['gold', 'domain:consolidation']
       # --- Domain: reporting ---
       gold_budget_at_hierarchy_node:
         +tags: ['gold', 'domain:reporting']
