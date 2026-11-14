@@ -43,11 +43,8 @@ select
     entity_amount + ic_elimination_amount + cta_amount + topside_amount as after_topside,
     entity_amount + ic_elimination_amount + cta_amount + topside_amount + equity_method_amount as after_equity_method,
     final_amount,
-    ic_elimination_amount,
-    cta_amount,
-    topside_amount,
-    equity_method_amount,
-    acq_disposal_amount,
-    nci_attribution_amount,
-    journal_close_amount
+    {# every bucket but entity (selected above), in the macro's order: macros/waterfall_buckets.sql #}
+    {% for bucket in waterfall_buckets().keys() | reject('equalto', 'entity') | list -%}
+    {{ bucket }}_amount{{ ',' if not loop.last }}
+    {% endfor -%}
 from waterfall

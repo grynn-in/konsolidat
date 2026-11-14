@@ -346,50 +346,69 @@ journal_close_source as (
            or l.main_account in ({{ "'" ~ journal_pnl_pseudo_accounts() | join("','") ~ "'" }}))
 ),
 
-journal_close as (
+{# Per-account lines: one per (group, entity, year, account, dimensions) whose year P&L is not 0
+   (#357 review F5: a topside and its auto-reversal that net to 0 post no line). #}
+journal_close_lines as (
     select
         s.consolidation_group as consolidation_group,
         s.data_area_id as data_area_id,
         s.fiscal_year as fiscal_year,
         s.closing_period as fiscal_period,
         s.main_account as main_account,
-        'Journal close' as account_name,
         {# aliased: dim_select(prefix=) leaves the column named `s.<dim>` #}
         {% for d in get_dimensions() -%}
         s.{{ d.name }} as {{ d.name }},
         {% endfor -%}
-        '' as reporting_currency,
-        -sum(s.amount) as amount,
-        'journal_close' as adjustment_type,
-        concat('JCLOSE_', s.consolidation_group, '_', toString(s.fiscal_year)) as journal_id
+        -sum(s.amount) as amount
     from journal_close_source as s
     cross join {{ retained_earnings_account() }} as re
     where re.re_count = 1
     group by s.consolidation_group, s.data_area_id, s.fiscal_year, s.closing_period,
              s.main_account{{ dim_group_by(prefix='s.', leading=true) }}
+    having abs(sum(s.amount)) > 0
+),
+
+{# The retained-earnings line is minus the sum of the KEPT lines (same filtered set, so the journal
+   balances by construction; it equals the unfiltered total because every dropped line is 0). #}
+journal_close as (
+    select
+        l.consolidation_group as consolidation_group,
+        l.data_area_id as data_area_id,
+        l.fiscal_year as fiscal_year,
+        l.fiscal_period as fiscal_period,
+        l.main_account as main_account,
+        'Journal close' as account_name,
+        {% for d in get_dimensions() -%}
+        l.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
+        '' as reporting_currency,
+        l.amount as amount,
+        'journal_close' as adjustment_type,
+        concat('JCLOSE_', l.consolidation_group, '_', toString(l.fiscal_year)) as journal_id
+    from journal_close_lines as l
 
     union all
 
     select
-        s.consolidation_group as consolidation_group,
-        s.data_area_id as data_area_id,
-        s.fiscal_year as fiscal_year,
-        s.closing_period as fiscal_period,
+        l.consolidation_group as consolidation_group,
+        l.data_area_id as data_area_id,
+        l.fiscal_year as fiscal_year,
+        l.fiscal_period as fiscal_period,
         any(re.retained_earnings_account) as main_account,
         'Journal close' as account_name,
-        {# aliased: dim_select(prefix=) leaves the column named `s.<dim>` #}
         {% for d in get_dimensions() -%}
-        s.{{ d.name }} as {{ d.name }},
+        l.{{ d.name }} as {{ d.name }},
         {% endfor -%}
         '' as reporting_currency,
-        sum(s.amount) as amount,
+        -sum(l.amount) as amount,
         'journal_close' as adjustment_type,
-        concat('JCLOSE_', s.consolidation_group, '_', toString(s.fiscal_year)) as journal_id
-    from journal_close_source as s
+        concat('JCLOSE_', l.consolidation_group, '_', toString(l.fiscal_year)) as journal_id
+    from journal_close_lines as l
     cross join {{ retained_earnings_account() }} as re
     where re.re_count = 1
-    group by s.consolidation_group, s.data_area_id, s.fiscal_year,
-             s.closing_period{{ dim_group_by(prefix='s.', leading=true) }}
+    group by l.consolidation_group, l.data_area_id, l.fiscal_year,
+             l.fiscal_period{{ dim_group_by(prefix='l.', leading=true) }}
+    having abs(sum(l.amount)) > 0
 ),
 
 {# Union all layers #}
