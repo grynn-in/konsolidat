@@ -8,9 +8,9 @@
 -- gold_spread_budget also reads these tables, empty here, so it is created empty:
 -- epm_raw.budget_entries (konsol's I3; created here as in budget_raw_monthly).
 INSERT INTO epm_gold.budget_annual_input
-  (scenario_id, data_area_id, fiscal_year, main_account, annual_amount, spread_profile_id, submitted_by)
+  (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', -1200, 'ZZ_ONE', 'zz'),
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', -100, 'ZZ_ONE', 'zz');
+  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', 'base', 'USD', -1200, 'ZZ_ONE', 'zz'),
+  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', 'base', 'USD', -100, 'ZZ_ONE', 'zz');
 INSERT INTO epm_gold.spread_profiles (profile_id, profile_name, fiscal_period, weight) VALUES
   ('ZZ_ONE', 'ZZ one period', 1, 1);
