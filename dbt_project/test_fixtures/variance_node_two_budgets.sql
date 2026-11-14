@@ -13,7 +13,7 @@
 --   GL voucher ZZV1 (2026-01-15), cost centre ZZCC1: ZZ1000 Dr 1000 | ZZ4000 Cr 1000.
 -- Declared scenarios: ACTUAL (actual), ZZ_PLAN_2026 (budget, active), ZZ_PLAN_2026_B (budget, active),
 --   ZZ_FCST_2026 (forecast, active).
--- Budget Sheet (epm_gold.budget_monthly_input), base layer, FY2026 P1 on ZZ4000, cost centre ZZCC1:
+-- Budget Entry lines (epm_raw.budget_entries, debit/credit, Period movement), base layer, FY2026 P1 on ZZ4000, cost centre ZZCC1:
 --   ZZ_PLAN_2026 -1200 | ZZ_PLAN_2026_B -1100 | ZZ_FCST_2026 -900
 -- Reporting hierarchy ZZH_CC over dim_cost_center: group ZZCCG with leaf ZZCC1.
 -- For each budget scenario the ZZCC1 leaf must carry ZZ1000 actual 1000 and ZZ4000 actual -1000 once, never 2000.
@@ -30,8 +30,6 @@ ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earni
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
-ALTER TABLE epm_gold.budget_monthly_input ADD COLUMN IF NOT EXISTS dim_department String DEFAULT '';
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
@@ -67,12 +65,12 @@ VALUES
   ('ZZ_PLAN_2026', 'ZZ plan 2026', 'budget', 1),
   ('ZZ_PLAN_2026_B', 'ZZ plan 2026 B', 'budget', 1),
   ('ZZ_FCST_2026', 'ZZ forecast 2026', 'forecast', 1);
-INSERT INTO epm_gold.budget_monthly_input
-  (scenario_id, data_area_id, fiscal_year, main_account, dim_cost_center, dim_department, fiscal_period, amount, layer)
+INSERT INTO epm_raw.budget_entries
+  (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 'ZZ4000', 'ZZCC1', '', 1, -1200, 'base'),
-  ('ZZ_PLAN_2026_B', 'ZZE1', 2026, 'ZZ4000', 'ZZCC1', '', 1, -1100, 'base'),
-  ('ZZ_FCST_2026', 'ZZE1', 2026, 'ZZ4000', 'ZZCC1', '', 1, -900, 'base');
+  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1200, 'USD', 'Period movement', 'ZZCC1', ''),
+  ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_2026_B', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1100, 'USD', 'Period movement', 'ZZCC1', ''),
+  ('ZZ-BE-3', 'ZZ-CY-2026', 'ZZ_FCST_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 900, 'USD', 'Period movement', 'ZZCC1', '');
 INSERT INTO epm_staging.reporting_hierarchies
   (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status)
 VALUES

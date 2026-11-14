@@ -87,7 +87,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
-    LAYERS, copy_project, fixture_dimension_vars, rewrite, run_dbt, split_sql,
+    FIXTURE_DIMENSIONS, LAYERS, budget_dimension_columns, copy_project, fixture_dimension_vars, rewrite,
+    run_dbt, split_sql,
 )
 
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
@@ -201,6 +202,34 @@ def epm_tables(client):
     return {f"{d}.{n}": e for d, n, e in rows}
 
 
+INIT_DB = os.path.join(REPO, "clickhouse", "init-db.sql")
+CREATE_RE = re.compile(r"\s*CREATE TABLE IF NOT EXISTS (epm_(?:%s)\.[A-Za-z0-9_]+)" % "|".join(LAYERS))
+
+
+def init_db_tables():
+    """{'epm_raw.budget_entries': CREATE statement} for every table init-db.sql declares."""
+    with open(INIT_DB, encoding="utf-8") as f:
+        stmts = split_sql(f.read())
+    return {m.group(1): s for s in stmts if (m := CREATE_RE.match(s))}
+
+
+def missing_table_statements(wanted, have, prefix):
+    """CREATE statements, as <prefix>_*, for wanted tables init-db.sql declares and the stack lacks.
+
+    A stack older than init-db.sql (konsol's budget_entries, say) has no table to
+    clone; the one definition is init-db.sql, so fixtures do not carry a copy."""
+    ddl = init_db_tables()
+    return [rewrite(ddl[n], prefix) for n in sorted(wanted) if n not in have and n in ddl]
+
+
+def scratch_dimension_columns(scratch_tables):
+    """The fixtures' budget dimension columns, for the budget tables present in the scratch schema.
+
+    Reuses tb_only_first_build.budget_dimension_columns (what konsol ALTERs on a site)."""
+    return [s for s in budget_dimension_columns(FIXTURE_DIMENSIONS, PREFIX)
+            if any(s.startswith(f"ALTER TABLE {t} ") for t in scratch_tables)]
+
+
 def clone_empty(client, epm_name, engine):
     zzg_name = rewrite(epm_name, PREFIX)
     if engine in ("View", "MaterializedView"):
@@ -258,6 +287,11 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir, dim_vars=DIM
     for name in sorted(wanted):
         if name in tables:
             clone_empty(client, name, tables[name])
+    for stmt in missing_table_statements(wanted, tables, PREFIX):
+        client.command(stmt)
+    present = {rewrite(n, PREFIX) for n in wanted if n in tables or n in init_db_tables()}
+    for stmt in scratch_dimension_columns(present):
+        client.command(stmt)
 
     loaded = []
     for stmt in split_sql(rewrite(s["text"], PREFIX)):
