@@ -340,7 +340,14 @@ models:
       - name: variance_pct
         description: "Variance as percentage of budget"
       - name: variance_favorable
-        description: "True if variance is favorable (revenue up or expense down)"
+        description: >
+          True when the variance is favourable by the account's normal balance
+          (konsol#348 S3 B13, QB7 a): a credit-normal account when the actual is
+          more credit than the budget, a debit-normal account when it is less
+          debit; on amounts signed debit - credit both mean the actual is below
+          the budget. False with no budget, on a balance-sheet account, or when
+          the chart declares no normal balance.
+          assert_variance_favorable_follows_normal_balance checks it.
       - name: budget_scenario_id
         description: >
           The budget-type scenario these rows compare the actuals with
