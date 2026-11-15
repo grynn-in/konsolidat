@@ -16,6 +16,15 @@
 -- either someone gave those documents a dimension (then this test is the place
 -- to record the new decision) or a layer is reading a slice it cannot know.
 --
+-- The NCI attribution ('nci_attribution', gold_nci_attribution_journal) is half
+-- covered. Its result legs inherit the slices of the entity's P&L (option D:
+-- derivable, so inherited; assert_nci_attribution_carries_the_result_slices).
+-- Its 'CTA' line is a share of the same entity-level CTA plug as the 'cta'
+-- layer, so it is blank by the same arithmetic and is asserted here by account.
+-- The CTA part of its NCI line is blank too, but shares the NCI account with
+-- the sliced result part, so it cannot be told apart here; the slice test's
+-- every-slice-nets-to-zero check covers it.
+--
 -- NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'.
 -- Layer 2 legs posted to a non-IC account (the NCI line, a group's
 -- IC-difference account) never match a slice row and correctly land on a blank
@@ -41,7 +50,7 @@ from {{ ref('gold_fully_consolidated_tb') }}
 -- made that layer real, it carries the dimension slice of the P&L it prorates.
 -- gold_business_combination_journal 'acquisition', gold_goodwill_amortisation_journal 'goodwill_amortisation',
 -- gold_business_disposal_journal 'disposal'.
-where adjustment_type in (
+where (adjustment_type in (
         'acquisition', 'goodwill_amortisation', 'disposal',
         -- the CTA, blank by arithmetic: an entity-level residual has no slice
         'cta',
@@ -49,6 +58,8 @@ where adjustment_type in (
         -- Deepak Pai's instruction to settle it): the investor's one-line
         -- pickup does not carry the associate's management dimensions
         'equity_method')
+       -- the NCI attribution's CTA leg, blank by the same arithmetic as 'cta'
+       or (adjustment_type = 'nci_attribution' and main_account = 'CTA'))
   and (
     {%- for d in dims %}
     {{ d.name }} != ''{{ ' or' if not loop.last }}
