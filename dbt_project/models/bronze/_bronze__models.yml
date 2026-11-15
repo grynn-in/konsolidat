@@ -50,12 +50,6 @@ models:
   - name: bronze_exchange_rate_types
     description: "Exchange rate type definitions"
 
-  - name: bronze_budget_register_entries
-    description: "Budget register headers"
-
-  - name: bronze_budget_transaction_lines
-    description: "Budget transaction line items"
-
   - name: bronze_consolidation_account_groups
     description: "Consolidation account group mapping"
 

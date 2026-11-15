@@ -121,12 +121,6 @@ models:
         tests:
           - not_null
 
-  - name: silver_budget_entries
-    description: >
-      Standardized ERP budget lines joined with register headers, put in the
-      declared Regular period that holds the transaction date (konsol#348).
-      Leaves with the ERP budget tables in stage B.
-
   - name: silver_trial_balance
     description: "Trial balance from D365 snapshot entity (validation baseline)"
 
