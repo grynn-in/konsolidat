@@ -58,6 +58,25 @@
     governed_rates join: one definition, so the guard and the translation
     cannot disagree on which rate a period needs.
 #}
+{#
+    konsol#348 S4 (S4-Q1 c, S4-Q7 a; 15 Nov 2026): a governed or historical rate
+    belongs to one Rate Set (rate_set), and the actuals consolidation reads the
+    ONE set flagged is_actuals in epm_staging.rate_sets (konsol's Rate Set
+    doctype, written through). This predicate is how every actuals rate reader
+    says so: the consolidation core (both rate sources), the deal journals, the
+    equity-method journal, governed_rate_gaps() (so the guard and the coverage
+    test judge the same rows the model reads) and every singular test that
+    resolves a rate. `column` is the rate_set column as the caller's query sees
+    it (`rate_set` bare, `g.rate_set` under an alias). With no flagged set it
+    selects nothing, and with two it selects both: the guard below and
+    assert_exactly_one_actuals_rate_set refuse either by count, so neither
+    builds. The consolidated budget passes its Cycle's set instead
+    (budget_cycles.rate_set), never this.
+#}
+{% macro actuals_rate_set_predicate(column='rate_set') -%}
+{{ column }} in (select rate_set from {{ source('epm_staging', 'rate_sets') }} where is_actuals = 1)
+{%- endmacro %}
+
 {% macro rate_period_map() %}
     (
         select
