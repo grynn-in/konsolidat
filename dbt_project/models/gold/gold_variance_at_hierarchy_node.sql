@@ -1,7 +1,7 @@
 {{
     config(
         engine=cluster_engine('MergeTree()'),
-        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account)',
+        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account, budget_scenario_id, currency)',
         cluster=cluster_name()
     )
 }}
@@ -17,7 +17,10 @@
    a period the calendar does not declare drops out of this model (an inner join), silently:
    assert_hierarchy_node_period_declared cannot see it (it reads the same declared keys) and is only a pin
    against a change here; the guards are upstream, where the row is kept: assert_trial_balance_period_declared
-   for the actuals and assert_budget_period_declared for the budget. #}
+   for the actuals and assert_budget_period_declared for the budget.
+
+   konsol#348 S3 B11 (QB3 a): the rollup carries gold_variance_analysis' `currency` (B8) and groups by it, so
+   a node never sums amounts in two currencies; assert_variance_node_single_currency names a node in two. #}
 
 with variance_long as (
     {{ variance_dimension_long_sql('v') }}
@@ -78,6 +81,7 @@ select
     v.fiscal_period,
     v.main_account,
     v.budget_scenario_id,
+    v.currency,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}{{ ',' if get_budget_dimensions() | length > 0 }}
@@ -102,7 +106,8 @@ group by
     v.fiscal_year,
     v.fiscal_period,
     v.main_account,
-    v.budget_scenario_id
+    v.budget_scenario_id,
+    v.currency
     {{- ',' if get_budget_dimensions() | length > 0 }}
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', v.{{ d.name }}){{ ',' if not loop.last }}
