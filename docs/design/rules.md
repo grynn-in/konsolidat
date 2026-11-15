@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **172** |
-| carrying their reasoning | 151 |
-| citing the issue that caused them | 145 |
+| assertions | **176** |
+| carrying their reasoning | 155 |
+| citing the issue that caused them | 149 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 150 |
+| severity `error` (stops the build, and its children) | 154 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,14 +25,14 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 27
+- [Currency and translation](#currency-and-translation) — 32
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -226,6 +226,14 @@ konsol refuses an Annual Input or a Budget Entry line whose currency is not the 
 
 <sub>`error` · `tests/assert_budget_currency_is_entity_currency.sql` · konsol#110 konsol#348</sub>
 
+### `budget_node_per_cycle_and_currency`
+
+**konsol#348 S3 B11 (QB2 a, QB3 a;**
+
+decided 14 Nov 2026 under Deepak Pai's standing rule): the budget rollup to a reporting hierarchy node keeps every Budget Cycle and every currency apart. gold_spread_budget carries `cycle` (B4) and `currency` (B4, B7): a forecast scenario holds one approved Cycle per round, and rounds must never sum; a budget line is in its entity's accounting currency, and amounts in two currencies must never sum. gold_budget_at_hierarchy_node therefore carries both and groups by both, as gold_tb_at_hierarchy_node carries every column of its row grain (gold_trial_balance has no currency; the entity's is one, so grouping by it never splits a row). Checked at the leaves. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's period_amount per (scenario, cycle, currency, entity, year, period, account, layer) must equal the fact's over the rows whose dimension value is a leaf of that hierarchy. A node model without the cycle (or currency) column is compared on the rest of the key, so each round's fact rows meet the node's sum across rounds and the test fails rather than errors: two rounds of -100 and -110 against one node row of -210. konsolidat#220: a code may be a leaf in several dated tranches. A fact row matches only the leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not declare drops out of both sides, QA3 a). Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them. One row per mismatched key; error severity. Fixtures: dbt_project/test_fixtures/budget_node_two_rounds.sql.
+
+<sub>`error` · `tests/assert_budget_node_per_cycle_and_currency.sql` · konsol#348 konsolidat#220</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -387,6 +395,38 @@ konsolidat#257: a balance sheet key declared at closing also carries its retrans
 Two failure modes, both of which silently misstate translated balances: 1. translation_rate = 0  — a LEFT-join miss defaulted the rate column to 0 (join_use_nulls=0) and the entity's translated/group/nci amounts collapse to $0. (The original #109.) 2. translation_rate IS NULL — defensive: a Nullable rate that escaped every rate branch would evade a bare `= 0` check (NULL = 0 -> NULL). A cross-currency row translating at exactly 1.0 is NOT a failure (#194): near-parity pairs are quoted to 3 decimals, so 1.000 is a legitimate approved rate. The model has no parity fallback — a translated currency with no approved rate stops the build (throwIf in gold_consolidated_trial_balance) before this test runs — so 1.0 here can only be a real quote. A green result means every entity/period translated with a resolved rate.
 
 <sub>`error (default)` · `tests/assert_translation_rate_resolved.sql` · konsolidat#109 konsolidat#194</sub>
+
+### `variance_node_single_currency`
+
+**konsol#348 S3 B11 (QB3 a): gold_variance_at_hierarchy_node carries the currency of gold_variance_analysis (B8) through the rollup and groups by it, so a node never sums amounts in two currencies.**
+
+Every (hierarchy, node, entity, year, period, account, budget dims, budget_scenario_id) holds one currency; a node in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream and assert_variance_single_currency names at the variance grain. One row per node key in two currencies; error severity. Fixtures: dbt_project/test_fixtures/variance_node_two_budgets.sql (pass), variance_node_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_node_single_currency.sql` · konsol#348</sub>
+
+### `variance_quarterly_single_currency`
+
+**konsol#348 S3 B10 (QB3 a): gold_variance_quarterly compares like with like.**
+
+Every (entity, year, quarter, account, budget dims, budget_scenario_id) grain holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_quarterly_single_currency.sql` · konsol#348</sub>
+
+### `variance_single_currency`
+
+**konsol#348 S3 B8 (QB3 a): gold_variance_analysis compares like with like.**
+
+Every (entity, year, period, account, budget dims, budget_scenario_id) grain holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_single_currency.sql` · konsol#348</sub>
+
+### `variance_ytd_single_currency`
+
+**konsol#348 S3 B9 (QB3 a): gold_variance_ytd compares like with like.**
+
+Every (entity, year, period, account, budget dims, budget_scenario_id) running total holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_ytd_single_currency.sql` · konsol#348</sub>
 
 ---
 
@@ -1058,18 +1098,6 @@ Every weight row of a run must equal a value of the named statistic at value_per
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weights_have_driver_values.sql` · konsol#269</sub>
 
-### `favorable_expense`
-
-**PRD-7 Test: Expense accounts where actual < budget should be marked favorable**
-
-<sub>`error (default)` · `tests/assert_favorable_expense.sql` · konsol#182</sub>
-
-### `favorable_revenue`
-
-**PRD-7 Test: Revenue accounts where actual > budget should be marked favorable**
-
-<sub>`error (default)` · `tests/assert_favorable_revenue.sql` · konsol#182</sub>
-
 ### `scenario_rows_declared`
 
 **PR #211 review 2 (konsolidat#206): the scenarios of gold_scenario_trial_balance are declared.**
@@ -1115,6 +1143,14 @@ A variance row that pairs a budget scenario with a (data_area_id, fiscal_year) w
 A model that does not yet carry budget_scenario_id covers no scenario, so the test fails on it rather than erroring. PR #211 review 4: and each budget scenario carries every actual grain of the (data_area_id, fiscal_year)s it budgets exactly once, with the actual amount of that grain (the running total to date in gold_variance_ytd): a model that repeats or sums the actuals across budget scenarios, or drops them, fails. The grain is the model's own: entity, fiscal year, period (fiscal_quarter in gold_variance_quarterly, through gold_period_hierarchy as the model maps it), main account and the budget dimensions. One row per problem: uncovered_scenario - a (model, budget scenario) with no variance rows; actual_not_once    - a (model, budget scenario, actual grain) with no row or more than one; actual_amount      - the grain's row carries another actual amount.
 
 <sub>`error (default)` · `tests/assert_variance_covers_budget_scenarios.sql` · konsolidat#206 konsolidat#211</sub>
+
+### `variance_favorable_follows_normal_balance`
+
+**konsol#348 S3 B13 (QB7 a, BUD-7-a;**
+
+decided 14 Nov 2026 under Deepak Pai's standing rule): a variance is favourable by the account's normal balance, read from the chart (silver_main_accounts.normal_balance, konsol's Main Account), on amounts signed debit - credit (QB6 a). A credit-normal account (revenue) is favourable when the actual is more credit than the budget: its signed actual is below its signed budget (-1,200 against -1,000). A debit-normal account (expense) is favourable when the actual is less debit than the budget: again below it (900 against 1,000; 1,200 against 1,000 is not). Under debit-positive signs both read "actual below budget"; they are spelled out so the rule reads in accounting terms. No favourable direction, so never favourable: a row with no budget, a balance-sheet account, and an account whose normal balance is not declared or not in the chart. The retired assert_favorable_revenue restated the model's own rule ("Revenue and actual > budget") against the model's own columns, so it passed while the model marked less revenue as favourable (the sign was the wrong way round). This test derives the expectation from the chart and the amounts, not from the model's account_type_name or flag, and its fixtures hold hand-computed rows: revenue 1,200 actual against 1,000 budget is favourable; expense 1,200 against 1,000 is not. One row per variance row whose flag differs; error severity. Fixtures: dbt_project/test_fixtures/variance_favorable_signed.sql (build, pass), assert_variance_favorable_follows_normal_balance.sql (pass), .must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_favorable_follows_normal_balance.sql` · konsol#348</sub>
 
 ---
 
