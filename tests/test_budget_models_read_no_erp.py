@@ -40,6 +40,17 @@ ALLOWED_BRONZE = {"bronze_trial_balance_submissions"}
 FORBIDDEN_MODELS = {"silver_budget_entries"}
 ERP_SOURCES = {"d365_raw", "erpnext_raw"}
 
+# B2 (QB1 b): the ERP budget models are deleted, not only unread. A model file
+# matching one of these, or a source table declared under one of these names,
+# would be the ERP budget path coming back.
+DELETED_MODEL_PATTERNS = (
+    re.compile(r"^silver_budget_entries$"),
+    re.compile(r"^bronze_budget_"),
+    re.compile(r"^stg_.*budget"),
+)
+DELETED_SOURCE_TABLES = {("d365_raw", "budget_register_entries"), ("erpnext_raw", "budget")}
+SOURCE_YML_NAME = re.compile(r"^\s*-\s*name:\s*(\S+)\s*$")
+
 REF = re.compile(r"ref\(\s*['\"]([^'\"]+)['\"]\s*\)")
 SOURCE = re.compile(r"source\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)")
 
@@ -94,6 +105,30 @@ class BudgetModelsReadNoErp(unittest.TestCase):
         self.assertEqual(
             hits, {}, f"budget/variance models reach ERP models (stg_*, bronze_*, silver_budget_entries): {hits}"
         )
+
+    def test_erp_budget_models_are_deleted(self):
+        present = sorted(m for m in self.models if any(p.search(m) for p in DELETED_MODEL_PATTERNS))
+        self.assertEqual(present, [], f"ERP budget models still under {MODELS}: {present}")
+
+    def test_erp_budget_sources_are_not_declared(self):
+        declared = set()
+        for dirpath, _dirs, files in os.walk(MODELS):
+            for name in files:
+                if not name.endswith((".yml", ".yaml")):
+                    continue
+                source = None
+                with open(os.path.join(dirpath, name), errors="replace") as f:
+                    for line in f:
+                        m = SOURCE_YML_NAME.match(line)
+                        if not m:
+                            continue
+                        indent = len(line) - len(line.lstrip())
+                        if indent <= 2:
+                            source = m.group(1)   # a `sources:` entry
+                        elif source:
+                            declared.add((source, m.group(1)))   # one of its tables
+        still = sorted(declared & DELETED_SOURCE_TABLES)
+        self.assertEqual(still, [], f"ERP budget source tables still declared: {still}")
 
     def test_no_start_model_reaches_an_erp_source(self):
         hits = {}
