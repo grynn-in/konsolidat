@@ -1,5 +1,6 @@
--- gate: build +gold_variance_analysis +assert_variance_covers_budget_scenarios
+-- gate: build +gold_variance_analysis +assert_variance_covers_budget_scenarios assert_variance_single_currency
 -- gate: expect assert_variance_covers_budget_scenarios pass
+-- gate: expect assert_variance_single_currency pass
 -- konsolidat#206: variance compares actuals with every active budget-type scenario, chosen by its declared
 -- scenario_type (epm_gold.scenario_definitions), not by a scenario code.
 -- `+gold_variance_analysis assert_variance_covers_budget_scenarios` must BUILD and PASS on these rows.
@@ -9,7 +10,8 @@
 -- Budget Entry lines (epm_raw.budget_entries, debit/credit, Period movement), base layer, FY2026 P1 on ZZ4000:
 --   ZZ_PLAN_2026 -1200 | ZZ_FCST_2026 -900
 -- gold_variance_analysis must carry variance rows for ZZ_PLAN_2026 (its budget_scenario_id); the forecast is not
--- a budget and is not compared.
+-- a budget and is not compared. Both sides are USD, so every grain holds one currency and
+-- assert_variance_single_currency (konsol#348 S3 B8) passes.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
 -- (empty): epm_raw.budget_register_entries, epm_raw.fiscal_calendar_years,
