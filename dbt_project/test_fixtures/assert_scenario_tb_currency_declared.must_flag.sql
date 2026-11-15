@@ -1,15 +1,19 @@
--- gate: build +gold_scenario_trial_balance assert_scenario_tb_currency_declared
+-- gate: build +gold_scenario_trial_balance assert_scenario_tb_currency_declared --exclude assert_every_tb_entity_has_a_currency
 -- gate: expect assert_scenario_tb_currency_declared flag 1
--- konsol#348 S3 B6 (QB3 a): a GL row whose entity declares no currency is named. Same rows as
+-- konsol#348 S3 B6 (QB3 a): a GL row whose entity declares no currency is named. The trial balance of
 -- assert_scenario_tb_currency_declared.sql, but epm_staging.entities holds no row for ZZE1, so
 -- silver_entity_currencies has no currency for it and the GL branch's LEFT JOIN fills '' (join_use_nulls=0).
--- Exactly 1 result: (ZZ_ACT, ZZE1, gl). The budget row carries 'USD' from its line and is not named.
+-- Exactly 1 result: (ZZ_ACT, ZZE1, gl). No budget line: the GL branch is the one under test.
 -- A model that dropped the unmatched entity instead would lose its trial balance from the scenario fact;
--- this test, with assert_every_tb_entity_has_a_currency, keeps the row and names it.
+-- this test keeps the row and names it.
+--
+-- assert_every_tb_entity_has_a_currency (error) names the same entity upstream, and `dbt build` would then
+-- SKIP the scenario TB and this test with it; it is excluded so this fixture judges its own test only (its
+-- own fixtures prove it). Nothing else is excluded.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_staging.entities, epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles,
--- epm_staging.dimension_mappings.
+-- (empty): epm_staging.entities, epm_raw.budget_entries, epm_gold.budget_annual_input,
+-- epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles, epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns, and
 -- the live annual table may predate `cycle` (B3w): add them to the scratch clones first.
@@ -39,9 +43,4 @@ VALUES
 INSERT INTO epm_gold.scenario_definitions
   (scenario_id, scenario_name, scenario_type, is_active)
 VALUES
-  ('ZZ_ACT', 'ZZ actual', 'actual', 1),
-  ('ZZ_B26', 'ZZ budget 2026', 'budget', 1);
-INSERT INTO epm_raw.budget_entries
-  (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
-VALUES
-  ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_B26', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1200, 'USD', 'Period movement', '', '');
+  ('ZZ_ACT', 'ZZ actual', 'actual', 1);

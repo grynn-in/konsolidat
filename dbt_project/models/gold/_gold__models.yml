@@ -277,6 +277,12 @@ models:
       - name: data_area_id
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency the row is in (konsol#348 S3 B6, QB3 a): the entity's
+          accounting currency (silver_entity_currencies) on the GL branch, the
+          fact's currency on the budget branch. '' only for an entity that declares
+          no currency, which assert_scenario_tb_currency_declared (error) names.
       - name: amount
         description: "Period amount for the scenario"
 

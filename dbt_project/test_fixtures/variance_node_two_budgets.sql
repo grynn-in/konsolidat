@@ -33,6 +33,13 @@ ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earni
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
+-- konsol#348 S3 B6: gold_scenario_trial_balance now carries the entity's accounting currency from
+-- silver_entity_currencies (epm_staging.entities), and the build runs assert_every_tb_entity_has_a_currency
+-- and assert_budget_currency_is_entity_currency on the way, so the entity declares its currency, as on a site.
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
+VALUES
+  ('ZZE1', 'ZZ entity 1', '', 0, 'Published', 'USD', 'US', '');
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES
