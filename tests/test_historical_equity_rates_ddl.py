@@ -24,7 +24,8 @@ import unittest
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INIT_DB = os.path.join(PROJECT_ROOT, "clickhouse", "init-db.sql")
-MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "models", "gold", "gold_consolidated_trial_balance.sql")
+# konsol#348 S4 (W3): the ASOF join is in the consolidation core the model calls.
+MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "macros", "consolidation_core.sql")
 SOURCES = os.path.join(PROJECT_ROOT, "dbt_project", "models", "staging", "_staging__sources.yml")
 WORKFLOW = os.path.join(PROJECT_ROOT, ".github", "workflows", "dbt-checks.yml")
 FIXTURE_DIRS = (

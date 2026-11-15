@@ -24,15 +24,15 @@
 {%- set lead = ['consolidation_group', 'data_area_id', 'fiscal_year', 'fiscal_period', 'main_account',
                 'account_name', 'account_type_name', 'is_balance_sheet', 'is_pnl', 'is_equity',
                 'partner_data_area_id'] -%}
-{%- set dim_names = [] -%}
-{%- for d in get_dimensions() %}{% do dim_names.append(d.name) %}{% endfor -%}
+{%- set dimension_names = [] -%}
+{%- for d in get_dimensions() %}{% do dimension_names.append(d.name) %}{% endfor -%}
 {%- set exact_tail = ['local_amount', 'accounting_currency', 'reporting_currency', 'consolidation_method',
                       'uses_historical_rate', 'fx_method', 'is_retained_earnings', 'is_year_end_close',
                       'is_filler'] -%}
 {%- set rounded = ['ownership_pct', 'closing_rate', 'average_rate', 'historical_equity_rate',
                    'translation_rate', 'translation_adjustment', 'translated_amount', 'group_amount',
                    'nci_amount'] -%}
-{%- set key = lead + dim_names + ['zz_layer'] + exact_tail -%}
+{%- set key = lead + dimension_names + ['zz_layer'] + exact_tail -%}
 {#- r_<column>: a fresh alias, as an alias equal to a column name is a cyclic alias in ClickHouse -#}
 {%- set rounded_exprs = [] -%}
 {%- set rounded_names = [] -%}

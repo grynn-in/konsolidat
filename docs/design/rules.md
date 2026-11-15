@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **177** |
-| carrying their reasoning | 156 |
-| citing the issue that caused them | 150 |
+| assertions | **178** |
+| carrying their reasoning | 157 |
+| citing the issue that caused them | 151 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 155 |
+| severity `error` (stops the build, and its children) | 156 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -35,7 +35,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 15
+- [Platform and data integrity](#platform-and-data-integrity) — 16
 - [Other](#other) — 4
 
 ---
@@ -1281,6 +1281,14 @@ Key a line by (consolidation_group, journal_id, data_area_id, main_account); sum
 toDecimal128(Float64, scale) truncates toward zero on the binary double, which is usually a hair below the decimal the value was entered as (e.g. 0.29 becomes 0.28). Summed over a trial-balance batch, balanced raw batches arrive unbalanced in bronze (konsolidat#191). A float *sum* (e.g. two submitted amounts added together, as gold_scenario_trial_balance.sql does) has the same problem even after the text-route fix, because the shortest text form of the sum itself can sit a hair below the cent (0.7 + 0.1 = 0.7999999999999999) — the macro now rounds to the target scale before the text step so this casts exactly too. Cases: an ordinary two-decimal amount, a large amount from the reported batch (177,485,814.95), a negative amount, a Nullable(Float64) input (assumeNotNull must still work through toString), a float sum whose binary result is a hair short of the cent, a very small value at scale 12 (the exchange-rate caller's scale), and #256's cases at the TB amount scale, amount_scale(): a three-decimal amount (BHD, KWD), a four-decimal one, and a three-decimal float sum. At scale 2 each of the last three loses a digit and is listed. Depends on bronze_trial_balance_submissions (not read otherwise) purely so CI's indirect test selection picks this test up whenever that model is selected — see dbt_project/tests/assert_ic_difference_account_in_chart.sql for the same pattern. bronze_trial_balance_submissions feeds silver_gl_entries -> gold_trial_balance_by_partner -> gold_consolidated_trial_balance, which is in tb_only_first_build.py's MUST_CREATE, so `dbt build --select @silver_main_accounts` (the tb-only-first-build CI job) now selects this test too.
 
 <sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191 konsolidat#256</sub>
+
+### `consolidation_core_grain_extra_is_a_partition`
+
+**konsol#348 S4 (W3): consolidation_core()'s grain_extra columns are a pure partition.**
+
+The consolidation core (macros/consolidation_core.sql) takes `grain_extra`, the key columns a caller adds to the consolidation grain beyond (group, entity, period, account, partner, dimensions): the budget model passes scenario_id, cycle and layer; the actuals model passes none. Each value of such a column must be a consolidation of its own: the same rows run under two layers must give, per layer, exactly the rows they give alone. If any one select, group by, join or window partition inside the core lacks the extra grain, two layers of one key telescope into each other without an error: the retranslation window sums both layers' balances, a filler for one layer hides the other's row, the year-end close credits retained earnings with both layers' results. The plan for S4 lists the windows at risk (key_before, key_all, key_year_before, close_period) and the retranslated_keys group by. This test runs the core twice on the partner trial balance: once as the actuals model does (no extra grain), once on the same rows duplicated under zz_layer 'ZZA' and 'ZZB' with grain_extra=['zz_layer']. The second must equal the first under each layer: a multiset diff (UNION ALL + GROUP BY with +1/-1 signs; never count() over EXCEPT, konsolidat#361) names any row that differs. Float columns are rounded to 6 places: `sum() over close_period` adds its rows in pipeline order, so the last binary digit may differ between two runs; a telescoped layer differs by the size of a balance. The test calls the macro directly, so it needs no model of its own and the fixture (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's inputs only: a retranslated balance, a year-end close and a historical tranche. Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or -1 (produced, not expected).
+
+<sub>`error (default)` · `tests/assert_consolidation_core_grain_extra_is_a_partition.sql` · konsol#348 konsolidat#361</sub>
 
 ### `d365_gl_vouchers_balance`
 
