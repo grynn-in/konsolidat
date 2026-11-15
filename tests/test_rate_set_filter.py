@@ -22,6 +22,7 @@ Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_rate_set_filter`.
 """
 import glob
+import importlib.util
 import os
 import re
 import unittest
@@ -32,6 +33,12 @@ WORKFLOW = os.path.join(PROJECT_ROOT, ".github", "workflows", "dbt-checks.yml")
 GOVERNED_RATES = os.path.join(DBT, "macros", "governed_rates.sql")
 CORE = os.path.join(DBT, "macros", "consolidation_core.sql")
 CTB = os.path.join(DBT, "models", "gold", "gold_consolidated_trial_balance.sql")
+SET_COUNT_TEST = os.path.join(DBT, "tests", "assert_exactly_one_actuals_rate_set.sql")
+FIXTURES = os.path.join(DBT, "test_fixtures")
+GATE = os.path.join(PROJECT_ROOT, "scripts", "fixture_gate.py")
+TB = "epm_gold.gold_trial_balance"
+RATE_SETS = "epm_staging.rate_sets"
+TB_COUNT = re.compile(r"\(\s*select count\(\) from \{\{ ref\('gold_trial_balance'\) \}\}\s*\) > 0")
 
 RATE_SOURCE = re.compile(r"source\(\s*'epm_staging'\s*,\s*'(group_exchange_rates|historical_equity_rates)'\s*\)")
 PREDICATE = re.compile(r"actuals_rate_set_predicate\(|rate_set_predicate")
@@ -108,6 +115,74 @@ class RateSetFilter(unittest.TestCase):
         self.assertIn("python -m unittest -v tests.test_rate_set_filter", wf)
         self.assertEqual(wf.count("- 'tests/test_rate_set_filter.py'"), 2,
                          "list this test under both the push and pull_request path filters")
+
+
+def _inserts_into(sql, table):
+    sql = re.sub(r"--[^\n]*", "", sql)
+    return re.search(r"INSERT\s+INTO\s+" + re.escape(table) + r"\b", sql, flags=re.I) is not None
+
+
+def _macro(macros, name):
+    body = macros[macros.index("{% macro " + name + "("):]
+    return body[:body.index("{% endmacro %}")]
+
+
+class SetCountRuleNeedsATrialBalance(unittest.TestCase):
+    """konsol#348 S4 review (konsolidat#365): on a fresh stack reconcile_all is
+    an RQ job, so the first dbt build can run before epm_staging.rate_sets is
+    filled. With no trial balance there is nothing a silent merge of two sets
+    could affect, so the set-count rule applies only when gold_trial_balance
+    has rows: the guard, fx_precheck's FX_ACTUALS_SETS line and the ERROR test
+    all read the count. With a TB, zero or two sets still refuse."""
+
+    def test_the_error_test_passes_on_an_empty_trial_balance(self):
+        sql = _read(SET_COUNT_TEST)
+        self.assertIn("{{ ref('gold_trial_balance') }}", sql)
+        having = sql[sql.index("having"):]
+        self.assertIn("countIf(is_actuals = 1) != 1", having)
+        self.assertRegex(having, TB_COUNT, "the HAVING gates the count on the TB having rows")
+
+    def test_the_guard_refuses_by_count_only_with_a_trial_balance(self):
+        guard = _macro(_read(GOVERNED_RATES), "governed_rate_guard")
+        self.assertIn("{{ ref('gold_trial_balance') }}", guard)
+        self.assertRegex(guard, r"count\(\) > 0 as has_tb")
+        self.assertRegex(guard, r"where n > 0 or \(n_sets != 1 and has_tb\)")
+
+    def test_the_precheck_reports_the_set_count_only_with_a_trial_balance(self):
+        precheck = _macro(_read(GOVERNED_RATES), "fx_precheck")
+        sets_line = precheck[precheck.index("FX_ACTUALS_SETS "):precheck.index("union all")]
+        self.assertRegex(sets_line, TB_COUNT)
+        # nothing built at all (no TB relation) is still FX_NOTHING_BUILT, before any count
+        self.assertLess(precheck.index("'FX_NOTHING_BUILT'"), precheck.index("FX_ACTUALS_SETS "))
+
+    def test_the_empty_stack_fixture_builds_and_passes_with_no_tb_and_no_set(self):
+        path = os.path.join(FIXTURES, "assert_exactly_one_actuals_rate_set.empty_stack.sql")
+        self.assertTrue(os.path.exists(path), "the fresh-stack fixture exists")
+        sql = _read(path)
+        spec = importlib.util.spec_from_file_location("fixture_gate", GATE)
+        gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gate)
+        s = gate.spec(path)
+        self.assertEqual(s["mode"], "build")
+        self.assertIn("gold_consolidated_trial_balance", s["selector"])
+        self.assertIn("assert_exactly_one_actuals_rate_set", s["selector"])
+        self.assertIn(("gold_consolidated_trial_balance", "built", None), s["expect"])
+        self.assertIn(("assert_exactly_one_actuals_rate_set", "pass", None), s["expect"])
+        self.assertIsNone(s["refuse"])
+        for table in (TB, RATE_SETS):
+            self.assertIn(table, sql, f"{table} is named, so the gate creates it empty")
+            self.assertFalse(_inserts_into(sql, table), f"{table} stays empty")
+        self.assertTrue(_inserts_into(sql, "epm_gold.gold_entity_ownership"), "the stack has its structure")
+
+    def test_the_fixtures_that_flag_or_refuse_hold_a_trial_balance(self):
+        """Without rows in gold_trial_balance the count rule is off, so a
+        flagging fixture that seeded only Rate Sets would now pass for the
+        wrong reason; the passing fixture holds one too, so it proves the pass."""
+        for name in ("assert_exactly_one_actuals_rate_set.sql",
+                     "assert_exactly_one_actuals_rate_set.none.must_flag.sql",
+                     "assert_exactly_one_actuals_rate_set.two.must_flag.sql",
+                     "assert_exactly_one_actuals_rate_set.guard_refuses.must_flag.sql"):
+            self.assertTrue(_inserts_into(_read(os.path.join(FIXTURES, name)), TB), name)
 
 
 if __name__ == "__main__":
