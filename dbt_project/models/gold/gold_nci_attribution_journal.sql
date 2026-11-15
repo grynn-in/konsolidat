@@ -121,7 +121,8 @@ result as (
         data_area_id,
         fiscal_year,
         fiscal_period,
-        sum(slice_share) as result_share
+        sum(slice_share) as result_share,
+        max(abs(slice_share)) as max_slice_share
     from result_slices
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
 ),
@@ -163,7 +164,10 @@ shares as (
         and c.data_area_id = s.data_area_id
         and c.fiscal_year = s.fiscal_year
         and c.fiscal_period = s.fiscal_period
-    where abs(r.result_share) > 0.000001 or abs((1.0 - s.ownership_pct) * c.cta_amount) > 0.000001
+    {# F6 (PR #260 review): the result filter reads the largest SLICE share, not
+       the entity total. A result netting to 0 across slices (+50 / -50) is
+       still two slices to attribute. #}
+    where r.max_slice_share > 0.000001 or abs((1.0 - s.ownership_pct) * c.cta_amount) > 0.000001
 ),
 
 group_nci as (
