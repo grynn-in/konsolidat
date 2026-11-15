@@ -269,20 +269,26 @@ models:
         description: >
           On the GL branch (data_source 'gl') the one active scenario declared
           with scenario_type 'actual' in epm_gold.scenario_definitions ('ACTUAL'
-          when none or several are declared), 'BUDGET' on the D365
-          budget branch ('d365_budget'), and konsol's own scenario ids on the
-          gold_spread_budget branch ('budget'). The variance models keep only
-          active scenarios declared in epm_gold.scenario_definitions with the
-          matching scenario_type, so assert_scenario_rows_declared (error) names
-          every (scenario_id, data_source) here that is undeclared, inactive, or
-          of the wrong type (gl needs actual; budget and d365_budget need budget
-          or forecast), rather than letting its rows drop out of variance
-          (PR #211 review 2).
+          when none or several are declared), and konsol's own scenario ids on
+          the gold_spread_budget branch ('budget'). The ERP budget branch
+          ('d365_budget') is gone (konsol#348 S3, QB1 b). The variance models
+          keep only active scenarios declared in epm_gold.scenario_definitions
+          with the matching scenario_type, so assert_scenario_rows_declared
+          (error) names every (scenario_id, data_source) here that is
+          undeclared, inactive, or of the wrong type (gl needs actual; budget
+          needs budget or forecast), rather than letting its rows drop out of
+          variance (PR #211 review 2).
         tests:
           - not_null
       - name: data_area_id
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency the row is in (konsol#348 S3 B6, QB3 a): the entity's
+          accounting currency (silver_entity_currencies) on the GL branch, the
+          fact's currency on the budget branch. '' only for an entity that declares
+          no currency, which assert_scenario_tb_currency_declared (error) names.
       - name: amount
         description: "Period amount for the scenario"
 
@@ -328,12 +334,26 @@ models:
       - name: main_account
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain (konsol#348 S3 B8, QB3 a):
+          the actuals' is the entity's accounting currency, a budget's is its
+          line's (gold_scenario_trial_balance). A budget in another currency than
+          the actuals comes out as its own row with actual 0, never netted;
+          assert_variance_single_currency (error) names such a grain.
       - name: variance_abs
         description: "actual_amount - budget_amount"
       - name: variance_pct
         description: "Variance as percentage of budget"
       - name: variance_favorable
-        description: "True if variance is favorable (revenue up or expense down)"
+        description: >
+          True when the variance is favourable by the account's normal balance
+          (konsol#348 S3 B13, QB7 a): a credit-normal account when the actual is
+          more credit than the budget, a debit-normal account when it is less
+          debit; on amounts signed debit - credit both mean the actual is below
+          the budget. False with no budget, on a balance-sheet account, or when
+          the chart declares no normal balance.
+          assert_variance_favorable_follows_normal_balance checks it.
       - name: budget_scenario_id
         description: >
           The budget-type scenario these rows compare the actuals with
@@ -347,13 +367,31 @@ models:
           gold_variance_quarterly and in gold_variance_ytd.
 
   - name: gold_spread_budget
-    description: "Canonical monthly budget fact: annual spread + manual monthly, one row per budget layer (base/challenge/management/board). The final budget is the sum of layers."
+    description: >
+      Canonical monthly budget fact: annual spread + manual monthly, one row per
+      (scenario, cycle, entity, year, period, account, budget dims, layer). One row
+      per budget layer (base/challenge/management/board): the final budget is the
+      sum of layers. One row per Budget Cycle (konsol#348 S3 B4): a forecast round
+      is its own approved Cycle, and rounds are never summed here; the reader picks
+      the round.
     columns:
       - name: scenario_id
         tests:
           - not_null
+      - name: cycle
+        description: >
+          The Budget Cycle the line was entered under (epm_raw.budget_entries.cycle,
+          epm_gold.budget_annual_input.cycle). Part of the grain: two forecast rounds
+          on one (scenario, year) are two sets of rows (QB2 a, Q23 a);
+          assert_budget_fact_per_cycle is the backstop. No not_null test: the
+          column is a non-Nullable String, so one could never fail.
       - name: layer
         description: "Budget layer: base / challenge / management / board"
+      - name: currency
+        description: >
+          The currency the line declares (QB3 a). konsol refuses a line that is not
+          in the entity's accounting currency; assert_budget_currency_is_entity_currency
+          is the warehouse backstop.
       - name: period_amount
         description: "annual_amount * period_weight"
 
@@ -404,6 +442,11 @@ models:
       - name: main_account
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain and of the running-total
+          partition (konsol#348 S3 B9, QB3 a); as on gold_variance_analysis.
+          assert_variance_ytd_single_currency (error) names a grain in two.
       - name: ytd_actual
         description: "Year-to-date actual amount"
       - name: ytd_budget
@@ -421,6 +464,11 @@ models:
       - name: fiscal_quarter
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain (konsol#348 S3 B10, QB3 a);
+          as on gold_variance_analysis. assert_variance_quarterly_single_currency
+          (error) names a grain in two.
       - name: budget_amount
         description: "Quarter budget amount for budget_scenario_id; null where that scenario has no line for the grain"
       - name: budget_scenario_id

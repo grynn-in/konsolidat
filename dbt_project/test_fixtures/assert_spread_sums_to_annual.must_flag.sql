@@ -2,6 +2,9 @@
 -- gate: expect assert_spread_sums_to_annual flag 1
 -- The same annual input (1200, ZZ_PLAN_2026 / ZZE1 / 2026 / ZZ4000) entered twice is spread twice: the
 -- 12 period amounts sum to 2400 against annual_amount 1200, one group with a gap of 1200, so the test must FLAG 1.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES

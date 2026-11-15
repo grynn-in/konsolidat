@@ -5,11 +5,13 @@ does so only inside the `erp_sources` guard. Its `{% else %}` branch returns
 `empty_relation(...)` (macros/erp_sources.sql) with the same columns and
 types, so a site whose only source is the trial-balance upload still builds.
 
-Two bronze models read the CANONICAL union instead (`stg_gl_entries`,
-`stg_budget_entries`), which is already empty and typed when `erp_sources` is
-empty (row D4). They read it unconditionally: a `d365_fo` guard around it
-would blank an ERPNext-only site's rows. Only their join to the D365 adapter
-(for D365-only fields) sits inside the guard.
+One bronze model reads the CANONICAL union instead (`stg_gl_entries`), which
+is already empty and typed when `erp_sources` is empty (row D4). It reads it
+unconditionally: a `d365_fo` guard around it would blank an ERPNext-only
+site's rows. Only its join to the D365 adapter (for D365-only fields) sits
+inside the guard. The other one, `bronze_budget_transaction_lines` over
+`stg_budget_entries`, went with the ERP budget path (konsol#348 S3 B2, QB1 b;
+tests/test_budget_models_read_no_erp.py).
 """
 import os
 import re
@@ -25,21 +27,17 @@ ENDIF = re.compile(r"{%-?\s*endif\s*-?%}")
 D365_REF = re.compile(r"ref\(\s*['\"]stg_d365_fo__")
 
 GUARDED = [
-    "bronze_budget_register_entries",
     "bronze_consolidation_account_groups",
     "bronze_exchange_rate_types",
     "bronze_financial_dimension_values",
     "bronze_financial_dimensions",
-    "bronze_fiscal_calendar_years",
     "bronze_fiscal_calendars",
-    "bronze_general_journal_entries",
     "bronze_main_account_categories",
 ]
 
 # Bronze models over the canonical union: model -> the canonical model it reads.
 CANONICAL_READERS = {
     "bronze_general_journal_account_entries": "stg_gl_entries",
-    "bronze_budget_transaction_lines": "stg_budget_entries",
 }
 
 MODELS = os.path.join(PROJECT_ROOT, "dbt_project", "models")

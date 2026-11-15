@@ -3,6 +3,9 @@
 -- A 13-period fiscal year (13 declared Regular periods, plus a Closing period 14) and a 13-weight profile: the annual
 -- input spreads into every declared Regular period, so the test must PASS.
 -- epm_raw.budget_entries is read too, empty here, so it is created empty.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES

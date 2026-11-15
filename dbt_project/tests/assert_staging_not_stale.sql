@@ -148,7 +148,7 @@ actual as (
         concat(database, '.', name) as table_name,
         total_rows
     from system.tables
-    where database in ('epm_staging', 'epm_gold')
+    where database in ('epm_staging', 'epm_gold', 'epm_raw')
 
 ),
 
