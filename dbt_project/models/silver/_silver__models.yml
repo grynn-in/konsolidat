@@ -2,7 +2,14 @@ version: 2
 
 models:
   - name: silver_gl_entries
-    description: "Joined GL entries with journal headers, flattened dimensions"
+    description: >
+      The ledger flow: one GL-shaped row per trial-balance submission movement
+      (silver_tb_movements), with the submission's declared dimensions. Dated at
+      the declared start_date of its period in konsol's fiscal calendar
+      (declared_periods()); a period the calendar does not declare is kept at
+      1970-01-01 and named by assert_tb_submission_period_start_not_epoch and
+      assert_trial_balance_period_declared. konsol#348 removed the ERP branch
+      (bronze_general_journal_account_entries, dated through silver_fiscal_periods).
     columns:
       - name: recid
         tests:
@@ -104,9 +111,6 @@ models:
       - name: accounting_currency
         description: "konsol's Functional Currency; '' when the Entity has none"
 
-  - name: silver_fiscal_periods
-    description: "Standardized period lookup"
-
   - name: silver_financial_dimensions
     description: "Clean dimension values with active status"
 
@@ -116,9 +120,6 @@ models:
       - name: exchange_rate
         tests:
           - not_null
-
-  - name: silver_budget_entries
-    description: "Standardized budget lines joined with register headers"
 
   - name: silver_trial_balance
     description: "Trial balance from D365 snapshot entity (validation baseline)"

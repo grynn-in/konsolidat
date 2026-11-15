@@ -1098,6 +1098,9 @@ def write_expected(files, models, balances):
                 tb.append([code, p[0], p[1], acct_code, partner, cents])
     data = {
         "group": GROUP, "group_currency": GROUP_CUR, "periods": PERIODS,
+        # the declared fiscal calendar konsol loads (fiscal_rows), so the offline replica dates a period the way
+        # the warehouse does (macros/declared_periods.sql), never by its number
+        "fiscal_periods": fiscal_rows()[1],
         "entities": {c: {"currency": e["cur"], "own": e["own"], "method": e["method"], "since": e["since"], "name": e["name"]} for c, e in ENT.items()},
         "chart": {code: {"type": atype, "flags": flags, "name": name} for code, name, parent, atype, sub, flags, cf in A if "G" not in (flags or "").split()},
         "rates": {"%d-%d" % p: {rt: RATES[p][rt] for rt in ("Closing", "Average")} for p in PERIODS},

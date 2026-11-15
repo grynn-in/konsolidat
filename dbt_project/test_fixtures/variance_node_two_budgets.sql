@@ -1,5 +1,6 @@
--- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget
+-- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget assert_variance_node_single_currency
 -- gate: expect assert_variance_node_single_budget pass
+-- gate: expect assert_variance_node_single_currency pass
 -- konsolidat#206: gold_variance_at_hierarchy_node keeps each budget scenario apart. gold_variance_analysis has
 -- one set of rows per active budget-type scenario (budget_scenario_id), so a node model that groups without it
 -- counts the actuals once per budget scenario and adds the budgets together.
@@ -17,19 +18,31 @@
 --   ZZ_PLAN_2026 -1200 | ZZ_PLAN_2026_B -1100 | ZZ_FCST_2026 -900
 -- Reporting hierarchy ZZH_CC over dim_cost_center: group ZZCCG with leaf ZZCC1.
 -- For each budget scenario the ZZCC1 leaf must carry ZZ1000 actual 1000 and ZZ4000 actual -1000 once, never 2000.
+-- Every line is USD, as the entity's actuals are, so each node holds one currency and
+-- assert_variance_node_single_currency (konsol#348 S3 B11) passes.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_raw.budget_register_entries, epm_raw.fiscal_calendar_years,
+-- (empty): epm_raw.fiscal_calendar_years,
 -- epm_gold.budget_annual_input, epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles,
 -- epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns: add them first.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
+-- konsol#348 S3 B6: gold_scenario_trial_balance now carries the entity's accounting currency from
+-- silver_entity_currencies (epm_staging.entities), and the build runs assert_every_tb_entity_has_a_currency
+-- and assert_budget_currency_is_entity_currency on the way, so the entity declares its currency, as on a site.
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
+VALUES
+  ('ZZE1', 'ZZ entity 1', '', 0, 'Published', 'USD', 'US', '');
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES

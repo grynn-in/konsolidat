@@ -213,7 +213,6 @@
   #}
   {{ return([
     ('epm_bronze', 'bronze_general_journal_account_entries'),
-    ('epm_bronze', 'bronze_general_journal_entries'),
     ('epm_gold', 'gold_trial_balance')
   ]) }}
 {% endmacro %}

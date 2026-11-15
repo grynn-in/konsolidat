@@ -40,6 +40,20 @@ class Offline:
         self.group = d["group"]
         self.gcur = d["group_currency"]
         self.periods = [tuple(p) for p in d["periods"]]
+        # the declared fiscal calendar (konsol's Fiscal Period rows, written by build_aquila_bike.fiscal_rows):
+        # {(fiscal_year, fiscal_period): (period_type, start_date, end_date)}. A period declared on several rows
+        # is grouped to one (min start, max end), as declared_periods() does.
+        self.calendar = {}
+        for r in d["fiscal_periods"]:
+            key = (int(r["fiscal_year"]), int(r["fiscal_period"]))
+            start, end = dt.date.fromisoformat(r["start_date"]), dt.date.fromisoformat(r["end_date"])
+            if key in self.calendar:
+                ptype, s0, e0 = self.calendar[key]
+                self.calendar[key] = (ptype, min(s0, start), max(e0, end))
+            else:
+                self.calendar[key] = (r["period_type"], start, end)
+        self.regular_periods = sorted(k for k, v in self.calendar.items() if v[0] == "Regular")
+        self._period_date = {}
         self.ent = d["entities"]
         self.chart = d["chart"]
         self.rates = {tuple(int(x) for x in k.split("-")): v for k, v in d["rates"].items()}
@@ -87,9 +101,29 @@ class Offline:
         return "RE" in self.acct(a)["flags"].split()
 
     # ---- calendar helpers ------------------------------------------------------------------------
-    @staticmethod
-    def period_date(p):
-        return dt.date(p[0], min(max(p[1], 1), 12), 1)          # build_date_from_year_period
+    def period_date(self, p):
+        """The day the warehouse judges period p on: declared_periods()'s window_end_date
+        (dbt_project/macros/declared_periods.sql), which dates the ownership window and the historical-rate as-of.
+          Regular   its declared end_date;
+          Closing   the end_date of its fiscal year's last Regular period (it is consolidated exactly when that
+                    period is);
+          Opening, Adjustment
+                    the end_date of the latest Regular period before it in (year, period) order: the eve of the
+                    year for an Opening P0; with no Regular period before it, the day before its own start.
+        A period the calendar does not declare has no date: KeyError, nothing is invented for it (no first or last
+        day of the calendar month its number names; that rule is retired, konsol#348 A13)."""
+        p = tuple(p)
+        if p not in self._period_date:
+            ptype, start, end = self.calendar[p]
+            if ptype == "Regular":
+                day = end
+            elif ptype == "Closing" and any(k[0] == p[0] for k in self.regular_periods):
+                day = self.calendar[max(k for k in self.regular_periods if k[0] == p[0])][2]
+            else:
+                before = [k for k in self.regular_periods if k < p]
+                day = self.calendar[max(before)][2] if before else start - dt.timedelta(days=1)
+            self._period_date[p] = day
+        return self._period_date[p]
 
     def rate_period(self, p):
         return (p[0], 12) if p[1] == 13 else p                      # a Closing period uses the last Regular period's rates

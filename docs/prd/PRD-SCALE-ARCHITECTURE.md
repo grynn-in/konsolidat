@@ -71,7 +71,7 @@ Horizontal scale for 50–500 LEs. Shard key derived from `data_area_id` (the ma
 | Per-node macros example | `clickhouse/cluster/macros-shard1-replica1.xml` | `{shard}`, `{replica}` server macros |
 | Cluster Docker Compose | `docker-compose.cluster.yml` | Overlay for 3-node cluster deployment |
 | Admin guide | `docs/admin-guide/cluster-setup.md` | Step-by-step setup + open questions |
-| Opted-in models (3) | `bronze_general_journal_account_entries`, `bronze_general_journal_entries`, `gold_trial_balance` | Config block uses `cluster_engine()` + `cluster_name()` macros; SQL query unchanged |
+| Opted-in models (2) | `bronze_general_journal_account_entries`, `gold_trial_balance` (the list `cluster_sharded_tables()` in `macros/cluster.sql` holds; `bronze_general_journal_entries` was removed with the ERP branch, konsolidat#221) | Config block uses `cluster_engine()` + `cluster_name()` macros; SQL query unchanged |
 
 **Cluster activation command**
 

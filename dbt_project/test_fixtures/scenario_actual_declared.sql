@@ -15,18 +15,28 @@
 -- undeclared: assert_scenario_rows_declared fails ('ACTUAL', 'gl', 'undeclared').
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_raw.budget_register_entries, epm_raw.fiscal_calendar_years,
+-- (empty): epm_raw.fiscal_calendar_years,
 -- epm_raw.general_journal_account_entry_bi_entities, epm_raw.general_journal_entry_bi_entities,
 -- epm_gold.budget_annual_input, epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles,
 -- epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns: add them first.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
+-- konsol#348 S3 B6: gold_scenario_trial_balance now carries the entity's accounting currency from
+-- silver_entity_currencies (epm_staging.entities), and the build runs assert_every_tb_entity_has_a_currency
+-- and assert_budget_currency_is_entity_currency on the way, so the entity declares its currency, as on a site.
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
+VALUES
+  ('ZZE1', 'ZZ entity 1', '', 0, 'Published', 'USD', 'US', '');
 INSERT INTO epm_staging.main_accounts
   (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
 VALUES

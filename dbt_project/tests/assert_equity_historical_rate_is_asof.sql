@@ -19,6 +19,12 @@
 -- presentation currencies were one as-of series and the later one won at
 -- both levels.
 --
+-- konsolidat#189 PR3 (konsol#348, QA2 c): "the period" is the DECLARED one. The as-of date is the period's
+-- window_end_date from declared_periods() (konsol's fiscal calendar), the same date the ownership window reads,
+-- never a date built from the period number: an April-March year's P1 ends 2025-04-30, not 2026-01-31. A
+-- period the calendar does not declare has no date, so its row is not judged here
+-- (assert_trial_balance_period_declared refuses it).
+--
 -- Fails (returns rows) when, for a row that applied a historical rate:
 --   * no tranche into the row's reporting currency qualifies as-of the period
 --     (rate borrowed from the future, or from another currency's series), or
@@ -31,7 +37,7 @@ with applied as (
         ctb.data_area_id as data_area_id,
         ctb.main_account as main_account,
         ctb.reporting_currency as reporting_currency,
-        {{ build_date_from_year_period('ctb.fiscal_year', 'ctb.fiscal_period') }} as period_date,
+        dp.window_end_date as period_date,
         ctb.historical_equity_rate as historical_equity_rate
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     inner join {{ ref('gold_entity_ownership') }} as eo
@@ -39,6 +45,9 @@ with applied as (
         and eo.data_area_id = ctb.data_area_id
         and eo.fiscal_year = ctb.fiscal_year
         and eo.fiscal_period = ctb.fiscal_period
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(ctb.fiscal_year)
+        and dp.fiscal_period = toUInt16(ctb.fiscal_period)
     where ctb.historical_equity_rate is not null
 ),
 

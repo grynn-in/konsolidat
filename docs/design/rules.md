@@ -13,29 +13,29 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **172** |
-| carrying their reasoning | 151 |
-| citing the issue that caused them | 144 |
+| assertions | **183** |
+| carrying their reasoning | 162 |
+| citing the issue that caused them | 156 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 150 |
+| severity `error` (stops the build, and its children) | 161 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
 
 ## Contents
 
-- [Trial balance intake](#trial-balance-intake) — 19
-- [Currency and translation](#currency-and-translation) — 25
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
+- [Trial balance intake](#trial-balance-intake) — 20
+- [Currency and translation](#currency-and-translation) — 32
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 16
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 24
+- [Reporting hierarchies](#reporting-hierarchies) — 9
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 7
-- [Calendar and periods](#calendar-and-periods) — 8
-- [Platform and data integrity](#platform-and-data-integrity) — 14
+- [Calendar and periods](#calendar-and-periods) — 7
+- [Platform and data integrity](#platform-and-data-integrity) — 15
 - [Other](#other) — 5
 
 ---
@@ -110,6 +110,14 @@ konsol validates this exactly, at the currency's own minor unit, before a submis
 
 <sub>`error (default)` · `tests/assert_tb_submission_batches_balance.sql` · konsol#180 konsolidat#256</sub>
 
+### `tb_submission_date_is_declared`
+
+**konsolidat#189 PR3 (konsol#348, QA1 c / A10): a trial-balance submission row in silver_gl_entries is dated at the start_date its period declares in konsol's fiscal calendar (epm_staging.fiscal_periods).**
+
+silver_gl_entries used to date a submission row from the entity's own ERP calendar and, when that was not loaded, at the first day of the CALENDAR month the period number names (a macro since retired). An April-March site's FY2026 P1 is 2025-04-01; the macro made it 2026-01-01. The declared calendar is the one source of period dates (macros/declared_periods.sql), so the row's accounting_date is that period's start_date, and this test fails the build when it is not. What this test is: a regression pin. silver_gl_entries and this test compute the SAME join (declared_periods() on the period key, reading start_date), so a row the model builds carries the declared date by construction and the test cannot fail on it. It fails only when a future change dates a submission any other way; its must_flag fixture seeds silver_gl_entries directly to prove it can. The guards that fail the build on a wrongly dated or undeclared submission period are assert_trial_balance_period_declared (the period is not declared) and assert_tb_submission_period_start_not_epoch (the row kept at 1970-01-01). One row per (entity, period) whose submission rows carry a date other than the declared start_date. A period the calendar does not declare has no declared date and is not judged here. Fixtures: dbt_project/test_fixtures/assert_tb_submission_date_is_declared*.sql.
+
+<sub>`error (default)` · `tests/assert_tb_submission_date_is_declared.sql` · konsol#348 konsolidat#189</sub>
+
 ### `tb_submission_has_basis`
 
 **Every claimed trial-balance batch declares what its amounts ARE (konsolidat#199).**
@@ -120,11 +128,11 @@ An ERP exports period movements, year-to-date movements or period-end balances, 
 
 ### `tb_submission_period_start_not_epoch`
 
-**Guard against the join_use_nulls=0 default silently winning over the TBS coalesce fallback.**
+**A trial-balance submission row in silver_gl_entries dated 1970-01-01.**
 
-silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8). Its accounting_date/document_date come from a LEFT JOIN from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced to build_date_from_year_period() when the entity's fiscal calendar isn't loaded -- exactly the shape of a TB-only site, which has no ERP calendar at all (konsol#182). Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the joined column's type default, NOT NULL. Date's default is toDate(0) = 1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through: every submission for an entity with no loaded calendar lands on 1970-01-01 instead of the first day of its own fiscal year/period. This test fails if any Trial Balance Submission row in silver_gl_entries carries the ClickHouse Date zero-value, which is never a legitimate posting date for a submitted batch.
+silver_gl_entries builds a synthetic GL row for every trial-balance submission (F8), dated at the declared start_date of its period (declared_periods(), konsol's fiscal calendar; konsol#348). A period the calendar does not declare misses that LEFT JOIN, and under join_use_nulls=0 ClickHouse fills Date's default, toDate(0) = 1970-01-01, not NULL. The row is kept, not dated by a guess, and this test names it. (Before konsol#348 the date came from the ERP calendar, silver_fiscal_periods, with a calendar-month fallback, and the epoch was the coalesce trap.) Fails if any Trial Balance Submission row carries the Date zero-value, which is never a legitimate posting date for a submitted batch. Fixture: test_fixtures/assert_tb_submission_period_start_not_epoch.undeclared.must_flag.sql.
 
-<sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#182</sub>
+<sub>`error (default)` · `tests/assert_tb_submission_period_start_not_epoch.sql` · konsol#348</sub>
 
 ### `tb_submission_rows_complete`
 
@@ -210,6 +218,22 @@ a blank is never defaulted (no silent fallback). Flags each row of epm_raw.budge
 
 <sub>`error` · `tests/assert_budget_blank_layer_currency.sql` · konsol#348</sub>
 
+### `budget_currency_is_entity_currency`
+
+**konsol#348 S3 B7 (QB3 a, decided 14 Nov 2026 under Deepak Pai's standing rule): a budget line is in its entity's accounting currency.**
+
+konsol refuses an Annual Input or a Budget Entry line whose currency is not the entity's Functional Currency; this is the warehouse backstop. The budget fact carries each line's currency (B4), and silver_entity_currencies is the one answer for the currency an entity keeps its books in (konsol#110). Every fact row whose currency differs from its entity's is named, so a budget can never meet actuals in another currency in the variance models (B8) without being reported first. LEFT JOIN on purpose: join_use_nulls=0 fills an entity with no currency row with '', and that is itself the fault named here (a budget on an entity that declares no currency), so the default hides nothing. A blank fact currency against a blank entity currency is not named here; assert_budget_blank_layer_currency names the blank line. One row per (scenario, cycle, entity, layer, budget currency), with the entity's currency and the row count. Error severity: the budget fact would be wrong. Fixtures: dbt_project/test_fixtures/assert_budget_currency_is_entity_currency*.sql.
+
+<sub>`error` · `tests/assert_budget_currency_is_entity_currency.sql` · konsol#110 konsol#348</sub>
+
+### `budget_node_per_cycle_and_currency`
+
+**konsol#348 S3 B11 (QB2 a, QB3 a;**
+
+decided 14 Nov 2026 under Deepak Pai's standing rule): the budget rollup to a reporting hierarchy node keeps every Budget Cycle and every currency apart. gold_spread_budget carries `cycle` (B4) and `currency` (B4, B7): a forecast scenario holds one approved Cycle per round, and rounds must never sum; a budget line is in its entity's accounting currency, and amounts in two currencies must never sum. gold_budget_at_hierarchy_node therefore carries both and groups by both, as gold_tb_at_hierarchy_node carries every column of its row grain (gold_trial_balance has no currency; the entity's is one, so grouping by it never splits a row). Checked at the leaves. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's period_amount per (scenario, cycle, currency, entity, year, period, account, layer) must equal the fact's over the rows whose dimension value is a leaf of that hierarchy. A node model without the cycle (or currency) column is compared on the rest of the key, so each round's fact rows meet the node's sum across rounds and the test fails rather than errors: two rounds of -100 and -110 against one node row of -210. konsolidat#220: a code may be a leaf in several dated tranches. A fact row matches only the leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not declare drops out of both sides, QA3 a). Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them. One row per mismatched key; error severity. Fixtures: dbt_project/test_fixtures/budget_node_two_rounds.sql.
+
+<sub>`error` · `tests/assert_budget_node_per_cycle_and_currency.sql` · konsol#348 konsolidat#220</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -250,15 +274,15 @@ PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the g
 
 ### `declared_historical_has_a_rate`
 
-<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#92</sub>
+<sub>`warn` · `tests/assert_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#189 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#92</sub>
 
 ### `equity_historical_rate_is_asof`
 
 **grynn-in/konsolidat#92 finding #2: the historical equity rate applied to a period must be the AS-OF rate (the latest tranche whose rate_date <= period_date), not the most-recent-ever rate.**
 
-The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
+The previous row_number()/rn=1 join ignored period_date, so an early period could get a future tranche's rate. The existing assert_equity_uses_historical_rate test only checks that *a* historical rate was used, not the correct-period one — this asserts the period correlation. konsol#374 (Deepak Pai, 7 Nov 2026, option b): a Historical Equity Rate converts INTO one presentation currency (`to_currency`). A sub-group that presents in EUR and its parent that presents in USD each need their own rate for the same entity and account, and the model matches a rate on the consolidating group's reporting_currency. The expected rate here is therefore resolved exactly as the model resolves it: on the entity's OWNING group (gold_entity_ownership.owner_group, where the rate is recorded once), the entity, the account, AND the row's reporting currency. Keyed on the consolidating group alone, a multi-level tree never matched a rate recorded under the sub-group; keyed without the currency, two tranches for two presentation currencies were one as-of series and the later one won at both levels. konsolidat#189 PR3 (konsol#348, QA2 c): "the period" is the DECLARED one. The as-of date is the period's window_end_date from declared_periods() (konsol's fiscal calendar), the same date the ownership window reads, never a date built from the period number: an April-March year's P1 ends 2025-04-30, not 2026-01-31. A period the calendar does not declare has no date, so its row is not judged here (assert_trial_balance_period_declared refuses it). Fails (returns rows) when, for a row that applied a historical rate: * no tranche into the row's reporting currency qualifies as-of the period (rate borrowed from the future, or from another currency's series), or * the applied rate differs from the as-of expected rate.
 
-<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#374 konsolidat#92</sub>
+<sub>`error (default)` · `tests/assert_equity_historical_rate_is_asof.sql` · konsol#348 konsol#374 konsolidat#189 konsolidat#92</sub>
 
 ### `equity_rate_coverage`
 
@@ -344,6 +368,14 @@ It is no longer the complement of group_amount (group_amount is 100% of translat
 
 <sub>`error (default)` · `tests/assert_nci_equals_translated_times_minority.sql` · konsol#117 konsolidat#204</sub>
 
+### `scenario_tb_currency_declared`
+
+**konsol#348 S3 B6 (QB3 a, decided 14 Nov 2026 under Deepak Pai's standing rule): every row of gold_scenario_trial_balance carries its currency.**
+
+The scenario trial balance is where actuals and budgets meet, so each row says what currency it is in: the GL branch takes the entity's accounting currency (silver_entity_currencies, the one answer for the books an entity keeps, konsol#110); the budget branch takes the fact's (gold_spread_budget.currency, B4). The variance models then carry the currency on their grain (B8) and can refuse to net two currencies. The GL branch LEFT JOINs silver_entity_currencies, and join_use_nulls=0 fills an entity with no currency row with ''. That default is not a fallback: this test names every such row, so a trial balance for an entity that declares no currency (konsol#328 refuses it at intake) cannot sit in the scenario fact unmarked. A budget row with a blank currency is named here too, beside assert_budget_blank_layer_currency on the line itself. One row per (scenario, entity, data_source) with blank-currency rows, and their count. Error severity. Fixtures: dbt_project/test_fixtures/assert_scenario_tb_currency_declared*.sql.
+
+<sub>`error` · `tests/assert_scenario_tb_currency_declared.sql` · konsol#110 konsol#328 konsol#348</sub>
+
 ### `translated_amount_formula`
 
 **PRD-1 Test: translated_amount must equal local_amount × translation_rate + retranslation_amount.**
@@ -364,6 +396,38 @@ Two failure modes, both of which silently misstate translated balances: 1. trans
 
 <sub>`error (default)` · `tests/assert_translation_rate_resolved.sql` · konsolidat#109 konsolidat#194</sub>
 
+### `variance_node_single_currency`
+
+**konsol#348 S3 B11 (QB3 a): gold_variance_at_hierarchy_node carries the currency of gold_variance_analysis (B8) through the rollup and groups by it, so a node never sums amounts in two currencies.**
+
+Every (hierarchy, node, entity, year, period, account, budget dims, budget_scenario_id) holds one currency; a node in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream and assert_variance_single_currency names at the variance grain. One row per node key in two currencies; error severity. Fixtures: dbt_project/test_fixtures/variance_node_two_budgets.sql (pass), variance_node_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_node_single_currency.sql` · konsol#348</sub>
+
+### `variance_quarterly_single_currency`
+
+**konsol#348 S3 B10 (QB3 a): gold_variance_quarterly compares like with like.**
+
+Every (entity, year, quarter, account, budget dims, budget_scenario_id) grain holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_quarterly_single_currency.sql` · konsol#348</sub>
+
+### `variance_single_currency`
+
+**konsol#348 S3 B8 (QB3 a): gold_variance_analysis compares like with like.**
+
+Every (entity, year, period, account, budget dims, budget_scenario_id) grain holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_single_currency.sql` · konsol#348</sub>
+
+### `variance_ytd_single_currency`
+
+**konsol#348 S3 B9 (QB3 a): gold_variance_ytd compares like with like.**
+
+Every (entity, year, period, account, budget dims, budget_scenario_id) running total holds one currency; a grain in two means a budget line in a currency other than the entity's actuals, which B7 (assert_budget_currency_is_entity_currency) refuses upstream. The rule and its reasons: macros/variance_single_currency.sql. Fixtures: dbt_project/test_fixtures/variance_budget_scenario.sql (pass), variance_currency_mismatch.must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_ytd_single_currency.sql` · konsol#348</sub>
+
 ---
 
 ## Ownership and the consolidated result
@@ -380,7 +444,7 @@ Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severi
 
 **Budget year-to-date lines reconcile to the spread (konsol#348 S2, Q15-c, R10).**
 
-gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date movement' into period movements within the Cycle year. Undoing that conversion must give the stated figure back: for every key a (cycle, scenario, layer, entity) states in that year, and every period it states any YTD figure for, the running sum of the spread's manual movements through that period equals the stated YTD. A key missing from a period's lines has a stated YTD of 0 there (the spine of macros/period_movements.sql), so a key that vanishes must have been reversed: a model that only differenced the rows that exist leaves its last YTD standing and is named here. The spread has no cycle column, so the stated figures are summed to the spread's grain (scenario, entity, year, period, account, budget dims, layer). A grain that mixes bases in one year does not reconcile either; assert_budget_basis_supported names that case by itself. Flags one row per (grain, period) that does not reconcile. Tolerance 0.01, as for the TB balance tests.
+gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date movement' into period movements within the Cycle year. Undoing that conversion must give the stated figure back: for every key a (cycle, scenario, layer, entity) states in that year, and every period it states any YTD figure for, the running sum of the spread's manual movements through that period equals the stated YTD. A key missing from a period's lines has a stated YTD of 0 there (the spine of macros/period_movements.sql), so a key that vanishes must have been reversed: a model that only differenced the rows that exist leaves its last YTD standing and is named here. The spread carries the cycle (konsol#348 S3 B4), so the stated figures are compared on the spread's full grain (cycle, scenario, entity, year, period, account, budget dims, layer): a forecast round reconciles to its own lines, never to another round's. A grain that mixes bases in one year does not reconcile either; assert_budget_basis_supported names that case by itself. Flags one row per (grain, period) that does not reconcile. Tolerance 0.01, as for the TB balance tests.
 
 <sub>`error` · `tests/assert_budget_ytd_reconciles.sql` · konsol#348</sub>
 
@@ -446,7 +510,7 @@ Consolidation Group's autoname is CG-{consolidation_group}-{data_area_id}, so CG
 
 **A group node's amount must equal the sum of its descendant leaves for the same slice: hierarchy, node, entity, period, account and every other dimension.**
 
-Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not list is judged at the last day of its month). So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
+Compared per account, not per node total: a voucher that balances inside one dimension value nets a node's total to 0, and a totals-only check would pass on a wrong rollup. konsolidat#220: the tree is resolved per period. A leaf row of gold_tb_at_hierarchy_node counts towards a group only through the closure link whose window (valid_from .. valid_to) covers the period's end_date (declared calendar, epm_staging.fiscal_periods). A period the calendar does not declare is not judged: its leaf rows drop out here, as they do from the node model (QA3 a). assert_trial_balance_period_declared names the period on gold_trial_balance, where the row is kept; assert_hierarchy_node_period_declared cannot (it reads the same declared keys the node model does) and is only a pin against a change to that model. So a moved leaf is counted once, under the parent it had then, and an ended group gets nothing later. Both sides are stacked and summed per key, so a group row with no leaves and leaves with no group row both show as a difference. Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them.
 
 <sub>`error (default)` · `tests/assert_hierarchy_rollup_ties.sql` · konsolidat#220</sub>
 
@@ -467,6 +531,14 @@ Each pair's two sides are recomputed from gold_consolidated_trial_balance at 100
 ### `nci_account_declared_for_partial_subs`
 
 <sub>`error` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
+
+### `nci_attribution_carries_the_result_slices`
+
+**konsolidat#245 option D (Deepak Pai, 3 Oct 2026: a consolidation entry carries the dimension values of whatever knows them;**
+
+inherit where derivable). The NCI attribution (layer 'nci_attribution', gold_nci_attribution_journal) is the minority's share of the subsidiary's own P&L, and that P&L carries dimension values, so its result legs are derivable per slice: in every slice the retained-earnings line is minus (1 - ownership) x that slice's translated P&L (year-end close rows excluded), and the NCI line is its opposite. The CTA leg is a share of the entity's one CTA plug, which has no slice by arithmetic (assert_sliceless_layers_carry_no_dimension), so it and the NCI line's CTA part sit in the blank slice. Read from the layer as gold_fully_consolidated_tb carries it, which is where a dimension slice is reported. Two checks, one row per failing (group, entity, period, slice): 1. the retained-earnings line of the slice equals the expected share; 2. the journal nets to zero within the slice (the NCI line follows the result legs into their slices, not only the total). assert_nci_attribution_equals_minority_result checks the entity-period totals; this test checks how they are spread. Before this change every line was blank, so a sliced P&L failed check 1. Fixture: test_fixtures/assert_nci_attribution_carries_the_result_slices.sql.
+
+<sub>`error (default)` · `tests/assert_nci_attribution_carries_the_result_slices.sql` · konsolidat#245</sub>
 
 ### `nci_attribution_equals_minority_result`
 
@@ -886,6 +958,14 @@ Each selects it from the leaf closure (lc) in a join whose other side (the long 
 
 <sub>`error (default)` · `tests/assert_hierarchy_node_columns.sql` · konsolidat#206</sub>
 
+### `hierarchy_node_period_declared`
+
+**konsolidat#189 PR3 (konsol#348, decision QA3 a): every period a hierarchy-node model carries is a period konsol's fiscal calendar declares (epm_staging.fiscal_periods).**
+
+The node models date a period by its declared calendar, and they used to fall back, for a period the calendar does not list, to the last day of the calendar month the period number names. That date is invented: an April-March year's P5 is August, not May, and a period with no declaration has no true date. Each node model now inner-joins the declared periods, so an undeclared period drops out of them silently. This test does NOT turn that drop into a failure: the models and the test read the same declared-period key set, so a row a model builds is declared by construction. The guards that fail the build on an undeclared period are upstream, where the row is kept: assert_trial_balance_period_declared (gold_trial_balance keeps the row) and assert_budget_period_declared (the raw budget lines and gold_spread_budget). What this test is: a regression pin. It fails only when a future change to a node model lets an undeclared period through (a LEFT JOIN, a coalesce, a guessed date); its must_flag fixture seeds the node tables directly to prove it can. One row per (model, fiscal_year, fiscal_period) that a node model carries and the calendar does not declare. Models: gold_tb_at_hierarchy_node, gold_unassigned_hierarchy_members, gold_budget_at_hierarchy_node, gold_variance_at_hierarchy_node. Fixtures: dbt_project/test_fixtures/assert_hierarchy_node_period_declared*.sql.
+
+<sub>`error (default)` · `tests/assert_hierarchy_node_period_declared.sql` · konsol#348 konsolidat#189</sub>
+
 ### `tree_node_reached_by_links`
 
 **konsol#117 (design section 1): the Consolidation Group tree stays the reporting structure, the links say what is owned.**
@@ -932,17 +1012,25 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 
 ### `budget_fact_grain_unique`
 
-**grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
+**grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, cycle, entity, year, period, account, budget dims, layer).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c, backstopped by assert_budget_one_writer_per_grain), so nothing double-counts and this asserts it. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c, backstopped by assert_budget_one_writer_per_grain), so nothing double-counts and this asserts it. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300). So is `cycle` (konsol#348 S3 B4, QB2 a): a forecast round is its own approved Cycle, and two rounds on one grain are two legitimate rows, never one.
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsol#348 konsolidat#300 konsolidat#94</sub>
+
+### `budget_fact_per_cycle`
+
+**konsol#348 S3 B4 (QB2 a, decided 14 Nov 2026 under Deepak Pai's standing rule): the budget fact keeps every Budget Cycle apart.**
+
+A forecast scenario holds one approved Cycle per round, and several rounds share one (scenario, fiscal year) by design (Q23 a; assert_budget_one_cycle_per_scenario_year leaves forecasts out for that reason). gold_spread_budget therefore carries `cycle`, and its manual branch groups by it. Rounds must never sum: a model that grouped the lines of one grain without the cycle would add round 2 to round 1 and report a budget nobody entered. Checked line by line. For every (cycle, scenario, layer, entity, year) whose epm_raw.budget_entries lines are all 'Period movement', the fact's manual rows per (cycle, scenario, layer, entity, year, period, account, budget dims) must equal the lines' debit - credit on that grain. A year-to-date slice is converted before it reaches the fact and is reconciled by assert_budget_ytd_reconciles; a slice that mixes bases is named by assert_budget_basis_supported; neither is read here. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing fact row with 0 and hide it. Here a missing side reads 0 and the difference names it. One row per grain whose fact differs from its lines by more than 0.01. Error severity: the budget fact would be wrong. Fixtures: dbt_project/test_fixtures/budget_fact_two_rounds.sql.
+
+<sub>`error` · `tests/assert_budget_fact_per_cycle.sql` · konsol#348</sub>
 
 ### `budget_one_cycle_per_scenario_year`
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums manual lines without the cycle, so two Cycles with lines on one (scenario, fiscal year) would be added together: a doubled budget. konsol's intake keeps one Cycle per (scenario, year); this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. epm_gold.budget_annual_input carries no cycle column, so the annual side has nothing to check here (n/a). Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Until S6, assert_forecast_one_approved_round_until_s6 is the forecast side: it holds a forecast to one approved round (interim rule on konsol#348, 15 Nov 2026), because the readers still sum rounds. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -954,11 +1042,19 @@ konsol's intake refuses an Annual Input and a manual Budget Entry line on the sa
 
 <sub>`error` · `tests/assert_budget_one_writer_per_grain.sql` · konsol#348</sub>
 
+### `budget_period_declared`
+
+**konsol#348 PR3 (BUD-10-1, no silent fallback): a budget line is stated against a declared Regular period.**
+
+A budget belongs to a period the calendar declares (epm_staging.fiscal_periods, period_type 'Regular'). A line in a Closing, Opening or Adjustment period, or in a period the calendar does not declare, has no window to be judged against: the hierarchy-node models inner-join the declared periods, so such a line would drop out of the node reports unnamed. This test names it. Checked on the raw lines (epm_raw.budget_entries) and on the fact (gold_spread_budget). One row per (source, scenario, entity, year, period). Error severity: the budget would be wrong. Fixtures: dbt_project/test_fixtures/assert_budget_period_declared*.sql.
+
+<sub>`error` · `tests/assert_budget_period_declared.sql` · konsol#348</sub>
+
 ### `budget_ytd_hand_table`
 
 **konsol#348 S2 (R10, Q15-c): the hand-computed movements of test_fixtures/budget_raw_ytd.sql, as literals.**
 
-assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated YTD per account and layer (the fixture's header holds the table); the manual spread of ZZ_PLAN_2026 / ZZE1 / FY2026 must hold exactly these movements, summed over budget dimensions. It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built. Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
+assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated YTD per account and layer (the fixture's header holds the table); the manual spread of that cycle, ZZ_PLAN_2026 / ZZE1 / FY2026, must hold exactly these movements, summed over budget dimensions. The fact carries the cycle (konsol#348 S3 B4), so another cycle's rows on the same scenario are not read. It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built. Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
 
 <sub>`error` · `tests/assert_budget_ytd_hand_table.sql` · konsol#348</sub>
 
@@ -1042,41 +1138,29 @@ Every weight row of a run must equal a value of the named statistic at value_per
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weights_have_driver_values.sql` · konsol#269</sub>
 
-### `favorable_expense`
-
-**PRD-7 Test: Expense accounts where actual < budget should be marked favorable**
-
-<sub>`error (default)` · `tests/assert_favorable_expense.sql` · konsol#182</sub>
-
-### `favorable_revenue`
-
-**PRD-7 Test: Revenue accounts where actual > budget should be marked favorable**
-
-<sub>`error (default)` · `tests/assert_favorable_revenue.sql` · konsol#182</sub>
-
 ### `scenario_rows_declared`
 
 **PR #211 review 2 (konsolidat#206): the scenarios of gold_scenario_trial_balance are declared.**
 
-This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl                    -> actual budget, d365_budget   -> budget or forecast Forecasts are legitimate rows of the scenario trial balance, so the budget branches accept them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
+This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl       -> actual budget   -> budget or forecast (The ERP branch 'd365_budget' is gone, konsol#348 S3 B1.) Forecasts are legitimate rows of the scenario trial balance, so the budget branch accepts them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
 
-<sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsolidat#206 konsolidat#211</sub>
+<sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsol#348 konsolidat#206 konsolidat#211</sub>
 
 ### `spread_covers_declared_periods`
 
 **each ANNUAL-spread budget line spreads into every declared Regular period of its fiscal year (epm_staging.fiscal_periods, period_type = 'Regular') and into no other period.**
 
-eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN.
+eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN. A line is one (scenario, cycle, entity, year, account, profile): the cycle is part of the fact's grain (konsol#348 S3 B4), so two forecast rounds of one annual input are two lines, each judged alone.
 
-<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsol#348 konsolidat#94</sub>
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+**PRD-6 Test: per grain (scenario, cycle, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
 
-gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference. The cycle is part of the grain (konsol#348 S3 B4): each forecast round has its own annual amount.
 
-<sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
+<sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql` · konsol#348</sub>
 
 ### `variance_abs_formula`
 
@@ -1099,6 +1183,14 @@ A variance row that pairs a budget scenario with a (data_area_id, fiscal_year) w
 A model that does not yet carry budget_scenario_id covers no scenario, so the test fails on it rather than erroring. PR #211 review 4: and each budget scenario carries every actual grain of the (data_area_id, fiscal_year)s it budgets exactly once, with the actual amount of that grain (the running total to date in gold_variance_ytd): a model that repeats or sums the actuals across budget scenarios, or drops them, fails. The grain is the model's own: entity, fiscal year, period (fiscal_quarter in gold_variance_quarterly, through gold_period_hierarchy as the model maps it), main account and the budget dimensions. One row per problem: uncovered_scenario - a (model, budget scenario) with no variance rows; actual_not_once    - a (model, budget scenario, actual grain) with no row or more than one; actual_amount      - the grain's row carries another actual amount.
 
 <sub>`error (default)` · `tests/assert_variance_covers_budget_scenarios.sql` · konsolidat#206 konsolidat#211</sub>
+
+### `variance_favorable_follows_normal_balance`
+
+**konsol#348 S3 B13 (QB7 a, BUD-7-a;**
+
+decided 14 Nov 2026 under Deepak Pai's standing rule): a variance is favourable by the account's normal balance, read from the chart (silver_main_accounts.normal_balance, konsol's Main Account), on amounts signed debit - credit (QB6 a). A credit-normal account (revenue) is favourable when the actual is more credit than the budget: its signed actual is below its signed budget (-1,200 against -1,000). A debit-normal account (expense) is favourable when the actual is less debit than the budget: again below it (900 against 1,000; 1,200 against 1,000 is not). Under debit-positive signs both read "actual below budget"; they are spelled out so the rule reads in accounting terms. No favourable direction, so never favourable: a row with no budget, a balance-sheet account, and an account whose normal balance is not declared or not in the chart. The retired assert_favorable_revenue restated the model's own rule ("Revenue and actual > budget") against the model's own columns, so it passed while the model marked less revenue as favourable (the sign was the wrong way round). This test derives the expectation from the chart and the amounts, not from the model's account_type_name or flag, and its fixtures hold hand-computed rows: revenue 1,200 actual against 1,000 budget is favourable; expense 1,200 against 1,000 is not. One row per variance row whose flag differs; error severity. Fixtures: dbt_project/test_fixtures/variance_favorable_signed.sql (build, pass), assert_variance_favorable_follows_normal_balance.sql (pass), .must_flag.sql (flag).
+
+<sub>`error` · `tests/assert_variance_favorable_follows_normal_balance.sql` · konsol#348</sub>
 
 ---
 
@@ -1159,14 +1251,6 @@ konsol checks this when the journal is approved; this catches a calendar changed
 ### `closing_period_activity_on_partial_subsidiary`
 
 <sub>`error` · `tests/assert_closing_period_activity_on_partial_subsidiary.sql` · konsol#117 konsolidat#204 konsolidat#259</sub>
-
-### `fiscal_calendar_is_loaded`
-
-**#77 — Guard against the silent fiscal-calendar fallback (FY0/P0 regression).**
-
-silver_gl_entries joins each GL row to a fiscal calendar; when the join misses, ClickHouse fills fp.* with 0 and the model falls back to deriving the period from the posting date (see #65). That fallback is correct for calendar fiscal years but silently wrong for offset ones — and a missed join is exactly what put every row in FY0/P0 before #65/#76. This test fails if any entity that actually has GL activity points (via entity_fiscal_calendars) at a fiscal calendar that ISN'T loaded in silver_fiscal_periods. That is the precise condition under which the join silently misses, turning a future re-break (e.g. a seed pointing an active entity back at a non-existent calendar, or a calendar dropping out of the raw load) into a failing test instead of quietly-wrong numbers.
-
-<sub>`error (default)` · `tests/assert_fiscal_calendar_is_loaded.sql` · konsolidat#65 konsolidat#76 konsolidat#77</sub>
 
 ### `partial_period_pnl_matches_treatment`
 
@@ -1245,6 +1329,14 @@ toDecimal128(Float64, scale) truncates toward zero on the binary double, which i
 Silver derives debit/credit from the SIGN of the amount (konsolidat#112), so the amount has to arrive signed. The demo generator shipped magnitudes with the sign only in IsCredit; every credit was booked as a debit, every trial balance went one-sided, and nothing failed until assert_silver_gl_debit_credit_balance, three layers down, by entity-year, where it was mistaken for "demo-data tension". This fails at the source, per voucher, whatever the feed. It deliberately does not re-derive the sign from IsCredit: on real D365 that flag can disagree with the sign on storno lines (#112/#118, assert_is_credit_retired). A correctly signed voucher nets to zero either way. Grouped by voucher alone, entity-less headers included: a voucher must balance whatever entity it is attributed to.
 
 <sub>`error (default)` · `tests/assert_d365_gl_vouchers_balance.sql` · konsolidat#112 konsolidat#118 konsolidat#155</sub>
+
+### `forecast_one_approved_round_until_s6`
+
+**INTERIM RULE, REMOVED IN S6 (konsol#348, review of grynn-in/konsol#540 / konsolidat#362, 15 Nov 2026).**
+
+A forecast (scenario, fiscal year) holds at most ONE approved round for now. Four readers still sum a forecast's rounds across the cycle: gold_scenario_trial_balance (its GROUP BY leaves `cycle` out), the cost-allocation pool (konsol cost_allocation_run.py), the forecast_input Dataset (konsol defaults/dataset.json) and hierarchy_query. Two approved rounds in one year would therefore add two forecasts together silently. konsol refuses the second Approve by name (Budget Cycle.before_submit, under the pair lock); this is the warehouse backstop, one row per forecast (scenario, fiscal year) that gold_spread_budget holds under more than one distinct cycle. The fact carries only approved Cycles (konsol syncs docstatus 1), so a second cycle here IS a second approved round. Forecasts only, by the declared type in epm_gold.scenario_definitions, as assert_budget_one_cycle_per_ scenario_year (B5) does for the budget side: that test leaves forecasts out, this one is the forecast guard. IN, not a join: join_use_nulls=0 would fill an unmatched join with ''. An undeclared scenario is B5's and assert_scenario_rows_declared's business, not read here. Goes in S6 with konsol's refusal, when the latest-estimate read picks the round (FC-2-1) and approved rounds sit side by side (FC-4). Error severity: every reader above would report a doubled forecast. Fixtures: assert_forecast_one_approved_round_until_s6.must_flag.sql (two cycles: 1 result), assert_forecast_one_approved_round_until_s6.one_round.sql (one cycle, and a two-cycle budget: pass).
+
+<sub>`error` · `tests/assert_forecast_one_approved_round_until_s6.sql` · konsol#348 konsol#540 konsolidat#362</sub>
 
 ### `incremental_slice_preserved`
 
@@ -1356,7 +1448,7 @@ The macro resolves such a row as method_source = 'undeclared' and consolidation_
 
 **konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a consolidation entry carries the dimension values of whatever knows them.**
 
-The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
+The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. The NCI attribution ('nci_attribution', gold_nci_attribution_journal) is half covered. Its result legs inherit the slices of the entity's P&L (option D: derivable, so inherited; assert_nci_attribution_carries_the_result_slices). Its 'CTA' line is a share of the same entity-level CTA plug as the 'cta' layer, so it is blank by the same arithmetic and is asserted here by account. The CTA part of its NCI line is blank too, but shares the NCI account with the sliced result part, so it cannot be told apart here; the slice test's every-slice-nets-to-zero check covers it. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
 
 <sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#345</sub>
 
