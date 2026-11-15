@@ -6,7 +6,7 @@
 }}
 
 {# PRD-6 / grynn-in/konsolidat#94: canonical monthly budget fact — one row per
-   (scenario, entity, fiscal_year, fiscal_period, main_account, budget dims, layer).
+   (scenario, cycle, entity, fiscal_year, fiscal_period, main_account, budget dims, layer).
    UNION of the two budget entry methods so both land in the SAME place and are
    read identically by K.EPM's `budget_input` fact and gold_scenario_trial_balance:
 
@@ -21,20 +21,39 @@
    layer is passed (Dataset.has_layer). Each Annual Input declares its own layer
    (R6), and the annual branch carries it.
 
+   Budget CYCLE (konsol#348 S3 B4, QB2 a): every row names the Budget Cycle it
+   was entered under, from epm_raw.budget_entries.cycle and
+   epm_gold.budget_annual_input.cycle (B3w). A forecast scenario holds one
+   approved Cycle per round, several per (scenario, year) (Q23 a, QB8 a), and
+   rounds must never sum: both branches carry the cycle and the manual branch
+   groups by it, so round 2 is a second set of rows beside round 1, never added
+   to it. assert_budget_fact_per_cycle is the backstop. Which round a read takes
+   (the latest estimate) is the reader's choice, with S6's budget_cycles table.
+
+   CURRENCY (QB3 a): each row carries the currency its line declares. konsol
+   refuses a line that is not in the entity's accounting currency;
+   assert_budget_currency_is_entity_currency is the warehouse backstop, and the
+   variance models carry the currency on their grain (B8).
+
    One writer per grain (konsol#348 Q16-c, 13 Nov 2026, Deepak Pai's standing
    rule): konsol refuses an Annual Input and a manual Budget Entry line on one
    (scenario, entity, year, layer, account, budget dims). The two branches are
    therefore a plain UNION ALL with no precedence rule;
-   assert_budget_one_writer_per_grain is the backstop that names any overlap. #}
+   assert_budget_one_writer_per_grain is the backstop that names any overlap.
+
+   The two branches are UNIONed positionally (select * from each): keep the
+   column lists of `spread` and `manual` in the same order. #}
 
 with annual_input as (
     select
         scenario_id,
+        cycle,
         data_area_id,
         {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
+        currency,
         annual_amount,
         spread_profile_id,
         submitted_by
@@ -62,8 +81,8 @@ profiles as (
 {# (b) Manually-entered monthly budgets as an identity spread (konsol#348 S2,
    R2). Each epm_raw.budget_entries line is a debit or a credit; the fact carries
    net = debit - credit, debit positive, signed like actuals (BUD-7), summed to
-   one value per (scenario, entity, year, period, account, budget dims, layer):
-   several lines on one grain are one fact row.
+   one value per (cycle, scenario, entity, year, period, account, budget dims,
+   layer, currency): several lines on one grain are one fact row.
    The fact holds period MOVEMENTS (Q15-c, R10). A 'Period movement' line is
    one as landed. A 'Year-to-date movement' line is converted within the Cycle
    year by the rule silver_tb_movements uses for actuals, written once in
@@ -73,10 +92,11 @@ profiles as (
    every period from 1 to its last (Q21-a, konsol#348): konsol refuses a late
    start or a gap at intake, and assert_budget_ytd_periods_contiguous is the
    build-time backstop. The series is
-   (cycle, scenario, layer, entity, account, budget dims): a layer is never
-   differenced against another, nor against actuals. A 'Period-end balance'
-   line is NOT read: it needs an opening balance, which is an open policy
-   question. assert_budget_basis_supported names every such line, and every
+   (cycle, scenario, layer, entity, currency, account, budget dims): a layer is
+   never differenced against another, nor against actuals, nor one cycle
+   against another. A 'Period-end balance' line is NOT read: it needs an
+   opening balance, which is an open policy question.
+   assert_budget_basis_supported names every such line, and every
    (cycle, entity, layer, year) that mixes bases, so none is dropped or
    combined silently. Keep the literals below identical to that test's.
    ALL layers are carried (challenge/management/board as well as base); the
@@ -84,7 +104,7 @@ profiles as (
    on layer too). annual_amount / period_weight are derived from the monthly
    values so the row shape matches the annual-spread branch. #}
 {%- set budget_dim_names = get_budget_dimensions() | map(attribute='name') | list -%}
-{%- set ytd_scope = ['cycle', 'scenario_id', 'layer', 'data_area_id'] -%}
+{%- set ytd_scope = ['cycle', 'scenario_id', 'layer', 'data_area_id', 'currency'] -%}
 {%- set ytd_key_columns = ['main_account'] + budget_dim_names %}
 ytd_lines as (
     {# the stated year-to-date figure per key and period #}
@@ -93,6 +113,7 @@ ytd_lines as (
         scenario_id,
         layer,
         data_area_id,
+        currency,
         fiscal_year,
         fiscal_period,
         main_account,
@@ -106,22 +127,23 @@ ytd_lines as (
         scenario_id,
         layer,
         data_area_id,
+        currency,
         fiscal_year,
         fiscal_period,
         main_account
         {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
 ),
 
-{# the periods a (cycle, scenario, layer, entity) states a YTD figure for: the
-   budget's analogue of an entity's claimed TB periods #}
+{# the periods a (cycle, scenario, layer, entity, currency) states a YTD figure
+   for: the budget's analogue of an entity's claimed TB periods #}
 ytd_periods as (
-    select distinct cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period
+    select distinct cycle, scenario_id, layer, data_area_id, currency, fiscal_year, fiscal_period
     from ytd_lines
 ),
 
 ytd_keys as (
     select distinct
-        cycle, scenario_id, layer, data_area_id, main_account
+        cycle, scenario_id, layer, data_area_id, currency, main_account
         {{- dim_select(dims=get_budget_dimensions(), leading=true) }}
     from ytd_lines
 ),
@@ -140,22 +162,26 @@ ytd_movements as (
 manual_lines as (
     select
         scenario_id,
+        cycle,
         data_area_id,
         fiscal_year,
         fiscal_period,
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
+        currency,
         sum(net_amount) as net_amount
     from (
         select
             scenario_id,
+            cycle,
             data_area_id,
             fiscal_year,
             fiscal_period,
             main_account,
             {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
             layer,
+            currency,
             toDecimal128(debit - credit, {{ amount_scale() }}) as net_amount
         from {{ source('budget_raw', 'budget_entries') }}
         where amount_basis = 'Period movement'
@@ -166,35 +192,42 @@ manual_lines as (
            as in silver_tb_movements #}
         select
             scenario_id,
+            cycle,
             data_area_id,
             fiscal_year,
             fiscal_period,
             main_account,
             {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
             layer,
+            currency,
             net_amount
         from ytd_movements
         where not (net_amount = 0 and has_source = 0)
     )
+    {# the cycle is part of the grain (B4): two rounds on one grain are two rows #}
     group by
         scenario_id,
+        cycle,
         data_area_id,
         fiscal_year,
         fiscal_period,
         main_account,
         {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }}
-        layer
+        layer,
+        currency
 ),
 
 manual as (
     select
         scenario_id,
+        cycle,
         data_area_id,
         {{ cast_to_uint16('fiscal_year') }} as fiscal_year,
         {{ cast_to_uint8('fiscal_period') }} as fiscal_period,
         main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         layer,
+        currency,
         toFloat64(sum(net_amount) over w) as annual_amount,
         'manual' as spread_profile_id,
         'Manual (as-entered)' as profile_name,
@@ -203,8 +236,8 @@ manual as (
         '' as submitted_by
     from manual_lines
     window w as (
-        partition by scenario_id, data_area_id, fiscal_year, main_account,
-                     {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }} layer
+        partition by scenario_id, cycle, data_area_id, fiscal_year, main_account,
+                     {{ dim_group_by(dims=get_budget_dimensions(), trailing=true) }} layer, currency
     )
 ),
 
@@ -213,12 +246,14 @@ manual as (
 spread as (
     select
         ai.scenario_id as scenario_id,
+        ai.cycle as cycle,
         ai.data_area_id as data_area_id,
         ai.fiscal_year as fiscal_year,
         p.fiscal_period as fiscal_period,
         toString(ai.main_account) as main_account,
         {{ dim_select(prefix='ai.', dims=get_budget_dimensions(), trailing=true) }}
         ai.layer as layer,
+        ai.currency as currency,
         toFloat64(ai.annual_amount) as annual_amount,
         ai.spread_profile_id as spread_profile_id,
         p.profile_name as profile_name,

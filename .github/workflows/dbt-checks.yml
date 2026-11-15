@@ -12,6 +12,7 @@ on:
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
+      - 'tests/test_budget_models_read_no_erp.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
@@ -42,6 +43,7 @@ on:
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
+      - 'tests/test_budget_models_read_no_erp.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
@@ -130,6 +132,10 @@ jobs:
       # (declared_periods()) is the one source of period dates.
       - name: no calendar-month period macro
         run: python -m unittest -v tests.test_no_month_period_macro
+      # konsol#348 S3 (B1, QB1 b): the budget and variance models read no ERP
+      # model or source; the budget enters through konsol's two tables only.
+      - name: budget and variance models read no ERP
+        run: python -m unittest -v tests.test_budget_models_read_no_erp
       # konsolidat#199: the TB submission control table's DDL is konsol's,
       # including amount_basis, and the CI fixture claims its batch by name.
       - name: raw submission control DDL and CI claim

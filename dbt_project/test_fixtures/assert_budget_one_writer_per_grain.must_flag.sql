@@ -4,6 +4,9 @@
 -- (scenario, entity, year, layer, account, budget dims). This backstop names a grain that has both.
 -- ZZ4000 'challenge' has an annual input of 1200 and two manual lines (P1, P2) of one Budget Entry:
 -- one grain, one flagged row. ZZ6000 has a manual line only and is not flagged.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES

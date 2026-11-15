@@ -71,13 +71,6 @@ models:
         tests:
           - not_null
 
-  - name: stg_budget_entries
-    description: "Canonical budget entries — UNION ALL from per-ERP adapters"
-    columns:
-      - name: erp_source
-        tests:
-          - not_null
-
   - name: stg_fiscal_periods
     description: "Canonical fiscal periods — UNION ALL from per-ERP adapters"
     columns:

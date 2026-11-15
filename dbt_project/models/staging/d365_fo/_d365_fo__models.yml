@@ -45,9 +45,6 @@ models:
   - name: stg_d365_fo__exchange_rates
     description: "D365 F&O exchange rates adapter — canonical schema output"
 
-  - name: stg_d365_fo__budget_entries
-    description: "D365 F&O budget entries adapter — canonical schema output"
-
   - name: stg_d365_fo__fiscal_periods
     description: "D365 F&O fiscal periods adapter — canonical schema output"
 
@@ -70,9 +67,6 @@ models:
 
   - name: stg_d365_fo__exchange_rate_types
     description: "Exchange rate type definitions"
-
-  - name: stg_d365_fo__budget_register_entries
-    description: "Budget register headers deduplicated by EntryNumber"
 
   - name: stg_d365_fo__consolidation_groups
     description: "Consolidation account groups deduplicated"

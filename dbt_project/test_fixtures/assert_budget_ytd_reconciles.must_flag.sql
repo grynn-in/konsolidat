@@ -11,9 +11,12 @@ VALUES
   ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 100, 'USD', 'Year-to-date movement'),
   ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 2, 'ZZ4000', 0, 250, 'USD', 'Year-to-date movement'),
   ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 80, 0, 'USD', 'Year-to-date movement');
+-- The fact carries cycle and currency since S3 B4; the live table may predate them: add them to the clone.
+ALTER TABLE epm_gold.gold_spread_budget ADD COLUMN IF NOT EXISTS cycle String DEFAULT '';
+ALTER TABLE epm_gold.gold_spread_budget ADD COLUMN IF NOT EXISTS currency String DEFAULT '';
 INSERT INTO epm_gold.gold_spread_budget
-  (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, layer, annual_amount, spread_profile_id, profile_name, period_weight, period_amount, submitted_by)
+  (scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, layer, currency, annual_amount, spread_profile_id, profile_name, period_weight, period_amount, submitted_by)
 VALUES
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 1, 'ZZ4000', 'base', -350, 'manual', 'Manual (as-entered)', 0.2857, -100, ''),
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 2, 'ZZ4000', 'base', -350, 'manual', 'Manual (as-entered)', 0.7143, -250, ''),
-  ('ZZ_PLAN_2026', 'ZZE1', 2026, 1, 'ZZ6000', 'base', 80, 'manual', 'Manual (as-entered)', 1, 80, '');
+  ('ZZ_PLAN_2026', 'ZZ-CY-2026', 'ZZE1', 2026, 1, 'ZZ4000', 'base', 'USD', -350, 'manual', 'Manual (as-entered)', 0.2857, -100, ''),
+  ('ZZ_PLAN_2026', 'ZZ-CY-2026', 'ZZE1', 2026, 2, 'ZZ4000', 'base', 'USD', -350, 'manual', 'Manual (as-entered)', 0.7143, -250, ''),
+  ('ZZ_PLAN_2026', 'ZZ-CY-2026', 'ZZE1', 2026, 1, 'ZZ6000', 'base', 'USD', 80, 'manual', 'Manual (as-entered)', 1, 80, '');

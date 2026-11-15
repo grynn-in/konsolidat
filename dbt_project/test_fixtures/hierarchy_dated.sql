@@ -19,6 +19,9 @@
 --   ZZ_AX   leaf under ZZ_A 2010-01-01 .. open
 --
 -- The live table may predate the two tranche columns: add them first.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
 -- A table that already has them as plain Date (1970-01-01..2149-06-06 clamps both ends) becomes Date32.
@@ -27,6 +30,13 @@ ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_to 
 -- konsol#287: the budget input tables name no dimension; konsol adds the site's
 -- declared ones. These rows carry dim_cost_center and dim_department, so the
 -- columns are added first, for a stack whose site declares neither.
+-- konsol#348 S3 B6: gold_scenario_trial_balance now carries the entity's accounting currency from
+-- silver_entity_currencies (epm_staging.entities), and the build runs assert_every_tb_entity_has_a_currency
+-- and assert_budget_currency_is_entity_currency on the way, so the entity declares its currency, as on a site.
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
+VALUES
+  ('ZZE1', 'ZZ entity 1', '', 0, 'Published', 'USD', 'US', '');
 INSERT INTO epm_staging.reporting_hierarchies
   (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
 VALUES

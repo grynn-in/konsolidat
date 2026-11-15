@@ -10,11 +10,15 @@
 -- same row also trips) is not selected, so it does not judge this fixture.
 -- Hierarchy ZZ_PDH over dim_business_unit: ZZ_ROOT (group) with leaf ZZ_L, both open-ended.
 -- Also named so they exist, empty: epm_gold.gold_spread_budget, epm_gold.gold_variance_analysis.
--- The live table may predate the two tranche columns: add them first.
+-- The live table may predate the two tranche columns: add them first. The seeded fact and variance clones may
+-- predate cycle and currency (konsol#348 S3 B4, B8, B11), which the node models now read: add them too.
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies ADD COLUMN IF NOT EXISTS member_effective_to Date32 DEFAULT '2299-12-31';
 ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_from Date32 DEFAULT '1900-01-01';
 ALTER TABLE epm_staging.reporting_hierarchies MODIFY COLUMN member_effective_to Date32 DEFAULT '2299-12-31';
+ALTER TABLE epm_gold.gold_spread_budget ADD COLUMN IF NOT EXISTS cycle String;
+ALTER TABLE epm_gold.gold_spread_budget ADD COLUMN IF NOT EXISTS currency String;
+ALTER TABLE epm_gold.gold_variance_analysis ADD COLUMN IF NOT EXISTS currency String;
 INSERT INTO epm_staging.reporting_hierarchies
   (hierarchy_name, dimension, member_code, member_label, parent_member_code, is_group, hierarchy_level, path, effective_from, effective_to, is_default, status, member_effective_from, member_effective_to)
 VALUES

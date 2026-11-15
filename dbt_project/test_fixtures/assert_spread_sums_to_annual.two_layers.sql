@@ -3,6 +3,9 @@
 -- Two manual layers (base, challenge) of one account, each totalling 1200, are two legitimate grains
 -- (gold_spread_budget gives each layer its own annual_amount): the test must PASS, not read them as 2400 vs 1200.
 -- epm_gold.budget_annual_input and epm_gold.spread_profiles are read too, empty here, so they are named to exist (empty).
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES

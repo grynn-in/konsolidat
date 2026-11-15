@@ -10,6 +10,20 @@ sources:
           Top-down annual budget figures from konsol's Budget Annual Input
           doctype, spread into months by gold_spread_budget. konsolidat#146:
           this was seeds/budget_annual_input.csv, the last seed this repo owned.
+        columns:
+          - name: annual_amount
+            description: >
+              The year's budget for the account, signed like the actuals: debit
+              positive, credit negative (konsol#348 S3 B12, QB6 a). A revenue or
+              liability budget is therefore negative, an expense or asset budget
+              positive, and the spread period amounts carry the same sign, so a
+              budget row compares with gold_trial_balance.period_net_amount
+              without a sign rule. assert_spread_sums_to_annual compares the
+              signed values (fixture assert_spread_sums_to_annual.negative_revenue).
+          - name: cycle
+            description: >
+              The approved Budget Cycle the input belongs to (konsol#348 S3 B3w,
+              QB4 a); part of the fact grain in gold_spread_budget.
       - name: entity_fiscal_calendars
         description: >
           Maps each ERP legal entity (data_area_id) to the fiscal calendar it

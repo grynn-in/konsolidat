@@ -1,7 +1,7 @@
 {{
     config(
         engine=cluster_engine('MergeTree()'),
-        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account, layer)',
+        order_by='(hierarchy_name, hierarchy_member_code, data_area_id, fiscal_year, fiscal_period, main_account, layer, cycle, currency)',
         cluster=cluster_name()
     )
 }}
@@ -14,7 +14,14 @@
    a period the calendar does not declare drops out of this model (an inner join), silently:
    assert_hierarchy_node_period_declared cannot see it (it reads the same declared keys) and is only a pin
    against a change here; the guard is upstream, where the line is kept: assert_budget_period_declared on the
-   raw budget lines and gold_spread_budget. #}
+   raw budget lines and gold_spread_budget.
+
+   konsol#348 S3 B11 (QB2 a, QB3 a): the rollup carries the fact's `cycle` and `currency` and groups by both,
+   so two forecast rounds never sum at a node and nor do two currencies. gold_tb_at_hierarchy_node carries every
+   column of its row grain the same way (gold_trial_balance has no currency: the entity's is one). A read of a
+   budget-type scenario sees one cycle per year (assert_budget_one_cycle_per_scenario_year); a read of a
+   forecast picks its round, as on the fact. assert_budget_node_per_cycle_and_currency ties the leaves to the
+   fact per cycle and currency. #}
 
 with budget_long as (
     {{ budget_dimension_long_sql('b') }}
@@ -77,6 +84,8 @@ select
        one layer (base/challenge/management/board); omitting the filter sums all
        layers = the final budget, matching the flat path (grynn-in/konsol#63). #}
     b.layer,
+    b.cycle,
+    b.currency,
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}) as {{ d.name }}{{ ',' if not loop.last }}
     {%- endfor %}{{ ',' if get_budget_dimensions() | length > 0 }}
@@ -103,7 +112,9 @@ group by
     b.fiscal_year,
     b.fiscal_period,
     b.main_account,
-    b.layer{{ ',' if get_budget_dimensions() | length > 0 }}
+    b.layer,
+    b.cycle,
+    b.currency{{ ',' if get_budget_dimensions() | length > 0 }}
     {% for d in get_budget_dimensions() %}
     if(lc.hierarchy_dimension = '{{ d.name }}', '', b.{{ d.name }}){{ ',' if not loop.last }}
     {%- endfor %}
