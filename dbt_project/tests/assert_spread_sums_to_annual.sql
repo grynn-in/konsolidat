@@ -1,9 +1,11 @@
--- PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts
--- must sum to annual_amount. gold_spread_budget gives each layer its own annual_amount, and carries each
--- annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a
+-- PRD-6 Test: per grain (scenario, cycle, entity, year, account, layer, budget dims) the spread period
+-- amounts must sum to annual_amount. gold_spread_budget gives each layer its own annual_amount, and carries
+-- each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a
 -- grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
+-- The cycle is part of the grain (konsol#348 S3 B4): each forecast round has its own annual amount.
 select
     scenario_id,
+    cycle,
     data_area_id,
     fiscal_year,
     main_account,
@@ -15,6 +17,7 @@ select
 from {{ ref('gold_spread_budget') }}
 group by
     scenario_id,
+    cycle,
     data_area_id,
     fiscal_year,
     main_account,

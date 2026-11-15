@@ -11,10 +11,11 @@
     that vanishes must have been reversed: a model that only differenced the
     rows that exist leaves its last YTD standing and is named here.
 
-    The spread has no cycle column, so the stated figures are summed to the
-    spread's grain (scenario, entity, year, period, account, budget dims,
-    layer). A grain that mixes bases in one year does not reconcile either;
-    assert_budget_basis_supported names that case by itself.
+    The spread carries the cycle (konsol#348 S3 B4), so the stated figures are
+    compared on the spread's full grain (cycle, scenario, entity, year, period,
+    account, budget dims, layer): a forecast round reconciles to its own lines,
+    never to another round's. A grain that mixes bases in one year does not
+    reconcile either; assert_budget_basis_supported names that case by itself.
 
     Flags one row per (grain, period) that does not reconcile. Tolerance 0.01,
     as for the TB balance tests.
@@ -72,7 +73,7 @@ stated as (
    side with 0 and hide a missing spread row #}
 combined as (
     select
-        scenario_id, layer, data_area_id,
+        cycle, scenario_id, layer, data_area_id,
         toUInt16(fiscal_year) as fiscal_year,
         toUInt8(fiscal_period) as fiscal_period,
         toString(main_account) as main_account,
@@ -85,7 +86,7 @@ combined as (
     union all
 
     select
-        scenario_id, layer, data_area_id,
+        cycle, scenario_id, layer, data_area_id,
         toUInt16(fiscal_year) as fiscal_year,
         toUInt8(fiscal_period) as fiscal_period,
         toString(main_account) as main_account,
@@ -99,14 +100,14 @@ combined as (
 
 per_period as (
     select
-        scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account,
+        cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account,
         {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
         sum(stated_ytd) as stated_ytd,
         sum(movement) as movement,
         max(on_spine) as on_spine
     from combined
     group by
-        scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account
+        cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account
         {{- dim_group_by(dims=get_budget_dimensions(), leading=true) }}
 ),
 
@@ -114,7 +115,7 @@ cumulated as (
     select
         *,
         sum(movement) over (
-            partition by scenario_id, layer, data_area_id, fiscal_year, main_account
+            partition by cycle, scenario_id, layer, data_area_id, fiscal_year, main_account
                 {{- dim_partition_by(dims=get_budget_dimensions(), leading=true) }}
             order by fiscal_period
             rows between unbounded preceding and current row
@@ -123,6 +124,7 @@ cumulated as (
 )
 
 select
+    cycle,
     scenario_id,
     layer,
     data_area_id,

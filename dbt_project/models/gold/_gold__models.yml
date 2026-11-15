@@ -341,13 +341,32 @@ models:
           gold_variance_quarterly and in gold_variance_ytd.
 
   - name: gold_spread_budget
-    description: "Canonical monthly budget fact: annual spread + manual monthly, one row per budget layer (base/challenge/management/board). The final budget is the sum of layers."
+    description: >
+      Canonical monthly budget fact: annual spread + manual monthly, one row per
+      (scenario, cycle, entity, year, period, account, budget dims, layer). One row
+      per budget layer (base/challenge/management/board): the final budget is the
+      sum of layers. One row per Budget Cycle (konsol#348 S3 B4): a forecast round
+      is its own approved Cycle, and rounds are never summed here; the reader picks
+      the round.
     columns:
       - name: scenario_id
         tests:
           - not_null
+      - name: cycle
+        description: >
+          The Budget Cycle the line was entered under (epm_raw.budget_entries.cycle,
+          epm_gold.budget_annual_input.cycle). Part of the grain: two forecast rounds
+          on one (scenario, year) are two sets of rows (QB2 a, Q23 a);
+          assert_budget_fact_per_cycle is the backstop.
+        tests:
+          - not_null
       - name: layer
         description: "Budget layer: base / challenge / management / board"
+      - name: currency
+        description: >
+          The currency the line declares (QB3 a). konsol refuses a line that is not
+          in the entity's accounting currency; assert_budget_currency_is_entity_currency
+          is the warehouse backstop.
       - name: period_amount
         description: "annual_amount * period_weight"
 

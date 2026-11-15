@@ -2,6 +2,9 @@
 -- gate: expect assert_spread_sums_to_annual flag 1
 -- Two annual inputs for one grain with different amounts (1200 and 600, ZZ_PLAN_2026 / ZZE1 / 2026 / ZZ4000) are
 -- both spread: 1800 against an annual_amount of 1200 at most. The test must FLAG 1 for the grain.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_gold.budget_annual_input
   (scenario_id, data_area_id, fiscal_year, main_account, layer, currency, annual_amount, spread_profile_id, submitted_by)
 VALUES

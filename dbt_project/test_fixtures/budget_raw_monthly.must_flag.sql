@@ -13,6 +13,9 @@
 --
 -- epm_raw.budget_entries is konsol's (I3), declared in clickhouse/init-db.sql: fixture_gate.py creates it
 -- (as zzg_raw) when the stack lacks it and adds the fixture budget dimension columns.
+-- konsol#348 S3 B4: gold_spread_budget reads budget_annual_input.cycle (B3w); the live table may predate it:
+-- add it to the scratch clone first.
+ALTER TABLE epm_gold.budget_annual_input ADD COLUMN IF NOT EXISTS cycle String;
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis)
 VALUES
