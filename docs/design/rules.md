@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **170** |
-| carrying their reasoning | 149 |
-| citing the issue that caused them | 142 |
+| assertions | **169** |
+| carrying their reasoning | 148 |
+| citing the issue that caused them | 141 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 148 |
+| severity `error` (stops the build, and its children) | 147 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -914,14 +914,6 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
 
-### `budget_entries_one_row_per_line`
-
-**konsol#348 PR3 (A12;**
-
-PR #360 review, finding 5): silver_budget_entries carries exactly one row per ERP budget line (recid). The model puts a line in the declared Regular period that holds its transaction_date through a date spine arrayJoined from epm_staging.fiscal_periods. The spine must hold each date once: a period declared on two rows (a calendar loaded twice) must be grouped to one (fiscal_year, fiscal_period) before its dates are spun out, as declared_periods() does. Spun out ungrouped, every date of that period appears twice and every budget line dated in it comes out twice: the budget doubles with no error. This test fails the build on any line with more than one row. One row per duplicated recid. Error severity: a doubled budget is a wrong number. Fixtures: dbt_project/test_fixtures/assert_budget_entries_one_row_per_line*.sql.
-
-<sub>`error` · `tests/assert_budget_entries_one_row_per_line.sql` · konsol#348 konsolidat#360</sub>
-
 ### `budget_fact_grain_unique`
 
 **grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
@@ -934,7 +926,7 @@ The two entry methods (annual×profile spread and manual monthly identity-spread
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums manual lines without the cycle, so two Cycles with lines on one (scenario, fiscal year) would be added together: a doubled budget. konsol's intake keeps one Cycle per (scenario, year); this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. epm_gold.budget_annual_input carries no cycle column, so the annual side has nothing to check here (n/a). Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums manual lines without the cycle, so two Cycles with lines on one (scenario, fiscal year) would be added together: a doubled budget. konsol's intake keeps one Cycle per (scenario, year); this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. epm_gold.budget_annual_input carries no cycle column, so the annual side has nothing to check here (n/a). konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -1058,9 +1050,9 @@ Every weight row of a run must equal a value of the named statistic at value_per
 
 **PR #211 review 2 (konsolidat#206): the scenarios of gold_scenario_trial_balance are declared.**
 
-This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl                    -> actual budget, d365_budget   -> budget or forecast Forecasts are legitimate rows of the scenario trial balance, so the budget branches accept them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
+This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl       -> actual budget   -> budget or forecast (The ERP branch 'd365_budget' is gone, konsol#348 S3 B1.) Forecasts are legitimate rows of the scenario trial balance, so the budget branch accepts them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
 
-<sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsolidat#206 konsolidat#211</sub>
+<sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsol#348 konsolidat#206 konsolidat#211</sub>
 
 ### `spread_covers_declared_periods`
 
