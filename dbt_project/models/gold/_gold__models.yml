@@ -328,6 +328,13 @@ models:
       - name: main_account
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain (konsol#348 S3 B8, QB3 a):
+          the actuals' is the entity's accounting currency, a budget's is its
+          line's (gold_scenario_trial_balance). A budget in another currency than
+          the actuals comes out as its own row with actual 0, never netted;
+          assert_variance_single_currency (error) names such a grain.
       - name: variance_abs
         description: "actual_amount - budget_amount"
       - name: variance_pct

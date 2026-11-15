@@ -18,7 +18,15 @@
 
    One stream plus conditional aggregation rather than a full outer join:
    under join_use_nulls=0 the unmatched side of a join fills '' and 0, which
-   lost the entity and account of budget-only lines. #}
+   lost the entity and account of budget-only lines.
+
+   CURRENCY (konsol#348 S3 B8, QB3 a): the currency joins the grain, so a
+   budget row never nets against an actual in another currency. The actuals
+   carry the entity's accounting currency and a budget line its own
+   (gold_scenario_trial_balance, B6); where they differ, the grain comes out
+   as two rows, one per currency, each with the other side missing.
+   assert_variance_single_currency names such a grain; B7 refuses the line
+   upstream. #}
 
 {% set budget_dims = get_budget_dimensions() %}
 
@@ -47,6 +55,7 @@ typed as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount
     from {{ ref('gold_scenario_trial_balance') }}
     where scenario_id in (select scenario_id from actual_scenarios)
@@ -95,6 +104,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         budget_scenario_id
     from typed
@@ -114,6 +124,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         scenario_id as budget_scenario_id
     from typed
@@ -127,6 +138,7 @@ grouped as (
         fiscal_period,
         main_account,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         budget_scenario_id,
         max(account_name) as account_name,
         max(account_type_name) as account_type_name,
@@ -137,7 +149,7 @@ grouped as (
            null) as budget_amount
     from paired
     group by data_area_id, fiscal_year, fiscal_period, main_account,
-             {{ dim_group_by(dims=budget_dims, trailing=true) }} budget_scenario_id
+             {{ dim_group_by(dims=budget_dims, trailing=true) }} currency, budget_scenario_id
 ),
 
 {# Get account metadata for accounts that only appear in budget #}
@@ -162,6 +174,7 @@ combined as (
         {% for d in budget_dims %}
         g.{{ d.name }} as {{ d.name }},
         {% endfor %}
+        g.currency as currency,
         g.actual_amount as actual_amount,
         g.budget_amount as budget_amount,
         g.actual_amount - coalesce(g.budget_amount, 0) as variance_abs,
