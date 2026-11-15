@@ -4,6 +4,9 @@
 -- ZZ-FC-R2 on the same account: not named. Must PASS. On the S2 test, which checked every scenario,
 -- it is named (1 result).
 -- The budget-type backstop is unchanged: assert_budget_one_cycle_per_scenario_year.must_flag.sql.
+-- Until S6 the forecast side is assert_forecast_one_approved_round_until_s6, which names this same
+-- data on gold_spread_budget (interim rule on konsol#348, 15 Nov 2026): two approved rounds may not
+-- coexist yet, because the readers sum them. That is its gate, not this one.
 INSERT INTO epm_gold.scenario_definitions
   (scenario_id, scenario_name, scenario_type, is_active)
 VALUES

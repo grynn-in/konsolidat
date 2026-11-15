@@ -22,7 +22,7 @@
 -- assert_variance_node_single_currency (konsol#348 S3 B11) passes.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_raw.budget_register_entries, epm_raw.fiscal_calendar_years,
+-- (empty): epm_raw.fiscal_calendar_years,
 -- epm_gold.budget_annual_input, epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles,
 -- epm_staging.dimension_mappings.
 --

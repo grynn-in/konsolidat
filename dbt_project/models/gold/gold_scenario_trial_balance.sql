@@ -70,6 +70,9 @@ union all
 -- scenario_year); a forecast scenario has one per round, and this model is not
 -- the place to read a forecast round (the variance models read budget-type
 -- scenarios only; S6's latest-estimate read picks its round on the fact).
+-- Until then a forecast holds one approved round (konsol refuses the second Approve;
+-- assert_forecast_one_approved_round_until_s6 is the backstop), so this sum is
+-- one round, never two.
 select
     scenario_id,
     data_area_id,

@@ -377,9 +377,8 @@ models:
           The Budget Cycle the line was entered under (epm_raw.budget_entries.cycle,
           epm_gold.budget_annual_input.cycle). Part of the grain: two forecast rounds
           on one (scenario, year) are two sets of rows (QB2 a, Q23 a);
-          assert_budget_fact_per_cycle is the backstop.
-        tests:
-          - not_null
+          assert_budget_fact_per_cycle is the backstop. No not_null test: the
+          column is a non-Nullable String, so one could never fail.
       - name: layer
         description: "Budget layer: base / challenge / management / board"
       - name: currency

@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **176** |
-| carrying their reasoning | 155 |
-| citing the issue that caused them | 149 |
+| assertions | **177** |
+| carrying their reasoning | 156 |
+| citing the issue that caused them | 150 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 154 |
+| severity `error` (stops the build, and its children) | 155 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -35,7 +35,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 14
+- [Platform and data integrity](#platform-and-data-integrity) — 15
 - [Other](#other) — 4
 
 ---
@@ -990,7 +990,7 @@ A forecast scenario holds one approved Cycle per round, and several rounds share
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Until S6, assert_forecast_one_approved_round_until_s6 is the forecast side: it holds a forecast to one approved round (interim rule on konsol#348, 15 Nov 2026), because the readers still sum rounds. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -1289,6 +1289,14 @@ toDecimal128(Float64, scale) truncates toward zero on the binary double, which i
 Silver derives debit/credit from the SIGN of the amount (konsolidat#112), so the amount has to arrive signed. The demo generator shipped magnitudes with the sign only in IsCredit; every credit was booked as a debit, every trial balance went one-sided, and nothing failed until assert_silver_gl_debit_credit_balance, three layers down, by entity-year, where it was mistaken for "demo-data tension". This fails at the source, per voucher, whatever the feed. It deliberately does not re-derive the sign from IsCredit: on real D365 that flag can disagree with the sign on storno lines (#112/#118, assert_is_credit_retired). A correctly signed voucher nets to zero either way. Grouped by voucher alone, entity-less headers included: a voucher must balance whatever entity it is attributed to.
 
 <sub>`error (default)` · `tests/assert_d365_gl_vouchers_balance.sql` · konsolidat#112 konsolidat#118 konsolidat#155</sub>
+
+### `forecast_one_approved_round_until_s6`
+
+**INTERIM RULE, REMOVED IN S6 (konsol#348, review of grynn-in/konsol#540 / konsolidat#362, 15 Nov 2026).**
+
+A forecast (scenario, fiscal year) holds at most ONE approved round for now. Four readers still sum a forecast's rounds across the cycle: gold_scenario_trial_balance (its GROUP BY leaves `cycle` out), the cost-allocation pool (konsol cost_allocation_run.py), the forecast_input Dataset (konsol defaults/dataset.json) and hierarchy_query. Two approved rounds in one year would therefore add two forecasts together silently. konsol refuses the second Approve by name (Budget Cycle.before_submit, under the pair lock); this is the warehouse backstop, one row per forecast (scenario, fiscal year) that gold_spread_budget holds under more than one distinct cycle. The fact carries only approved Cycles (konsol syncs docstatus 1), so a second cycle here IS a second approved round. Forecasts only, by the declared type in epm_gold.scenario_definitions, as assert_budget_one_cycle_per_ scenario_year (B5) does for the budget side: that test leaves forecasts out, this one is the forecast guard. IN, not a join: join_use_nulls=0 would fill an unmatched join with ''. An undeclared scenario is B5's and assert_scenario_rows_declared's business, not read here. Goes in S6 with konsol's refusal, when the latest-estimate read picks the round (FC-2-1) and approved rounds sit side by side (FC-4). Error severity: every reader above would report a doubled forecast. Fixtures: assert_forecast_one_approved_round_until_s6.must_flag.sql (two cycles: 1 result), assert_forecast_one_approved_round_until_s6.one_round.sql (one cycle, and a two-cycle budget: pass).
+
+<sub>`error` · `tests/assert_forecast_one_approved_round_until_s6.sql` · konsol#348 konsol#540 konsolidat#362</sub>
 
 ### `incremental_slice_preserved`
 
