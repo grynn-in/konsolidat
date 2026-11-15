@@ -91,6 +91,7 @@ candidates as (
         and eo.fiscal_period = ctb.fiscal_period
 ),
 
+{# the actuals Rate Set's tranches only, as the model reads them (konsol#348 S4 W2) #}
 rates as (
     select
         consolidation_group,
@@ -99,6 +100,7 @@ rates as (
         to_currency,
         rate_date
     from {{ source('epm_staging', 'historical_equity_rates') }}
+    where {{ actuals_rate_set_predicate() }}
 ),
 
 {# The as-of count, on the model's keys. join_use_nulls=0: a LEFT-join miss fills

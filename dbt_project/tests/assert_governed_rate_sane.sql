@@ -11,6 +11,9 @@
     stops the model (governed_rate_guard); a merely implausible one is named
     here only.
 
+    konsol#348 S4 (S4-Q1 c): a rate is sane or not whatever Rate Set it is in,
+    so this judges every Rate Set and names the row's set.
+
     severity warn: an error-severity source test would make `dbt build` skip
     the model. Until epm_gold.currencies has usd_log10 (konsol #174 adds it),
     this returns one warn row instead of erroring on the missing column.
@@ -35,6 +38,7 @@ checked as (
         g.rate_type as rate_type,
         g.rate as rate,
         g.document as document,
+        g.rate_set as rate_set,
         multiIf(
             {# A currency into itself is 1 by definition: a 1.0 row is harmless
                (and never read: same-currency entities translate at 1). #}

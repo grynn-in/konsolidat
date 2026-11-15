@@ -20,11 +20,14 @@
                        row's, the budget takes the chart's.
    dims                the dimension list (get_dimensions() for actuals,
                        get_budget_dimensions() for the budget).
-   rate_set_predicate  a SQL predicate applied to BOTH rate sources
-                       (group_exchange_rates, historical_equity_rates). Until
-                       the rate tables carry a rate_set column (S4 K1/W1/W2)
-                       there is nothing to select on, and the default `1 = 1`
-                       keeps the actuals result unchanged.
+   rate_set_predicate  a SQL predicate over the bare `rate_set` column, applied
+                       to BOTH rate sources (group_exchange_rates,
+                       historical_equity_rates): the actuals pass
+                       actuals_rate_set_predicate() (the one set flagged
+                       is_actuals in epm_staging.rate_sets, konsol#348 S4-Q7 a),
+                       the budget passes its Cycle's set. Required: a default
+                       would read every set, and two sets' rates for one key
+                       are a duplicate the guard refuses (W2).
    ownership_cte       a CTE name, or a relation (ref('gold_entity_ownership')),
                        with gold_entity_ownership's columns, resolved on the
                        caller's own period spine: the actuals read the
@@ -55,8 +58,9 @@
    its final select orders partner_data_area_id, uses_historical_rate,
    retranslation_amount last. grain_extra columns sit after the dims, so a
    caller that passes any must place them in its own final select. #}
-{% macro consolidation_core(source_cte, dims, rate_set_predicate='1 = 1', ownership_cte=none, grain_extra=[], scoped=true, p='') %}
+{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='') %}
 {%- if ownership_cte is none %}{{ exceptions.raise_compiler_error('consolidation_core: ownership_cte is required: a CTE or relation with gold_entity_ownership\'s columns, resolved on the caller\'s period spine') }}{% endif -%}
+{%- if rate_set_predicate is none or (rate_set_predicate | trim) == '' or (rate_set_predicate | trim) == '1 = 1' %}{{ exceptions.raise_compiler_error('consolidation_core: rate_set_predicate is required: actuals_rate_set_predicate() for the actuals, the Cycle\'s set for a budget; a predicate that selects every set reads two rates for one key') }}{% endif -%}
 {%- set extra = [] -%}
 {%- for g in grain_extra %}{% do extra.append({'name': g}) %}{% endfor -%}
 {%- set grain = dims + extra -%}

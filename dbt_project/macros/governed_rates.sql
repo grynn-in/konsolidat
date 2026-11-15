@@ -31,6 +31,13 @@
     assert_every_translated_currency_has_a_governed_rate (unscoped).
     NOT IN / IN rather than a LEFT JOIN null test (join_use_nulls=0).
 
+    konsol#348 S4 (W2): the rate rows are first filtered by `rate_set_predicate`
+    (default: the actuals set, actuals_rate_set_predicate('g.rate_set')), the
+    same predicate the model applies, so a rate approved only in a budget's set
+    leaves the actuals key 'missing' here as it does in the model, and a second
+    set's rate for one key is not a 'duplicate'. The budget guard (W5) passes
+    its Cycle's set.
+
     The keys are RATE keys (konsolidat#199, row D9): a trial-balance period is
     first mapped through rate_period_map(), so a Closing period is required
     (and reported) as its year's last Regular period, once, whatever it is
@@ -137,8 +144,9 @@
           {% if scoped %}{{ period_filter('tb.fiscal_year', 'tb.fiscal_period') }} {{ scope_filter('tb.data_area_id') }}{% endif %}
 {% endmacro %}
 
-{% macro governed_rate_gaps(scoped=true) %}
+{% macro governed_rate_gaps(scoped=true, rate_set_predicate=none) %}
     {%- set with_refs = fx_reference_column_present() -%}
+    {%- if rate_set_predicate is none %}{% set rate_set_predicate = actuals_rate_set_predicate('g.rate_set') %}{% endif -%}
     with translated as (
         {{ governed_translated_keys(scoped) }}
     ),
@@ -163,7 +171,12 @@
             {% else %}
             false as r_implausible
             {% endif %}
-        from {{ source('epm_staging', 'group_exchange_rates') }} as g
+        from (
+            {# the set's rows only, before anything is counted #}
+            select from_currency, to_currency, fiscal_year, fiscal_period, rate_type, rate, rate_set
+            from {{ source('epm_staging', 'group_exchange_rates') }} as g
+            where {{ rate_set_predicate }}
+        ) as g
         {% if with_refs %}
         left join ref_mag as f on f.currency_code = g.from_currency
         left join ref_mag as t on t.currency_code = g.to_currency
@@ -207,14 +220,35 @@
    throwIf needs a constant message; a CAST of the message to UInt8 raises
    with the message itself in the error. The inner query always returns one
    row; the outer WHERE keeps it only when there is something to refuse, so
-   the CAST is never evaluated on a clean run. #}
+   the CAST is never evaluated on a clean run.
+
+   konsol#348 S4-Q7 (a), W2: the guard first counts the Rate Sets flagged
+   is_actuals. Anything but exactly one is refused by that count, whatever is
+   translated (a same-currency group included): with zero sets the predicate
+   selects no rate and every key would read 'missing' for the wrong reason,
+   with two it selects both and every shared key would read 'duplicate'. Zero
+   is also the existing stack whose konsol has not synced epm_staging.rate_sets
+   yet (reconcile_all creates and fills it; konsol's patch creates and flags
+   ACTUAL): it is refused by name, never built at "every set" as before the
+   column existed. assert_exactly_one_actuals_rate_set (error) says the same
+   on a full build, before this model runs. #}
 {% macro governed_rate_guard() %}
-    select cast(concat(
-        'konsolidat#93 refused before anything was deleted: ', toString(n),
-        ' translated key(s) without a usable governed rate (konsol Group Exchange Rate): ', keys,
-        if(n > 50, concat(' ... and ', toString(n - 50), ' more (assert_every_translated_currency_has_a_governed_rate lists all)'), ''),
-        '. Reasons: missing = no approved Closing and Average rate; duplicate = more than one approved rate of a type;',
-        ' invalid = zero, negative or not finite; implausible = more than 10x from the reference magnitudes (check the quoted-per factor).'
+    select cast(if(n_sets != 1,
+        concat(
+            'konsol#348 refused before anything was deleted: ', toString(n_sets),
+            ' Rate Set(s) flagged Is Actuals (konsol Rate Set); exactly one is required, and the consolidated trial balance',
+            ' translates at the rates of that set only. ',
+            if(n_sets = 0,
+               'Declare the actuals set in konsol (Rate Set, Is Actuals) and let reconcile_all sync it.',
+               concat('Unflag all but one of: ', sets, '.'))
+        ),
+        concat(
+            'konsolidat#93 refused before anything was deleted: ', toString(n),
+            ' translated key(s) without a usable governed rate (konsol Group Exchange Rate) in the actuals Rate Set ', sets, ': ', keys,
+            if(n > 50, concat(' ... and ', toString(n - 50), ' more (assert_every_translated_currency_has_a_governed_rate lists all)'), ''),
+            '. Reasons: missing = no approved Closing and Average rate in that set; duplicate = more than one approved rate of a type;',
+            ' invalid = zero, negative or not finite; implausible = more than 10x from the reference magnitudes (check the quoted-per factor).'
+        )
     ) as UInt8)
     from (
         select
@@ -222,8 +256,14 @@
             arrayStringConcat(arraySlice(arraySort(groupArray(
                 concat(from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem))), 1, 50), '; ') as keys
         from ({{ governed_rate_gaps(scoped=true) }})
-    )
-    where n > 0
+    ) as gaps
+    cross join (
+        select
+            countIf(is_actuals = 1) as n_sets,
+            arrayStringConcat(arraySort(groupArrayIf(rate_set, is_actuals = 1)), ', ') as sets
+        from {{ source('epm_staging', 'rate_sets') }}
+    ) as rs
+    where n > 0 or n_sets != 1
 {% endmacro %}
 
 {#
@@ -236,17 +276,27 @@
                               (checked first: the guard and the model read it
                               whatever is translated); n translated
                               foreign-currency keys, 0 when nothing is built
-      FX_NOTHING_BUILT        the table exists, but no trial balance or
+      FX_RATE_SETS_MISSING    epm_staging.rate_sets does not exist (konsol#348
+                              S4-Q7 a): konsol has not synced the Rate Sets
+                              yet, and the guard refuses every build
+      FX_NOTHING_BUILT        the tables exist, but no trial balance or
                               ownership is built yet (a fresh stack)
-      FX_GAPS_TOTAL <n>       n translated keys have no usable rate, then
+      FX_ACTUALS_SETS <n>     n Rate Sets are flagged Is Actuals; the guard
+                              refuses unless n = 1 (listed first, so a stack
+                              with no actuals set is not also told every key
+                              is missing)
+      FX_GAPS_TOTAL <n>       n translated keys have no usable rate in the
+                              actuals set, then
       FX_GAP <key> <reason>   one line per key, sorted
 #}
 {% macro fx_precheck() %}
--- depends_on: {{ ref('gold_trial_balance') }} {{ ref('silver_entity_currencies') }} {{ ref('gold_entity_ownership') }} {{ source('epm_gold', 'consolidation_groups') }} {{ source('epm_staging', 'group_exchange_rates') }} {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }}
-{%- set ger, tb, eo = none, none, none -%}
+-- depends_on: {{ ref('gold_trial_balance') }} {{ ref('silver_entity_currencies') }} {{ ref('gold_entity_ownership') }} {{ source('epm_gold', 'consolidation_groups') }} {{ source('epm_staging', 'group_exchange_rates') }} {{ source('epm_staging', 'rate_sets') }} {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }}
+{%- set ger, rs, tb, eo = none, none, none, none -%}
 {%- if execute -%}
     {%- set g = source('epm_staging', 'group_exchange_rates') -%}
     {%- set ger = adapter.get_relation(database=none, schema=g.schema, identifier=g.identifier) -%}
+    {%- set r = source('epm_staging', 'rate_sets') -%}
+    {%- set rs = adapter.get_relation(database=none, schema=r.schema, identifier=r.identifier) -%}
     {%- set t = ref('gold_trial_balance') -%}
     {%- set tb = adapter.get_relation(database=none, schema=t.schema, identifier=t.identifier) -%}
     {%- set o = ref('gold_entity_ownership') -%}
@@ -258,14 +308,20 @@ select 0 as o, 'FX_NOTHING_BUILT' as fx_check
 select 0 as o, 'FX_TABLE_MISSING 0' as fx_check
 {% elif ger is none %}
 select 0 as o, concat('FX_TABLE_MISSING ', toString(count())) as fx_check from ({{ governed_translated_keys(scoped=false) }})
+{% elif rs is none %}
+select 0 as o, 'FX_RATE_SETS_MISSING' as fx_check
 {% elif tb is none or eo is none %}
 select 0 as o, 'FX_NOTHING_BUILT' as fx_check
 {% else %}
 select o, fx_check from (
-    select 0 as o, concat('FX_GAPS_TOTAL ', toString(count())) as fx_check
+    select 0 as o, concat('FX_ACTUALS_SETS ', toString(countIf(is_actuals = 1))) as fx_check
+    from {{ source('epm_staging', 'rate_sets') }}
+    having countIf(is_actuals = 1) != 1
+    union all
+    select 1 as o, concat('FX_GAPS_TOTAL ', toString(count())) as fx_check
     from ({{ governed_rate_gaps(scoped=false) }})
     union all
-    select 1 as o, concat('FX_GAP ', from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem) as fx_check
+    select 2 as o, concat('FX_GAP ', from_currency, '->', to_currency, ' FY', toString(fy), ' P', toString(fp), ' ', problem) as fx_check
     from ({{ governed_rate_gaps(scoped=false) }})
 )
 order by o, fx_check

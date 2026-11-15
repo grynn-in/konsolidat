@@ -89,6 +89,8 @@
    FX CONTRACT (13 Sep 2026): epm_staging.group_exchange_rates.rate is the true
    rate (units of to_currency per 1 from_currency), published by konsol, the
    single source of FX rates. The warehouse never scales or inverts it.
+   konsol#348 (S4-Q1 c): a rate belongs to one Rate Set; the actuals read the
+   one set flagged Is Actuals, and nothing else.
    silver_exchange_rates holds the ERP quotes, which feed only konsol's
    pre-fill.
    PRD-4: Minority interest — nci_amount column for partial ownership
@@ -102,8 +104,12 @@
    source CTE below (the partner trial balance, its signed movement, the
    statement flags from the row itself: S4-Q6 (a)), the actuals' dimensions,
    the materialised gold_entity_ownership, no extra grain, the scoped build,
-   and the final positional select. Until the rate tables carry a rate set
-   (S4 K1/W1/W2) the rate predicate is the macro's default, `1 = 1`. #}
+   and the final positional select. The rate predicate is the actuals' (W2,
+   S4-Q1 c / S4-Q7 a): both rate tables are read for the one Rate Set flagged
+   is_actuals in epm_staging.rate_sets, the same set the pre_hook guard and
+   assert_every_translated_currency_has_a_governed_rate judge; a budget's
+   rates in the same tables are never read here
+   (assert_translation_rates_are_the_actuals_sets). #}
 
 with entity_tb_source as (
     select
@@ -137,7 +143,7 @@ with entity_tb_source as (
 -- depends_on: {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }}
 {{ consolidation_core(source_cte='entity_tb_source',
                       dims=get_dimensions(),
-                      rate_set_predicate='1 = 1',
+                      rate_set_predicate=actuals_rate_set_predicate(),
                       ownership_cte=ref('gold_entity_ownership'),
                       grain_extra=[],
                       scoped=true) }}

@@ -33,14 +33,15 @@ translated as (
     select
         ctb.consolidation_group as consolidation_group,
         ctb.data_area_id as data_area_id,
-        toUInt16(ctb.fiscal_year) as fiscal_year,
-        toUInt16(ctb.fiscal_period) as fiscal_period,
+        toUInt16(ctb.fiscal_year) as fy,
+        toUInt16(ctb.fiscal_period) as fp,
         ctb.accounting_currency as accounting_currency,
         ctb.reporting_currency as reporting_currency,
         if(rpm.mapped = 1, rpm.rate_year, toUInt16(ctb.fiscal_year)) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, toUInt16(ctb.fiscal_period)) as rate_period,
-        ctb.closing_rate as closing_rate,
-        ctb.average_rate as average_rate
+        {# fresh aliases: an alias equal to a column it reads is a cyclic alias in ClickHouse #}
+        ctb.closing_rate as model_closing_rate,
+        ctb.average_rate as model_average_rate
     from {{ ref('gold_consolidated_trial_balance') }} as ctb
     left join {{ rate_period_map() }} as rpm
         on rpm.fiscal_year = toUInt16(ctb.fiscal_year)
@@ -55,21 +56,21 @@ translated as (
 select
     t.consolidation_group,
     t.data_area_id,
-    t.fiscal_year,
-    t.fiscal_period,
+    t.fy as fiscal_year,
+    t.fp as fiscal_period,
     t.accounting_currency,
     t.reporting_currency,
     t.rate_year,
     t.rate_period,
-    t.closing_rate as model_closing_rate,
-    t.average_rate as model_average_rate,
+    t.model_closing_rate,
+    t.model_average_rate,
     r.closing_rate as actuals_closing_rate,
     r.average_rate as actuals_average_rate,
     multiIf(
         (t.accounting_currency, t.reporting_currency, t.rate_year, t.rate_period) not in (
             select from_currency, to_currency, rate_year, rate_period from actuals_rates), 'no actuals rate for this key',
-        abs(t.closing_rate - r.closing_rate) > 1e-9, 'closing rate is not the actuals set''s',
-        abs(t.average_rate - r.average_rate) > 1e-9, 'average rate is not the actuals set''s',
+        abs(t.model_closing_rate - r.closing_rate) > 1e-9, 'closing rate is not the actuals set''s',
+        abs(t.model_average_rate - r.average_rate) > 1e-9, 'average rate is not the actuals set''s',
         ''
     ) as problem
 from translated as t

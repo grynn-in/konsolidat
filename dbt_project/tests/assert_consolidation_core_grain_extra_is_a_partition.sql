@@ -73,7 +73,7 @@ with base_source as (
     from {{ ref('gold_trial_balance_by_partner') }}
 ),
 
-{{ consolidation_core(source_cte='base_source', dims=get_dimensions(),
+{{ consolidation_core(source_cte='base_source', dims=get_dimensions(), rate_set_predicate=actuals_rate_set_predicate(),
                       ownership_cte=ref('gold_entity_ownership'), grain_extra=[], scoped=false, p='base_') }},
 
 {# the same rows under two layers: each layer must consolidate as the whole does #}
@@ -83,7 +83,7 @@ layered_source as (
     array join ['ZZA', 'ZZB'] as zz_layer
 ),
 
-{{ consolidation_core(source_cte='layered_source', dims=get_dimensions(),
+{{ consolidation_core(source_cte='layered_source', dims=get_dimensions(), rate_set_predicate=actuals_rate_set_predicate(),
                       ownership_cte=ref('gold_entity_ownership'), grain_extra=['zz_layer'], scoped=false, p='layered_') }},
 
 expected as (
