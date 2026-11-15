@@ -4,14 +4,14 @@
 -- gate: expect assert_exit_accounts_declared pass
 -- konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X5: a 30% associate (consolidation_method
 -- 'equity', IAS 28) with a result in P2 and P3 ends its link on 2026-03-31 with no Business Disposal (a bare end):
--- the exit event is FY2026 P4. Group ZZQG (USD, exit gain/loss ZZ4960). Entity ZZQS (EUR), Average rates 1.15 (P2),
+-- the exit event is FY2026 P3 (the Regular period holding end_date; #358 review F1 moved it from P4). Group ZZQG (USD, exit gain/loss ZZ4960). Entity ZZQS (EUR), Average rates 1.15 (P2),
 -- 1.22 (P3). gold_equity_method_associates posts EQ_INCOME / EQ_INVEST per period: P2 result -300 EUR x 0.30 x 1.15 =
 -- -103.50, P3 -100 x 0.30 x 1.22 = -36.60, so EQ_INVEST carries +140.10 at the end of P3. The exit reverses it:
 -- Cr EQ_INVEST 140.10 / Dr ZZ4960 140.10 (no CTA leg: the model translates at the Average rate).
 -- The associate still has a result in P4 (revenue 700), after the end: the model must post no EQ line for it (an
 -- ended link is no longer 'equity' in gold_entity_ownership), so EQ_INVEST is 0, not 408.90 (268.80 more: 700 x 0.30 x 1.28).
--- Expected: the oracle passes (EQ_INVEST is 0 from P4) and the group TB balances; on the base (equity posts nothing)
--- EQ_INVEST stays at 140.10 in P4 and P5: the oracle flags it.
+-- Expected: the oracle passes (EQ_INVEST is 0 from P3) and the group TB balances; on the base (equity posts nothing)
+-- EQ_INVEST stays at 140.10 in P3, P4 and P5: the oracle flags it.
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';

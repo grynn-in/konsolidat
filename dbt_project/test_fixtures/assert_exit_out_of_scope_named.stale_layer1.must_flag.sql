@@ -1,5 +1,5 @@
 -- gate: expect assert_exit_out_of_scope_named flag 1
--- konsolidat#335 task X8, case (c): ZZQS (full 70%) ends 2026-03-31, so the exit is FY2026 P4. gold_consolidated_trial_balance
+-- konsolidat#335 task X8, case (c): ZZQS (full 70%) ends 2026-03-31, so the exit is FY2026 P3 (#358 review F1; first out P4). gold_consolidated_trial_balance
 -- is seeded with a layer-1 row in P3 (live: fine) and one in P4 (not live: a stale #154 incremental slice that survived a
 -- back-dated end_date). A fresh build never makes the P4 row (the model keeps only complete chains), so this seeds the table.
 -- Exactly one WARN row: FY2026 P4, 'layer-1 row after exit'.

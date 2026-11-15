@@ -4,12 +4,12 @@
 -- gate: expect assert_exit_accounts_declared pass
 -- konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X4: a joint operation (IFRS 11.20,
 -- consolidation_method 'proportional') held 50% (P1-P2) then stepped to 40% by a successor Ownership Period (no deal),
--- ends its link on 2026-03-31 with no Business Disposal (a bare end): the exit event is FY2026 P4.
+-- ends its link on 2026-03-31 with no Business Disposal (a bare end): the exit event is FY2026 P3 (the Regular period holding end_date; #358 review F1 moved it from P4).
 -- Group ZZQG (USD, exit gain/loss ZZ4960). Entity ZZQS (EUR). Rates as the full_70pct fixture. Layer 1 carries
 -- group_amount = translated x share of each period (nci 0), and gold_fx_revaluation's plug is on the group share
 -- (no minority), so the exit reverses -sum(group_amount) per account and the 'CTA' line at the carried share.
--- Expected: the oracle passes (no E balance carried from P4) and the exit journal balances; on the base (proportional
--- posts nothing) the carried non-equity accounts and CTA stay: the oracle flags them in P4.
+-- Expected: the oracle passes (no E balance carried from P3) and the exit journal balances; on the base (proportional
+-- posts nothing) the carried non-equity accounts and CTA stay: the oracle flags them in P3.
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';

@@ -2,21 +2,66 @@
 -- 'left' row agree. Design: .claude/memory/active/tasks-p1-round2.md, T8 (konsol repo).
 -- Severity ERROR: an exit that is not paired with the IC reconciliation either leaves an intercompany balance
 -- eliminated against an entity that is no longer in the group, or reverses it twice.
--- Fixture: test_fixtures/assert_exit_matches_ic_left.receivable.sql.
+-- Fixtures: test_fixtures/assert_exit_matches_ic_left.receivable.sql, .after_last_tb.sql.
 --
--- For every exit event (G, E, P) of ownership_exits() and every intercompany pair that had E on one side and was
--- live before P (gold_ic_reconciliation rows for the pair in an earlier period that are not themselves 'left' rows):
---   left_missing          the reconciliation has no 'left' row for the pair at all;
---   left_in_other_period  it has a 'left' row, but not in P (the exit macro reads every declared period, the IC spine
---                         the periods present in gold_trial_balance, so an exit in an empty period can diverge);
---   double_reversal       in P, over every FCTB layer, E's IC account is not 0 (the exit journal reverses E's
+-- The periods (#358 review F1, F2). An exit (G, E, P) of ownership_exits() posts in P, the Regular period holding
+-- the end date, and E is first out of G in F (out_fiscal_*). gold_ic_reconciliation's 'left' row is the first
+-- period of its spine in which the pair is no longer live: the first spine period at or after F. Its spine is the
+-- declared periods present in gold_trial_balance, up to the group's latest gold_consolidated_trial_balance period,
+-- so the expected 'left' period L is the first such period at or after F. An exit with no such period yet (F is
+-- after the group's last trial-balance period, or every period from F on is empty) is not judged: its 'left' row
+-- is pending until a trial balance for a period at or after F arrives, and judging it then would fail the build
+-- for the close of P, the month the link ended. The 'left' row lands after P, as it does after a full disposal's
+-- period: at the end of P the exit journal has reversed E's IC balance while the elimination still stands, and
+-- the 'left' row reverses the elimination in L (classification only for the periods between; follow-up).
+--
+-- For every judged exit and every intercompany pair that had E on one side and was live before F
+-- (gold_ic_reconciliation rows for the pair in an earlier period that are not themselves 'left' rows):
+--   left_missing          the reconciliation has no 'left' row for the pair at or after F;
+--   left_in_other_period  it has one, but not in L;
+--   double_reversal       to L, over every FCTB layer, E's IC account is not 0 (the exit journal reverses E's
 --                         layer-1 balance once, and the layer-2 elimination is reversed by the 'left' row, so
 --                         E's own rows net to 0), or the pair's elimination legs do not net to 0 on either
---                         account to P (the counterparty is then not left carrying its full, now external, balance).
+--                         account to L (the counterparty is then not left carrying its full, now external, balance).
 -- The exit journal never reads layer 2 (design), so a non-zero E total means it reversed the IC layer too.
-with exits as (
-    select consolidation_group, data_area_id, fiscal_year, fiscal_period
+-- exit_year / exit_period in the output are L, the period judged.
+with exits_all as (
+    select consolidation_group, data_area_id,
+        toUInt16(out_fiscal_year) as out_year, toUInt16(out_fiscal_period) as out_period
     from {{ ownership_exits() }}
+),
+
+ic_spine as (
+    select distinct toUInt16(tb.fiscal_year) as fiscal_year, toUInt16(tb.fiscal_period) as fiscal_period
+    from {{ ref('gold_trial_balance') }} as tb
+    inner join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year) and dp.fiscal_period = toUInt16(tb.fiscal_period)
+),
+
+group_last as (
+    select consolidation_group,
+        max((toUInt16(fiscal_year), toUInt16(fiscal_period))) as last_period
+    from {{ ref('gold_consolidated_trial_balance') }}
+    group by consolidation_group
+),
+
+{# L per exit; an exit with no spine period from F to the group's last is pending and has no row here #}
+exits_l as (
+    select x.consolidation_group as l_group, x.data_area_id as l_entity,
+        x.out_year as l_out_year, x.out_period as l_out_period,
+        min((sp.fiscal_year, sp.fiscal_period)) as l_first
+    from exits_all as x
+    inner join group_last as gl on gl.consolidation_group = x.consolidation_group
+    cross join ic_spine as sp
+    where (sp.fiscal_year, sp.fiscal_period) >= (x.out_year, x.out_period)
+      and (sp.fiscal_year, sp.fiscal_period) <= gl.last_period
+    group by x.consolidation_group, x.data_area_id, x.out_year, x.out_period
+),
+
+exits as (
+    select l_group as consolidation_group, l_entity as data_area_id, l_out_year as out_year,
+        l_out_period as out_period, tupleElement(l_first, 1) as fiscal_year, tupleElement(l_first, 2) as fiscal_period
+    from exits_l
 ),
 
 {# each pair from the side of both of its entities: E, E's account, the counterparty and its account #}
@@ -32,13 +77,14 @@ sides as (
 
 live_pairs as (
     select x.consolidation_group as consolidation_group, x.data_area_id as exited_entity,
+        x.out_year as out_year, x.out_period as out_period,
         x.fiscal_year as exit_year, x.fiscal_period as exit_period,
         s.side_account as side_account, s.other_entity as other_entity, s.other_account as other_account
     from exits as x
     inner join sides as s
         on s.consolidation_group = x.consolidation_group and s.side_entity = x.data_area_id
-    where (s.fiscal_year, s.fiscal_period) < (x.fiscal_year, x.fiscal_period) and s.pair_event != 'left'
-    group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period,
+    where (toUInt16(s.fiscal_year), toUInt16(s.fiscal_period)) < (x.out_year, x.out_period) and s.pair_event != 'left'
+    group by x.consolidation_group, x.data_area_id, x.out_year, x.out_period, x.fiscal_year, x.fiscal_period,
         s.side_account, s.other_entity, s.other_account
 ),
 
@@ -49,12 +95,12 @@ left_rows as (
     where pair_event = 'left'
 ),
 
-{# per pair: how many 'left' rows, and how many of them in P #}
+{# per pair: how many 'left' rows at or after F, and how many of them in L #}
 left_counts as (
     select p.consolidation_group as consolidation_group, p.exited_entity as exited_entity,
         p.exit_year as exit_year, p.exit_period as exit_period, p.side_account as side_account,
         p.other_entity as other_entity, p.other_account as other_account,
-        countIf(l.left_year > 0) as n_left,
+        countIf(l.left_year > 0 and (l.left_year, l.left_period) >= (p.out_year, p.out_period)) as n_left,
         countIf(l.left_year = p.exit_year and l.left_period = p.exit_period) as n_left_in_p
     from live_pairs as p
     left join left_rows as l
@@ -64,7 +110,7 @@ left_counts as (
         p.other_entity, p.other_account
 ),
 
-{# E's own rows on its IC account, every layer, to P #}
+{# E's own rows on its IC account, every layer, to L #}
 exited_totals as (
     select p.consolidation_group as consolidation_group, p.exited_entity as exited_entity,
         p.exit_year as exit_year, p.exit_period as exit_period, p.side_account as side_account,
@@ -79,7 +125,7 @@ exited_totals as (
         p.other_entity, p.other_account
 ),
 
-{# the pair's elimination legs, net per account, to P: 0 on both once the pair has left #}
+{# the pair's elimination legs, net per account, to L: 0 on both once the pair has left #}
 elimination_totals as (
     select p.consolidation_group as consolidation_group, p.exited_entity as exited_entity,
         p.exit_year as exit_year, p.exit_period as exit_period, p.side_account as side_account,

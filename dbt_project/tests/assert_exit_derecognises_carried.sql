@@ -5,7 +5,7 @@
 -- Fixture: test_fixtures/assert_exit_derecognises_carried.full_70pct.sql (a 70% full subsidiary with a business
 -- combination and CTA, then a bare end).
 --
--- For every exit event (G, E, P) of ownership_exits() (X1), and for every check period Q = P and each later period
+-- For every exit event (G, E, P) of ownership_exits() (X1), and for every check period Q = A and each later period
 -- gold_fully_consolidated_tb has for G, the cumulative amount to Q, summed over every layer of the fully
 -- consolidated TB for data_area_id E, must be 0 (within materiality_floor()) on each of E's carried accounts:
 --   - every non-equity balance-sheet account of E's layer 1 (gold_consolidated_trial_balance, is_balance_sheet = 1)
@@ -17,6 +17,10 @@
 --   - the acquisition journal's investment, proceeds, costs and bargain_gain lines: the parent's investment and the
 --     deal's settlement, which the disposal journal does not derecognise either (its header, "Not here");
 --   - topside (gold_consolidation_adjustments): the design does not reverse it on exit; a WARN names it (task X8).
+-- A, the anchor (#358 review F1), is read here from the fiscal calendar, not from the macro: the Regular period
+-- whose declared span holds the exit's end_date (lowest tuple), the period the group last held E in and so the
+-- period by whose end control was lost (IFRS 10.25), as a full disposal's period holds its disposal_date. With no
+-- end_date (a method change) or no Regular period holding it, A is the macro's exit period P.
 -- Check periods stop at a re-entry (task X7): from the first later period in which E is live in G again, the group
 -- carries E anew; assert_reentry_carries_full_balance checks that it carries 100%, not 100% plus the pre-exit share.
 -- Second check: every ownership_exit journal in the FCTB sums to 0 per (group, entity, period).
@@ -24,8 +28,35 @@
 -- Every exit method is checked, not only 'full': a proportional or equity-method exit that leaves its balances is
 -- flagged here (fixtures .proportional_step, .equity). Layer 2 (IC, data_area_id '') is outside E's rows.
 with exits as (
-    select consolidation_group, data_area_id, fiscal_year, fiscal_period, method_before
+    select consolidation_group, data_area_id, toUInt16(fiscal_year) as fiscal_year,
+        toUInt16(fiscal_period) as fiscal_period, method_before, end_date
     from {{ ownership_exits() }}
+),
+
+{# the Regular period holding end_date, read from the calendar (header: A) #}
+holding as (
+    select x.consolidation_group as consolidation_group, x.data_area_id as data_area_id,
+        x.fiscal_year as fiscal_year, x.fiscal_period as fiscal_period,
+        count() as n_holding,
+        argMin(toUInt16(fp.fiscal_year), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as holding_year,
+        argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as holding_period
+    from exits as x
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    where x.end_date is not null
+      and fp.period_type = 'Regular' and fp.start_date <= x.end_date and fp.end_date >= x.end_date
+    group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period
+),
+
+{# join_use_nulls = 0: no holding period reads n_holding = 0, and the anchor is the macro's period #}
+anchors as (
+    select x.consolidation_group as consolidation_group, x.data_area_id as data_area_id,
+        x.fiscal_year as fiscal_year, x.fiscal_period as fiscal_period,
+        if(h.n_holding = 0, x.fiscal_year, h.holding_year) as anchor_year,
+        if(h.n_holding = 0, x.fiscal_period, h.holding_period) as anchor_period
+    from exits as x
+    left join holding as h
+        on h.consolidation_group = x.consolidation_group and h.data_area_id = x.data_area_id
+        and h.fiscal_year = x.fiscal_year and h.fiscal_period = x.fiscal_period
 ),
 
 root as (
@@ -117,19 +148,19 @@ reentries as (
 
 check_periods_all as (
     select consolidation_group, data_area_id, fiscal_year, fiscal_period,
-        fiscal_year as check_year, fiscal_period as check_period
-    from exits
+        anchor_year as check_year, anchor_period as check_period
+    from anchors
 
     union all
 
     select x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period,
         toUInt16(f.fiscal_year) as check_year, toUInt16(f.fiscal_period) as check_period
-    from exits as x
+    from anchors as x
     inner join (
         select distinct consolidation_group, fiscal_year, fiscal_period from {{ ref('gold_fully_consolidated_tb') }}
     ) as f
         on f.consolidation_group = x.consolidation_group
-    where (toUInt16(f.fiscal_year), toUInt16(f.fiscal_period)) > (x.fiscal_year, x.fiscal_period)
+    where (toUInt16(f.fiscal_year), toUInt16(f.fiscal_period)) > (x.anchor_year, x.anchor_period)
 ),
 
 check_periods as (
