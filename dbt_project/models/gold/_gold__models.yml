@@ -430,6 +430,11 @@ models:
       - name: main_account
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain and of the running-total
+          partition (konsol#348 S3 B9, QB3 a); as on gold_variance_analysis.
+          assert_variance_ytd_single_currency (error) names a grain in two.
       - name: ytd_actual
         description: "Year-to-date actual amount"
       - name: ytd_budget
