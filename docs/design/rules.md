@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **170** |
-| carrying their reasoning | 149 |
-| citing the issue that caused them | 142 |
+| assertions | **173** |
+| carrying their reasoning | 152 |
+| citing the issue that caused them | 146 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 148 |
+| severity `error` (stops the build, and its children) | 151 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,14 +25,14 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 25
+- [Currency and translation](#currency-and-translation) — 27
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 27
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -218,6 +218,14 @@ a blank is never defaulted (no silent fallback). Flags each row of epm_raw.budge
 
 <sub>`error` · `tests/assert_budget_blank_layer_currency.sql` · konsol#348</sub>
 
+### `budget_currency_is_entity_currency`
+
+**konsol#348 S3 B7 (QB3 a, decided 14 Nov 2026 under Deepak Pai's standing rule): a budget line is in its entity's accounting currency.**
+
+konsol refuses an Annual Input or a Budget Entry line whose currency is not the entity's Functional Currency; this is the warehouse backstop. The budget fact carries each line's currency (B4), and silver_entity_currencies is the one answer for the currency an entity keeps its books in (konsol#110). Every fact row whose currency differs from its entity's is named, so a budget can never meet actuals in another currency in the variance models (B8) without being reported first. LEFT JOIN on purpose: join_use_nulls=0 fills an entity with no currency row with '', and that is itself the fault named here (a budget on an entity that declares no currency), so the default hides nothing. A blank fact currency against a blank entity currency is not named here; assert_budget_blank_layer_currency names the blank line. One row per (scenario, cycle, entity, layer, budget currency), with the entity's currency and the row count. Error severity: the budget fact would be wrong. Fixtures: dbt_project/test_fixtures/assert_budget_currency_is_entity_currency*.sql.
+
+<sub>`error` · `tests/assert_budget_currency_is_entity_currency.sql` · konsol#110 konsol#348</sub>
+
 ### `conversion_factor_known`
 
 **Every ConversionFactor value must be one the D365 adapter resolves.**
@@ -352,6 +360,14 @@ It is no longer the complement of group_amount (group_amount is 100% of translat
 
 <sub>`error (default)` · `tests/assert_nci_equals_translated_times_minority.sql` · konsol#117 konsolidat#204</sub>
 
+### `scenario_tb_currency_declared`
+
+**konsol#348 S3 B6 (QB3 a, decided 14 Nov 2026 under Deepak Pai's standing rule): every row of gold_scenario_trial_balance carries its currency.**
+
+The scenario trial balance is where actuals and budgets meet, so each row says what currency it is in: the GL branch takes the entity's accounting currency (silver_entity_currencies, the one answer for the books an entity keeps, konsol#110); the budget branch takes the fact's (gold_spread_budget.currency, B4). The variance models then carry the currency on their grain (B8) and can refuse to net two currencies. The GL branch LEFT JOINs silver_entity_currencies, and join_use_nulls=0 fills an entity with no currency row with ''. That default is not a fallback: this test names every such row, so a trial balance for an entity that declares no currency (konsol#328 refuses it at intake) cannot sit in the scenario fact unmarked. A budget row with a blank currency is named here too, beside assert_budget_blank_layer_currency on the line itself. One row per (scenario, entity, data_source) with blank-currency rows, and their count. Error severity. Fixtures: dbt_project/test_fixtures/assert_scenario_tb_currency_declared*.sql.
+
+<sub>`error` · `tests/assert_scenario_tb_currency_declared.sql` · konsol#110 konsol#328 konsol#348</sub>
+
 ### `translated_amount_formula`
 
 **PRD-1 Test: translated_amount must equal local_amount × translation_rate + retranslation_amount.**
@@ -388,7 +404,7 @@ Decided by Deepak Pai, 6 Oct 2026: konsolidat#238 option #238-4, at error severi
 
 **Budget year-to-date lines reconcile to the spread (konsol#348 S2, Q15-c, R10).**
 
-gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date movement' into period movements within the Cycle year. Undoing that conversion must give the stated figure back: for every key a (cycle, scenario, layer, entity) states in that year, and every period it states any YTD figure for, the running sum of the spread's manual movements through that period equals the stated YTD. A key missing from a period's lines has a stated YTD of 0 there (the spine of macros/period_movements.sql), so a key that vanishes must have been reversed: a model that only differenced the rows that exist leaves its last YTD standing and is named here. The spread has no cycle column, so the stated figures are summed to the spread's grain (scenario, entity, year, period, account, budget dims, layer). A grain that mixes bases in one year does not reconcile either; assert_budget_basis_supported names that case by itself. Flags one row per (grain, period) that does not reconcile. Tolerance 0.01, as for the TB balance tests.
+gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date movement' into period movements within the Cycle year. Undoing that conversion must give the stated figure back: for every key a (cycle, scenario, layer, entity) states in that year, and every period it states any YTD figure for, the running sum of the spread's manual movements through that period equals the stated YTD. A key missing from a period's lines has a stated YTD of 0 there (the spine of macros/period_movements.sql), so a key that vanishes must have been reversed: a model that only differenced the rows that exist leaves its last YTD standing and is named here. The spread carries the cycle (konsol#348 S3 B4), so the stated figures are compared on the spread's full grain (cycle, scenario, entity, year, period, account, budget dims, layer): a forecast round reconciles to its own lines, never to another round's. A grain that mixes bases in one year does not reconcile either; assert_budget_basis_supported names that case by itself. Flags one row per (grain, period) that does not reconcile. Tolerance 0.01, as for the TB balance tests.
 
 <sub>`error` · `tests/assert_budget_ytd_reconciles.sql` · konsol#348</sub>
 
@@ -924,17 +940,25 @@ PR #360 review, finding 5): silver_budget_entries carries exactly one row per ER
 
 ### `budget_fact_grain_unique`
 
-**grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, entity, year, period, account, budget dims).**
+**grynn-in/konsolidat#94: the canonical budget fact must hold exactly one row per (scenario, cycle, entity, year, period, account, budget dims, layer).**
 
-The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c, backstopped by assert_budget_one_writer_per_grain), so nothing double-counts and this asserts it. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300).
+The two entry methods (annual×profile spread and manual monthly identity-spread) are UNIONed with no precedence rule: konsol keeps them on disjoint grains (Q16-c, backstopped by assert_budget_one_writer_per_grain), so nothing double-counts and this asserts it. `layer` is part of the grain: gold_spread_budget emits one row per layer (konsolidat#300). So is `cycle` (konsol#348 S3 B4, QB2 a): a forecast round is its own approved Cycle, and two rounds on one grain are two legitimate rows, never one.
 
-<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsolidat#300 konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_budget_fact_grain_unique.sql` · konsol#348 konsolidat#300 konsolidat#94</sub>
+
+### `budget_fact_per_cycle`
+
+**konsol#348 S3 B4 (QB2 a, decided 14 Nov 2026 under Deepak Pai's standing rule): the budget fact keeps every Budget Cycle apart.**
+
+A forecast scenario holds one approved Cycle per round, and several rounds share one (scenario, fiscal year) by design (Q23 a; assert_budget_one_cycle_per_scenario_year leaves forecasts out for that reason). gold_spread_budget therefore carries `cycle`, and its manual branch groups by it. Rounds must never sum: a model that grouped the lines of one grain without the cycle would add round 2 to round 1 and report a budget nobody entered. Checked line by line. For every (cycle, scenario, layer, entity, year) whose epm_raw.budget_entries lines are all 'Period movement', the fact's manual rows per (cycle, scenario, layer, entity, year, period, account, budget dims) must equal the lines' debit - credit on that grain. A year-to-date slice is converted before it reaches the fact and is reconciled by assert_budget_ytd_reconciles; a slice that mixes bases is named by assert_budget_basis_supported; neither is read here. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing fact row with 0 and hide it. Here a missing side reads 0 and the difference names it. One row per grain whose fact differs from its lines by more than 0.01. Error severity: the budget fact would be wrong. Fixtures: dbt_project/test_fixtures/budget_fact_two_rounds.sql.
+
+<sub>`error` · `tests/assert_budget_fact_per_cycle.sql` · konsol#348</sub>
 
 ### `budget_one_cycle_per_scenario_year`
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). gold_spread_budget sums manual lines without the cycle, so two Cycles with lines on one (scenario, fiscal year) would be added together: a doubled budget. konsol's intake keeps one Cycle per (scenario, year); this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. epm_gold.budget_annual_input carries no cycle column, so the annual side has nothing to check here (n/a). konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -958,7 +982,7 @@ A budget belongs to a period the calendar declares (epm_staging.fiscal_periods, 
 
 **konsol#348 S2 (R10, Q15-c): the hand-computed movements of test_fixtures/budget_raw_ytd.sql, as literals.**
 
-assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated YTD per account and layer (the fixture's header holds the table); the manual spread of ZZ_PLAN_2026 / ZZE1 / FY2026 must hold exactly these movements, summed over budget dimensions. It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built. Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
+assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated YTD per account and layer (the fixture's header holds the table); the manual spread of that cycle, ZZ_PLAN_2026 / ZZE1 / FY2026, must hold exactly these movements, summed over budget dimensions. The fact carries the cycle (konsol#348 S3 B4), so another cycle's rows on the same scenario are not read. It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built. Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
 
 <sub>`error` · `tests/assert_budget_ytd_hand_table.sql` · konsol#348</sub>
 
@@ -1066,17 +1090,17 @@ This test checks declaration, activeness and branch type: every scenario_id with
 
 **each ANNUAL-spread budget line spreads into every declared Regular period of its fiscal year (epm_staging.fiscal_periods, period_type = 'Regular') and into no other period.**
 
-eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN.
+eriod. A site's year is not always 12 periods (a 13-period 4-4-5 or 4-weekly calendar), so the count comes from the declared calendar, not from a constant (konsolidat Q12-b; replaces the hard-coded 12 of assert_spread_has_12_periods, konsolidat#94). Flags one row per line: periods_missing counts declared Regular periods the profile skips, periods_outside counts spread periods that are not declared Regular (a Closing period, or a year with no declared calendar). Excludes manual (identity-spread) budgets (#94): a manually-entered budget can legitimately be partial-year, so it carries no structural period guarantee. join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN. A line is one (scenario, cycle, entity, year, account, profile): the cycle is part of the fact's grain (konsol#348 S3 B4), so two forecast rounds of one annual input are two lines, each judged alone.
 
-<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsolidat#94</sub>
+<sub>`error (default)` · `tests/assert_spread_covers_declared_periods.sql` · konsol#348 konsolidat#94</sub>
 
 ### `spread_sums_to_annual`
 
-**PRD-6 Test: per grain (scenario, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
+**PRD-6 Test: per grain (scenario, cycle, entity, year, account, layer, budget dims) the spread period amounts must sum to annual_amount.**
 
-gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference.
+gold_spread_budget gives each layer its own annual_amount, and carries each annual input's own amount on its rows, so the reference is the largest annual_amount of the grain: a grain fed by two inputs (equal or unequal) is spread twice and its total exceeds that reference. The cycle is part of the grain (konsol#348 S3 B4): each forecast round has its own annual amount.
 
-<sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql`</sub>
+<sub>`error (default)` · `tests/assert_spread_sums_to_annual.sql` · konsol#348</sub>
 
 ### `variance_abs_formula`
 
