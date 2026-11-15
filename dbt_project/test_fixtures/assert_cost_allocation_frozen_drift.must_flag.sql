@@ -25,12 +25,12 @@ INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fis
 ('ZZSC','ZZE3',2026,1,'ZZ6000','ZZIT',1000),
 ('ZZSC','ZZE3',2026,1,'ZZ6000','ZZNW',400),
 ('ZZSC','ZZE4',2026,1,'ZZ6000','ZZOT',55);
-INSERT INTO epm_gold.gold_cost_allocation_frozen (run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension, member, line_type, origin_member, sender_member, receiver_member, driver, fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at) VALUES
-('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
-('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZP1','received','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
-('ZZRD','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
-('ZZRD','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZP1','received','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
-('ZZRA','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
-('ZZRA','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZP1','received','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
-('ZZRB','ZZRS1','Direct','ZZSC','ZZE4','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,700,-700,'2026-11-01 10:00:00'),
-('ZZRB','ZZRS1','Direct','ZZSC','ZZE4','ZZ6000','dim_cost_center','ZZP1','received','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,700,700,'2026-11-01 10:00:00');
+INSERT INTO epm_gold.gold_cost_allocation_frozen (run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension, member, line_type, hop_kind, origin_member, sender_member, receiver_member, driver, fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at) VALUES
+('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
+('ZZRP','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZP1','received','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
+('ZZRD','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
+('ZZRD','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZP1','received','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
+('ZZRA','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,-1000,'2026-11-01 10:00:00'),
+('ZZRA','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZP1','received','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,1000,1000,'2026-11-01 10:00:00'),
+('ZZRB','ZZRS1','Direct','ZZSC','ZZE4','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,700,-700,'2026-11-01 10:00:00'),
+('ZZRB','ZZRS1','Direct','ZZSC','ZZE4','ZZ6000','dim_cost_center','ZZP1','received','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,700,700,'2026-11-01 10:00:00');

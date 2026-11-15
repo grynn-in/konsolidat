@@ -166,6 +166,9 @@ models:
       - name: line_type
         data_type: String
         description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
+      - name: hop_kind
+        data_type: String
+        description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -229,6 +232,9 @@ models:
       - name: line_type
         data_type: String
         description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
+      - name: hop_kind
+        data_type: String
+        description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
