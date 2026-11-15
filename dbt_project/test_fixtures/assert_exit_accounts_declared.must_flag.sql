@@ -1,9 +1,9 @@
--- gate: build +assert_exit_accounts_declared
--- gate: expect assert_exit_accounts_declared flag 4
--- konsolidat#335 (option A, Deepak Pai, 14 Nov 2026), task X2: assert_exit_accounts_declared.
--- Graph = assert_ownership_exit_events.cases (group ZZXG) plus ZZXN, a 70% full link that ends 2024-08-15 with no successor.
--- Exits (every exit requires the account): ZZXB FY2024 P6, ZZXN FY2024 P6 (carried NCI: share_before 0.7), ZZXE FY2025 P1.
--- Root declares NO exit_gain_loss_account and NO nci_account. EXPECT 4 rows: three missing exit_gain_loss_account, one missing nci_account (ZZXN).
+-- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_exit_derecognises_carried assert_end_to_end_bs_balances assert_exit_accounts_declared assert_exit_out_of_scope_named
+-- gate: expect assert_exit_accounts_declared flag 1
+-- konsolidat#335, task X2, rebuilt for review F3: same data as .declared, but the root declares NO exit_gain_loss_account.
+-- The exit journal carries lines (balancing line posts to ''), so EXPECT 1 row: exit_gain_loss_account missing.
+-- nci_account stays declared: assert_acquisition_accounts_declared needs it for the partial NCI, and an undeclared
+-- one would stop the build upstream of the exit journal (the nci_account branch is SQL-only, not fixtured).
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';
@@ -21,96 +21,136 @@ ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_gain
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS disposal_proceeds_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS goodwill_amortisation_expense_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS acquisition_costs_account String DEFAULT '';
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS ic_difference_account String DEFAULT '';
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS ic_difference_tolerance Float64 DEFAULT 0;
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS partial_period_treatment String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
-ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;
-INSERT INTO epm_staging.main_accounts
-  (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings)
-VALUES
-  ('ZZ1000', 'ZZ cash', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'CASH', 'Published', 0),
-  ('ZZ1100', 'ZZ receivables', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'RECEIVABLES', 'Published', 0),
-  ('ZZ1420', 'ZZ plant', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'PPE', 'Published', 0),
-  ('ZZ1800', 'ZZ goodwill', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'INTANGIBLES', 'Published', 0),
-  ('ZZ1900', 'ZZ fair value adjustments', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'PPE', 'Published', 0),
-  ('ZZ2100', 'ZZ payables', 'ZZCOA', '', 0, 'Liability', 'Balance Sheet', 'Current Liabilities', 'Credit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'PAYABLES', 'Published', 0),
-  ('ZZ3000', 'ZZ share capital', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0),
-  ('ZZ3100', 'ZZ retained earnings', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 1),
-  ('ZZ3400', 'ZZ non-controlling interest', 'ZZCOA', '', 0, 'Equity', 'Balance Sheet', 'Equity', 'Credit', 'Balance', 'historical', 1, 0, 0, '', '', 0, 'EQUITY', 'Published', 0),
-  ('ZZ3500', 'ZZ investment in subsidiaries', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Non-current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 0, 'INVESTMENTS', 'Published', 0),
-  ('ZZ4900', 'ZZ bargain purchase gain', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Other income', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OTHER_INCOME', 'Published', 0),
-  ('ZZ4950', 'ZZ gain or loss on disposal', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Other income', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OTHER_INCOME', 'Published', 0),
-  ('ZZ6900', 'ZZ goodwill amortisation', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OPEX', 'Published', 0),
-  ('ZZ6950', 'ZZ acquisition costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'OPEX', 'Published', 0);
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 ALTER TABLE epm_staging.ownership_periods ADD COLUMN IF NOT EXISTS owner_group String, ADD COLUMN IF NOT EXISTS owner_data_area_id String, MODIFY ORDER BY (consolidation_group, data_area_id, effective_date, owner_group, owner_data_area_id);
 CREATE TABLE IF NOT EXISTS epm_staging.consolidation_method_declarations (consolidation_group String, data_area_id String, consolidation_method String, effective_date Date, end_date Date DEFAULT '9999-12-31', reason String, updated_at DateTime DEFAULT now()) ENGINE = ReplacingMergeTree(updated_at) ORDER BY (consolidation_group, data_area_id, effective_date);
+CREATE TABLE IF NOT EXISTS epm_staging.business_combinations (name String, consolidation_group String, acquired_entity String, acquisition_date Date, share_acquired_pct Float64, consideration_currency String, total_consideration Float64, net_assets_acquired Float64, fair_value_adjustments Float64, goodwill Float64, bargain_purchase_gain Float64, nci_at_acquisition Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
+ALTER TABLE epm_staging.business_combinations ADD COLUMN IF NOT EXISTS nci_fair_value Float64 DEFAULT 0;
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_consideration (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_acquired_balances (parent String, idx UInt16, main_account String, book_amount Float64, fair_value_adjustment Float64, note String) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.business_combination_costs (parent String, idx UInt16, kind String, amount Float64, currency String, description String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.business_disposals (name String, consolidation_group String, disposed_entity String, disposal_date Date, share_disposed_pct Float64, retained_interest_pct Float64, proceeds_currency String, total_proceeds Float64, ownership_period String) ENGINE = MergeTree ORDER BY name;
-INSERT INTO epm_staging.fiscal_periods
-  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
-VALUES
-  (2024, 0, 'FY2024-P00', 'FY2024 opening', 'Opening', '2024-04-01', '2024-04-01', '', 'Open'),
-  (2024, 1, 'FY2024-P01', 'Apr 2024', 'Regular', '2024-04-01', '2024-04-30', 'Q1', 'Open'),
-  (2024, 2, 'FY2024-P02', 'May 2024', 'Regular', '2024-05-01', '2024-05-31', 'Q1', 'Open'),
-  (2024, 3, 'FY2024-P03', 'Jun 2024', 'Regular', '2024-06-01', '2024-06-30', 'Q1', 'Open'),
-  (2024, 4, 'FY2024-P04', 'Jul 2024', 'Regular', '2024-07-01', '2024-07-31', 'Q2', 'Open'),
-  (2024, 5, 'FY2024-P05', 'Aug 2024', 'Regular', '2024-08-01', '2024-08-31', 'Q2', 'Open'),
-  (2024, 6, 'FY2024-P06', 'Sep 2024', 'Regular', '2024-09-01', '2024-09-30', 'Q2', 'Open'),
-  (2024, 7, 'FY2024-P07', 'Oct 2024', 'Regular', '2024-10-01', '2024-10-31', 'Q3', 'Open'),
-  (2024, 8, 'FY2024-P08', 'Nov 2024', 'Regular', '2024-11-01', '2024-11-30', 'Q3', 'Open'),
-  (2024, 9, 'FY2024-P09', 'Dec 2024', 'Regular', '2024-12-01', '2024-12-31', 'Q3', 'Open'),
-  (2024, 10, 'FY2024-P10', 'Jan 2025', 'Regular', '2025-01-01', '2025-01-31', 'Q4', 'Open'),
-  (2024, 11, 'FY2024-P11', 'Feb 2025', 'Regular', '2025-02-01', '2025-02-28', 'Q4', 'Open'),
-  (2024, 12, 'FY2024-P12', 'Mar 2025', 'Regular', '2025-03-01', '2025-03-31', 'Q4', 'Open'),
-  (2024, 13, 'FY2024-P13', 'FY2024 closing', 'Closing', '2025-03-31', '2025-03-31', '', 'Open'),
-  (2024, 14, 'FY2024-P14', 'FY2024 adjustment', 'Adjustment', '2025-03-31', '2025-03-31', '', 'Open'),
-  (2025, 0, 'FY2025-P00', 'FY2025 opening', 'Opening', '2025-04-01', '2025-04-01', '', 'Open'),
-  (2025, 1, 'FY2025-P01', 'Apr 2025', 'Regular', '2025-04-01', '2025-04-30', 'Q1', 'Open'),
-  (2025, 2, 'FY2025-P02', 'May 2025', 'Regular', '2025-05-01', '2025-05-31', 'Q1', 'Open'),
-  (2025, 3, 'FY2025-P03', 'Jun 2025', 'Regular', '2025-06-01', '2025-06-30', 'Q1', 'Open'),
-  (2025, 4, 'FY2025-P04', 'Jul 2025', 'Regular', '2025-07-01', '2025-07-31', 'Q2', 'Open'),
-  (2025, 5, 'FY2025-P05', 'Aug 2025', 'Regular', '2025-08-01', '2025-08-31', 'Q2', 'Open'),
-  (2025, 6, 'FY2025-P06', 'Sep 2025', 'Regular', '2025-09-01', '2025-09-30', 'Q2', 'Open'),
-  (2025, 7, 'FY2025-P07', 'Oct 2025', 'Regular', '2025-10-01', '2025-10-31', 'Q3', 'Open'),
-  (2025, 8, 'FY2025-P08', 'Nov 2025', 'Regular', '2025-11-01', '2025-11-30', 'Q3', 'Open'),
-  (2025, 9, 'FY2025-P09', 'Dec 2025', 'Regular', '2025-12-01', '2025-12-31', 'Q3', 'Open'),
-  (2025, 10, 'FY2025-P10', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q4', 'Open'),
-  (2025, 11, 'FY2025-P11', 'Feb 2026', 'Regular', '2026-02-01', '2026-02-28', 'Q4', 'Open'),
-  (2025, 12, 'FY2025-P12', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q4', 'Open'),
-  (2025, 13, 'FY2025-P13', 'FY2025 closing', 'Closing', '2026-03-31', '2026-03-31', '', 'Open'),
-  (2025, 14, 'FY2025-P14', 'FY2025 adjustment', 'Adjustment', '2026-03-31', '2026-03-31', '', 'Open');
+CREATE TABLE IF NOT EXISTS epm_staging.business_disposal_proceeds (parent String, idx UInt16, component String, amount Float64, currency String, settlement_date Date, description String) ENGINE = MergeTree ORDER BY (parent, idx);
+ALTER TABLE epm_gold.gold_trial_balance_by_partner ADD COLUMN IF NOT EXISTS is_year_end_close UInt8 DEFAULT 0;
 INSERT INTO epm_staging.consolidation_ancestry
   (consolidation_group, data_area_id, link_group, link_data_area_id, link_depth, depth, path, path_id, link_owner_group, link_owner_data_area_id)
 VALUES
-  ('ZZXG', 'ZZXB', 'ZZXG', 'ZZXB', 1, 1, 'ZZXG/ZZXB', 'ZZXG/ZZXB', 'ZZXG', ''),
-  ('ZZXG', 'ZZXS', 'ZZXG', 'ZZXS', 1, 1, 'ZZXG/ZZXS', 'ZZXG/ZZXS', 'ZZXG', ''),
-  ('ZZXG', 'ZZXD', 'ZZXG', 'ZZXD', 1, 1, 'ZZXG/ZZXD', 'ZZXG/ZZXD', 'ZZXG', ''),
-  ('ZZXG', 'ZZXE', 'ZZXG', 'ZZXE', 1, 1, 'ZZXG/ZZXE', 'ZZXG/ZZXE', 'ZZXG', ''),
-  ('ZZXG', 'ZZXL', 'ZZXG', 'ZZXL', 1, 1, 'ZZXG/ZZXL', 'ZZXG/ZZXL', 'ZZXG', ''),
-  ('ZZXG', 'ZZXN', 'ZZXG', 'ZZXN', 1, 1, 'ZZXG/ZZXN', 'ZZXG/ZZXN', 'ZZXG', ''),
-  ('ZZXG', 'ZZXH1', 'ZZXH1', 'ZZXH1', 1, 1, 'ZZXG/ZZXH1', 'ZZXG/ZZXH1', 'ZZXG', ''),
-  ('ZZXG', 'ZZXH2', 'ZZXH2', 'ZZXH2', 1, 1, 'ZZXG/ZZXH2', 'ZZXG/ZZXH2', 'ZZXG', ''),
-  ('ZZXG', 'ZZXT', 'ZZXH1', 'ZZXH1', 1, 2, 'ZZXG/ZZXH1/ZZXT', 'ZZXG/ZZXH1/ZZXT', 'ZZXG', ''),
-  ('ZZXG', 'ZZXT', 'ZZXG', 'ZZXT', 2, 2, 'ZZXG/ZZXH1/ZZXT', 'ZZXG/ZZXH1/ZZXT', 'ZZXH1', 'ZZXH1'),
-  ('ZZXG', 'ZZXT', 'ZZXH2', 'ZZXH2', 1, 2, 'ZZXG/ZZXH2/ZZXT', 'ZZXG/ZZXH2/ZZXT', 'ZZXG', ''),
-  ('ZZXG', 'ZZXT', 'ZZXG', 'ZZXT', 2, 2, 'ZZXG/ZZXH2/ZZXT', 'ZZXG/ZZXH2/ZZXT', 'ZZXH2', 'ZZXH2');
+  ('ZZQG', 'ZZQS', 'ZZQG', 'ZZQS', 1, 1, 'ZZQG/ZZQS', 'ZZQG/ZZQS', 'ZZQG', '');
+INSERT INTO epm_staging.consolidation_hierarchy
+  (consolidation_group, data_area_id, parent_group, hierarchy_level, path)
+VALUES
+  ('ZZQG', 'ZZQS', '', 1, 'ZZQG');
 INSERT INTO epm_staging.ownership_periods
   (consolidation_group, data_area_id, effective_date, end_date, ownership_pct, consolidation_method, owner_group, owner_data_area_id, is_disposal, disposal_date)
 VALUES
-  ('ZZXH1', 'ZZXH1', '2020-01-01', '2149-06-06', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXH2', 'ZZXH2', '2020-01-01', '2149-06-06', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXB', '2020-01-01', '2024-08-15', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXS', '2020-01-01', '2024-08-15', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXS', '2024-08-16', '2149-06-06', 80, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXT', '2020-01-01', '2024-08-15', 100, 'full', 'ZZXH1', 'ZZXH1', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXT', '2024-08-16', '2149-06-06', 100, 'full', 'ZZXH2', 'ZZXH2', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXD', '2020-01-01', '2024-08-15', 100, 'full', 'ZZXG', '', 1, '2024-08-15'),
-  ('ZZXG', 'ZZXE', '2020-01-01', '2025-03-31', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXL', '2020-01-01', '2149-06-06', 100, 'full', 'ZZXG', '', 0, '9999-12-31'),
-  ('ZZXG', 'ZZXN', '2020-01-01', '2024-08-15', 70, 'full', 'ZZXG', '', 0, '9999-12-31');
-INSERT INTO epm_staging.business_disposals
-  (name, consolidation_group, disposed_entity, disposal_date, share_disposed_pct, retained_interest_pct, proceeds_currency, total_proceeds, ownership_period)
+  ('ZZQG', 'ZZQS', '2026-01-01', '2026-03-31', 70, 'full', 'ZZQG', '', 0, '9999-12-31');
+INSERT INTO epm_staging.entities
+  (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source)
 VALUES
-  ('BD-ZZXG-ZZXD-2024-08-15', 'ZZXG', 'ZZXD', '2024-08-15', 100, 0, 'USD', 1000, 'ZZ-OP-ZZXD-1');
+  ('ZZQS', 'ZZ Exit Subsidiary', 'ZZQG', 0, 'Active', 'EUR', 'DE', '');
+INSERT INTO epm_silver.silver_entity_currencies
+  (data_area_id, accounting_currency)
+VALUES
+  ('ZZQS', 'EUR');
+INSERT INTO epm_silver.silver_main_accounts
+  (main_account_id, account_name, account_type, account_type_name, is_pnl, is_balance_sheet, is_equity, fx_method, is_posting, is_retained_earnings, uses_historical_rate)
+VALUES
+  ('ZZ1100', 'ZZ receivables', 'Asset', 'Asset', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ1420', 'ZZ plant', 'Asset', 'Asset', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ1800', 'ZZ goodwill', 'Asset', 'Asset', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ1900', 'ZZ fair value adjustments', 'Asset', 'Asset', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ2100', 'ZZ payables', 'Liability', 'Liability', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ3000', 'ZZ share capital', 'Equity', 'Equity', 0, 1, 1, 'closing', 1, 0, 0),
+  ('ZZ3100', 'ZZ retained earnings', 'Equity', 'Equity', 0, 1, 1, 'closing', 1, 1, 0),
+  ('ZZ3400', 'ZZ non-controlling interest', 'Equity', 'Equity', 0, 1, 1, 'closing', 1, 0, 0),
+  ('ZZ3500', 'ZZ investment in subsidiaries', 'Asset', 'Asset', 0, 1, 0, 'closing', 1, 0, 0),
+  ('ZZ4000', 'ZZ revenue', 'Revenue', 'Revenue', 1, 0, 0, 'average', 1, 0, 0),
+  ('ZZ4960', 'ZZ gain or loss on exit', 'Revenue', 'Revenue', 1, 0, 0, 'average', 1, 0, 0),
+  ('ZZ5000', 'ZZ cost', 'Expense', 'Expense', 1, 0, 0, 'average', 1, 0, 0);
 INSERT INTO epm_gold.consolidation_groups
-  (consolidation_group, data_area_id, entity_name, reporting_currency, nci_account, exit_gain_loss_account)
+  (consolidation_group, data_area_id, entity_name, reporting_currency,
+   nci_measurement, accounting_framework, goodwill_treatment, acquisition_costs_treatment, measurement_period, bargain_purchase,
+   goodwill_account, fair_value_adjustment_account, investment_account, nci_account, bargain_purchase_gain_account,
+   disposal_gain_loss_account, disposal_proceeds_account, partial_period_treatment, exit_gain_loss_account)
 VALUES
-  ('ZZXG', '', 'ZZ Exit Group', 'USD', '', '');
+  ('ZZQG', '', 'ZZ Exit Group', 'USD',
+   'partial', 'IFRS', 'Impairment only', 'Expense', 'Off', 'Recognise gain',
+   'ZZ1800', 'ZZ1900', 'ZZ3500', 'ZZ3400', '',
+   '', '', 'Whole period', ''),
+  ('ZZQG', 'ZZQS', 'ZZ Exit Subsidiary', 'USD',
+   '', '', '', '', '', '',
+   '', '', '', '', '',
+   '', '', '', '');
+INSERT INTO epm_staging.fiscal_periods
+  (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
+VALUES
+  (2026, 1, 'FY2026-P01', 'Jan 2026', 'Regular', '2026-01-01', '2026-01-31', 'Q1', 'Open'),
+  (2026, 2, 'FY2026-P02', 'Feb 2026', 'Regular', '2026-02-01', '2026-02-28', 'Q1', 'Open'),
+  (2026, 3, 'FY2026-P03', 'Mar 2026', 'Regular', '2026-03-01', '2026-03-31', 'Q1', 'Open'),
+  (2026, 4, 'FY2026-P04', 'Apr 2026', 'Regular', '2026-04-01', '2026-04-30', 'Q2', 'Open'),
+  (2026, 5, 'FY2026-P05', 'May 2026', 'Regular', '2026-05-01', '2026-05-31', 'Q2', 'Open');
+INSERT INTO epm_gold.currencies
+  (currency_code, currency_name, symbol, minor_unit, usd_log10)
+VALUES
+  ('USD', 'US Dollar', '$', 2, 0),
+  ('EUR', 'Euro', 'E', 2, 0);
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+VALUES
+  ('USD', 'EUR', 2026, 1, 'Closing', 1.10, 'ZZ-GER-2026-01'),
+  ('USD', 'EUR', 2026, 1, 'Average', 1.10, 'ZZ-GER-2026-01'),
+  ('USD', 'EUR', 2026, 2, 'Closing', 1.20, 'ZZ-GER-2026-02'),
+  ('USD', 'EUR', 2026, 2, 'Average', 1.15, 'ZZ-GER-2026-02'),
+  ('USD', 'EUR', 2026, 3, 'Closing', 1.25, 'ZZ-GER-2026-03'),
+  ('USD', 'EUR', 2026, 3, 'Average', 1.22, 'ZZ-GER-2026-03'),
+  ('USD', 'EUR', 2026, 4, 'Closing', 1.30, 'ZZ-GER-2026-04'),
+  ('USD', 'EUR', 2026, 4, 'Average', 1.28, 'ZZ-GER-2026-04');
+INSERT INTO epm_gold.gold_trial_balance_by_partner
+  (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count)
+VALUES
+  ('ZZQS', 2026, 1, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 1000, 0, 1000, 1),
+  ('ZZQS', 2026, 1, 'ZZ1420', 'ZZ plant', 'Asset', 1, 0, '', 500, 0, 500, 1),
+  ('ZZQS', 2026, 1, 'ZZ2100', 'ZZ payables', 'Liability', 1, 0, '', 0, 300, -300, 1),
+  ('ZZQS', 2026, 1, 'ZZ3000', 'ZZ share capital', 'Equity', 1, 0, '', 0, 200, -200, 1),
+  ('ZZQS', 2026, 1, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, '', 0, 1000, -1000, 1),
+  ('ZZQS', 2026, 2, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 300, 0, 300, 1),
+  ('ZZQS', 2026, 2, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, '', 200, 0, 200, 1),
+  ('ZZQS', 2026, 2, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 500, -500, 1),
+  ('ZZQS', 2026, 3, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, '', 100, 0, 100, 1),
+  ('ZZQS', 2026, 3, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, '', 100, 0, 100, 1),
+  ('ZZQS', 2026, 3, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', 0, 200, -200, 1);
+INSERT INTO epm_gold.gold_trial_balance
+  (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
+VALUES
+  ('ZZQS', 2026, 1, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 1000, 0, 1000, 1),
+  ('ZZQS', 2026, 1, 'ZZ1420', 'ZZ plant', 'Asset', 1, 0, 500, 0, 500, 1),
+  ('ZZQS', 2026, 1, 'ZZ2100', 'ZZ payables', 'Liability', 1, 0, 0, 300, -300, 1),
+  ('ZZQS', 2026, 1, 'ZZ3000', 'ZZ share capital', 'Equity', 1, 0, 0, 200, -200, 1),
+  ('ZZQS', 2026, 1, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, 0, 1000, -1000, 1),
+  ('ZZQS', 2026, 2, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 300, 0, 300, 1),
+  ('ZZQS', 2026, 2, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 200, 0, 200, 1),
+  ('ZZQS', 2026, 2, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 500, -500, 1),
+  ('ZZQS', 2026, 3, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 100, 0, 100, 1),
+  ('ZZQS', 2026, 3, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 100, 0, 100, 1),
+  ('ZZQS', 2026, 3, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 200, -200, 1);
+INSERT INTO epm_staging.business_combinations
+  (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement)
+VALUES
+  ('BC-ZZQG-ZZQS-2026-01-01', 'ZZQG', 'ZZQS', '2026-01-01', 70, 'USD', 1500, 1320, 220, 422, 0, 462, 'ZZ-OP-ZZQS-1', 'partial');
+INSERT INTO epm_staging.business_combination_consideration
+  (parent, idx, component, amount, currency, settlement_date, description)
+VALUES
+  ('BC-ZZQG-ZZQS-2026-01-01', 1, 'Cash', 1500, 'USD', '2026-01-01', 'Cash paid at completion');
+INSERT INTO epm_staging.business_combination_acquired_balances
+  (parent, idx, main_account, book_amount, fair_value_adjustment, note)
+VALUES
+  ('BC-ZZQG-ZZQS-2026-01-01', 1, 'ZZ1100', 1000, 0, 'Receivables'),
+  ('BC-ZZQG-ZZQS-2026-01-01', 2, 'ZZ1420', 500, 200, 'Plant, stepped up to fair value'),
+  ('BC-ZZQG-ZZQS-2026-01-01', 3, 'ZZ2100', -300, 0, 'Payables'),
+  ('BC-ZZQG-ZZQS-2026-01-01', 4, 'ZZ3000', -200, 0, 'Share capital'),
+  ('BC-ZZQG-ZZQS-2026-01-01', 5, 'ZZ3100', -1000, 0, 'Retained earnings at acquisition');
