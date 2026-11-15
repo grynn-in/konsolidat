@@ -83,6 +83,11 @@ inner join slice_movement as m
     and m.{{ d.name }} = e.{{ d.name }}
     {%- endfor %}
 {# blank-dimensioned rows are the whole-leg answer, not a sliced share #}
-where {% for d in var('dimensions') %}e.{{ d.name }} != ''{{ ' or ' if not loop.last }}{% endfor %}
-  {% if var('dimensions') | length == 0 %}1 = 0{% endif %}
+{# Parenthesised: AND binds tighter than OR, so unwrapped, two or more
+   dimensions rendered `d1 != '' or d2 != '' or d3 != '' and moved > ...` and
+   every sliced row with d1 or d2 set failed whatever it moved (PR #260 F2). #}
+where (
+    {% for d in var('dimensions') %}e.{{ d.name }} != ''{{ ' or ' if not loop.last }}{% endfor %}
+    {% if var('dimensions') | length == 0 %}1 = 0{% endif %}
+  )
   and e.moved > m.own_move + {{ materiality_floor() }}

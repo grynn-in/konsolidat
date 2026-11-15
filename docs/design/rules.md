@@ -834,7 +834,7 @@ gold_ic_side_slices must be gold_ic_reconciliation's `sides` CTE split by the de
 
 No elimination slice may be moved further than it moved itself. THE ASSERTION NO TEST IN THIS LAYER MAKES, and the reason five rounds of guards all passed while the numbers were wrong. Every existing assertion here is satisfied by construction: shares lie in [0,1] and sum to 1, so "the slices sum to the leg" and "no slice exceeds the leg" cannot fail. The quantity that CAN be wrong is the one none of them compares — a slice's share of the leg against that slice's OWN movement. amount_i = |leg| x aligned_i / aligned_gross, so amount_i <= aligned_i holds exactly when aligned_gross >= |leg|. At leg_coverage() = 0.5 the gate allowed |leg| <= 2 x aligned_gross, so a slice could take twice what it booked: measured through the real chain, a cost centre that ever booked +100 ended at -100, on an intercompany receivable, with the account total exactly right. That is what this test exists to catch. Only the SLICED rows are checked. A whole-leg row is blank-dimensioned by design and carries the entire leg, which is the declared answer when the side cannot account for it. Error severity: a slice moved past its own movement is a wrong consolidated number that every total-based check accepts. Two passes, because ClickHouse refuses a window function inside an aggregate (ILLEGAL_AGGREGATION) — the same limit the model hit.
 
-<sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245</sub>
+<sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `unrealized_profit_at_operator_share`
 
