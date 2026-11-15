@@ -359,7 +359,8 @@ equity_method as (
 
 {# Layer 7: NCI attribution (konsol#117 pair 2 K2, konsolidat#204 (a)): the minority's
    share of a full-method subsidiary's result and CTA, one balanced journal per
-   (group, entity, period). #}
+   (group, entity, period). konsolidat#245 option D: the result legs carry the
+   slices of the entity's P&L, the CTA legs are blank (gold_nci_attribution_journal). #}
 nci_attribution as (
     select
         consolidation_group,
@@ -368,7 +369,7 @@ nci_attribution as (
         fiscal_period,
         main_account,
         account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {{ dim_select(trailing=true) }}
         reporting_currency,
         amount,
         adjustment_type,

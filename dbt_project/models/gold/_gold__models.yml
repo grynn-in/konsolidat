@@ -411,6 +411,10 @@ models:
       nci_account (their sum). Year-end close rows are excluded from the result.
       A chart without a retained-earnings account, or a group without nci_account,
       gets no journal. Layer 'nci_attribution' of gold_fully_consolidated_tb.
+      Dimensions (konsolidat#245 option D): the retained-earnings line and the
+      result part of the NCI line carry the slices of the entity's P&L; the CTA
+      line and the CTA part of the NCI line are blank. One row per account,
+      role and slice.
     columns:
       - name: consolidation_group
         tests:
