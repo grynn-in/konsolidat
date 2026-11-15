@@ -6,11 +6,12 @@
    fallback 'ACTUAL').
 
    Branch (data_source) -> accepted scenario_type:
-     gl                    -> actual
-     budget, d365_budget   -> budget or forecast
+     gl       -> actual
+     budget   -> budget or forecast
 
-   Forecasts are legitimate rows of the scenario trial balance, so the budget
-   branches accept them here. The variance models read only 'budget'-type
+   (The ERP branch 'd365_budget' is gone, konsol#348 S3 B1.) Forecasts are
+   legitimate rows of the scenario trial balance, so the budget branch accepts
+   them here. The variance models read only 'budget'-type
    scenarios, so forecast rows never reach variance; that is by design, not a
    problem this test names.
 
@@ -51,7 +52,7 @@ checked as (
             d.d_active_types,
             multiIf(
                 t.t_data_source = 'gl', ['actual'],
-                t.t_data_source in ('budget', 'd365_budget'), ['budget', 'forecast'],
+                t.t_data_source = 'budget', ['budget', 'forecast'],
                 emptyArrayString()
             )
         ) as c_type_ok

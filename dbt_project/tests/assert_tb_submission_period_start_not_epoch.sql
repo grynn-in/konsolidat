@@ -1,23 +1,18 @@
 {#
-    Guard against the join_use_nulls=0 default silently winning over the TBS
-    coalesce fallback.
+    A trial-balance submission row in silver_gl_entries dated 1970-01-01.
 
     silver_gl_entries builds a synthetic GL row for every trial-balance
-    submission (F8). Its accounting_date/document_date come from a LEFT JOIN
-    from bronze_trial_balance_submissions to silver_fiscal_periods, coalesced
-    to build_date_from_year_period() when the entity's fiscal calendar isn't
-    loaded -- exactly the shape of a TB-only site, which has no ERP calendar
-    at all (konsol#182).
+    submission (F8), dated at the declared start_date of its period
+    (declared_periods(), konsol's fiscal calendar; konsol#348). A period the
+    calendar does not declare misses that LEFT JOIN, and under
+    join_use_nulls=0 ClickHouse fills Date's default, toDate(0) = 1970-01-01,
+    not NULL. The row is kept, not dated by a guess, and this test names it.
+    (Before konsol#348 the date came from the ERP calendar, silver_fiscal_periods,
+    with a calendar-month fallback, and the epoch was the coalesce trap.)
 
-    Under join_use_nulls=0 ClickHouse fills an unmatched LEFT JOIN with the
-    joined column's type default, NOT NULL. Date's default is toDate(0) =
-    1970-01-01, so coalesce(sfp.period_start_date, ...) never falls through:
-    every submission for an entity with no loaded calendar lands on
-    1970-01-01 instead of the first day of its own fiscal year/period.
-
-    This test fails if any Trial Balance Submission row in silver_gl_entries
-    carries the ClickHouse Date zero-value, which is never a legitimate
-    posting date for a submitted batch.
+    Fails if any Trial Balance Submission row carries the Date zero-value,
+    which is never a legitimate posting date for a submitted batch.
+    Fixture: test_fixtures/assert_tb_submission_period_start_not_epoch.undeclared.must_flag.sql.
 #}
 select
     data_area_id,

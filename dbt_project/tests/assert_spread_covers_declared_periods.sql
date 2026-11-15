@@ -9,6 +9,8 @@
 -- Excludes manual (identity-spread) budgets (#94): a manually-entered budget can
 -- legitimately be partial-year, so it carries no structural period guarantee.
 -- join_use_nulls=0: the comparisons use NOT IN, never a LEFT JOIN.
+-- A line is one (scenario, cycle, entity, year, account, profile): the cycle is part of the fact's grain
+-- (konsol#348 S3 B4), so two forecast rounds of one annual input are two lines, each judged alone.
 with declared as (
     select fiscal_year, fiscal_period
     from {{ source('epm_staging', 'fiscal_periods') }}
@@ -16,19 +18,20 @@ with declared as (
 ),
 
 spread as (
-    select scenario_id, data_area_id, fiscal_year, main_account, spread_profile_id, fiscal_period
+    select scenario_id, cycle, data_area_id, fiscal_year, main_account, spread_profile_id, fiscal_period
     from {{ ref('gold_spread_budget') }}
     where spread_profile_id != 'manual'
 ),
 
 line as (
-    select distinct scenario_id, data_area_id, fiscal_year, main_account, spread_profile_id
+    select distinct scenario_id, cycle, data_area_id, fiscal_year, main_account, spread_profile_id
     from spread
 ),
 
 missing as (
     select
         l.scenario_id as scenario_id,
+        l.cycle as cycle,
         l.data_area_id as data_area_id,
         l.fiscal_year as fiscal_year,
         l.main_account as main_account,
@@ -37,15 +40,15 @@ missing as (
         0 as periods_outside
     from line as l
     inner join declared as d on l.fiscal_year = d.fiscal_year
-    where (l.scenario_id, l.data_area_id, l.fiscal_year, l.main_account, l.spread_profile_id, d.fiscal_period) not in (
-        select scenario_id, data_area_id, fiscal_year, main_account, spread_profile_id, fiscal_period
+    where (l.scenario_id, l.cycle, l.data_area_id, l.fiscal_year, l.main_account, l.spread_profile_id, d.fiscal_period) not in (
+        select scenario_id, cycle, data_area_id, fiscal_year, main_account, spread_profile_id, fiscal_period
         from spread
     )
 ),
 
 outside as (
     select
-        scenario_id, data_area_id, fiscal_year, main_account, spread_profile_id,
+        scenario_id, cycle, data_area_id, fiscal_year, main_account, spread_profile_id,
         0 as periods_missing,
         1 as periods_outside
     from spread
@@ -54,6 +57,7 @@ outside as (
 
 select
     scenario_id,
+    cycle,
     data_area_id,
     fiscal_year,
     main_account,
@@ -61,4 +65,4 @@ select
     sum(periods_missing) as periods_missing,
     sum(periods_outside) as periods_outside
 from (select * from missing union all select * from outside)
-group by scenario_id, data_area_id, fiscal_year, main_account, spread_profile_id
+group by scenario_id, cycle, data_area_id, fiscal_year, main_account, spread_profile_id
