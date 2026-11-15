@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **167** |
-| carrying their reasoning | 146 |
-| citing the issue that caused them | 139 |
+| assertions | **169** |
+| carrying their reasoning | 148 |
+| citing the issue that caused them | 141 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 145 |
+| severity `error` (stops the build, and its children) | 147 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 24
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -978,6 +978,14 @@ A run's allocation_dimension must be one of the site's In Budget dimensions, com
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_dimension_declared.sql` · konsol#269</sub>
 
+### `cost_allocation_expected_values`
+
+**The worked example's values are asserted (konsol#269, RF5, review finding 5).**
+
+Conservation and per-account balance hold for any correct-looking set of coefficients, Step-Down's included; only the numbers tell Reciprocal apart. The expected values below belong to the fixture runs ZZEV (RC6 reciprocal coefficients, pools IT 1,000 and HR 400, Declared Allocation Account) and ZZEW (Step-Down coefficients, must flag); a site has no run of that name, so this test returns nothing there (it judges a run only where the run exists). Rows returned are violations: net:<member>      the member's net on the run's allocation account gross:<s>><r>:<k> received lines from sender s at receiver r of hop kind k Expected: Sales 885, Ops 515, IT 0, HR 0; IT -> HR 725 = own 500 + pass 225. Expected and actual are summed per run and key side by side: a missing or a wrong number differs. UNION ALL + GROUP BY, no join (join_use_nulls=0 would fill a missing side with 0).
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_expected_values.sql` · konsol#269</sub>
+
 ### `cost_allocation_frozen_consistent`
 
 **Cost allocation lines agree with their run (konsol#269, W5).**
@@ -993,6 +1001,14 @@ Three ways the published lines can disagree with epm_staging.cost_allocation_run
 A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
+
+### `cost_allocation_hop_kind_valid`
+
+**hop_kind is `own` or `pass` (konsol#269, RF5, review finding 6).**
+
+The allocation macro books an `own` hop on the pool account and a `pass` hop on the account the sender received the cost on; any other value, a blank included, is neither, and used to be treated as `pass` without a word. Rows returned are violations: a coefficient row or an allocation line whose hop_kind is not in ('own', 'pass').
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_hop_kind_valid.sql` · konsol#269</sub>
 
 ### `cost_allocation_sender_relieved_once`
 

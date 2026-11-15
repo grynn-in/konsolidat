@@ -19,10 +19,13 @@
        allocation_account in 'Declared Allocation Account' mode;
      - sent on an `own` hop (hop_kind = 'own', the origin's relief of its pool): the
        pool account, always;
-     - sent on a `pass` hop (hop_kind != 'own'; the sender may be the origin itself in
+     - sent on a `pass` hop (hop_kind = 'pass'; the sender may be the origin itself in
        a Reciprocal solve): the account the sender
        received the cost on, so its received and sent lines net to zero there
        (review H2: booking it on the pool account over-relieved the pool account).
+     - any other hop_kind goes to NEITHER account: the line is booked on the marker
+       account `?hop_kind`, so balanced_per_account fails loudly, and
+       assert_cost_allocation_hop_kind_valid names the row (RF5, review finding 6).
    pool_account is on every line, so the lines of two pools that share an account
    (every received line in declared mode) stay apart (review M1).
 
@@ -116,8 +119,11 @@ hops as (
 lines as (
     select
         run, rule_set, method, scenario_id, data_area_id, fiscal_year, fiscal_period,
-        if(hop_kind != 'own' and receiver_account_mode = 'Declared Allocation Account',
-           allocation_account, pool_account) as main_account,
+        multiIf(
+            hop_kind = 'own', pool_account,
+            hop_kind = 'pass', if(receiver_account_mode = 'Declared Allocation Account',
+                                  allocation_account, pool_account),
+            '?hop_kind') as main_account,
         pool_account,
         allocation_dimension,
         sender_member as member,
