@@ -15,12 +15,23 @@
 -- (UNION ALL + GROUP BY with +1/-1 signs; never count() over EXCEPT, konsolidat#361) names any
 -- row that differs. Float columns are rounded to 6 places: `sum() over close_period` adds its
 -- rows in pipeline order, so the last binary digit may differ between two runs; a telescoped
--- layer differs by the size of a balance.
+-- layer differs by the size of a balance. A rounded zero is then made +0: round() keeps the
+-- sign of a tiny negative (-1e-12 -> -0.0), GROUP BY keys on the bits, and a year-end close
+-- row whose residue came out -1e-12 on one side and +1e-12 on the other was 6 false pairs
+-- on real data (W3 review).
+-- Fixture-only (W3 review): this test re-runs the core twice over the whole partner trial
+-- balance, about twice the cost of the model it guards, and an error in it would skip
+-- gold_consolidated_trial_balance's children in a site build. It is disabled unless the run
+-- passes `fixture_only_tests: true` in --vars, which the fixture gate and CI's full build do
+-- (scripts/tb_only_first_build.py: fixture_dimension_vars / zero_dimension_vars;
+-- tests/test_fixture_only_tests.py pins it).
 -- The test calls the macro directly, so it needs no model of its own and the fixture
 -- (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's
 -- inputs only: a retranslated balance, a year-end close and a historical tranche.
 -- Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or
 -- -1 (produced, not expected).
+{{ config(enabled=var('fixture_only_tests', false)) }}
+
 {%- set lead = ['consolidation_group', 'data_area_id', 'fiscal_year', 'fiscal_period', 'main_account',
                 'account_name', 'account_type_name', 'is_balance_sheet', 'is_pnl', 'is_equity',
                 'partner_data_area_id'] -%}
@@ -37,11 +48,13 @@
 {%- set rounded_exprs = [] -%}
 {%- set rounded_names = [] -%}
 {%- for c in rounded %}
-    {%- do rounded_exprs.append('round(' ~ c ~ ', 6) as r_' ~ c) %}
+    {#- round to 6 places, then a zero is +0 whatever sign the residue had (-0.0 = 0 is true) -#}
+    {%- do rounded_exprs.append('if(round(' ~ c ~ ', 6) = 0, 0., round(' ~ c ~ ', 6)) as r_' ~ c) %}
     {%- do rounded_names.append('r_' ~ c) %}
 {%- endfor -%}
 {%- set projection = (key + rounded_exprs) | join(', ') -%}
-{%- set grouping = (key + rounded_names) | join(', ') -%}
+{#- no trailing `-` here: the newline before `with` stays, so no block above can trim into the header -#}
+{%- set grouping = (key + rounded_names) | join(', ') %}
 
 with base_source as (
     select

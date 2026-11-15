@@ -88,7 +88,7 @@ sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
     FIXTURE_DIMENSIONS, LAYERS, budget_dimension_columns, copy_project, fixture_dimension_vars, rewrite,
-    run_dbt, split_sql,
+    run_dbt, split_sql, zero_dimension_vars,
 )
 
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
@@ -102,7 +102,10 @@ DIM_VARS = fixture_dimension_vars()
 #: ALTERs those columns onto the input table itself and every value the zero pass
 #: relies on is the entity/account/period grain, so they run unchanged.
 ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
-ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": []})]
+#: Both payloads enable the fixture-only tests (konsol#348 S4 W3 review): the
+#: gate's parse below reads the manifest for a test's parents, so a test that is
+#: disabled there would get no tables and fail before it ran.
+ZERO_DIM_VARS = zero_dimension_vars()
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")

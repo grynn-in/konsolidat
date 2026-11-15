@@ -23,6 +23,7 @@ on:
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
+      - 'tests/test_fixture_only_tests.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -54,6 +55,7 @@ on:
       - 'tests/test_historical_equity_rates_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
+      - 'tests/test_fixture_only_tests.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -179,6 +181,11 @@ jobs:
       # verbatim, and declared dbt sources.
       - name: cost allocation staging DDL and sources
         run: python -m unittest -v tests.test_cost_allocation_ddl
+      # konsol#348 S4 (W3): the test that re-runs the consolidation core is
+      # fixture-only: disabled by default, enabled by the gate's and this
+      # workflow's --vars payloads, and its header does not swallow its query.
+      - name: fixture-only tests stay out of site builds
+        run: python -m unittest -v tests.test_fixture_only_tests
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip

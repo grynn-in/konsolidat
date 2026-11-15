@@ -8,6 +8,10 @@
 -- ZZ3100 retained earnings takes the close lump (close_period); ZZE1 has a historical tranche
 -- for ZZ3100 (the ASOF join). The test duplicates these rows under two layers and expects each
 -- layer to equal the whole; a window or join that lost the layer doubles a balance here.
+-- Signed zeros (W3 review): every negative row of these 100%-owned entities has nci_amount =
+-- translated x 0.0 = -0.0 (revenue, payables, the retained-earnings close), and ZZE1's ZZ2000
+-- movement in P13 carries a retranslation of cum_local(-30) x (1.20 - 1.20) = -0.0; the test's
+-- normaliser must group those with +0.0, or they would flag.
 -- Calendar: FY2025 P11, P12 (Regular), P13 (Closing, translated at P12's rates), FY2026 P1.
 -- Governed EUR->USD: 2025 P11 1.05/1.00; 2025 P12 1.20/1.10; 2026 P1 1.25/1.22 (closing/average).
 INSERT INTO epm_silver.silver_main_accounts
@@ -78,6 +82,7 @@ VALUES
   ('ZZE1', 2025, 12, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', '', '', '', 40, 0, -40, 1, 0),
   ('ZZE1', 2025, 13, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', '', '', '', 0, 100, 100, 1, 1),
   ('ZZE1', 2025, 13, 'ZZ3100', 'ZZ retained earnings', 'Equity', 1, 0, '', '', '', '', 100, 0, -100, 1, 1),
+  ('ZZE1', 2025, 13, 'ZZ2000', 'ZZ payables', 'Liability', 1, 0, '', '', '', '', 5, 0, -5, 1, 0),
   ('ZZE1', 2026, 1, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, '', '', '', '', 0, 50, 50, 1, 0),
   ('ZZE1', 2026, 1, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, '', '', '', '', 50, 0, -50, 1, 0),
   ('ZZE2', 2025, 12, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, '', '', '', '', 0, 100, 100, 1, 0),
