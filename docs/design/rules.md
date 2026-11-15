@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **169** |
-| carrying their reasoning | 148 |
-| citing the issue that caused them | 141 |
+| assertions | **170** |
+| carrying their reasoning | 149 |
+| citing the issue that caused them | 142 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 147 |
+| severity `error` (stops the build, and its children) | 148 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 8
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 27
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 8
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -982,7 +982,7 @@ A run's allocation_dimension must be one of the site's In Budget dimensions, com
 
 **The worked example's values are asserted (konsol#269, RF5, review finding 5).**
 
-Conservation and per-account balance hold for any correct-looking set of coefficients, Step-Down's included; only the numbers tell Reciprocal apart. The expected values below belong to the fixture runs ZZEV (RC6 reciprocal coefficients, pools IT 1,000 and HR 400, Declared Allocation Account) and ZZEW (Step-Down coefficients, must flag); a site has no run of that name, so this test returns nothing there (it judges a run only where the run exists). Rows returned are violations: net:<member>      the member's net on the run's allocation account gross:<s>><r>:<k> received lines from sender s at receiver r of hop kind k Expected: Sales 885, Ops 515, IT 0, HR 0; IT -> HR 725 = own 500 + pass 225. Expected and actual are summed per run and key side by side: a missing or a wrong number differs. UNION ALL + GROUP BY, no join (join_use_nulls=0 would fill a missing side with 0).
+Conservation and per-account balance hold for any correct-looking set of coefficients, Step-Down's included; only the numbers tell Reciprocal apart. The expected values below belong to the fixture runs ZZEV (RC6 reciprocal coefficients, pools IT 1,000 and HR 400, Declared Allocation Account) and ZZEW (Step-Down coefficients, must flag). The names are fixture data, so the test is enabled only under the fixture gate (var cost_allocation_fixture_values, which scripts/fixture_gate.py passes); on a real site it does not exist, so a run named ZZEV there cannot fail it. Rows returned are violations: net:<member>      the member's net on the run's allocation account gross:<s>><r>:<k> received lines from sender s at receiver r of hop kind k Expected: Sales 885, Ops 515, IT 0, HR 0; IT -> HR 725 = own 500 + pass 225. Expected and actual are summed per run and key side by side: a missing or a wrong number differs. UNION ALL + GROUP BY, no join (join_use_nulls=0 would fill a missing side with 0).
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_expected_values.sql` · konsol#269</sub>
 
@@ -1001,6 +1001,14 @@ Three ways the published lines can disagree with epm_staging.cost_allocation_run
 A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
+
+### `cost_allocation_frozen_no_idle_backfill`
+
+**The hop_kind backfill is a mutation, and a mutation rewrites parts: it must run only when a blank hop_kind exists (konsol#269, RF8).**
+
+Rows returned are violations: a backfill UPDATE recorded against the frozen table when the table held no blank hop_kind before the build. Only the fixture gate can know that, so the test is enabled only under it; on a real site the table's history legitimately holds one (the upgrade), and the test would fail for no fault. It judges only the fixture run ZZRK, whose frozen table is seeded in the new shape; the old-shape fixture's build legitimately runs the backfill and must not trip it.
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_frozen_no_idle_backfill.sql` · konsol#269</sub>
 
 ### `cost_allocation_hop_kind_valid`
 

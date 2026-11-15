@@ -93,7 +93,9 @@ from tb_only_first_build import (  # noqa: E402
 
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
 #: the fixtures' own declaration (FIXTURE_DIMENSIONS in tb_only_first_build.py).
-DIM_VARS = fixture_dimension_vars()
+#: RF8: also switches on the checks keyed to fixture data (var cost_allocation_fixture_values).
+GATE_VARS = {"cost_allocation_fixture_values": True}
+DIM_VARS = ["--vars", json.dumps({**json.loads(fixture_dimension_vars()[1]), **GATE_VARS})]
 #: konsol#287 review: every fixture runs at FIXTURE_DIMENSIONS, so a model that
 #: breaks at zero dimensions (konsolidat#220's class: dim_select call sites that
 #: leave a dangling comma or an empty CTE) would pass the gate. These budget and
@@ -102,7 +104,7 @@ DIM_VARS = fixture_dimension_vars()
 #: ALTERs those columns onto the input table itself and every value the zero pass
 #: relies on is the entity/account/period grain, so they run unchanged.
 ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
-ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": []})]
+ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": [], **GATE_VARS})]
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")

@@ -156,3 +156,18 @@ select
     {{ frozen_at_expr }} as frozen_at
 from lines
 {% endmacro %}
+
+
+{#- RF8: backfill hop_kind on frozen rows written by phase 1 (sender = origin -> 'own',
+    else 'pass'), only when a blank row exists. An ALTER ... UPDATE is a mutation that
+    rewrites parts, so it must not run on every incremental build. Runs as a pre_hook,
+    after the ADD COLUMN hook. The UPDATE is executed here and the macro returns an empty
+    string, which dbt skips as a hook. mutations_sync = 2 waits on every replica. -#}
+{% macro cost_allocation_backfill_hop_kind(relation) %}
+    {%- if execute -%}
+        {%- set blank = run_query("select count() from " ~ relation ~ " where hop_kind = ''") -%}
+        {%- if blank.columns[0].values()[0] | int > 0 -%}
+            {%- do run_query("ALTER TABLE " ~ relation ~ " UPDATE hop_kind = if(sender_member = origin_member, 'own', 'pass') WHERE hop_kind = '' SETTINGS mutations_sync = 2") -%}
+        {%- endif -%}
+    {%- endif -%}
+{% endmacro %}

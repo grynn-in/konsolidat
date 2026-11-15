@@ -6,7 +6,7 @@
         full_refresh=false,
         pre_hook=[
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS hop_kind String AFTER line_type{% endif %}",
-            "{% if is_incremental() %}ALTER TABLE {{ this }} UPDATE hop_kind = if(sender_member = origin_member, 'own', 'pass') WHERE hop_kind = '' SETTINGS mutations_sync = 2{% endif %}",
+            "{% if is_incremental() %}{{ cost_allocation_backfill_hop_kind(this) }}{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE run NOT IN (SELECT name FROM {{ source('epm_staging', 'cost_allocation_runs') }}){% endif %}"
         ],
         engine='MergeTree()',
@@ -40,9 +40,10 @@
 -- under phase 1 keep their amounts untouched; only hop_kind is backfilled, by
 -- the phase-1 rule: only Direct and Step-Down existed, and there sender = origin
 -- meant the origin's own relief ('own'), anything else a pass-through ('pass').
--- The ADD is a no-op once the column exists; the UPDATE (mutations_sync = 2:
--- wait on every replica) touches only rows with hop_kind = '', so a new-shape
--- table is unchanged. Any other column change still fails loudly.
+-- The ADD is a no-op once the column exists. The backfill is the macro
+-- cost_allocation_backfill_hop_kind: it counts the rows with hop_kind = '' and
+-- issues the UPDATE (a mutation: it rewrites parts) only when there are some, so
+-- a build of a new-shape table runs no mutation (RF8). Any other column change still fails loudly.
 --
 -- full_refresh=false: `dbt build --full-refresh` skips the rebuild of this table
 -- (dbt treats the model as a normal incremental run), so it cannot re-freeze
