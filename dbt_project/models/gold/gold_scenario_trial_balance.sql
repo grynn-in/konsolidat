@@ -32,28 +32,14 @@ cross join (
 
 union all
 
--- BUDGET (from D365): from silver_budget_entries
-select
-    'BUDGET' as scenario_id,
-    data_area_id,
-    fiscal_year,
-    fiscal_period,
-    main_account,
-    '' as account_name,
-    '' as account_type_name,
-    {{ dim_select(dims=get_budget_dimensions(), trailing=true) }}
-    accounting_currency_amount as amount,
-    'd365_budget' as data_source
-from {{ ref('silver_budget_entries') }}
-
-union all
-
 -- BUDGET/FORECAST from the canonical budget fact (annual-spread + manual
 -- monthly, grynn-in/konsolidat#94). Replaces the empty epm_staging.budget_input
 -- placeholder, which nothing populated — so app-entered budgets never reached
 -- this scenario fact. gold_spread_budget scenario_ids (BUDGET_2024/2025,
--- FORECAST_*) are disjoint from the declared actual and D365 'BUDGET' branches
--- above, so no double-count.
+-- FORECAST_*) are disjoint from the declared actual branch above, so no
+-- double-count. The ERP 'BUDGET' branch (silver_budget_entries, data_source
+-- 'd365_budget') is gone (konsol#348 S3 B1, QB1 b): the budget enters through
+-- konsol's two tables only; tests/test_budget_models_read_no_erp.py pins it.
 -- gold_spread_budget now carries one row per layer (base/challenge/management/
 -- board); the scenario TB is the FINAL budget, so layers are summed back to one
 -- row per (scenario, entity, period, account, dims) here.
