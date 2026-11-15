@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **173** |
-| carrying their reasoning | 152 |
-| citing the issue that caused them | 146 |
+| assertions | **172** |
+| carrying their reasoning | 151 |
+| citing the issue that caused them | 145 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 151 |
+| severity `error` (stops the build, and its children) | 150 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 27
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 26
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 14
@@ -929,14 +929,6 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
-
-### `budget_entries_one_row_per_line`
-
-**konsol#348 PR3 (A12;**
-
-PR #360 review, finding 5): silver_budget_entries carries exactly one row per ERP budget line (recid). The model puts a line in the declared Regular period that holds its transaction_date through a date spine arrayJoined from epm_staging.fiscal_periods. The spine must hold each date once: a period declared on two rows (a calendar loaded twice) must be grouped to one (fiscal_year, fiscal_period) before its dates are spun out, as declared_periods() does. Spun out ungrouped, every date of that period appears twice and every budget line dated in it comes out twice: the budget doubles with no error. This test fails the build on any line with more than one row. One row per duplicated recid. Error severity: a doubled budget is a wrong number. Fixtures: dbt_project/test_fixtures/assert_budget_entries_one_row_per_line*.sql.
-
-<sub>`error` · `tests/assert_budget_entries_one_row_per_line.sql` · konsol#348 konsolidat#360</sub>
 
 ### `budget_fact_grain_unique`
 
