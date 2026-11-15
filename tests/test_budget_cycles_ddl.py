@@ -57,8 +57,12 @@ class BudgetCyclesDDL(unittest.TestCase):
         self.assertEqual(_normalise(statements[0]), _normalise(EXPECTED_STATEMENT))
 
     def test_as_of_date_is_a_date32_with_a_declared_default(self):
-        self.assertIn("as_of_date Date32 DEFAULT '1900-01-01'", KONSOL_BODY)
-        self.assertNotIn("scenario_type", KONSOL_BODY)
+        """Read from init-db.sql, the statement a fresh volume runs: asserting on
+        this file's KONSOL_BODY could not fail when the source changed (review
+        of konsolidat#365)."""
+        [statement] = _create_statements(_read(INIT_DB), TABLE)
+        self.assertIn("as_of_date Date32 DEFAULT '1900-01-01'", _normalise(statement))
+        self.assertNotIn("scenario_type", statement)
 
     def test_the_source_is_declared_with_the_rate_set(self):
         sources = _read(SOURCES)
