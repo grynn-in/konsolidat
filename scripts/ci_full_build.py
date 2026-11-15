@@ -77,10 +77,11 @@ SCHEMA_SQL = ("clickhouse/init-db.sql", "clickhouse/raw-schema.sql")
 #: reintroduce exactly the coverage gap this job was added to close.
 #: konsol#287: the shipped default declares no dimension, so this leg builds at
 #: the fixtures' declared ones; the zero-dimension leg below is the default.
-FULL_BUILD = ["build", *fixture_dimension_vars()]
+FULL_BUILD = ["build", *fixture_dimension_vars(fixture_only=True)]
 #: konsolidat#220's standing guard.
-#: Both legs enable the fixture-only tests (konsol#348 S4 W3 review).
-ZERO_DIM_BUILD = ["build", "--full-refresh", *zero_dimension_vars()]
+#: Both legs enable the fixture-only tests (konsol#348 S4 W3 review): a full
+#: build has no refuse path, every ERROR or SKIP fails it.
+ZERO_DIM_BUILD = ["build", "--full-refresh", *zero_dimension_vars(fixture_only=True)]
 
 
 def apply_schema(client):

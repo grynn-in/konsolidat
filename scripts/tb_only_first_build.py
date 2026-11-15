@@ -83,26 +83,45 @@ FIXTURE_DIMENSIONS = [
 #: core (assert_consolidation_core_grain_extra_is_a_partition) is disabled by
 #: default, `config(enabled=var('fixture_only_tests', false))`: on a site it cost
 #: twice the model it guards, and an error in it skips the consolidated trial
-#: balance's children. The fixture runs (the gate, ci_full_build.py's two legs)
-#: enable it here. dbt takes ONE --vars flag, so the var rides in the same
-#: payload as the dimensions. tests/test_fixture_only_tests.py pins both.
+#: balance's children. ci_full_build.py's two legs enable it (a full build has
+#: no refuse path), and the gate enables it for a fixture that names such a
+#: test and for no other: enabled on every gate call, it joined the build of a
+#: `refuse` fixture, errored first, and dbt SKIPPED the model the fixture
+#: expected REFUSED. dbt takes ONE --vars flag, so the var rides in the same
+#: payload as the dimensions. tests/test_fixture_only_tests.py pins all of it.
 FIXTURE_ONLY_TESTS = {"fixture_only_tests": True}
+FIXTURE_ONLY_CONFIG = re.compile(
+    r"\{\{\s*config\(\s*enabled\s*=\s*var\(\s*'fixture_only_tests'\s*,\s*false\s*\)\s*\)\s*\}\}")
 
 
-def fixture_dimension_vars():
-    """dbt arguments that build at the fixtures' declared dimensions, with the
-    fixture-only tests enabled."""
+def fixture_only_tests():
+    """The singular tests that carry the fixture-only config, by name."""
+    tests_dir = os.path.join(REPO, "dbt_project", "tests")
+    found = set()
+    for root, _dirs, files in os.walk(tests_dir):
+        for name in files:
+            if name.endswith(".sql"):
+                with open(os.path.join(root, name), encoding="utf-8") as f:
+                    if FIXTURE_ONLY_CONFIG.search(f.read()):
+                        found.add(name[:-4])
+    return found
+
+
+def fixture_dimension_vars(fixture_only=False):
+    """dbt arguments that build at the fixtures' declared dimensions; with
+    fixture_only=True the fixture-only tests are enabled too."""
     import json
 
-    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS, **FIXTURE_ONLY_TESTS})]
+    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS, **(FIXTURE_ONLY_TESTS if fixture_only else {})})]
 
 
-def zero_dimension_vars():
+def zero_dimension_vars(fixture_only=False):
     """dbt arguments for the zero-dimension leg (konsolidat#220's guard: a site
-    that declares no dimension), with the fixture-only tests enabled."""
+    that declares no dimension); with fixture_only=True the fixture-only tests
+    are enabled too."""
     import json
 
-    return ["--vars", json.dumps({"dimensions": [], **FIXTURE_ONLY_TESTS})]
+    return ["--vars", json.dumps({"dimensions": [], **(FIXTURE_ONLY_TESTS if fixture_only else {})})]
 
 
 def project_dimensions():
