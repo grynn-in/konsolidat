@@ -1,12 +1,14 @@
--- gate: build +gold_variance_analysis assert_variance_single_currency --exclude assert_budget_currency_is_entity_currency
+-- gate: build +gold_variance_analysis +gold_variance_ytd assert_variance_single_currency assert_variance_ytd_single_currency --exclude assert_budget_currency_is_entity_currency
 -- gate: expect assert_variance_single_currency flag 1
+-- gate: expect assert_variance_ytd_single_currency flag 1
 -- konsol#348 S3 B8 (QB3 a): the currency joins the variance grain, so a budget row never nets against an
 -- actual in another currency. Entity ZZE1 keeps its books in USD; its FY2026 P1 actuals are ZZ1000 cash
 -- Dr 1000 | ZZ4000 revenue Cr 1000 (USD, from the entity). Budget scenario ZZ_PLAN_2026 budgets ZZ4000 P1
 -- at -1200 in EUR. gold_variance_analysis must carry two rows for (ZZE1, 2026, 1, ZZ4000, ZZ_PLAN_2026):
 -- USD actual -1000 with no budget, and EUR budget -1200 with actual 0; never one row netting -1000
 -- against -1200. assert_variance_single_currency must FLAG exactly that grain (1 row); ZZ1000 has one
--- currency and is not named.
+-- currency and is not named. gold_variance_ytd (B9) runs the same totals through P1 and
+-- assert_variance_ytd_single_currency must FLAG the same grain (1 row).
 --
 -- Red on the S3-B7 model: gold_variance_analysis has no `currency` column, so the test errors (missing
 -- column) and nothing can flag; green once the grain carries it.
