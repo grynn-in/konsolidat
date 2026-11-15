@@ -257,6 +257,12 @@ def fixture_sql(p):
         # assert_scenario_rows_declared fails rows under an undeclared id
         f"INSERT INTO {p}_gold.scenario_definitions (scenario_id, scenario_name, scenario_type, is_active) VALUES "
         "('ACTUAL', 'Actual', 'actual', 1), ('BUDGET', 'Budget', 'budget', 1), ('FORECAST', 'Forecast', 'forecast', 1)",
+        # konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals that a real
+        # site gets from konsol's patch (ACTUAL). gold_consolidated_trial_balance
+        # translates at that set's rates only, and its guard refuses a build
+        # with zero or two flagged sets even when nothing is translated
+        # (tests/test_rate_sets_ddl.py pins this row).
+        f"INSERT INTO {p}_staging.rate_sets (rate_set, label, is_actuals) VALUES ('ACTUAL', 'Actual', 1)",
         f"INSERT INTO {p}_raw.trial_balance_submissions (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at) VALUES "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ1000', 150, 0, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ3000', 0, 50, '', 'ZZ-TBS-1', now()), "

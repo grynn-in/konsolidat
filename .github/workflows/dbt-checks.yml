@@ -21,6 +21,9 @@ on:
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
+      - 'tests/test_group_exchange_rates_ddl.py'
+      - 'tests/test_rate_sets_ddl.py'
+      - 'tests/test_budget_cycles_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
@@ -53,6 +56,9 @@ on:
       - 'tests/test_cash_flow_categories_ddl.py'
       - 'tests/test_sync_watermark_ddl.py'
       - 'tests/test_historical_equity_rates_ddl.py'
+      - 'tests/test_group_exchange_rates_ddl.py'
+      - 'tests/test_rate_sets_ddl.py'
+      - 'tests/test_budget_cycles_ddl.py'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
@@ -169,8 +175,21 @@ jobs:
       # konsol#374: a Historical Equity Rate is keyed by the presentation
       # currency it converts into; init-db.sql, konsol's DDL, the model's join
       # and every fixture agree on the column.
-      - name: historical equity rates DDL carries the To currency
+      - name: historical equity rates DDL carries the To currency and the Rate Set
         run: python -m unittest -v tests.test_historical_equity_rates_ddl
+      # konsol#348 S4 (W1): a governed rate names its Rate Set, last in the
+      # column list and outside the key; every fixture rate names it.
+      - name: group exchange rates DDL carries the Rate Set
+        run: python -m unittest -v tests.test_group_exchange_rates_ddl
+      # konsol#348 S4-Q7 (a): the Rate Sets table names the one actuals set;
+      # every fixture that seeds a rate seeds its set, and so does the TB-only
+      # first build.
+      - name: rate sets DDL and the one actuals set
+        run: python -m unittest -v tests.test_rate_sets_ddl
+      # konsol#348 S4-Q2 (a): an approved Budget Cycle reaches the warehouse
+      # with its declared Rate Set.
+      - name: budget cycles DDL carries the Rate Set
+        run: python -m unittest -v tests.test_budget_cycles_ddl
       # konsol#117 pair 1: ownership is a graph. The link's owner is in the
       # periods table's key, the closure carries path_id and the link owner,
       # the method declarations table exists, and every INSERT into the two

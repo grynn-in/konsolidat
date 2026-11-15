@@ -60,6 +60,9 @@ def _create_statements(sql, table):
 
 
 def _inserts_into(sql, table):
+    """Whether the SQL (comments stripped: a fixture may say it deliberately
+    seeds no rate) inserts into <table>."""
+    sql = re.sub(r"--[^\n]*", "", sql)
     return re.search(r"INSERT\s+INTO\s+" + re.escape(table) + r"\b", sql, flags=re.I) is not None
 
 
