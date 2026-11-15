@@ -33,7 +33,10 @@
 
    The exit stop (konsolidat#335, X3c): a bare end of the link with no
    Business Disposal (ownership_exits()) stops the schedule the same way, before
-   the exit period; the earlier of the disposal and the exit counts.
+   the exit period; the earlier of the disposal and the exit counts. Per deal
+   (review F5): only an exit or disposal AFTER the deal's acquisition period
+   stops its schedule; one before it ended an earlier holding, and a
+   re-acquisition amortises on its own schedule.
 
    The disposal stop (row J5b): a submitted Business Disposal
    (epm_staging.business_disposals) for the same group and entity ends the
@@ -107,44 +110,54 @@ periods_per_year as (
     group by fiscal_year
 ),
 
-{# the earliest submitted disposal of each entity in each group, as the
-   calendar period holding its date: the lowest-numbered Regular period (deal_period_holds())
-   whose span holds it, exactly as gold_business_disposal_journal maps it.
-   The schedule ends before that period. A range condition is not a
+{# every submitted disposal and every bare ownership exit of an entity in a
+   group, as the calendar period holding its date: the lowest-numbered Regular
+   period (deal_period_holds()) whose span holds it, exactly as
+   gold_business_disposal_journal maps it. A range condition is not a
    ClickHouse join key, so the calendar is cross-joined and filtered. #}
+stop_events as (
+    select
+        bd.consolidation_group as consolidation_group,
+        bd.disposed_entity as data_area_id,
+        toUInt16(fp.fiscal_year) as ev_year,
+        toUInt16(fp.fiscal_period) as ev_period
+    from {{ source('epm_staging', 'business_disposals') }} as bd
+    cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
+    where {{ deal_period_holds('fp', 'bd.disposal_date') }}
+
+    union all
+
+    {# konsolidat#335 (X3c): a bare end of the link (ownership_exits(),
+       no Business Disposal) stops the schedule the same way, before the
+       exit period (the Regular period holding the end date, as the
+       disposal period holds its date): gold_ownership_exit_journal
+       derecognises the goodwill net of the amortisation posted to date
+       through the exit period, in which none is posted. #}
+    select
+        x.consolidation_group as consolidation_group,
+        x.data_area_id as data_area_id,
+        toUInt16(x.fiscal_year) as ev_year,
+        toUInt16(x.fiscal_period) as ev_period
+    from {{ ownership_exits() }} as x
+),
+
+{# the stop of each deal (konsolidat#335 review F5): the first exit or
+   disposal of its entity strictly AFTER the deal's acquisition period. An
+   event before the deal ended an earlier holding; a re-acquisition starts a
+   new schedule that it must not stop. The ends of the equi-join keys match
+   the group and entity; the period comparison is a post-join filter. #}
 disposal_stop as (
     select
-        consolidation_group,
-        data_area_id,
-        argMin(ev_year, (ev_year, ev_period)) as stop_year,
-        argMin(ev_period, (ev_year, ev_period)) as stop_period,
+        dg.deal as deal,
+        argMin(e.ev_year, (e.ev_year, e.ev_period)) as stop_year,
+        argMin(e.ev_period, (e.ev_year, e.ev_period)) as stop_period,
         toUInt8(1) as has_disposal
-    from (
-        select
-            bd.consolidation_group as consolidation_group,
-            bd.disposed_entity as data_area_id,
-            toUInt16(fp.fiscal_year) as ev_year,
-            toUInt16(fp.fiscal_period) as ev_period
-        from {{ source('epm_staging', 'business_disposals') }} as bd
-        cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
-        where {{ deal_period_holds('fp', 'bd.disposal_date') }}
-
-        union all
-
-        {# konsolidat#335 (X3c): a bare end of the link (ownership_exits(),
-           no Business Disposal) stops the schedule the same way, before the
-           exit period (the Regular period holding the end date, as the
-           disposal period holds its date): gold_ownership_exit_journal
-           derecognises the goodwill net of the amortisation posted to date
-           through the exit period, in which none is posted. #}
-        select
-            x.consolidation_group as consolidation_group,
-            x.data_area_id as data_area_id,
-            toUInt16(x.fiscal_year) as ev_year,
-            toUInt16(x.fiscal_period) as ev_period
-        from {{ ownership_exits() }} as x
-    )
-    group by consolidation_group, data_area_id
+    from deal_goodwill as dg
+    inner join stop_events as e
+        on e.consolidation_group = dg.consolidation_group
+        and e.data_area_id = dg.data_area_id
+    where (e.ev_year, e.ev_period) > (dg.acquisition_year, dg.acquisition_period)
+    group by dg.deal
 ),
 
 {# one row per amortised deal: the goodwill, the number of instalments, the
@@ -172,8 +185,7 @@ schedules as (
     inner join periods_per_year as ppy
         on ppy.fiscal_year = dg.acquisition_year
     left join disposal_stop as ds
-        on ds.consolidation_group = dg.consolidation_group
-        and ds.data_area_id = dg.data_area_id
+        on ds.deal = dg.deal
 ),
 
 {# every declared Regular period from the acquisition period on and, when the
