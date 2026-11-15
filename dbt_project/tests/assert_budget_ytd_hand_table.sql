@@ -1,8 +1,9 @@
 -- konsol#348 S2 (R10, Q15-c): the hand-computed movements of test_fixtures/budget_raw_ytd.sql, as
 -- literals. assert_budget_ytd_reconciles is built from the macro it checks (movement_spine), so it
 -- cannot catch a mistake in that rule; this test does not use it. Cycle ZZ-CY-HAND (ZZ data) is stated
--- YTD per account and layer (the fixture's header holds the table); the manual spread of ZZ_PLAN_2026 /
--- ZZE1 / FY2026 must hold exactly these movements, summed over budget dimensions.
+-- YTD per account and layer (the fixture's header holds the table); the manual spread of that cycle,
+-- ZZ_PLAN_2026 / ZZE1 / FY2026, must hold exactly these movements, summed over budget dimensions. The
+-- fact carries the cycle (konsol#348 S3 B4), so another cycle's rows on the same scenario are not read.
 -- It is vacuous where the cycle ZZ-CY-HAND has no lines (every real site): no expected row is built.
 -- Flags one row per (layer, account, period) that is missing, unexpected or off by more than 0.01.
 {{ config(severity='error') }}
@@ -35,6 +36,7 @@ combined as (
            toUInt8(0) as is_expected, toUInt8(1) as is_actual
     from {{ ref('gold_spread_budget') }}
     where spread_profile_id = 'manual'
+      and cycle = 'ZZ-CY-HAND'
       and scenario_id = 'ZZ_PLAN_2026'
       and data_area_id = 'ZZE1'
       and fiscal_year = 2026

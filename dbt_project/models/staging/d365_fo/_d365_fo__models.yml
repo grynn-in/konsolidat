@@ -45,29 +45,16 @@ models:
   - name: stg_d365_fo__exchange_rates
     description: "D365 F&O exchange rates adapter — canonical schema output"
 
-  - name: stg_d365_fo__budget_entries
-    description: "D365 F&O budget entries adapter — canonical schema output"
-
   - name: stg_d365_fo__fiscal_periods
     description: "D365 F&O fiscal periods adapter — canonical schema output"
 
   # --- D365-specific internal helper models (not part of canonical interface) ---
-  - name: stg_d365_fo__gl_journal_entries
-    description: "GL journal entry headers from D365 BI entities"
-    columns:
-      - name: RecId
-        tests:
-          - not_null
-
   - name: stg_d365_fo__main_account_categories
     description: "Account categories with field renames from OData names"
     columns:
       - name: RecId
         tests:
           - not_null
-
-  - name: stg_d365_fo__fiscal_calendar_years
-    description: "Fiscal calendar years with Calendar mapped to FiscalCalendar"
 
   - name: stg_d365_fo__fiscal_calendars
     description: "Fiscal calendar definitions derived from FiscalCalendarYears"
@@ -80,9 +67,6 @@ models:
 
   - name: stg_d365_fo__exchange_rate_types
     description: "Exchange rate type definitions"
-
-  - name: stg_d365_fo__budget_register_entries
-    description: "Budget register headers deduplicated by EntryNumber"
 
   - name: stg_d365_fo__consolidation_groups
     description: "Consolidation account groups deduplicated"

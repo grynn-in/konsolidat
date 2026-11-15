@@ -10,22 +10,31 @@ sources:
           Top-down annual budget figures from konsol's Budget Annual Input
           doctype, spread into months by gold_spread_budget. konsolidat#146:
           this was seeds/budget_annual_input.csv, the last seed this repo owned.
+        columns:
+          - name: annual_amount
+            description: >
+              The year's budget for the account, signed like the actuals: debit
+              positive, credit negative (konsol#348 S3 B12, QB6 a). A revenue or
+              liability budget is therefore negative, an expense or asset budget
+              positive, and the spread period amounts carry the same sign, so a
+              budget row compares with gold_trial_balance.period_net_amount
+              without a sign rule. assert_spread_sums_to_annual compares the
+              signed values (fixture assert_spread_sums_to_annual.negative_revenue).
+          - name: cycle
+            description: >
+              The approved Budget Cycle the input belongs to (konsol#348 S3 B3w,
+              QB4 a); part of the fact grain in gold_spread_budget.
       - name: entity_fiscal_calendars
         description: >
           Maps each ERP legal entity (data_area_id) to the fiscal calendar it
-          posts against; silver_gl_entries joins on it to resolve
-          fiscal_year/period, falling back to 'Fiscal' for an entity with no row.
-          Most rows are entities NOT present in the demo (CN01->Fiscal_CN,
-          MYMF->Fiscal_MY) whose calendars are not loaded; those are inert and
-          deliberately retained as a template for real multi-calendar
-          deployments. An entity that HAS GL data must reference a calendar
-          present in silver_fiscal_periods — the demo's AMHQ/AMUS/AMDE map to
-          'Standard', the one calendar it loads — and
-          assert_fiscal_calendar_is_loaded (#77) fails the build if a newly
-          activated entity points at an unloaded one. To support more calendars,
-          load their period data into the raw/staging fiscal-calendar source.
-          konsolidat#146 moved it out of seeds/entity_fiscal_calendars.csv into
-          konsol's Entity Fiscal Calendar doctype.
+          posts against, written by konsol's Entity Fiscal Calendar doctype
+          (konsolidat#146 moved it out of seeds/entity_fiscal_calendars.csv).
+          No model or test reads it since konsol#348: silver_gl_entries dates a
+          trial-balance submission from konsol's declared fiscal calendar
+          (fiscal_periods, declared_periods()), and the ERP branch and
+          silver_fiscal_periods that resolved an ERP calendar were removed
+          (konsolidat#221), with assert_fiscal_calendar_is_loaded. One declared
+          calendar per site; per-entity calendars are not built.
         columns:
           - name: data_area_id
             description: "ERP legal-entity code, as the ledger emits it"

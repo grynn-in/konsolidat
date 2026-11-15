@@ -19,7 +19,12 @@
    One stream plus conditional aggregation per period, then the running totals
    per (grain, budget_scenario_id), rather than a full outer join of two
    separately-accumulated sides: under join_use_nulls=0 the unmatched side of a
-   join fills '' and 0, which lost the entity and account of budget-only lines. #}
+   join fills '' and 0, which lost the entity and account of budget-only lines.
+
+   CURRENCY (konsol#348 S3 B9, QB3 a): the currency joins the grain and the
+   running-total partition, so a budget row never nets against an actual in
+   another currency (gold_variance_analysis, B8, has the same rule);
+   assert_variance_ytd_single_currency names a grain in two currencies. #}
 
 {% set budget_dims = get_budget_dimensions() %}
 
@@ -48,6 +53,7 @@ typed as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount
     from {{ ref('gold_scenario_trial_balance') }}
     where scenario_id in (select scenario_id from actual_scenarios)
@@ -98,6 +104,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         budget_scenario_id
     from typed
@@ -117,6 +124,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         scenario_id as budget_scenario_id
     from typed
@@ -130,6 +138,7 @@ by_period as (
         fiscal_period,
         main_account,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         budget_scenario_id,
         max(account_name) as account_name,
         max(account_type_name) as account_type_name,
@@ -138,7 +147,7 @@ by_period as (
         countIf(scenario_type = 'budget') as budget_lines
     from paired
     group by data_area_id, fiscal_year, fiscal_period, main_account,
-             {{ dim_group_by(dims=budget_dims, trailing=true) }} budget_scenario_id
+             {{ dim_group_by(dims=budget_dims, trailing=true) }} currency, budget_scenario_id
 ),
 
 running as (
@@ -150,6 +159,7 @@ running as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         budget_scenario_id,
         sum(actual_amount) over w as ytd_actual,
         sum(budget_amount) over w as ytd_budget_sum,
@@ -157,7 +167,7 @@ running as (
     from by_period
     window w as (
         partition by data_area_id, fiscal_year, main_account,
-                     {{ dim_partition_by(dims=budget_dims, trailing=true) }} budget_scenario_id
+                     {{ dim_partition_by(dims=budget_dims, trailing=true) }} currency, budget_scenario_id
         order by fiscal_period
         rows between unbounded preceding and current row
     )
@@ -179,6 +189,7 @@ select
     account_name,
     account_type_name,
     {{ dim_select(dims=budget_dims, trailing=true) }}
+    currency,
     ytd_actual,
     ytd_budget,
     ytd_actual - coalesce(ytd_budget, 0) as ytd_variance_abs,

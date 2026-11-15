@@ -151,7 +151,13 @@ with entity_tb as (
            by position, so no column may be added before partner_data_area_id. #}
         if(rpm.mapped = 1, rpm.rate_year, toUInt16(tb.fiscal_year)) as rate_year,
         if(rpm.mapped = 1, rpm.rate_period, toUInt16(tb.fiscal_period)) as rate_period,
-        {{ build_date_from_year_period('tb.fiscal_year', 'tb.fiscal_period') }} as period_date
+        {# konsol#348 (QA2 c): the date the historical equity rate is read as of, the period's declared
+           window_end_date (macros/declared_periods.sql): a Regular period's own end, a Closing period's last
+           Regular period's, an Opening period's the eve of the year. A period the calendar does not declare
+           misses the LEFT JOIN and reads Date's default, 1970-01-01 (join_use_nulls=0): no tranche is that
+           early, so it translates at the closing rate, and assert_trial_balance_period_declared names it.
+           Read by the as-of join and never selected: no column may be added (positional append). #}
+        dp.window_end_date as period_date
     {# konsol#159: the partner-grained twin of gold_trial_balance. That model
        stays at the account grain for its own readers; see
        gold_trial_balance_by_partner. #}
@@ -193,6 +199,9 @@ with entity_tb as (
     left join {{ rate_period_map() }} as rpm
         on rpm.fiscal_year = tb.fiscal_year
         and rpm.fiscal_period = tb.fiscal_period
+    left join {{ declared_periods() }} as dp
+        on dp.fiscal_year = toUInt16(tb.fiscal_year)
+        and dp.fiscal_period = toUInt16(tb.fiscal_period)
     {# Orchestrator run filters (opt-in; no var => no predicate => full build).
        period_filter = single-period close; scope_filter = one entity/group.
        Applied at the consolidation chokepoint so every downstream

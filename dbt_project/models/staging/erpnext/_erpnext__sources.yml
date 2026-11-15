@@ -29,11 +29,6 @@ sources:
         description: "Exchange rates from ERPNext `Currency Exchange` doctype"
         loaded_at_field: _airbyte_extracted_at
 
-      - name: budget
-        identifier: budget
-        description: "Budgets from ERPNext `Budget` doctype, flattened to one row per `Budget Account` child line"
-        loaded_at_field: _airbyte_extracted_at
-
       - name: fiscal_year
         identifier: fiscal_year
         description: "Fiscal years from ERPNext `Fiscal Year` doctype"

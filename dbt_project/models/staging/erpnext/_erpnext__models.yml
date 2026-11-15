@@ -36,8 +36,5 @@ models:
   - name: stg_erpnext__exchange_rates
     description: "ERPNext exchange rates adapter — canonical schema output"
 
-  - name: stg_erpnext__budget_entries
-    description: "ERPNext budget entries adapter — canonical schema output"
-
   - name: stg_erpnext__fiscal_periods
     description: "ERPNext fiscal periods adapter — canonical schema output"

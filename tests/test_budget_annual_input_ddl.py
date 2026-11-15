@@ -1,12 +1,14 @@
-"""Budget S2 R6 (Q13-a): epm_gold.budget_annual_input is created by
-clickhouse/init-db.sql with the exact column list konsol's
-_REFERENCE_TABLE_DDL carries (konsol A7 pins the same string): `layer` after
-main_account, `currency` after layer. dim_* columns are added by ALTER.
+"""Budget S2 R6 (Q13-a) and S3 B3w (QB4 a): epm_gold.budget_annual_input is
+created by clickhouse/init-db.sql with the exact column list konsol's
+_REFERENCE_TABLE_DDL carries (konsol pins the same string): `cycle` after
+fiscal_year (konsol#348 S3: every annual row names the Budget Cycle it was
+entered under, no DEFAULT), `layer` after main_account, `currency` after
+layer. dim_* columns are added by ALTER.
 
-An existing warehouse gets the two columns from konsol, not from this repo:
+An existing warehouse gets the new columns from konsol, not from this repo:
 konsol's _POSITIONED_COLUMNS issues `ALTER TABLE ... ADD COLUMN IF NOT EXISTS
-layer String AFTER main_account, ADD COLUMN IF NOT EXISTS currency String AFTER
-layer` on migrate. init-db.sql has no upgrade path for an existing table.
+<column> String AFTER <predecessor>` on migrate. init-db.sql has no upgrade
+path for an existing table.
 
 Plain unittest: `python -m unittest -v tests.test_budget_annual_input_ddl`.
 """
@@ -19,7 +21,7 @@ INIT_DB = os.path.join(PROJECT_ROOT, "clickhouse", "init-db.sql")
 
 TABLE = "epm_gold.budget_annual_input"
 COLUMNS = (
-    "(scenario_id String, data_area_id String, fiscal_year UInt16, "
+    "(scenario_id String, data_area_id String, fiscal_year UInt16, cycle String, "
     "main_account String, layer String, currency String, "
     "annual_amount Decimal(18,2), spread_profile_id String, submitted_by String)"
 )
@@ -50,6 +52,10 @@ class BudgetAnnualInputDDL(unittest.TestCase):
 
     def test_layer_and_currency_follow_main_account(self):
         self.assertIn("main_account String, layer String, currency String,", COLUMNS)
+
+    def test_cycle_follows_fiscal_year_without_default(self):
+        self.assertIn("fiscal_year UInt16, cycle String, main_account String,", COLUMNS)
+        self.assertNotIn("DEFAULT", COLUMNS)
 
 
 if __name__ == "__main__":
