@@ -49,7 +49,9 @@ expected as (
              eo.effective_ownership_pct{{ dim_group_by(prefix='ctb.', leading=true) }}
 ),
 
-{# Only entity-periods that got a journal: a missing journal is
+{# An entity-period that got no journal is judged below: the figure is missing
+   only when the group could post one (it declares an NCI account and the
+   chart has a retained-earnings account), else the absence is by design and
    assert_nci_attribution_equals_minority_result's finding, not this test's. #}
 layer as (
     select *
@@ -68,6 +70,14 @@ re_accounts as (
     where is_retained_earnings = 1
 ),
 
+group_nci as (
+    {{ ic_group_nci_accounts() }}
+),
+
+{# konsolidat#245 F6: a result netting to 0 across slices (+50 / -50) once posted
+   no journal, so its per-slice attribution was lost and no total-based check
+   saw it. Every expected slice of a postable but unjournaled entity-period is
+   a missing figure. #}
 compared as (
     select e.consolidation_group as consolidation_group, e.data_area_id as data_area_id,
            e.fiscal_year as fiscal_year, e.fiscal_period as fiscal_period,
@@ -79,6 +89,15 @@ compared as (
         and jd.data_area_id = e.data_area_id
         and jd.fiscal_year = e.fiscal_year
         and jd.fiscal_period = e.fiscal_period
+    union all
+    select e.consolidation_group, e.data_area_id, e.fiscal_year, e.fiscal_period,
+           {{ dim_select(prefix='e.', trailing=true) }}
+           e.expected_re, 0.0, 0.0
+    from expected as e
+    where (e.consolidation_group, e.data_area_id, e.fiscal_year, e.fiscal_period)
+          not in (select consolidation_group, data_area_id, fiscal_year, fiscal_period from journaled)
+      and e.consolidation_group in (select nci_group from group_nci where declared_nci_account != '')
+      and (select count() from re_accounts) > 0
     union all
     select j.consolidation_group, j.data_area_id, j.fiscal_year, j.fiscal_period,
            {{ dim_select(prefix='j.', trailing=true) }}
