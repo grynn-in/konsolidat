@@ -452,6 +452,11 @@ models:
       - name: fiscal_quarter
         tests:
           - not_null
+      - name: currency
+        description: >
+          The currency of the row, part of the grain (konsol#348 S3 B10, QB3 a);
+          as on gold_variance_analysis. assert_variance_quarterly_single_currency
+          (error) names a grain in two.
       - name: budget_amount
         description: "Quarter budget amount for budget_scenario_id; null where that scenario has no line for the grain"
       - name: budget_scenario_id

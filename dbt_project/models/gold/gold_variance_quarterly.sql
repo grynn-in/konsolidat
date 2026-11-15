@@ -18,7 +18,12 @@
 
    One stream plus conditional aggregation rather than a full outer join:
    under join_use_nulls=0 the unmatched side of a join fills '' and 0, which
-   lost the entity and account of budget-only lines. #}
+   lost the entity and account of budget-only lines.
+
+   CURRENCY (konsol#348 S3 B10, QB3 a): the currency joins the grain, so a
+   budget row never nets against an actual in another currency
+   (gold_variance_analysis, B8, has the same rule);
+   assert_variance_quarterly_single_currency names a grain in two. #}
 
 {% set budget_dims = get_budget_dimensions() %}
 
@@ -49,6 +54,7 @@ typed as (
         {% for d in budget_dims %}
         stb.{{ d.name }} as {{ d.name }},
         {% endfor %}
+        stb.currency as currency,
         stb.amount as amount
     from {{ ref('gold_scenario_trial_balance') }} as stb
     left join {{ ref('gold_period_hierarchy') }} as ph
@@ -99,6 +105,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         budget_scenario_id
     from typed
@@ -118,6 +125,7 @@ paired as (
         account_name,
         account_type_name,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         amount,
         scenario_id as budget_scenario_id
     from typed
@@ -131,6 +139,7 @@ grouped as (
         fiscal_quarter,
         main_account,
         {{ dim_select(dims=budget_dims, trailing=true) }}
+        currency,
         budget_scenario_id,
         max(account_name) as account_name,
         max(account_type_name) as account_type_name,
@@ -141,7 +150,7 @@ grouped as (
            null) as budget_amount
     from paired
     group by data_area_id, fiscal_year, fiscal_quarter, main_account,
-             {{ dim_group_by(dims=budget_dims, trailing=true) }} budget_scenario_id
+             {{ dim_group_by(dims=budget_dims, trailing=true) }} currency, budget_scenario_id
 )
 
 select
@@ -152,6 +161,7 @@ select
     account_name,
     account_type_name,
     {{ dim_select(dims=budget_dims, trailing=true) }}
+    currency,
     actual_amount,
     budget_amount,
     actual_amount - coalesce(budget_amount, 0) as variance_abs,
