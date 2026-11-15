@@ -14,10 +14,10 @@ INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation
 ('ZZRN','ZZRS1','Direct','dim_cost_center','Sender''s Own Accounts','','Freeze at Approval','ZZE2','ZZSC',2026,1);
 INSERT INTO epm_staging.cost_allocation_run_accounts (parent, idx, main_account, declared_account) VALUES
 ('ZZRL',1,'ZZ6000',''),('ZZRF',1,'ZZ6000',''),('ZZRN',1,'ZZ6000','');
-INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES
-('ZZRL','ZZIT',1,'ZZIT','ZZP1','ZZHC',1,1),
-('ZZRF','ZZIT',1,'ZZIT','ZZP1','ZZHC',1,1),
-('ZZRN','ZZIT',1,'ZZIT','ZZP1','ZZHC',1,1);
+INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, hop_kind, pool_coefficient, coefficient) VALUES
+('ZZRL','ZZIT',1,'ZZIT','ZZP1','ZZHC','own',1,1),
+('ZZRF','ZZIT',1,'ZZIT','ZZP1','ZZHC','own',1,1),
+('ZZRN','ZZIT',1,'ZZIT','ZZP1','ZZHC','own',1,1);
 INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, dim_cost_center, amount) VALUES
 ('ZZSC','ZZE1',2026,1,'ZZ6000','ZZIT',800),
 ('ZZSC','ZZE3',2026,2,'ZZ6000','ZZIT',1500),
