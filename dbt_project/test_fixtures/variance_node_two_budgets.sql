@@ -1,5 +1,6 @@
--- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget
+-- gate: build +gold_variance_at_hierarchy_node assert_variance_node_single_budget assert_variance_node_single_currency
 -- gate: expect assert_variance_node_single_budget pass
+-- gate: expect assert_variance_node_single_currency pass
 -- konsolidat#206: gold_variance_at_hierarchy_node keeps each budget scenario apart. gold_variance_analysis has
 -- one set of rows per active budget-type scenario (budget_scenario_id), so a node model that groups without it
 -- counts the actuals once per budget scenario and adds the budgets together.
@@ -17,6 +18,8 @@
 --   ZZ_PLAN_2026 -1200 | ZZ_PLAN_2026_B -1100 | ZZ_FCST_2026 -900
 -- Reporting hierarchy ZZH_CC over dim_cost_center: group ZZCCG with leaf ZZCC1.
 -- For each budget scenario the ZZCC1 leaf must carry ZZ1000 actual 1000 and ZZ4000 actual -1000 once, never 2000.
+-- Every line is USD, as the entity's actuals are, so each node holds one currency and
+-- assert_variance_node_single_currency (konsol#348 S3 B11) passes.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
 -- (empty): epm_raw.budget_register_entries, epm_raw.fiscal_calendar_years,
