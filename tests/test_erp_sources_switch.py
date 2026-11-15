@@ -30,9 +30,7 @@ GUARDED = [
     "bronze_exchange_rate_types",
     "bronze_financial_dimension_values",
     "bronze_financial_dimensions",
-    "bronze_fiscal_calendar_years",
     "bronze_fiscal_calendars",
-    "bronze_general_journal_entries",
     "bronze_main_account_categories",
 ]
 

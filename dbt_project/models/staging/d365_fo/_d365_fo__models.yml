@@ -52,22 +52,12 @@ models:
     description: "D365 F&O fiscal periods adapter — canonical schema output"
 
   # --- D365-specific internal helper models (not part of canonical interface) ---
-  - name: stg_d365_fo__gl_journal_entries
-    description: "GL journal entry headers from D365 BI entities"
-    columns:
-      - name: RecId
-        tests:
-          - not_null
-
   - name: stg_d365_fo__main_account_categories
     description: "Account categories with field renames from OData names"
     columns:
       - name: RecId
         tests:
           - not_null
-
-  - name: stg_d365_fo__fiscal_calendar_years
-    description: "Fiscal calendar years with Calendar mapped to FiscalCalendar"
 
   - name: stg_d365_fo__fiscal_calendars
     description: "Fiscal calendar definitions derived from FiscalCalendarYears"

@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: bronze_general_journal_account_entries
-    description: "GL line items - raw from D365 with explicit types"
+    description: "GL line items - raw from D365 with explicit types. No model reads it since konsol#348 removed the ERP branch of silver_gl_entries; it leaves with the ERP tree (konsolidat#221)."
     columns:
       - name: recid
         description: "D365 record ID"
@@ -10,13 +10,6 @@ models:
           - not_null
       - name: data_area_id
         description: "Legal entity / company code"
-        tests:
-          - not_null
-
-  - name: bronze_general_journal_entries
-    description: "Journal headers - raw from D365"
-    columns:
-      - name: recid
         tests:
           - not_null
 
@@ -44,9 +37,6 @@ models:
 
   - name: bronze_fiscal_calendars
     description: "Fiscal calendar definitions"
-
-  - name: bronze_fiscal_calendar_years
-    description: "Fiscal year definitions"
 
   - name: bronze_financial_dimensions
     description: "Financial dimension definitions"

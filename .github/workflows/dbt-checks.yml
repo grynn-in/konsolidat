@@ -11,6 +11,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_no_shipped_dimensions.py'
+      - 'tests/test_no_month_period_macro.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
@@ -40,6 +41,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_no_shipped_dimensions.py'
+      - 'tests/test_no_month_period_macro.py'
       - 'tests/test_raw_submission_ddl.py'
       - 'tests/test_fiscal_periods_ddl.py'
       - 'tests/test_deal_tables_ddl.py'
@@ -124,6 +126,10 @@ jobs:
       # names no dimension, and the fixture builds declare their own.
       - name: no shipped dimensions
         run: python -m unittest -v tests.test_no_shipped_dimensions
+      # konsol#348: no period is dated by its number; the declared calendar
+      # (declared_periods()) is the one source of period dates.
+      - name: no calendar-month period macro
+        run: python -m unittest -v tests.test_no_month_period_macro
       # konsolidat#199: the TB submission control table's DDL is konsol's,
       # including amount_basis, and the CI fixture claims its batch by name.
       - name: raw submission control DDL and CI claim
