@@ -2,7 +2,8 @@
 -- gate: refuse gold_consolidated_trial_balance 0 Rate Set(s) flagged Is Actuals
 -- governed_rate_guard (konsol#348 S4-Q7 a, W2): the consolidated trial balance's first pre_hook must
 -- REFUSE the build when no Rate Set is flagged Is Actuals, naming the count, even when nothing is
--- translated. This is the existing stack whose konsol has not synced epm_staging.rate_sets yet
+-- translated, as long as there is a trial balance (an empty TB is the fresh stack, which builds:
+-- assert_exactly_one_actuals_rate_set.empty_stack.sql). This is the existing stack whose konsol has not synced epm_staging.rate_sets yet
 -- (reconcile_all creates and fills it; konsol's patch creates and flags ACTUAL): it is refused by
 -- name, not built at every set as before the column existed.
 --

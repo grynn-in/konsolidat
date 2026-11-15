@@ -231,7 +231,16 @@
    yet (reconcile_all creates and fills it; konsol's patch creates and flags
    ACTUAL): it is refused by name, never built at "every set" as before the
    column existed. assert_exactly_one_actuals_rate_set (error) says the same
-   on a full build, before this model runs. #}
+   on a full build, before this model runs.
+
+   The count rule applies only while gold_trial_balance has rows (has_tb;
+   review of konsolidat#365, 15 Nov 2026). On a fresh stack reconcile_all is
+   an RQ job, so the first dbt build can run before epm_staging.rate_sets is
+   filled; with no TB row nothing is translated and nothing a silent merge
+   could affect exists, so that build goes through, and the first TB row
+   brings the rule in. The gaps count n is never positive without a TB, so a
+   same-currency stack with a TB and no flagged set is still refused by count
+   (assert_exactly_one_actuals_rate_set.guard_refuses.must_flag.sql). #}
 {% macro governed_rate_guard() %}
     select cast(if(n_sets != 1,
         concat(
@@ -263,7 +272,10 @@
             arrayStringConcat(arraySort(groupArrayIf(rate_set, is_actuals = 1)), ', ') as sets
         from {{ source('epm_staging', 'rate_sets') }}
     ) as rs
-    where n > 0 or n_sets != 1
+    cross join (
+        select count() > 0 as has_tb from {{ ref('gold_trial_balance') }}
+    ) as tb
+    where n > 0 or (n_sets != 1 and has_tb)
 {% endmacro %}
 
 {#
@@ -284,7 +296,10 @@
       FX_ACTUALS_SETS <n>     n Rate Sets are flagged Is Actuals; the guard
                               refuses unless n = 1 (listed first, so a stack
                               with no actuals set is not also told every key
-                              is missing)
+                              is missing). Only while gold_trial_balance has
+                              rows, as the guard: a fresh stack whose
+                              reconcile_all job has not filled rate_sets yet
+                              has nothing to translate
       FX_GAPS_TOTAL <n>       n translated keys have no usable rate in the
                               actuals set, then
       FX_GAP <key> <reason>   one line per key, sorted
@@ -317,6 +332,7 @@ select o, fx_check from (
     select 0 as o, concat('FX_ACTUALS_SETS ', toString(countIf(is_actuals = 1))) as fx_check
     from {{ source('epm_staging', 'rate_sets') }}
     having countIf(is_actuals = 1) != 1
+       and (select count() from {{ ref('gold_trial_balance') }}) > 0
     union all
     select 1 as o, concat('FX_GAPS_TOTAL ', toString(count())) as fx_check
     from ({{ governed_rate_gaps(scoped=false) }})

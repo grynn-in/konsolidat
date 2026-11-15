@@ -15,7 +15,16 @@
 -- The fixture gate seeds one flagged set ('ZZACT') in every fixture that seeds a rate or builds the
 -- consolidated trial balance; the TB-only first build seeds ACTUAL (tests/test_rate_sets_ddl.py).
 --
--- Fails (returns one row) when countIf(is_actuals = 1) != 1, naming the count and the flagged sets.
+-- The rule applies only while there is a trial balance to translate (review of konsolidat#365,
+-- 15 Nov 2026). On a fresh stack reconcile_all is an RQ job, so the first dbt build can run before
+-- this table is filled; with no row in gold_trial_balance there is nothing a silent merge of two
+-- sets, or no set, could affect, so an empty TB passes here (and the guard and fx_precheck say the
+-- same), and the first TB row brings the rule in. Fixtures: .empty_stack (no TB, no set: builds
+-- and passes), .none.must_flag / .two.must_flag (a TB: flags), .guard_refuses.must_flag (a TB,
+-- same-currency: the guard refuses).
+--
+-- Fails (returns one row) when countIf(is_actuals = 1) != 1 and gold_trial_balance has rows,
+-- naming the count and the flagged sets.
 select
     count() as rate_sets,
     countIf(is_actuals = 1) as actuals_sets,
@@ -29,3 +38,4 @@ select
     ) as problem
 from {{ source('epm_staging', 'rate_sets') }}
 having countIf(is_actuals = 1) != 1
+   and (select count() from {{ ref('gold_trial_balance') }}) > 0
