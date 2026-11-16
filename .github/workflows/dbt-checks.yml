@@ -148,6 +148,12 @@ jobs:
       # model or source; the budget enters through konsol's two tables only.
       - name: budget and variance models read no ERP
         run: python -m unittest -v tests.test_budget_models_read_no_erp
+      # konsol#348 S4 (W7): the budget stays outside the close. The close
+      # fingerprint's one relation reaches no budget model or source, the budget
+      # models reach no actuals consolidation, and both are documented "before
+      # eliminations" (konsol#427, #425).
+      - name: budget outside the close
+        run: python -m unittest -v tests.test_budget_outside_close
       # konsolidat#199: the TB submission control table's DDL is konsol's,
       # including amount_basis, and the CI fixture claims its batch by name.
       - name: raw submission control DDL and CI claim

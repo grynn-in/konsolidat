@@ -83,8 +83,10 @@ models:
       only this build. Ownership is resolved on the budget's own period spine, so a
       budget period with no trial balance row is consolidated
       (assert_budget_consolidated_periods_complete). Before eliminations (konsol#427):
-      partner_data_area_id is '' on every row. A table, rebuilt whole; no orchestrator
-      scope. The CTA and NCI attribution layers are the FCTB-shaped model's (W6).
+      partner_data_area_id is '' on every row, so no intercompany elimination runs on a
+      budget; no deal journal, topside or equity-method entry reaches it either
+      (konsol#425). A table, rebuilt whole; no orchestrator scope. The CTA and NCI
+      attribution layers are gold_fully_consolidated_budget's (W6).
     columns:
       - name: consolidation_group
         tests:
