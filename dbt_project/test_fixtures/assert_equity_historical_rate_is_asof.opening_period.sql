@@ -29,11 +29,13 @@ INSERT INTO epm_gold.gold_entity_ownership
   (consolidation_group, data_area_id, fiscal_year, fiscal_period, period_date, chain_depth, owner_group, has_complete_chain, outside_ownership_window, effective_ownership_pct, direct_ownership_pct, consolidation_method)
 VALUES
   ('ZZGRP', 'ZZE1', 2026, 0, '2025-12-31', 1, 'ZZGRP', 1, 0, 1.0, 1.0, 'full');
+-- The live table may predate konsol#348's rate_set: add it to the scratch clone first.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS rate_set String;
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency, rate_set)
 VALUES
-  ('ZZGRP', 'ZZE1', 'ZZ3000', '2025-06-01', 1.10, 'USD'),
-  ('ZZGRP', 'ZZE1', 'ZZ3000', '2026-01-01', 1.50, 'USD');
+  ('ZZGRP', 'ZZE1', 'ZZ3000', '2025-06-01', 1.10, 'USD', 'ZZACT'),
+  ('ZZGRP', 'ZZE1', 'ZZ3000', '2026-01-01', 1.50, 'USD', 'ZZACT');
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
