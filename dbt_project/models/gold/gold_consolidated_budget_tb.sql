@@ -26,8 +26,11 @@
 
    - Source: gold_spread_budget (the canonical monthly budget fact, annual spreads and manual
      lines, every layer, every Cycle) joined to epm_staging.budget_cycles, konsol's write-through
-     of the APPROVED Cycles (S4-Q2 a): an unapproved Cycle's rows are not consolidated, and
-     assert_budget_cycle_is_approved (warn) names them. The statement flags and names come from the
+     of the APPROVED Cycles (S4-Q2 a), which carries each Cycle's Rate Set. Since S3 the fact's own
+     inputs (budget_annual_input, budget_entries) are in ClickHouse only while their Cycle is
+     approved, so in a consistent warehouse every fact row finds its Cycle here; a fact row whose
+     Cycle has no budget_cycles row is sync drift between the three write-throughs, is not
+     consolidated, and assert_budget_cycle_is_approved (warn) names it. The statement flags and names come from the
      chart (silver_main_accounts; S4-Q6 a): the budget fact carries none. period_amount is already
      signed like the actuals (debit - credit, BUD-7) and is cast to the actuals' Decimal scale.
      is_year_end_close is 0: a budget posts no close.

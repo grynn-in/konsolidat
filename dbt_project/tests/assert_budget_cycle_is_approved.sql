@@ -1,11 +1,15 @@
--- konsol#348 S4 (W4, S4-Q2 a): a budget fact row names a Budget Cycle that is not approved.
--- gold_consolidated_budget_tb consolidates the APPROVED Cycles only: it joins gold_spread_budget
--- to epm_staging.budget_cycles (konsol's write-through of submitted Cycles, which carries the
--- Cycle's Rate Set) on the Cycle's name, and a row whose Cycle has no row there is not translated.
--- That is correct (a Cycle still being entered has no declared rates to translate at), but it must
--- not be silent: this test names every (scenario, cycle) the fact holds and the consolidation does
--- not. Warn, not error: approved budget lines under a Cycle not yet approved are a normal state of
--- entry, and a draft budget must never stop the build.
+-- konsol#348 S4 (W4, S4-Q2 a; premise reworded after the #368 review): a sync-drift check between
+-- the three budget write-throughs. Since S3, Budget Annual Input rows (epm_gold.budget_annual_input)
+-- and Budget Entry lines (epm_raw.budget_entries) reach ClickHouse only while their Cycle is
+-- approved, and the approved Cycle itself reaches epm_staging.budget_cycles with its Rate Set. So
+-- in a consistent warehouse every Cycle gold_spread_budget names has a budget_cycles row, and
+-- gold_consolidated_budget_tb (which joins the fact to budget_cycles on the Cycle's name) consolidates
+-- every fact row. A row here is drift between the three write-throughs, not a draft budget: a
+-- Cycle cancelled or deleted after its lines synced, a reconcile_all that repaired one table and not
+-- another, a load that seeded the fact without the Cycle. The fact rows of such a Cycle are silently
+-- not translated, so this names every (scenario, cycle) the fact holds and budget_cycles does not,
+-- with the row count and years, for konsol.clickhouse.reconcile_all() to repair. Warn, not error:
+-- the missing Cycle's rows are the only ones affected, and the rest of the budget must still build.
 -- NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
 {{ config(severity='warn') }}
 
