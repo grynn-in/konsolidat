@@ -4,9 +4,10 @@
 -- windows or sums over (S5's YTD running total, the budget side of a variance), as
 -- gold_consolidated_ytd's ROWS window does over gold_fully_consolidated_tb
 -- (assert_journal_grain_unique): a second row on one key is a second running total, not a
--- larger one. The model's three layers are each grouped or keyed to this grain: 'entity' by
--- GROUP BY, 'cta' one plug per (group, entity, period, scenario, cycle, layer), 'nci_attribution'
--- three lines on three accounts of one journal. A row here means a layer passes rows through
+-- larger one. The model's four layers are each grouped or keyed to this grain: 'entity' by
+-- GROUP BY, 'unbalanced' and 'cta' one plug each per (group, entity, period, scenario, cycle,
+-- layer) on their own literal accounts, 'nci_attribution' three lines on three accounts of one
+-- journal. A row here means a layer passes rows through
 -- unsummed, or a grain column (scenario_id, cycle, layer) was dropped from one layer's key so two
 -- consolidations landed on one key. journal_id is not part of the grain; the journals seen are
 -- reported for the reader.

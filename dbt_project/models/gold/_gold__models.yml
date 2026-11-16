@@ -117,16 +117,23 @@ models:
 
   - name: gold_fully_consolidated_budget
     description: >
-      konsol#348 S4 (W6; S4-Q3 a, S4-Q4 a): the fully consolidated BUDGET, in
+      konsol#348 S4 (W6; S4-Q3 a, S4-Q4 a, S4-Q8 b): the fully consolidated BUDGET, in
       gold_fully_consolidated_tb's shape plus scenario_id, cycle and layer, over
       gold_consolidated_budget_tb, so S5 reads the same columns for a budget as for the
-      actuals. Three layers, each per (scenario, cycle, layer): 'entity' (sum of
-      group_amount at the account and budget-dimension grain), 'cta' (the residual
-      -sum(group_amount) per group, entity and period, gold_fx_revaluation's formula) and
-      'nci_attribution' (gold_nci_attribution_journal's formula: the minority's share of
-      the result and of the CTA on the retained-earnings account, 'CTA' and the group's
-      nci_account). Within one (group, scenario, cycle, layer, entity, period) the layers
-      sum to 0 (assert_budget_consolidated_balances, error). BEFORE ELIMINATIONS
+      actuals. Four layers, each per (scenario, cycle, layer), with L = the sum of the
+      local amounts, G = the sum of group_amount and C = the period's Closing rate in the
+      Cycle's Rate Set: 'entity' (group_amount at the account and budget-dimension grain),
+      'unbalanced' (-L x C, S4-Q8 b: the budget's OWN local imbalance, typically a P&L-only
+      budget whose one-sided Annual Inputs do not sum to zero, translated at closing; 0 for
+      a double-entry budget), 'cta' (-(G - L x C): the TRANSLATION DIFFERENCE only, which is
+      gold_fx_revaluation's whole residual when L = 0) and 'nci_attribution'
+      (gold_nci_attribution_journal's formula: the minority's share of the result and of
+      the CTA on the retained-earnings account, 'CTA' and the group's nci_account). Within
+      one (group, scenario, cycle, layer, entity, period) the layers sum to 0
+      (assert_budget_consolidated_balances, error); the two plugs are pinned as literals
+      (assert_budget_consolidated_plugs_hand_table). A closing rate that is not a positive
+      finite number refuses the build by name; no plug is translated at 0 or 1.0. BEFORE
+      ELIMINATIONS
       (konsol#427): a budget has no partner, so there is no 'ic_elimination' layer, and
       every reader labels the figure so. The deal journals, 'topside' and 'equity_method'
       are absent too (konsol#425): actuals-only journals with no scenario key. A table,
@@ -146,17 +153,19 @@ models:
         description: "The budget layer (base / challenge / management / board); part of the grain, each consolidated on its own."
       - name: adjustment_type
         description: >
-          Layer: entity, cta or nci_attribution. Never ic_elimination (konsol#427, before
-          eliminations) nor a deal, topside or equity_method journal (konsol#425).
+          Layer: entity, unbalanced (the budget's own local imbalance at the closing rate,
+          main_account 'UNBALANCED'), cta (the translation difference, main_account 'CTA') or
+          nci_attribution. Never ic_elimination (konsol#427, before eliminations) nor a deal,
+          topside or equity_method journal (konsol#425).
         tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['entity', 'cta', 'nci_attribution']
+                values: ['entity', 'unbalanced', 'cta', 'nci_attribution']
       - name: amount
         description: "In the group's reporting currency, signed debit - credit like the actuals."
       - name: journal_id
-        description: "'' on entity and cta rows; 'NCI-{group}-{entity}-{FY}-P{period}-{scenario}-{cycle}-{layer}' on an attribution line."
+        description: "'' on entity, unbalanced and cta rows; 'NCI-{group}-{entity}-{FY}-P{period}-{scenario}-{cycle}-{layer}' on an attribution line."
 
   - name: gold_ic_eliminations
     description: >

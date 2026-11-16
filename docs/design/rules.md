@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **187** |
-| carrying their reasoning | 166 |
-| citing the issue that caused them | 160 |
+| assertions | **188** |
+| carrying their reasoning | 167 |
+| citing the issue that caused them | 161 |
 | severity `warn` (reports, does not stop a build) | 23 |
-| severity `error` (stops the build, and its children) | 164 |
+| severity `error` (stops the build, and its children) | 165 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 30
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 31
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 16
@@ -998,7 +998,7 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 
 **konsol#348 S4 (W6;**
 
-S4-Q3 a): the fully consolidated BUDGET balances by construction, per consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's shape over gold_consolidated_budget_tb, with three layers: 'entity' (sum of group_amount), 'cta' (the residual, -sum(group_amount) per group, entity and period, the gold_fx_revaluation formula) and 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share of the result and of the CTA, a journal that sums to zero). So within one (group, scenario, cycle, layer, entity, period) the three adjustment types sum to 0: entity + cta is 0 by the residual's definition, and the attribution journal nets to 0 on its own. A row here means a layer was computed on a different key than the others: a CTA summed across budget layers or Cycles (telescoping), an NCI journal whose lines were dropped by the zero-line filter on one side only, or an entity layer that lost rows the residual saw. Not covered, by design (konsol#427, #425): a budget has no partner, so there is no 'ic_elimination' layer ("before eliminations"); deal journals and topside are actuals-only. Nothing is missing from the sum because nothing else is posted. Fixture: test_fixtures/assert_budget_consolidated_balances.sql (a EUR entity in a USD group, 80% owned, two layers, two periods; hand values in its header). Vacuous when no Budget Cycle is approved: the model is then empty. Tolerance 0.01 in the group's currency: the amounts are Float64 sums of Decimal x Float64 products.
+S4-Q3 a, S4-Q8 b): the fully consolidated BUDGET balances by construction, per consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's shape over gold_consolidated_budget_tb, with four layers; per (group, scenario, cycle, layer, entity, period), L = sum of local amounts, G = sum of group_amount, C = the Closing rate in the Cycle's Rate Set: 'entity' (G, by account), 'unbalanced' (-L x C, the budget's own local imbalance), 'cta' (-(G - L x C), the translation difference only; the whole residual when L = 0) and 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share of the result and of the CTA, a journal that sums to zero). So within one consolidation the adjustment types sum to 0: G - L x C - (G - L x C) is 0 by definition, and the attribution journal nets to 0 on its own. A row here means a layer was computed on a different key than the others: a plug summed across budget layers or Cycles (telescoping), the two plugs read from different sums, an NCI journal whose lines were dropped by the zero-line filter on one side only, or an entity layer that lost rows the plugs saw. The plugs' values are pinned by assert_budget_consolidated_plugs_hand_table; this test proves only that they close. Not covered, by design (konsol#427, #425): a budget has no partner, so there is no 'ic_elimination' layer ("before eliminations"); deal journals and topside are actuals-only. Nothing is missing from the sum because nothing else is posted. Fixture: test_fixtures/assert_budget_consolidated_balances.sql (a EUR entity in a USD group, 80% owned, two layers, two periods; hand values in its header). Vacuous when no Budget Cycle is approved: the model is then empty. Tolerance 0.01 in the group's currency: the amounts are Float64 sums of Decimal x Float64 products.
 
 <sub>`error` · `tests/assert_budget_consolidated_balances.sql` · konsol#348 konsol#427 konsolidat#425</sub>
 
@@ -1006,7 +1006,7 @@ S4-Q3 a): the fully consolidated BUDGET balances by construction, per consolidat
 
 **konsol#348 S4 (W8;**
 
-S4-Q3 a): gold_fully_consolidated_budget holds exactly one row per (consolidation_group, data_area_id, scenario_id, cycle, layer, fiscal_year, fiscal_period, main_account, adjustment_type, the budget dimension columns). That is the grain a reader windows or sums over (S5's YTD running total, the budget side of a variance), as gold_consolidated_ytd's ROWS window does over gold_fully_consolidated_tb (assert_journal_grain_unique): a second row on one key is a second running total, not a larger one. The model's three layers are each grouped or keyed to this grain: 'entity' by GROUP BY, 'cta' one plug per (group, entity, period, scenario, cycle, layer), 'nci_attribution' three lines on three accounts of one journal. A row here means a layer passes rows through unsummed, or a grain column (scenario_id, cycle, layer) was dropped from one layer's key so two consolidations landed on one key. journal_id is not part of the grain; the journals seen are reported for the reader. Fixture: test_fixtures/assert_budget_consolidated_grain_unique.must_flag.sql (one duplicated 'entity' key, flagged; the same account under another layer or another adjustment_type, not).
+S4-Q3 a): gold_fully_consolidated_budget holds exactly one row per (consolidation_group, data_area_id, scenario_id, cycle, layer, fiscal_year, fiscal_period, main_account, adjustment_type, the budget dimension columns). That is the grain a reader windows or sums over (S5's YTD running total, the budget side of a variance), as gold_consolidated_ytd's ROWS window does over gold_fully_consolidated_tb (assert_journal_grain_unique): a second row on one key is a second running total, not a larger one. The model's four layers are each grouped or keyed to this grain: 'entity' by GROUP BY, 'unbalanced' and 'cta' one plug each per (group, entity, period, scenario, cycle, layer) on their own literal accounts, 'nci_attribution' three lines on three accounts of one journal. A row here means a layer passes rows through unsummed, or a grain column (scenario_id, cycle, layer) was dropped from one layer's key so two consolidations landed on one key. journal_id is not part of the grain; the journals seen are reported for the reader. Fixture: test_fixtures/assert_budget_consolidated_grain_unique.must_flag.sql (one duplicated 'entity' key, flagged; the same account under another layer or another adjustment_type, not).
 
 <sub>`error` · `tests/assert_budget_consolidated_grain_unique.sql` · konsol#348</sub>
 
@@ -1025,6 +1025,14 @@ Two Budget Cycles of one scenario declare DIFFERENT Rate Sets, each has two laye
 gold_consolidated_budget_tb resolves ownership on the BUDGET's own period spine (budget_consolidation_inputs(), macros/budget_rates.sql, through ownership_resolution_ctes()), not on gold_entity_ownership, whose spine is the periods the ACTUALS have rows in. A budget is entered before its year starts, so most budget periods have no trial balance row; joined to the actuals' ownership they had no ownership and vanished from the consolidation without an error. This test rebuilds the expected keys the same way the model does and names every one the model lacks: (group, scenario, cycle, layer, entity, year, period) for every fact row of an APPROVED Cycle (epm_staging.budget_cycles) whose entity has a currency and, at that period, a complete ownership chain into the group with method full or proportional. The core keeps every source row that survives the ownership join (a missing rate stops the build rather than dropping a row), so an expected key with no row in the model is a row the consolidation lost. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
 
 <sub>`error` · `tests/assert_budget_consolidated_periods_complete.sql` · konsol#348</sub>
+
+### `budget_consolidated_plugs_hand_table`
+
+**konsol#348 S4 (S4-Q8 b;**
+
+W6): the two plug layers of gold_fully_consolidated_budget, as hand literals, over two fixtures. For each (group, scenario, cycle, layer, entity, period), with L = sum of the local amounts, G = sum of group_amount and C = the period's Closing rate in the Cycle's Rate Set (entity currency -> group currency): unbalanced = -L x C          the budget's own local imbalance, translated at closing; cta        = -(G - L x C)    the translation difference only. Before S4-Q8 cta was the whole residual -G, which for a budget that is not double-entry (a P&L-only budget: every Budget Annual Input is one-sided) carried the budget's own gap as if it were a currency effect. Both rows are emitted for every consolidation, 0 when there is nothing to plug. Fixture 1, test_fixtures/assert_budget_consolidated_balances.sql (Cycle ZZ-CY-BAL, EUR entity in a USD group, 80% owned, double-entry rows, L = 0): unbalanced 0 everywhere, and cta exactly what the whole residual gave before: base P6 -5, base P7 -12.5 (the P7 cash retranslation is in G), challenge P6 -2. Fixture 2, test_fixtures/assert_budget_consolidated_balances.pnl_only.sql (Cycle ZZ-CY-PNL, the same entity 100% owned, a P&L-ONLY budget: revenue and an expense, nothing on the balance sheet): P6: revenue -100, expense +60, L = -40; average 1.05, closing 1.10. G = -40 x 1.05 = -42; L x C = -44; unbalanced = +44; cta = -(-42 + 44) = -2 (the hand translation difference: -40 x (1.05 - 1.10) = +2, plugged by -2). P7: revenue -50, expense +30, L = -20; average 1.15, closing 1.20. G = -23; L x C = -24; unbalanced = +24; cta = -1. Red before S4-Q8: no 'unbalanced' row exists, and the P&L-only cta is the whole residual (+42, +23 instead of -2, -1). Each fixture's block is vacuous where its Cycle is not approved (every real site). Flags one row per (cycle, layer, period, adjustment_type) missing, unexpected or off by more than 0.01.
+
+<sub>`error` · `tests/assert_budget_consolidated_plugs_hand_table.sql` · konsol#348</sub>
 
 ### `budget_cycle_is_approved`
 

@@ -1,14 +1,17 @@
--- konsol#348 S4 (W6; S4-Q3 a): the fully consolidated BUDGET balances by construction, per
--- consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's shape
--- over gold_consolidated_budget_tb, with three layers: 'entity' (sum of group_amount), 'cta' (the
--- residual, -sum(group_amount) per group, entity and period, the gold_fx_revaluation formula) and
--- 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share of the result
--- and of the CTA, a journal that sums to zero). So within one (group, scenario, cycle, layer,
--- entity, period) the three adjustment types sum to 0: entity + cta is 0 by the residual's
--- definition, and the attribution journal nets to 0 on its own. A row here means a layer was
--- computed on a different key than the others: a CTA summed across budget layers or Cycles
--- (telescoping), an NCI journal whose lines were dropped by the zero-line filter on one side
--- only, or an entity layer that lost rows the residual saw.
+-- konsol#348 S4 (W6; S4-Q3 a, S4-Q8 b): the fully consolidated BUDGET balances by construction,
+-- per consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's
+-- shape over gold_consolidated_budget_tb, with four layers; per (group, scenario, cycle, layer,
+-- entity, period), L = sum of local amounts, G = sum of group_amount, C = the Closing rate in the
+-- Cycle's Rate Set: 'entity' (G, by account), 'unbalanced' (-L x C, the budget's own local
+-- imbalance), 'cta' (-(G - L x C), the translation difference only; the whole residual when
+-- L = 0) and 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share
+-- of the result and of the CTA, a journal that sums to zero). So within one consolidation the
+-- adjustment types sum to 0: G - L x C - (G - L x C) is 0 by definition, and the attribution
+-- journal nets to 0 on its own. A row here means a layer was computed on a different key than
+-- the others: a plug summed across budget layers or Cycles (telescoping), the two plugs read
+-- from different sums, an NCI journal whose lines were dropped by the zero-line filter on one
+-- side only, or an entity layer that lost rows the plugs saw. The plugs' values are pinned by
+-- assert_budget_consolidated_plugs_hand_table; this test proves only that they close.
 --
 -- Not covered, by design (konsol#427, #425): a budget has no partner, so there is no
 -- 'ic_elimination' layer ("before eliminations"); deal journals and topside are actuals-only.
