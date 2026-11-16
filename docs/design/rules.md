@@ -13,10 +13,10 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **188** |
+| assertions | **189** |
 | carrying their reasoning | 167 |
-| citing the issue that caused them | 161 |
-| severity `warn` (reports, does not stop a build) | 23 |
+| citing the issue that caused them | 162 |
+| severity `warn` (reports, does not stop a build) | 24 |
 | severity `error` (stops the build, and its children) | 165 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
@@ -25,7 +25,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 35
+- [Currency and translation](#currency-and-translation) — 36
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
@@ -225,6 +225,10 @@ a blank is never defaulted (no silent fallback). Flags each row of epm_raw.budge
 konsol refuses an Annual Input or a Budget Entry line whose currency is not the entity's Functional Currency; this is the warehouse backstop. The budget fact carries each line's currency (B4), and silver_entity_currencies is the one answer for the currency an entity keeps its books in (konsol#110). Every fact row whose currency differs from its entity's is named, so a budget can never meet actuals in another currency in the variance models (B8) without being reported first. LEFT JOIN on purpose: join_use_nulls=0 fills an entity with no currency row with '', and that is itself the fault named here (a budget on an entity that declares no currency), so the default hides nothing. A blank fact currency against a blank entity currency is not named here; assert_budget_blank_layer_currency names the blank line. One row per (scenario, cycle, entity, layer, budget currency), with the entity's currency and the row count. Error severity: the budget fact would be wrong. Fixtures: dbt_project/test_fixtures/assert_budget_currency_is_entity_currency*.sql.
 
 <sub>`error` · `tests/assert_budget_currency_is_entity_currency.sql` · konsol#110 konsol#348</sub>
+
+### `budget_declared_historical_has_a_rate`
+
+<sub>`warn` · `tests/assert_budget_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#368 konsolidat#92</sub>
 
 ### `budget_node_per_cycle_and_currency`
 
@@ -1036,11 +1040,11 @@ W6): the two plug layers of gold_fully_consolidated_budget, as hand literals, ov
 
 ### `budget_cycle_is_approved`
 
-**konsol#348 S4 (W4, S4-Q2 a): a budget fact row names a Budget Cycle that is not approved.**
+**konsol#348 S4 (W4, S4-Q2 a;**
 
-gold_consolidated_budget_tb consolidates the APPROVED Cycles only: it joins gold_spread_budget to epm_staging.budget_cycles (konsol's write-through of submitted Cycles, which carries the Cycle's Rate Set) on the Cycle's name, and a row whose Cycle has no row there is not translated. That is correct (a Cycle still being entered has no declared rates to translate at), but it must not be silent: this test names every (scenario, cycle) the fact holds and the consolidation does not. Warn, not error: approved budget lines under a Cycle not yet approved are a normal state of entry, and a draft budget must never stop the build. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
+premise reworded after the #368 review): a sync-drift check between the three budget write-throughs. Since S3, Budget Annual Input rows (epm_gold.budget_annual_input) and Budget Entry lines (epm_raw.budget_entries) reach ClickHouse only while their Cycle is approved, and the approved Cycle itself reaches epm_staging.budget_cycles with its Rate Set. So in a consistent warehouse every Cycle gold_spread_budget names has a budget_cycles row, and gold_consolidated_budget_tb (which joins the fact to budget_cycles on the Cycle's name) consolidates every fact row. A row here is drift between the three write-throughs, not a draft budget: a Cycle cancelled or deleted after its lines synced, a reconcile_all that repaired one table and not another, a load that seeded the fact without the Cycle. The fact rows of such a Cycle are silently not translated, so this names every (scenario, cycle) the fact holds and budget_cycles does not, with the row count and years, for konsol.clickhouse.reconcile_all() to repair. Warn, not error: the missing Cycle's rows are the only ones affected, and the rest of the budget must still build. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
 
-<sub>`warn` · `tests/assert_budget_cycle_is_approved.sql` · konsol#348</sub>
+<sub>`warn` · `tests/assert_budget_cycle_is_approved.sql` · konsol#348 konsolidat#368</sub>
 
 ### `budget_fact_grain_unique`
 
