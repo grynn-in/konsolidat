@@ -32,7 +32,8 @@
      Cycle has no budget_cycles row is sync drift between the three write-throughs, is not
      consolidated, and assert_budget_cycle_is_approved (warn) names it. The statement flags and names come from the
      chart (silver_main_accounts; S4-Q6 a): the budget fact carries none. period_amount is already
-     signed like the actuals (debit - credit, BUD-7) and is cast to the actuals' Decimal scale.
+     signed like the actuals (debit - credit, BUD-7) and is ROUNDED to the actuals' Decimal scale
+     (cast_to_decimal128, never toDecimal128 of a Float64, konsolidat#191).
      is_year_end_close is 0: a budget posts no close.
    - Rate Set (BUD-3; S4-Q1 c): each row translates at ITS CYCLE's Rate Set, never the actuals set
      and never 1.0. One model holds Cycles on different sets (a budget and a reforecast), so the set
@@ -88,7 +89,11 @@ budget_source as (
         f.scenario_id as scenario_id,
         f.cycle as cycle,
         f.layer as layer,
-        toDecimal128(f.period_amount, {{ amount_scale() }}) as local_amount,
+        {# konsolidat#191's class (S4b live test): period_amount is a Float64, and
+           toDecimal128(Float64) truncates toward zero (1234567.89 -> 1234567.8899;
+           1000.01 / 12 -> 83.3341 for 83.3342). cast_to_decimal128 rounds to the scale
+           first; assert_budget_consolidated_local_amount_exact compares exactly. #}
+        {{ cast_to_decimal128('f.period_amount', amount_scale()) }} as local_amount,
         toUInt8(0) as is_year_end_close,
         f.rate_set as rate_set
     from budget_fact as f

@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **189** |
-| carrying their reasoning | 167 |
-| citing the issue that caused them | 162 |
+| assertions | **190** |
+| carrying their reasoning | 168 |
+| citing the issue that caused them | 163 |
 | severity `warn` (reports, does not stop a build) | 24 |
-| severity `error` (stops the build, and its children) | 165 |
+| severity `error` (stops the build, and its children) | 166 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 31
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 32
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 16
@@ -1021,6 +1021,14 @@ S4-Q3 a): gold_fully_consolidated_budget holds exactly one row per (consolidatio
 Two Budget Cycles of one scenario declare DIFFERENT Rate Sets, each has two layers, and every (cycle, layer) holds the same local rows (one EUR entity in a USD group, 100% owned, FY2026 P6 and P7: a closing-rate cash account and an average-rate revenue account); the actuals set holds a different rate for every key. The fixture's header shows the rates and the arithmetic. Each (cycle, layer) must come out as that Cycle's set translates it alone, including the closing-rate retranslation of the cash balance at P7 (konsolidat#257). A model that read the actuals set, read every set without the Cycle's set on the rate key, or lost the layer or the cycle in a window partition (so one layer's balance was retranslated against another's) gives a different number here, and this test does not use the macros it checks. It is vacuous where the Cycle ZZ-CY-HAND-A is not approved (every real site): no expected row is built. Flags one row per (cycle, layer, account, period) that is missing, unexpected or off by more than 0.01.
 
 <sub>`error` · `tests/assert_budget_consolidated_hand_table.sql` · konsol#348 konsolidat#257</sub>
+
+### `budget_consolidated_local_amount_exact`
+
+**konsol#348 S4 (S4b live test, must fix): every local_amount of gold_consolidated_budget_tb equals its budget fact row's period_amount ROUNDED to the actuals' Decimal scale (amount_scale(), 4), never truncated.**
+
+period_amount is a Float64 (gold_spread_budget: annual_amount x period_weight, or a manual line's net), and toDecimal128(Float64, 4) truncates the binary double toward zero (konsolidat#191): 1234567.89 becomes 1234567.8899, and an annual 1000.01 spread evenly, 83.33416666..., becomes 83.3341 where rounding gives 83.3342. 14 of 16 live ZZ budget rows were off by 0.0001 on the first live build. cast_to_decimal128() (macros/db_adapter.sql) rounds to the scale, goes through the shortest exact text and parses that; the model must use it, and this test recomputes the expected value with the same macro from the fact, so the two can only agree when the model rounds. Exact Decimal comparison, no tolerance. Join: the fact's grain (scenario, cycle, layer, entity, year, period, account, budget dims) to the consolidated rows, which fan out once per ancestor group; every fan-out row is compared. Filler rows the core adds for a retranslation (is_filler, local_amount 0) have no fact row and are not judged; a fact row whose Cycle is not approved has no consolidated row and is not judged (assert_budget_cycle_is_approved names it). Fixture: test_fixtures/assert_budget_consolidated_local_amount_exact.sql (1234567.89 and the 1000.01 / 12 spread; red on toDecimal128(Float64), green on cast_to_decimal128).
+
+<sub>`error` · `tests/assert_budget_consolidated_local_amount_exact.sql` · konsol#348 konsolidat#191</sub>
 
 ### `budget_consolidated_periods_complete`
 
