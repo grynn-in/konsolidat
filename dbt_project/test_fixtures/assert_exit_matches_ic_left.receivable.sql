@@ -115,3 +115,9 @@ VALUES
   ('ZZBE1', 'ZZ-TBS-E1', 'ZZXE', 2026, 1, 2, '2026-02-05 09:00:00', 'Period movement'),
   ('ZZBA1', 'ZZ-TBS-A1', 'ZZXA', 2026, 1, 2, '2026-02-05 09:00:00', 'Period movement'),
   ('ZZBA4', 'ZZ-TBS-A4', 'ZZXA', 2026, 4, 2, '2026-05-05 09:00:00', 'Period movement');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

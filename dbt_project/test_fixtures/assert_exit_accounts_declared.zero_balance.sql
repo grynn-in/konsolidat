@@ -87,3 +87,9 @@ INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency, nci_account, exit_gain_loss_account)
 VALUES
   ('ZZXG', '', 'ZZ Exit Group', 'USD', '', '');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);
