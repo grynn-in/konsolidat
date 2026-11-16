@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **184** |
-| carrying their reasoning | 162 |
-| citing the issue that caused them | 157 |
+| assertions | **187** |
+| carrying their reasoning | 165 |
+| citing the issue that caused them | 160 |
 | severity `warn` (reports, does not stop a build) | 23 |
-| severity `error` (stops the build, and its children) | 161 |
+| severity `error` (stops the build, and its children) | 164 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,7 +25,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 32
+- [Currency and translation](#currency-and-translation) — 33
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 15
 - [Intercompany](#intercompany) — 13
@@ -35,8 +35,8 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 25
 - [The chart of accounts](#the-chart-of-accounts) — 8
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 15
-- [Other](#other) — 7
+- [Platform and data integrity](#platform-and-data-integrity) — 16
+- [Other](#other) — 8
 
 ---
 
@@ -270,7 +270,7 @@ What CTA is: gold_fx_revaluation.cta_amount is the residual of currency translat
 
 PR #203 review 3 + 4): a submitted deal that needs a governed Closing rate the group has not published for its period. gold_business_combination_journal and gold_business_disposal_journal INNER JOIN every rate they translate at, so such a deal posts NOTHING (never a 0: a LEFT JOIN miss read 0 under join_use_nulls = 0 and booked a false bargain gain, or goodwill = consideration, or a false disposal loss). Silence is not an answer either: this test stops the build and names the pair. One row per submitted deal and (from_currency, to_currency) it needs with no Closing rate for its period. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.must_flag.sql. The currencies a deal needs, exactly the ones the journals translate: the entity's accounting currency (epm_staging.entities; '' when the entity is not in the registry, and that is reported as such): the acquired balances, the opening balances, the derecognised balances each consideration / acquisition-costs / proceeds line's own currency the header's consideration_currency / proceeds_currency, when the document has no consideration (proceeds) lines and the header amount is not zero (the journals fall back to the header figure then). Row J13 (PR #203 second review 1): the acquisition-costs lines do NOT count here — the journal's consideration_line_count reads only business_combination_consideration, so a combination with a header amount, no consideration line and one cost line falls back to the header and needs its rate; counting the cost row as "a line" left that header unchecked while the journal dropped the deal silently. Fixture: dbt_project/test_fixtures/assert_deal_rate_resolved.header.must_flag.sql. a combination's consideration_currency when it measures NCI at 'full' and share_acquired_pct < 100 (konsol#204, row M2b): the journal translates the declared NCI fair value at that currency's rate and drops the deal when it is missing, even when every consideration line is in another currency. Row M4 (PR #205 review): whatever nci_fair_value says, exactly the journal's condition. Fixtures: dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value.must_flag.sql, dbt_project/test_fixtures/assert_deal_rate_resolved.nci_fair_value_zero.must_flag.sql. into the group's reporting currency (the root row of epm_gold.consolidation_groups), for the deal's period: epm_staging.fiscal_periods by start_date <= date <= end_date (Regular periods only, deal_period_holds()), then rate_period_map() (so a Closing period would ask for its year's last Regular period's rates, as every trial-balance translation does). A currency equal to the group currency translates at 1 and needs no rate. Scope follows the journals: every submitted Business Combination; a Business Disposal with retained_interest_pct = 0 (a disposal that keeps an interest posts nothing and is named by assert_disposal_gain_loss_exists). A deal whose group has no root row or whose date is outside the declared calendar has no period to look a rate up for; assert_acquisition_accounts_declared names those. Reported: deal, kind ('business_combination' | 'business_disposal'), from_currency, to_currency, and the deal's fiscal_year / fiscal_period. NOT IN rather than a LEFT JOIN null test (join_use_nulls = 0).
 
-<sub>`error (default)` · `tests/assert_deal_rate_resolved.sql` · konsol#204 konsolidat#198 konsolidat#203 konsolidat#205</sub>
+<sub>`error (default)` · `tests/assert_deal_rate_resolved.sql` · konsol#204 konsol#348 konsolidat#198 konsolidat#203 konsolidat#205</sub>
 
 ### `declared_historical_has_a_rate`
 
@@ -286,7 +286,7 @@ The previous row_number()/rn=1 join ignored period_date, so an early period coul
 
 ### `equity_rate_coverage`
 
-<sub>`warn` · `tests/assert_equity_rate_coverage.sql` · konsolidat#104 konsolidat#120 konsolidat#176 konsolidat#232</sub>
+<sub>`warn` · `tests/assert_equity_rate_coverage.sql` · konsol#348 konsolidat#104 konsolidat#120 konsolidat#176 konsolidat#232</sub>
 
 ### `equity_uses_historical_rate`
 
@@ -298,7 +298,15 @@ konsolidat#213: the declaration is uses_historical_rate (fx_method = 'historical
 
 ### `every_translated_currency_has_a_governed_rate`
 
-<sub>`warn` · `tests/assert_every_translated_currency_has_a_governed_rate.sql` · konsol#103 konsolidat#93</sub>
+<sub>`warn` · `tests/assert_every_translated_currency_has_a_governed_rate.sql` · konsol#103 konsol#348 konsolidat#93</sub>
+
+### `exactly_one_actuals_rate_set`
+
+**konsol#348 S4-Q7 (a), chosen under the standing rule (15 Nov 2026): exactly one Rate Set is flagged Is Actuals in epm_staging.rate_sets, or nothing consolidates.**
+
+The actuals consolidation (gold_consolidated_trial_balance, the deal journals, the equity-method journal, and every test that reads a governed or historical rate) translates at that set's rates only, through actuals_rate_set_predicate() in macros/governed_rates.sql. With zero flagged sets the predicate selects no rate at all; with two it selects both sets' rates and every key is a duplicate. Neither is a number anyone should read, so this test refuses at ERROR severity: in `dbt build` a failure here skips gold_consolidated_trial_balance and everything downstream, by design, and the model's own pre_hook guard (governed_rate_guard) refuses a selective build with the same count in its message, before the scope's DELETE. An existing stack whose konsol has not yet synced the table (reconcile_all creates and fills it; konsol's patch creates and flags ACTUAL) has zero rows here and is refused by name, never built at "every set" as before the column existed: the guard reads the count, not the old `1 = 1`. The fixture gate seeds one flagged set ('ZZACT') in every fixture that seeds a rate or builds the consolidated trial balance; the TB-only first build seeds ACTUAL (tests/test_rate_sets_ddl.py). The rule applies only while there is a trial balance to translate (review of konsolidat#365, 15 Nov 2026). On a fresh stack reconcile_all is an RQ job, so the first dbt build can run before this table is filled; with no row in gold_trial_balance there is nothing a silent merge of two sets, or no set, could affect, so an empty TB passes here (and the guard and fx_precheck say the same), and the first TB row brings the rule in. Fixtures: .empty_stack (no TB, no set: builds and passes), .none.must_flag / .two.must_flag (a TB: flags), .guard_refuses.must_flag (a TB, same-currency: the guard refuses). Fails (returns one row) when countIf(is_actuals = 1) != 1 and gold_trial_balance has rows, naming the count and the flagged sets.
+
+<sub>`error (default)` · `tests/assert_exactly_one_actuals_rate_set.sql` · konsol#348 konsolidat#365</sub>
 
 ### `exchange_rate_currencies_are_iso`
 
@@ -330,11 +338,11 @@ The SAME case table runs through konsol's konsol.group_rates.magnitude_problem, 
 
 ### `governed_rate_grain_unique`
 
-<sub>`warn` · `tests/assert_governed_rate_grain_unique.sql` · konsol#103 konsolidat#176</sub>
+<sub>`warn` · `tests/assert_governed_rate_grain_unique.sql` · konsol#103 konsol#348 konsolidat#176</sub>
 
 ### `governed_rate_sane`
 
-<sub>`warn` · `tests/assert_governed_rate_sane.sql` · konsol#103 konsolidat#138 konsolidat#174</sub>
+<sub>`warn` · `tests/assert_governed_rate_sane.sql` · konsol#103 konsol#348 konsolidat#138 konsolidat#174</sub>
 
 ### `group_equals_translated_for_full`
 
@@ -358,7 +366,7 @@ A controlled subsidiary (full) is at 100% and has its own test, assert_group_equ
 
 konsol translates and does not remeasure. fx_method = 'historical' is therefore an Equity-only declaration: an Asset or Liability carried at the rate of the day it arrived would be remeasurement (IAS 21's non-monetary treatment), which this product does not do. konsol#239 refuses any such declaration at publish, so a chart governed today cannot carry one. A stack whose chart predates that guard still can, and that is what this test is for. The damage is not that the number is wrong in an obvious way: gold_consolidated_trial_balance applies a historical rate only where the chart declares one, so a Historical Equity Rate keyed to a non-equity account is simply never applied and the balance quietly falls back to the closing rate. Silent is the problem. This names the declaration instead. Error, not warn. assert_equity_rate_coverage warns because every row it returns is master data with a defined fallback (equity with no historical rate translates at closing, which is a decision, not a mistake). A historical declaration on a non-equity account has no such reading: it is a wrong declaration, and the fallback it lands on is not what the chart asked for. Nothing downstream can repair it, so the build should stop. GREEN requires every account declaring historical to be typed Equity — the konsolidat#213 invariant, uses_historical_rate = 1 implies is_equity = 1. is_equity is what the account IS (account_type = 'Equity'); uses_historical_rate is what the chart DECLARES (fx_method = 'historical'). Two kinds of offender, one row each, the assert_staging_not_stale shape: DECLARATION — the chart itself, an account typed non-equity that declares historical. One row per account. RATE — a Historical Equity Rate someone entered against an account that is not equity. The chart is where the damage is, but the rate is the row a user typed and expects to see honoured, and it can outlive the declaration that made it plausible (retype the account and the rate simply stops mattering, still sitting there). It is never applied either way, so name it too. One row per rate row, tranches included: each is a separately entered rate that does nothing.
 
-<sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsolidat#213 konsolidat#92</sub>
+<sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsol#348 konsolidat#213 konsolidat#92</sub>
 
 ### `nci_equals_translated_times_minority`
 
@@ -854,7 +862,7 @@ The EQ_INCOME entry should match the formula. 7 Nov 2026: the oracle translates,
 
 The close moves the year's P&L into retained earnings, so read as "net income of P13" it posts an equity-method entry equal and opposite to the year's result. The marker is gold_trial_balance_by_partner.is_year_end_close (posting_layer 'Year-end close' in silver_gl_entries), the one gold_consolidated_trial_balance reads. Oracle: for every equity associate period, EQ_INCOME must equal the PRE-CLOSE P&L movement (close rows excluded) x effective ownership x the governed Average rate (1.0 in the same currency; a Closing-type period reads its year's last Regular period, rate_period_map()). A share of 0.01 or less posts no journal, so it is expected as 0. A Closing period with no activity of its own is therefore expected as no journal at all. Built from the model's inputs, never from its CTEs. Fixture: dbt_project/test_fixtures/assert_equity_method_ignores_close_rows.sql.
 
-<sub>`error` · `tests/assert_equity_method_ignores_close_rows.sql` · konsolidat#259 konsolidat#279</sub>
+<sub>`error` · `tests/assert_equity_method_ignores_close_rows.sql` · konsol#348 konsolidat#259 konsolidat#279</sub>
 
 ### `equity_method_journal_balances`
 
@@ -1314,6 +1322,14 @@ toDecimal128(Float64, scale) truncates toward zero on the binary double, which i
 
 <sub>`error (default)` · `tests/assert_cast_to_decimal128_is_exact.sql` · konsolidat#191 konsolidat#256</sub>
 
+### `consolidation_core_grain_extra_is_a_partition`
+
+**konsol#348 S4 (W3): consolidation_core()'s grain_extra columns are a pure partition.**
+
+The consolidation core (macros/consolidation_core.sql) takes `grain_extra`, the key columns a caller adds to the consolidation grain beyond (group, entity, period, account, partner, dimensions): the budget model passes scenario_id, cycle and layer; the actuals model passes none. Each value of such a column must be a consolidation of its own: the same rows run under two layers must give, per layer, exactly the rows they give alone. If any one select, group by, join or window partition inside the core lacks the extra grain, two layers of one key telescope into each other without an error: the retranslation window sums both layers' balances, a filler for one layer hides the other's row, the year-end close credits retained earnings with both layers' results. The plan for S4 lists the windows at risk (key_before, key_all, key_year_before, close_period) and the retranslated_keys group by. This test runs the core twice on the partner trial balance: once as the actuals model does (no extra grain), once on the same rows duplicated under zz_layer 'ZZA' and 'ZZB' with grain_extra=['zz_layer']. The second must equal the first under each layer: a multiset diff (UNION ALL + GROUP BY with +1/-1 signs; never count() over EXCEPT, konsolidat#361) names any row that differs. Float columns are rounded to 6 places: `sum() over close_period` adds its rows in pipeline order, so the last binary digit may differ between two runs; a telescoped layer differs by the size of a balance. A rounded zero is then made +0: round() keeps the sign of a tiny negative (-1e-12 -> -0.0), GROUP BY keys on the bits, and a year-end close row whose residue came out -1e-12 on one side and +1e-12 on the other was 6 false pairs on real data (W3 review). Fixture-only (W3 review): this test re-runs the core twice over the whole partner trial balance, about twice the cost of the model it guards, and an error in it would skip gold_consolidated_trial_balance's children in a site build. It is disabled unless the run passes `fixture_only_tests: true` in --vars, which the fixture gate and CI's full build do (scripts/tb_only_first_build.py: fixture_dimension_vars / zero_dimension_vars; tests/test_fixture_only_tests.py pins it). The test calls the macro directly, so it needs no model of its own and the fixture (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's inputs only: a retranslated balance, a year-end close and a historical tranche. Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or -1 (produced, not expected).
+
+<sub>`error (default)` · `tests/assert_consolidation_core_grain_extra_is_a_partition.sql` · konsol#348 konsolidat#361</sub>
+
 ### `d365_gl_vouchers_balance`
 
 **konsolidat#155 — every D365 voucher nets to zero at staging.**
@@ -1454,5 +1470,13 @@ The macro resolves such a row as method_source = 'undeclared' and consolidation_
 
 Design: konsol .claude/memory/active/tasks-p1-round2.md, T8. Severity ERROR (the dbt default): a re-entered entity carried at 150% is a wrong consolidated balance sheet. Fixture: test_fixtures/assert_reentry_carries_full_balance.gap_no_double_count.sql (the joint_operation_gap shape: 50% proportional to 2025-12-31, a gap, then a 100% Business Combination from 2026-04-01). An independent oracle: it never reads gold_ownership_exit_journal or repeats its rules. For every exit event (G, E, P) of ownership_exits() (X1) and every later period Q in which gold_entity_ownership holds E in G as a full subsidiary with a complete chain, each of E's non-equity balance-sheet accounts translated at the closing rate (fx_method 'closing' or undeclared, the accounts #257 retranslates) must satisfy sum over every layer of gold_fully_consolidated_tb for E, periods <= Q = E's cumulative local balance to Q (gold_trial_balance_by_partner, every partner and dimension) x the governed Closing rate of Q (rate_period_map(); 1.0 for a same-currency entity) within materiality_floor(). Taken out of the FCTB sum, as assert_exit_derecognises_carried does: the acquisition journal's investment, proceeds, costs and bargain_gain lines (the parent's investment and the deal's settlement, not E's balances) and topside (gold_consolidation_adjustments). Full only: a proportional re-entry carries translated x the share of each period, not one share of the cumulative balance, so this formula does not hold for it after a share step. a re-entry is live again at or after the exit's first period out (out_fiscal_*): between the exit period and it the entity can still be consolidated (a year-end boundary period, ownership_exits())
 
-<sub>`error (default)` · `tests/assert_reentry_carries_full_balance.sql` · konsolidat#257 konsolidat#335</sub>
+<sub>`error (default)` · `tests/assert_reentry_carries_full_balance.sql` · konsol#348 konsolidat#257 konsolidat#335</sub>
+
+### `translation_rates_are_the_actuals_sets`
+
+**konsol#348 S4 (W2, S4-Q1 c): every consolidated row that translates a foreign currency carries the Closing and Average rate of the one Rate Set flagged Is Actuals (epm_staging.rate_sets), for its rate period, and no other set's.**
+
+A budget's set may hold a different rate for the same (from, to, year, period) key; before the rate tables carried rate_set the model read every row and a second set's rate was a duplicate that stopped the build, or, had the guard not caught it, an arbitrary pick (anyIf). The model filters its rates through actuals_rate_set_predicate() (macros/governed_rates.sql); this test resolves the expected rate from the same table with the same predicate and compares, so a model that read the wrong set, or every set, is named here. The rate period is the row's period mapped through rate_period_map() (a Closing-type period translates at its year's last Regular period's rates, konsolidat#199 row D9), exactly as the model maps it. Same-currency rows (accounting = reporting, rate 1.0 by definition) are not judged; a row whose key has no actuals rate cannot exist in a built table (the guard refuses), so the join is inner and a miss is a model that resolved a rate from somewhere else. Fails (returns rows) when a translated row's closing_rate or average_rate differs from the actuals set's rate for its key, or the key has no actuals rate.
+
+<sub>`error (default)` · `tests/assert_translation_rates_are_the_actuals_sets.sql` · konsol#348 konsolidat#199</sub>
 

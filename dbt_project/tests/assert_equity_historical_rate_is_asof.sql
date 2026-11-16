@@ -51,6 +51,8 @@ with applied as (
     where ctb.historical_equity_rate is not null
 ),
 
+-- the actuals Rate Set's tranches only, as the model reads them (konsol#348 S4 W2): a budget's
+-- later tranche for the same key must not win here either
 rates as (
     select
         consolidation_group,
@@ -60,6 +62,7 @@ rates as (
         rate_date,
         toFloat64(historical_rate) as historical_rate
     from {{ source('epm_staging', 'historical_equity_rates') }}
+    where {{ actuals_rate_set_predicate() }}
 ),
 
 expected as (

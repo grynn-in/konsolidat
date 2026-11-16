@@ -3,9 +3,12 @@
     konsolidat#93 / konsol#103: every currency the consolidated trial balance
     translates must have exactly one approved governed Closing and one Average
     rate for its period, into the group's reporting currency, each a positive
-    finite number. This names each key that doesn't, and why, in the shape a
-    person fixes it: pre-fill or enter the rate in konsol's Group Exchange Rate
-    and approve it (or cancel the extra one).
+    finite number, in the one Rate Set flagged Is Actuals (konsol#348 S4-Q1 c:
+    a rate approved only in a budget's set is no rate for the actuals, and the
+    key is 'missing' here as it is in the model). This names each key that
+    doesn't, and why, in the shape a person fixes it: pre-fill or enter the
+    rate in konsol's Group Exchange Rate, in the actuals set, and approve it
+    (or cancel the extra one).
 
     severity warn, on purpose: this test depends on the model's upstream, so
     at error severity a failure made `dbt build` SKIP the model and its

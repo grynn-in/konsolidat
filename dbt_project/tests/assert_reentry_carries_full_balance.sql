@@ -75,6 +75,8 @@ closing_rates as (
     select from_currency, to_currency, toUInt16(fiscal_year) as fiscal_year, toUInt16(fiscal_period) as fiscal_period,
         anyIf(toFloat64(rate), rate_type = 'Closing') as closing_rate
     from {{ source('epm_staging', 'group_exchange_rates') }}
+    {# konsol#348 S4-Q7 (a): the actuals Rate Set only, as the model reads #}
+    where {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 

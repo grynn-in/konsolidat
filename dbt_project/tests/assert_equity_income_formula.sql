@@ -49,6 +49,7 @@ average_rates as (
         toUInt16(fiscal_period) as rate_period,
         anyIf(toFloat64(rate), rate_type = 'Average') as average_rate
     from {{ source('epm_staging', 'group_exchange_rates') }}
+    where {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 )
 

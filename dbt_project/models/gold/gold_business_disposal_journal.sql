@@ -228,7 +228,9 @@ disposals_all as (
 ),
 
 {# the governed Closing rate per (from, to, rate period); the same rows
-   gold_consolidated_trial_balance translates at #}
+   gold_consolidated_trial_balance translates at: the one Rate Set flagged
+   is_actuals (konsol#348 S4 W2, actuals_rate_set_predicate), never a
+   budget's set #}
 closing_rates as (
     select
         from_currency,
@@ -238,6 +240,7 @@ closing_rates as (
         any(toFloat64(rate)) as closing_rate
     from {{ source('epm_staging', 'group_exchange_rates') }}
     where rate_type = 'Closing'
+      and {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 
