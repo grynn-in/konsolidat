@@ -2,6 +2,9 @@
     config(
         materialized='table',
         query_settings={'query_plan_enable_multithreading_after_window_functions': 0},
+        pre_hook=[
+            "{{ budget_rate_guard() }}"
+        ],
         engine='MergeTree()',
         order_by='tuple()'
     )
@@ -51,6 +54,13 @@
 
    Fully-consolidated budget layers (CTA, NCI attribution) are W6's model; nothing here reads or is
    read by the close (gold_fully_consolidated_tb, the close fingerprint). #}
+
+{# konsol#348 S4 (W5): the first and only pre_hook, budget_rate_guard (macros/budget_rates.sql),
+   raises BEFORE the table is replaced when a budget key has no usable rate in its Cycle's set,
+   naming scenario, Cycle, set, currency pair, rate period and reason. It also reads the currencies'
+   reference magnitudes; declared here so dbt knows the dependency at parse time (the body reads the
+   calendar and the Cycles itself). #}
+-- depends_on: {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }} {{ source('epm_staging', 'budget_cycles') }}
 
 with {{ budget_consolidation_inputs() }},
 

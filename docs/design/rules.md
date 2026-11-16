@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **183** |
-| carrying their reasoning | 162 |
-| citing the issue that caused them | 156 |
+| assertions | **184** |
+| carrying their reasoning | 163 |
+| citing the issue that caused them | 157 |
 | severity `warn` (reports, does not stop a build) | 23 |
-| severity `error` (stops the build, and its children) | 160 |
+| severity `error` (stops the build, and its children) | 161 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,7 +25,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 33
+- [Currency and translation](#currency-and-translation) — 34
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 12
@@ -233,6 +233,14 @@ konsol refuses an Annual Input or a Budget Entry line whose currency is not the 
 decided 14 Nov 2026 under Deepak Pai's standing rule): the budget rollup to a reporting hierarchy node keeps every Budget Cycle and every currency apart. gold_spread_budget carries `cycle` (B4) and `currency` (B4, B7): a forecast scenario holds one approved Cycle per round, and rounds must never sum; a budget line is in its entity's accounting currency, and amounts in two currencies must never sum. gold_budget_at_hierarchy_node therefore carries both and groups by both, as gold_tb_at_hierarchy_node carries every column of its row grain (gold_trial_balance has no currency; the entity's is one, so grouping by it never splits a row). Checked at the leaves. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's period_amount per (scenario, cycle, currency, entity, year, period, account, layer) must equal the fact's over the rows whose dimension value is a leaf of that hierarchy. A node model without the cycle (or currency) column is compared on the rest of the key, so each round's fact rows meet the node's sum across rounds and the test fails rather than errors: two rounds of -100 and -110 against one node row of -210. konsolidat#220: a code may be a leaf in several dated tranches. A fact row matches only the leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not declare drops out of both sides, QA3 a). Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them. One row per mismatched key; error severity. Fixtures: dbt_project/test_fixtures/budget_node_two_rounds.sql.
 
 <sub>`error` · `tests/assert_budget_node_per_cycle_and_currency.sql` · konsol#348 konsolidat#220</sub>
+
+### `budget_translated_currency_has_a_governed_rate`
+
+**konsol#348 S4 (W5): every currency the consolidated budget translates has a usable governed rate IN ITS CYCLE'S Rate Set, for its rate period.**
+
+A budget translates at the set its Budget Cycle declares (BUD-3; epm_staging.budget_cycles.rate_set), never at the actuals set and never at 1.0, so a rate approved only in the actuals set leaves the budget key missing here. One row per (scenario, cycle, rate set, from-currency, group reporting currency, rate year, rate period) with the reason: missing (no approved Closing and Average rate in that set), duplicate (more than one of a type in that set), invalid (zero, negative or not finite), implausible (more than 10x from the two currencies' reference magnitudes, when both are known). Built from the same macro as the model's pre_hook guard (budget_rate_gaps(), macros/ budget_rates.sql): the guard stops the budget build on the first 50 keys, this test lists all. The keys are the model's own: the approved Cycles' fact rows, the entity's currency, the groups the entity line-consolidates into at that period (ownership resolved on the budget's spine), the group's reporting currency, same-currency rows excluded, the period mapped through rate_period_map(). The actuals' twin is assert_every_translated_currency_has_a_governed_rate; neither reads the other's keys, so a missing budget rate never stops the actuals build, and a missing actuals rate never stops the budget. The rate rows are read through budget_rate_set_predicate, the budget's rate_set_predicate: the Cycles' sets, counted per set.
+
+<sub>`error` · `tests/assert_budget_translated_currency_has_a_governed_rate.sql` · konsol#348</sub>
 
 ### `conversion_factor_known`
 
