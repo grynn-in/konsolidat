@@ -15,8 +15,11 @@
 -- lines cannot be the only evidence: an undeclared account would hide the very exit that needs it. The second
 -- evidence is the carried balance itself, read where the journal reads it: gold_consolidated_trial_balance,
 -- non-equity balance sheet accounts of (group, entity) summed over the periods before the exit period, any
--- account above the materiality floor. (Goodwill, FVA and NCI come from other layers; they exist only with an
--- acquisition, whose balance sheet accounts show here too.)
+-- account above the materiality floor, from the period after the previous exit (or full Business Disposal) of the
+-- entity in the group up to AND INCLUDING the exit period P: the span the journal reverses (its from_ord bound,
+-- #358 re-review F2). Balances that first appear in P count; the evidence read strictly before P let an entity
+-- bought and lost with its first balances in P pass with no account declared. (Goodwill, FVA and NCI come from
+-- other layers; they exist only with an acquisition, whose balance sheet accounts show here too.)
 --
 -- What is required:
 --   root_row                  the group's root row in epm_gold.consolidation_groups (data_area_id = ''), read with
@@ -50,6 +53,55 @@ chart as (
     group by main_account_id
 ),
 
+{# the lower bound of what each exit reverses, as gold_ownership_exit_journal computes from_ord: the period after the
+   entity's previous exit, and after its latest full Business Disposal before P (ord = FY x 1000 + period; 0 = all
+   history, join_use_nulls = 0 reads an absent earlier event as 0) #}
+exit_prev as (
+    select
+        consolidation_group, data_area_id, fiscal_year, fiscal_period,
+        lagInFrame(toUInt32(fiscal_year) * 1000 + fiscal_period, 1, toUInt32(0)) over (
+            partition by consolidation_group, data_area_id
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and current row
+        ) as previous_exit_ord
+    from {{ ownership_exits() }}
+),
+
+exit_prev_disposal as (
+    select
+        x.consolidation_group as consolidation_group,
+        x.data_area_id as data_area_id,
+        x.fiscal_year as fiscal_year,
+        x.fiscal_period as fiscal_period,
+        max(toUInt32(d.fiscal_year) * 1000 + d.fiscal_period) as disposal_ord
+    from {{ ownership_exits() }} as x
+    inner join (
+        select distinct consolidation_group, data_area_id, fiscal_year, fiscal_period
+        from {{ ref('gold_business_disposal_journal') }}
+    ) as d
+        on d.consolidation_group = x.consolidation_group
+        and d.data_area_id = x.data_area_id
+    where (toUInt16(d.fiscal_year), toUInt16(d.fiscal_period)) < (x.fiscal_year, x.fiscal_period)
+    group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period
+),
+
+exit_span as (
+    select
+        x.consolidation_group as consolidation_group,
+        x.data_area_id as data_area_id,
+        x.fiscal_year as fiscal_year,
+        x.fiscal_period as fiscal_period,
+        greatest(if(pe.previous_exit_ord = 0, toUInt32(0), pe.previous_exit_ord + 1),
+                 if(pd.disposal_ord = 0, toUInt32(0), pd.disposal_ord + 1)) as from_ord
+    from {{ ownership_exits() }} as x
+    left join exit_prev as pe
+        on pe.consolidation_group = x.consolidation_group and pe.data_area_id = x.data_area_id
+        and pe.fiscal_year = x.fiscal_year and pe.fiscal_period = x.fiscal_period
+    left join exit_prev_disposal as pd
+        on pd.consolidation_group = x.consolidation_group and pd.data_area_id = x.data_area_id
+        and pd.fiscal_year = x.fiscal_year and pd.fiscal_period = x.fiscal_period
+),
+
 ctb_carried as (
     select
         x.consolidation_group as consolidation_group,
@@ -58,7 +110,7 @@ ctb_carried as (
         toUInt16(x.fiscal_period) as fiscal_period,
         c.main_account as main_account,
         sum(toFloat64(coalesce(c.group_amount, 0.0))) as amount
-    from {{ ownership_exits() }} as x
+    from exit_span as x
     inner join {{ ref('gold_consolidated_trial_balance') }} as c
         on c.consolidation_group = x.consolidation_group and c.data_area_id = x.data_area_id
     inner join (
@@ -68,8 +120,9 @@ ctb_carried as (
         group by main_account_id
     ) as a
         on a.main_account_id = c.main_account
-    where toUInt32(c.fiscal_year) * 1000 + toUInt32(c.fiscal_period)
-        < toUInt32(x.fiscal_year) * 1000 + toUInt32(x.fiscal_period)
+    where toUInt32(c.fiscal_year) * 1000 + toUInt32(c.fiscal_period) >= x.from_ord
+        and toUInt32(c.fiscal_year) * 1000 + toUInt32(c.fiscal_period)
+        <= toUInt32(x.fiscal_year) * 1000 + toUInt32(x.fiscal_period)
     group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period, c.main_account
     having abs(amount) > {{ materiality_floor() }}
 ),

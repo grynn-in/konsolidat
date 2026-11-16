@@ -34,9 +34,10 @@
    The exit stop (konsolidat#335, X3c): a bare end of the link with no
    Business Disposal (ownership_exits()) stops the schedule the same way, before
    the exit period; the earlier of the disposal and the exit counts. Per deal
-   (review F5): only an exit or disposal AFTER the deal's acquisition period
-   stops its schedule; one before it ended an earlier holding, and a
-   re-acquisition amortises on its own schedule.
+   (review F5, #358 re-review F3): only an exit (end_date) or disposal
+   (disposal_date) dated AFTER the deal's acquisition date stops its schedule;
+   one before it ended an earlier holding, and a re-acquisition amortises on
+   its own schedule. Bought and lost in one period: no instalment posts.
 
    The disposal stop (row J5b): a submitted Business Disposal
    (epm_staging.business_disposals) for the same group and entity ends the
@@ -120,7 +121,8 @@ stop_events as (
         bd.consolidation_group as consolidation_group,
         bd.disposed_entity as data_area_id,
         toUInt16(fp.fiscal_year) as ev_year,
-        toUInt16(fp.fiscal_period) as ev_period
+        toUInt16(fp.fiscal_period) as ev_period,
+        bd.disposal_date as ev_date
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where {{ deal_period_holds('fp', 'bd.disposal_date') }}
@@ -137,15 +139,23 @@ stop_events as (
         x.consolidation_group as consolidation_group,
         x.data_area_id as data_area_id,
         toUInt16(x.fiscal_year) as ev_year,
-        toUInt16(x.fiscal_period) as ev_period
+        toUInt16(x.fiscal_period) as ev_period,
+        {# 1970-01-01 = no end date caused the exit (a method change): the period comparison decides #}
+        ifNull(x.end_date, toDate('1970-01-01')) as ev_date
     from {{ ownership_exits() }} as x
 ),
 
-{# the stop of each deal (konsolidat#335 review F5): the first exit or
-   disposal of its entity strictly AFTER the deal's acquisition period. An
-   event before the deal ended an earlier holding; a re-acquisition starts a
-   new schedule that it must not stop. The ends of the equi-join keys match
-   the group and entity; the period comparison is a post-join filter. #}
+{# the stop of each deal (konsolidat#335 review F5; #358 re-review F3): the
+   first exit (its end_date) or disposal (its disposal_date) of its entity
+   dated AFTER the deal's acquisition_date. An event before the deal ended an
+   earlier holding; a re-acquisition starts a new schedule that it must not
+   stop. By date, not period: an entity bought and lost in the same period
+   stops (the exit journal reverses its goodwill through that period, so the
+   schedule posts nothing), while an earlier holding's end in the
+   re-acquisition's own period, dated before the acquisition, does not. An
+   exit with no end date (ev_date 1970-01-01) falls back to the period
+   comparison. The equi-join keys match the group and entity; the comparison
+   is a post-join filter. #}
 disposal_stop as (
     select
         dg.deal as deal,
@@ -156,7 +166,9 @@ disposal_stop as (
     inner join stop_events as e
         on e.consolidation_group = dg.consolidation_group
         and e.data_area_id = dg.data_area_id
-    where (e.ev_year, e.ev_period) > (dg.acquisition_year, dg.acquisition_period)
+    where if(e.ev_date = toDate('1970-01-01'),
+             (e.ev_year, e.ev_period) > (dg.acquisition_year, dg.acquisition_period),
+             e.ev_date > dg.acquisition_date)
     group by dg.deal
 ),
 
