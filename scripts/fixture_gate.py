@@ -88,7 +88,7 @@ sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
     FIXTURE_DIMENSIONS, LAYERS, budget_dimension_columns, copy_project, fixture_dimension_vars, rewrite,
-    run_dbt, split_sql,
+    fixture_only_tests, run_dbt, split_sql, zero_dimension_vars,
 )
 
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
@@ -102,7 +102,15 @@ DIM_VARS = fixture_dimension_vars()
 #: ALTERs those columns onto the input table itself and every value the zero pass
 #: relies on is the entity/account/period grain, so they run unchanged.
 ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
-ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": []})]
+#: konsol#348 S4 (W3 review): a fixture-only test (fixture_only_tests(), the
+#: ones carrying config(enabled=var('fixture_only_tests', false))) is enabled
+#: only for a fixture that names it, in an `expect` line or by its file name
+#: (fixture_vars below). Enabled on every call, it joined the build of a
+#: `refuse` fixture, errored on the data the model is meant to refuse, and dbt
+#: SKIPPED the model the fixture expected REFUSED. The parse alone always
+#: enables them, so the manifest knows such a test's parents when a fixture
+#: needs them; a parse-time node is never run.
+PARSE_VARS = fixture_dimension_vars(fixture_only=True)
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")
@@ -266,11 +274,19 @@ def test_parents(manifest, tests):
 
 # ── one fixture ─────────────────────────────────────────────────────────────
 
+def fixture_vars(s, zero=False):
+    """The one --vars payload for this fixture: its dimensions, plus
+    fixture_only_tests only when the fixture names a fixture-only test."""
+    named = {t for t, v, _n in s["expect"] if v != "built"}
+    needs = bool(named & fixture_only_tests())
+    return zero_dimension_vars(fixture_only=needs) if zero else fixture_dimension_vars(fixture_only=needs)
+
+
 def passes(specs):
     """(spec, dim_vars, label) for each run: every fixture at FIXTURE_DIMENSIONS,
     then each ZERO_DIM_FIXTURES one again at `dimensions: []`."""
-    plan = [(s, DIM_VARS, s["name"]) for s in specs]
-    plan += [(s, ZERO_DIM_VARS, s["name"] + " [dimensions: []]")
+    plan = [(s, fixture_vars(s), s["name"]) for s in specs]
+    plan += [(s, fixture_vars(s, zero=True), s["name"] + " [dimensions: []]")
              for s in specs if s["name"] in ZERO_DIM_FIXTURES]
     return plan
 
@@ -457,7 +473,7 @@ def main():
     if leaks:
         sys.exit(f"refusing: the project copy still names epm_ in {leaks[:5]}")
     reset_scratch(client)
-    code, out = run_dbt(a.dbt, project, ["parse", *DIM_VARS], os.path.join(log_dir, "parse.log"))
+    code, out = run_dbt(a.dbt, project, ["parse", *PARSE_VARS], os.path.join(log_dir, "parse.log"))
     if code != 0:
         sys.exit(f"dbt parse failed (exit {code}); see {log_dir}/parse.log")
     with open(os.path.join(project, "target", "manifest.json"), encoding="utf-8") as f:

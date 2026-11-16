@@ -45,11 +45,18 @@ VALUES
   ('GBP', 'Pound sterling', 'L', 2, -0.10),
   ('EUR', 'Euro', 'E', 2, -0.05),
   ('USD', 'US Dollar', '$', 2, 0);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation reads rates of this set only.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'GBP', 2026, 0, 'Closing', 1.30, 'ZZ-GER-USD-2026-00'),
-  ('USD', 'GBP', 2026, 0, 'Average', 1.28, 'ZZ-GER-USD-2026-00');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'GBP', 2026, 0, 'Closing', 1.30, 'ZZ-GER-USD-2026-00', 'ZZACT'),
+  ('USD', 'GBP', 2026, 0, 'Average', 1.28, 'ZZ-GER-USD-2026-00', 'ZZACT');
 INSERT INTO epm_silver.silver_gl_entries
   (recid, data_area_id, accounting_date, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, debit_amount, credit_amount, partner_data_area_id, posting_layer)
 VALUES

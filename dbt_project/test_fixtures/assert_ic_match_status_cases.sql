@@ -56,11 +56,19 @@ INSERT INTO epm_gold.currencies
 VALUES
   ('EUR', 'Euro', 'E', 2, -0.05),
   ('USD', 'US Dollar', '$', 2, 0);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'EUR', 2026, 1, 'Closing', 1.20, 'ZZ-GER-2026-01'),
-  ('USD', 'EUR', 2026, 1, 'Average', 1.15, 'ZZ-GER-2026-01');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'EUR', 2026, 1, 'Closing', 1.20, 'ZZ-GER-2026-01', 'ZZACT'),
+  ('USD', 'EUR', 2026, 1, 'Average', 1.15, 'ZZ-GER-2026-01', 'ZZACT');
 INSERT INTO epm_gold.consolidation_groups
   (consolidation_group, data_area_id, entity_name, reporting_currency, ic_difference_account, ic_difference_tolerance, nci_account)
 VALUES
