@@ -111,3 +111,8 @@ INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
   ('ZZT2', 'ZZ-TBS-ZZT2', 'ZZS', 2027, 1, 2, now(), 'Period movement');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation guard refuses a build with zero flagged sets even when nothing is translated.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

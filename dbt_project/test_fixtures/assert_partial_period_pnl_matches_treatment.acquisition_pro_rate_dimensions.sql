@@ -146,3 +146,9 @@ INSERT INTO epm_staging.business_combination_acquired_balances
 VALUES
   ('BC-ZZG-ZZS-2026-03-11', 1, 'ZZ1000', 1000, 0, 'Cash'),
   ('BC-ZZG-ZZS-2026-03-11', 2, 'ZZ3000', -1000, 0, 'Share capital');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

@@ -109,3 +109,8 @@ INSERT INTO epm_staging.consolidation_adjustments
 VALUES
   ('ZZG', 'topside', 'ZZJ-00001', 'ZZP', 2026, 12, 'ZZ1000', 50, 0, 'accrued income', 'zz', 'Approved', 'zz', 2027, 1),
   ('ZZG', 'topside', 'ZZJ-00001', 'ZZP', 2026, 12, 'ZZ4000', 0, 50, 'accrued income', 'zz', 'Approved', 'zz', 2027, 1);
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation guard refuses a build with zero flagged sets even when nothing is translated.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

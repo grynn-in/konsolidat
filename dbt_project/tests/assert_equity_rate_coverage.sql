@@ -89,9 +89,12 @@ scoped as (
     where data_area_id != ''
 ),
 
+-- the actuals Rate Set's tranches only (konsol#348 S4 W2): a tranche approved in a budget's set
+-- covers nothing for the actuals
 rates as (
     select distinct consolidation_group, data_area_id
     from {{ source('epm_staging', 'historical_equity_rates') }}
+    where {{ actuals_rate_set_predicate() }}
 )
 
 select

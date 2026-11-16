@@ -44,11 +44,19 @@ INSERT INTO epm_staging.fiscal_periods
 VALUES
   (2026, 12, 'FY2026-P12', 'Dec 2026', 'Regular', '2026-12-01', '2026-12-31', 'Q4', 'Open'),
   (2026, 13, 'FY2026-P13', 'FY2026 closing', 'Closing', '2026-12-31', '2026-12-31', 'Q4', 'Open');
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('EUR', 'SEK', 2026, 12, 'Closing', 0.10, 'ZZ-GER-2026-12'),
-  ('EUR', 'SEK', 2026, 12, 'Average', 0.09, 'ZZ-GER-2026-12');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('EUR', 'SEK', 2026, 12, 'Closing', 0.10, 'ZZ-GER-2026-12', 'ZZACT'),
+  ('EUR', 'SEK', 2026, 12, 'Average', 0.09, 'ZZ-GER-2026-12', 'ZZACT');
 INSERT INTO epm_gold.gold_trial_balance
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, period_debit, period_credit, period_net_amount, transaction_count)
 VALUES

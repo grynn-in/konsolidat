@@ -56,10 +56,10 @@ def test_window_matches_the_consolidated_model():
     """Drift guard: the report's window is the consolidated model's filter.
 
     If gold_consolidated_trial_balance changes which periods it consolidates,
-    ownership_window_filter must change with it.
+    ownership_window_filter must change with it. konsol#348 S4 (W3): the
+    filter lives in the core the model calls, macros/consolidation_core.sql.
     """
-    path = os.path.join(PROJECT_ROOT, "dbt_project", "models", "gold",
-                        "gold_consolidated_trial_balance.sql")
+    path = os.path.join(PROJECT_ROOT, "dbt_project", "macros", "consolidation_core.sql")
     with open(path) as f:
         model = _flat(f.read())
     assert "where eo.consolidation_method not in ('equity', 'none') and eo.has_complete_chain = 1" in model

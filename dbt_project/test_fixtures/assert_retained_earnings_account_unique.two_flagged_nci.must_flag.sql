@@ -109,13 +109,20 @@ VALUES
   ('ZZC', 2026, 3, 'ZZ1100', 'ZZ receivables', 'Asset', 1, 0, 600, 0, 600, 1),
   ('ZZC', 2026, 3, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 400, 0, 400, 1),
   ('ZZC', 2026, 3, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 1000, -1000, 1);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation reads rates of this set only.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03'),
-  ('USD', 'SEK', 2026, 3, 'Average', 0.09, 'ZZ-GER-2026-03'),
-  ('USD', 'SEK', 2026, 4, 'Closing', 0.12, 'ZZ-GER-2026-04'),
-  ('USD', 'SEK', 2026, 4, 'Average', 0.11, 'ZZ-GER-2026-04');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'SEK', 2026, 3, 'Average', 0.09, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'SEK', 2026, 4, 'Closing', 0.12, 'ZZ-GER-2026-04', 'ZZACT'),
+  ('USD', 'SEK', 2026, 4, 'Average', 0.11, 'ZZ-GER-2026-04', 'ZZACT');
 INSERT INTO epm_gold.gold_trial_balance_by_partner
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, partner_data_area_id, period_debit, period_credit, period_net_amount, transaction_count, is_year_end_close)
 VALUES

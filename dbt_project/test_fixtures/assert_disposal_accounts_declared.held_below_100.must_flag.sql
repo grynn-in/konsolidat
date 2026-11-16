@@ -113,13 +113,21 @@ INSERT INTO epm_gold.currencies
 VALUES
   ('EUR', 'Euro', 'E', 2),
   ('USD', 'US Dollar', '$', 2);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03'),
-  ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03'),
-  ('USD', 'EUR', 2027, 3, 'Closing', 1.0, 'ZZ-GER-2027-03'),
-  ('USD', 'EUR', 2027, 3, 'Average', 1.0, 'ZZ-GER-2027-03');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'EUR', 2027, 3, 'Closing', 1.0, 'ZZ-GER-2027-03', 'ZZACT'),
+  ('USD', 'EUR', 2027, 3, 'Average', 1.0, 'ZZ-GER-2027-03', 'ZZACT');
 INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
 VALUES
