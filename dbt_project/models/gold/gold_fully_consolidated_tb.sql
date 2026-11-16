@@ -189,7 +189,8 @@ side_slice_shares as (
    (2B: only slices aligned with the side's to-date net take a share; 1B: the
    slices must cover leg_coverage() x |L(t)|, else the whole L(t) sits on the
    blank slice), and each period posts the change in each slice's to-date
-   share — the lagInFrame pattern gold_ic_eliminations itself uses. A slice
+   share — the to-date difference gold_ic_eliminations takes with lagInFrame
+   (bal_posted takes it with arrays; see there). A slice
    whose share falls is posted the reversal even in a period in which the leg
    did not change. assert_ic_slice_to_date_eliminated pins it.
 
@@ -368,17 +369,30 @@ bal_to_date as (
     from bal_cover
 ),
 
-{# what each period posts: the change in the slice's to-date share #}
+{# what each period posts: the change in the slice's to-date share.
+   An array difference, not lagInFrame: ClickHouse 24.8 is killed (out of
+   memory, nothing logged; exit 137) running a window over bal_to_date when
+   the IC inputs are empty and max_threads > 2, which is every first build on
+   a fresh site and the zero-dimension CI build (#260 CI, 16 Nov 2026). The
+   grid is distinct per (key, year, period), so the previous array element is
+   the row lagInFrame would read, and the first period posts its whole share. #}
 bal_posted as (
     select
-        *,
-        elim_td - lagInFrame(elim_td, 1, toFloat64(0)) over (
-            partition by consolidation_group, rule_id, entity, partner, account, is_whole
-                         {{ dim_group_by(leading=true) }}
-            order by fiscal_year, fiscal_period
-            rows between unbounded preceding and current row
-        ) as posted
-    from bal_to_date
+        consolidation_group, rule_id, entity, partner, account, is_whole,
+        {{ dim_select(trailing=true) }}
+        p.1 as fiscal_year, p.2 as fiscal_period, p.3 as elim_td, p.4 as posted
+    from (
+        select
+            consolidation_group, rule_id, entity, partner, account, is_whole,
+            {{ dim_select(trailing=true) }}
+            arraySort(x -> (x.1, x.2), groupArray((fiscal_year, fiscal_period, elim_td))) as s,
+            arrayJoin(arrayMap(
+                i -> (s[i].1, s[i].2, s[i].3, s[i].3 - if(i = 1, toFloat64(0), s[i - 1].3)),
+                arrayEnumerate(s))) as p
+        from bal_to_date
+        group by consolidation_group, rule_id, entity, partner, account, is_whole
+                 {{ dim_group_by(leading=true) }}
+    )
 ),
 
 ic_elims as (
