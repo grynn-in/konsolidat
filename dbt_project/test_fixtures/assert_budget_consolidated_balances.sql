@@ -1,9 +1,12 @@
--- gate: build gold_consolidated_budget_tb gold_fully_consolidated_budget assert_budget_consolidated_balances
+-- gate: build gold_consolidated_budget_tb gold_fully_consolidated_budget assert_budget_consolidated_balances assert_budget_consolidated_grain_unique assert_budget_translation_rate_resolved
 -- gate: expect gold_fully_consolidated_budget built
 -- gate: expect assert_budget_consolidated_balances pass
+-- gate: expect assert_budget_consolidated_grain_unique pass
+-- gate: expect assert_budget_translation_rate_resolved pass
 -- assert_budget_consolidated_balances (konsol#348 S4 W6): must PASS, and both budget models must
 -- build. The fully consolidated budget's three layers (entity, cta, nci_attribution) sum to 0 per
--- (group, scenario, cycle, layer, entity, period) for a two-currency, partly owned entity.
+-- (group, scenario, cycle, layer, entity, period) for a two-currency, partly owned entity. The
+-- W8 grain and rate tests must pass on the same built rows (one row per key; every row rated).
 --
 -- One EUR entity ZZE1 in a USD group ZZG, 80% owned (full method) since 2020; the group's root
 -- declares nci_account ZZ3500 and the chart flags ZZ3000 as retained earnings. The approved Cycle
