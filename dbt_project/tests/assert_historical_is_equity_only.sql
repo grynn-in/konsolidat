@@ -64,7 +64,8 @@ union all
 {# The rate half of finding 4. gold_consolidated_trial_balance joins
    historical_equity_rates on (owner group, data_area_id, main_account) and then
    applies the joined rate only where `etb.fx_method = 'historical'`, fx_method
-   being the chart's. So a rate keyed to an account the chart does not type as
+   being the chart's. An account is equity or not whatever Rate Set the rate is
+   in (konsol#348 S4-Q1 c), so this judges every Rate Set and names the set. So a rate keyed to an account the chart does not type as
    equity is read, dropped, and never mentioned: the balance translates at the
    closing rate as if the rate had never been entered. "Not an equity account"
    covers both readings of the same mistake — an account the chart types as
@@ -77,6 +78,7 @@ select
     r.main_account as main_account_id,
     concat(
         'consolidation group ', r.consolidation_group, ', entity ', r.data_area_id,
+        ', Rate Set ', r.rate_set,
         ': the Historical Equity Rate for main account ', r.main_account,
         ' is ignored — that account is not an Equity account of the governed chart,',
         ' and gold_consolidated_trial_balance applies a historical rate only where',

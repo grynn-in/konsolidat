@@ -12,6 +12,11 @@ the test must PASS on; `<test_name>.must_flag.sql` holds rows the test must stil
 - Use an explicit column list in every INSERT so a fixture keeps working when a column is added.
 - A fixture may open with `ALTER TABLE epm_<layer>.<table> ADD COLUMN IF NOT EXISTS …;` statements
   (run first, in order) when it needs a column the live DDL does not have yet.
+- A fixture that seeds a governed or historical rate names the rate's `rate_set`, and seeds exactly
+  one `epm_staging.rate_sets` row flagged `is_actuals = 1` (`'ZZACT'`); so does every fixture that
+  builds `gold_consolidated_trial_balance`, whose guard refuses a build with zero or two flagged sets
+  even when nothing is translated (konsol#348 S4; `tests/test_rate_sets_ddl.py` pins the first rule).
+  A second set (`'ZZBUD'`, `is_actuals = 0`) holds rates the actuals must not read.
 - A consolidation fixture may `CREATE TABLE IF NOT EXISTS epm_staging.<table> (<body>) …;` the deal
   tables konsol owns (`business_combinations`, `business_combination_consideration`,
   `business_combination_acquired_balances`, `business_combination_costs`, `business_disposals`,

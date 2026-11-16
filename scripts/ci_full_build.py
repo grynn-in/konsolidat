@@ -57,7 +57,6 @@ it) or `--yes-destroy-this-warehouse`. Never point it at a live stack.
 """
 
 import argparse
-import json
 import os
 import re
 import subprocess
@@ -68,7 +67,7 @@ sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
     FIXTURE_DIMENSIONS, budget_dimension_columns, fixture_dimension_vars, fixture_sql,
-    run_dbt, split_sql, summary,
+    run_dbt, split_sql, summary, zero_dimension_vars,
 )
 
 PROJECT = os.path.join(REPO, "dbt_project")
@@ -78,9 +77,11 @@ SCHEMA_SQL = ("clickhouse/init-db.sql", "clickhouse/raw-schema.sql")
 #: reintroduce exactly the coverage gap this job was added to close.
 #: konsol#287: the shipped default declares no dimension, so this leg builds at
 #: the fixtures' declared ones; the zero-dimension leg below is the default.
-FULL_BUILD = ["build", *fixture_dimension_vars()]
+FULL_BUILD = ["build", *fixture_dimension_vars(fixture_only=True)]
 #: konsolidat#220's standing guard.
-ZERO_DIM_BUILD = ["build", "--full-refresh", "--vars", json.dumps({"dimensions": []})]
+#: Both legs enable the fixture-only tests (konsol#348 S4 W3 review): a full
+#: build has no refuse path, every ERROR or SKIP fails it.
+ZERO_DIM_BUILD = ["build", "--full-refresh", *zero_dimension_vars(fixture_only=True)]
 
 
 def apply_schema(client):

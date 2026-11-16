@@ -35,7 +35,12 @@ with expected as (
     left join {{ rate_period_map() }} as rpm
         on rpm.fiscal_year = tb.fiscal_year
         and rpm.fiscal_period = tb.fiscal_period
-    left join {{ source('epm_staging', 'group_exchange_rates') }} as r
+    left join (
+        {# the actuals Rate Set's rates only, as the model reads them (konsol#348 S4 W2) #}
+        select from_currency, to_currency, fiscal_year, fiscal_period, rate_type, rate
+        from {{ source('epm_staging', 'group_exchange_rates') }}
+        where {{ actuals_rate_set_predicate() }}
+    ) as r
         on r.rate_type = 'Average'
         and r.from_currency = ec.accounting_currency
         and r.to_currency = grp.reporting_currency

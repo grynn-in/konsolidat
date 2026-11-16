@@ -47,6 +47,7 @@ entity_currency as (
     group by data_area_id
 ),
 
+-- the actuals Rate Set's Closing rates, as the journals read them (konsol#348 S4 W2)
 closing_rates as (
     select
         from_currency,
@@ -55,6 +56,7 @@ closing_rates as (
         toUInt16(fiscal_period) as fiscal_period
     from {{ source('epm_staging', 'group_exchange_rates') }}
     where rate_type = 'Closing'
+      and {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 
