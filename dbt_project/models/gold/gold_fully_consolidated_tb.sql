@@ -172,6 +172,215 @@ side_slice_shares as (
     select * from side_shares_whole
 ),
 
+{# PR #260 review F1: a BALANCE pair's matched leg is split TO DATE.
+
+   gold_ic_eliminations values a balance-sheet pair at its balance to date and
+   posts each period the CHANGE in the to-date elimination (decision 14). The
+   period path above splits a leg by what each slice MOVED in the period, which
+   is the wrong base for a change in a to-date amount:
+     (a) the partner books a period late: the side moved nothing in the period
+         the leg is posted, so the whole leg fell on the blank slice, and the
+         slice holding the balance kept it un-eliminated for ever;
+     (b) the side reclassifies its receivable between two slices: the leg is 0,
+         so the first slice kept an elimination against a balance it no longer
+         holds and the second was never eliminated.
+   So for a balance pair's MATCHED leg, the TO-DATE elimination L(t) is split by
+   each slice's TO-DATE balance, under the same two rules as the period path
+   (2B: only slices aligned with the side's to-date net take a share; 1B: the
+   slices must cover leg_coverage() x |L(t)|, else the whole L(t) sits on the
+   blank slice), and each period posts the change in each slice's to-date
+   share — the lagInFrame pattern gold_ic_eliminations itself uses. A slice
+   whose share falls is posted the reversal even in a period in which the leg
+   did not change. assert_ic_slice_to_date_eliminated pins it.
+
+   Movement-basis (P&L) pairs are period-valued and keep the period split. The
+   DIFFERENCE legs keep the period split too: how a residual is sliced is the
+   open HMD Q1 on #260, not this change.
+
+   #262: every window here runs over the small per-side grid built from
+   gold_ic_side_slices and gold_ic_eliminations, never over the CTB. #}
+bal_leg_sides as (
+    select consolidation_group, fiscal_year, fiscal_period, rule_id,
+           debit_entity as entity, credit_entity as partner, debit_account as account,
+           toFloat64(debit_elimination) as leg
+    from {{ ref('gold_ic_eliminations') }}
+    where basis = 'balance' and elimination_kind = 'matched'
+    union all
+    select consolidation_group, fiscal_year, fiscal_period, rule_id,
+           credit_entity as entity, debit_entity as partner, credit_account as account,
+           toFloat64(credit_elimination) as leg
+    from {{ ref('gold_ic_eliminations') }}
+    where basis = 'balance' and elimination_kind = 'matched'
+),
+
+bal_legs as (
+    select consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account,
+           sum(leg) as leg
+    from bal_leg_sides
+    group by consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
+),
+
+bal_sides as (
+    select distinct consolidation_group, rule_id, entity, partner, account from bal_legs
+),
+
+{# the side's slices, per period, for the sides that have a balance leg #}
+bal_slices as (
+    select
+        s.consolidation_group as consolidation_group, s.fiscal_year as fiscal_year,
+        s.fiscal_period as fiscal_period, d.rule_id as rule_id,
+        s.entity as entity, s.partner as partner, s.account as account,
+        {{ dim_select_or_blank('s.', available=var('dimensions'), trailing=true) }}
+        sum(s.mov_group) as mov
+    from {{ ref('gold_ic_side_slices') }} as s
+    inner join bal_sides as d
+        on d.consolidation_group = s.consolidation_group and d.entity = s.entity
+        and d.partner = s.partner and d.account = s.account
+    group by s.consolidation_group, s.fiscal_year, s.fiscal_period, d.rule_id,
+             s.entity, s.partner, s.account
+             {{ dim_group_by('s.', leading=true) }}
+),
+
+{# every period in which the side's leg or any of its slices changes #}
+bal_grid as (
+    select distinct consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
+    from (
+        select consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account from bal_legs
+        union all
+        select consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account from bal_slices
+    )
+),
+
+{# L(t), the side's matched elimination to date. join_use_nulls=0: a grid
+   period with no leg row fills 0, which is what it posted. #}
+bal_leg_to_date as (
+    select
+        g.consolidation_group as consolidation_group, g.fiscal_year as fiscal_year,
+        g.fiscal_period as fiscal_period, g.rule_id as rule_id,
+        g.entity as entity, g.partner as partner, g.account as account,
+        sum(l.leg) over (
+            partition by g.consolidation_group, g.rule_id, g.entity, g.partner, g.account
+            order by g.fiscal_year, g.fiscal_period
+            rows between unbounded preceding and current row
+        ) as leg_td
+    from bal_grid as g
+    left join bal_legs as l
+        on l.consolidation_group = g.consolidation_group and l.fiscal_year = g.fiscal_year
+        and l.fiscal_period = g.fiscal_period and l.rule_id = g.rule_id
+        and l.entity = g.entity and l.partner = g.partner and l.account = g.account
+),
+
+bal_slice_keys as (
+    select distinct consolidation_group, rule_id, entity, partner, account
+           {{ dim_select(leading=true) }}
+    from bal_slices
+),
+
+{# each slice at every grid period of its side, so its to-date balance is
+   carried through the periods it did not move in #}
+bal_slice_grid as (
+    select
+        g.consolidation_group as consolidation_group, g.fiscal_year as fiscal_year,
+        g.fiscal_period as fiscal_period, g.rule_id as rule_id,
+        g.entity as entity, g.partner as partner, g.account as account,
+        {{ dim_select_or_blank('k.', available=var('dimensions'), trailing=true) }}
+        sum(m.mov) over (
+            partition by g.consolidation_group, g.rule_id, g.entity, g.partner, g.account
+                         {{ dim_group_by('k.', leading=true) }}
+            order by g.fiscal_year, g.fiscal_period
+            rows between unbounded preceding and current row
+        ) as bal_td
+    from bal_grid as g
+    inner join bal_slice_keys as k
+        on k.consolidation_group = g.consolidation_group and k.rule_id = g.rule_id
+        and k.entity = g.entity and k.partner = g.partner and k.account = g.account
+    left join bal_slices as m
+        on m.consolidation_group = g.consolidation_group and m.fiscal_year = g.fiscal_year
+        and m.fiscal_period = g.fiscal_period and m.rule_id = g.rule_id
+        and m.entity = g.entity and m.partner = g.partner and m.account = g.account
+        {% for d in var('dimensions') %}
+        and m.{{ d.name }} = k.{{ d.name }}
+        {%- endfor %}
+),
+
+{# separate passes: ClickHouse refuses a window inside a window #}
+bal_slice_side as (
+    select
+        *,
+        sum(bal_td) over (
+            partition by consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
+        ) as side_td
+    from bal_slice_grid
+),
+
+bal_slice_aligned as (
+    select
+        *,
+        {# side_td = 0 picks the positive slices: the declared default of the
+           period path (round 5, F6), applied to date #}
+        greatest(bal_td * if(side_td >= 0, 1, -1), 0) as aligned_s
+    from bal_slice_side
+),
+
+bal_gross as (
+    select consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account,
+           sum(aligned_s) as aligned_gross
+    from bal_slice_aligned
+    group by consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
+),
+
+{# 1B, to date: split only when the aligned slices cover the to-date leg. A side
+   with no slice row is a join miss, aligned_gross 0: not split. #}
+bal_cover as (
+    select
+        l.consolidation_group as consolidation_group, l.fiscal_year as fiscal_year,
+        l.fiscal_period as fiscal_period, l.rule_id as rule_id,
+        l.entity as entity, l.partner as partner, l.account as account,
+        l.leg_td as leg_td, g.aligned_gross as aligned_gross,
+        toUInt8(g.aligned_gross > 0 and g.aligned_gross >= {{ leg_coverage() }} * abs(l.leg_td)) as split
+    from bal_leg_to_date as l
+    left join bal_gross as g
+        on g.consolidation_group = l.consolidation_group and g.fiscal_year = l.fiscal_year
+        and g.fiscal_period = l.fiscal_period and g.rule_id = l.rule_id
+        and g.entity = l.entity and g.partner = l.partner and g.account = l.account
+),
+
+{# each slice's share of L(t), and the whole-leg row on the blank slice #}
+bal_to_date as (
+    select
+        a.consolidation_group as consolidation_group, a.fiscal_year as fiscal_year,
+        a.fiscal_period as fiscal_period, a.rule_id as rule_id,
+        a.entity as entity, a.partner as partner, a.account as account,
+        toUInt8(0) as is_whole,
+        {{ dim_select_or_blank('a.', available=var('dimensions'), trailing=true) }}
+        if(c.split = 1, c.leg_td * a.aligned_s / c.aligned_gross, 0) as elim_td
+    from bal_slice_aligned as a
+    inner join bal_cover as c
+        on c.consolidation_group = a.consolidation_group and c.fiscal_year = a.fiscal_year
+        and c.fiscal_period = a.fiscal_period and c.rule_id = a.rule_id
+        and c.entity = a.entity and c.partner = a.partner and c.account = a.account
+    union all
+    select
+        consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account,
+        toUInt8(1) as is_whole,
+        {{ dim_empty_strings(trailing=true) }}
+        if(split = 1, 0, leg_td) as elim_td
+    from bal_cover
+),
+
+{# what each period posts: the change in the slice's to-date share #}
+bal_posted as (
+    select
+        *,
+        elim_td - lagInFrame(elim_td, 1, toFloat64(0)) over (
+            partition by consolidation_group, rule_id, entity, partner, account, is_whole
+                         {{ dim_group_by(leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and current row
+        ) as posted
+    from bal_to_date
+),
+
 ic_elims as (
 
 {# konsolidat#245 layer 2, option C (Deepak Pai, 6 Oct 2026): each leg carries
@@ -234,6 +443,8 @@ ic_elims as (
              and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
+    {# a balance pair's MATCHED leg is split to date, in bal_posted above #}
+    where not (e.basis = 'balance' and e.elimination_kind = 'matched')
 
 
     union all
@@ -266,6 +477,23 @@ ic_elims as (
              and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
+    {# a balance pair's MATCHED leg is split to date, in bal_posted above #}
+    where not (e.basis = 'balance' and e.elimination_kind = 'matched')
+
+    union all
+
+    {# balance pairs, matched legs: the change in each slice's to-date share #}
+    select
+        consolidation_group, '' as data_area_id, fiscal_year, fiscal_period,
+        account as main_account, 'IC Elimination' as account_name,
+        {{ dim_select(trailing=true) }}
+        '' as reporting_currency,
+        posted as amount,
+        'ic_elimination' as adjustment_type,
+        rule_id as journal_id
+    from bal_posted
+    {# a float residue of a zero change is not a posting #}
+    where abs(posted) > 1e-9
 
 ),
 

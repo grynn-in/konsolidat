@@ -14,6 +14,11 @@
 -- carry many legs of very different sizes, so account-level max() is the wrong
 -- grain.
 --
+-- Movement-basis pairs only (PR #260 F1): a balance pair's slice posts the
+-- change in its TO-DATE share, which a reclass between slices makes larger than
+-- the period's leg (the leg can be 0). assert_ic_slice_to_date_eliminated checks
+-- balance pairs instead.
+--
 -- Error severity: a slice moved further than its leg is a wrong consolidated
 -- number, and every total-based check passes while it happens.
 with legs as (
@@ -22,7 +27,7 @@ with legs as (
         debit_entity as entity, credit_entity as partner, debit_account as account,
         sum(abs(debit_elimination)) as leg_size
     from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+    where elimination_view = 'group' and basis != 'balance'
     group by consolidation_group, fiscal_year, fiscal_period, rule_id,
              debit_entity, credit_entity, debit_account
 
@@ -33,7 +38,7 @@ with legs as (
         credit_entity as entity, debit_entity as partner, credit_account as account,
         sum(abs(credit_elimination)) as leg_size
     from {{ ref('gold_ic_eliminations') }}
-    where elimination_view = 'group'
+    where elimination_view = 'group' and basis != 'balance'
     group by consolidation_group, fiscal_year, fiscal_period, rule_id,
              credit_entity, debit_entity, credit_account
 ),

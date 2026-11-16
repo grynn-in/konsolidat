@@ -18,6 +18,9 @@
 -- design and carries the entire leg, which is the declared answer when the
 -- side cannot account for it.
 --
+-- Movement-basis (P&L) pairs only: a balance pair is checked to date by
+-- assert_ic_slice_to_date_eliminated (PR #260 F1).
+--
 -- Error severity: a slice moved past its own movement is a wrong consolidated
 -- number that every total-based check accepts.
 {# Two passes, because ClickHouse refuses a window function inside an
@@ -60,6 +63,13 @@ emitted as (
         sum(abs(amount)) as moved
     from {{ ref('gold_fully_consolidated_tb') }}
     where adjustment_type in ('ic_elimination', 'ic_elimination_nci')
+      {# PR #260 F1: a BALANCE pair is eliminated to date, so a slice's posting
+         in a period is the change in its to-date share and may exceed what it
+         moved in that period (a partner booking late, a reclass between
+         slices). Its per-slice check is assert_ic_slice_to_date_eliminated. #}
+      and journal_id not in (
+          select rule_id from {{ ref('gold_ic_eliminations') }} where basis = 'balance'
+      )
     group by consolidation_group, fiscal_year, fiscal_period, main_account
              {{ dim_group_by(leading=true) }}
 )
