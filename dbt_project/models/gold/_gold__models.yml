@@ -113,6 +113,49 @@ models:
       - name: rate_set
         description: "The Rate Set the row translated at: its Cycle's (epm_staging.budget_cycles.rate_set)."
 
+  - name: gold_fully_consolidated_budget
+    description: >
+      konsol#348 S4 (W6; S4-Q3 a, S4-Q4 a): the fully consolidated BUDGET, in
+      gold_fully_consolidated_tb's shape plus scenario_id, cycle and layer, over
+      gold_consolidated_budget_tb, so S5 reads the same columns for a budget as for the
+      actuals. Three layers, each per (scenario, cycle, layer): 'entity' (sum of
+      group_amount at the account and budget-dimension grain), 'cta' (the residual
+      -sum(group_amount) per group, entity and period, gold_fx_revaluation's formula) and
+      'nci_attribution' (gold_nci_attribution_journal's formula: the minority's share of
+      the result and of the CTA on the retained-earnings account, 'CTA' and the group's
+      nci_account). Within one (group, scenario, cycle, layer, entity, period) the layers
+      sum to 0 (assert_budget_consolidated_balances, error). BEFORE ELIMINATIONS
+      (konsol#427): a budget has no partner, so there is no 'ic_elimination' layer, and
+      every reader labels the figure so. The deal journals, 'topside' and 'equity_method'
+      are absent too (konsol#425): actuals-only journals with no scenario key. A table,
+      rebuilt whole; no orchestrator scope; nothing here reads or is read by the close.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: scenario_id
+        description: "The budget or forecast scenario the Cycle belongs to; part of the grain."
+      - name: cycle
+        description: "The approved Budget Cycle the rows were entered under; part of the grain, rounds are never summed."
+      - name: layer
+        description: "The budget layer (base / challenge / management / board); part of the grain, each consolidated on its own."
+      - name: adjustment_type
+        description: >
+          Layer: entity, cta or nci_attribution. Never ic_elimination (konsol#427, before
+          eliminations) nor a deal, topside or equity_method journal (konsol#425).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['entity', 'cta', 'nci_attribution']
+      - name: amount
+        description: "In the group's reporting currency, signed debit - credit like the actuals."
+      - name: journal_id
+        description: "'' on entity and cta rows; 'NCI-{group}-{entity}-{FY}-P{period}-{scenario}-{cycle}-{layer}' on an attribution line."
+
   - name: gold_ic_eliminations
     description: >
       Intercompany elimination entries, each with a debit and a credit leg that

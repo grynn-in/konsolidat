@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **184** |
-| carrying their reasoning | 163 |
-| citing the issue that caused them | 157 |
+| assertions | **185** |
+| carrying their reasoning | 164 |
+| citing the issue that caused them | 158 |
 | severity `warn` (reports, does not stop a build) | 23 |
-| severity `error` (stops the build, and its children) | 161 |
+| severity `error` (stops the build, and its children) | 162 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 28
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 29
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 16
@@ -985,6 +985,14 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
+
+### `budget_consolidated_balances`
+
+**konsol#348 S4 (W6;**
+
+S4-Q3 a): the fully consolidated BUDGET balances by construction, per consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's shape over gold_consolidated_budget_tb, with three layers: 'entity' (sum of group_amount), 'cta' (the residual, -sum(group_amount) per group, entity and period, the gold_fx_revaluation formula) and 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share of the result and of the CTA, a journal that sums to zero). So within one (group, scenario, cycle, layer, entity, period) the three adjustment types sum to 0: entity + cta is 0 by the residual's definition, and the attribution journal nets to 0 on its own. A row here means a layer was computed on a different key than the others: a CTA summed across budget layers or Cycles (telescoping), an NCI journal whose lines were dropped by the zero-line filter on one side only, or an entity layer that lost rows the residual saw. Not covered, by design (konsol#427, #425): a budget has no partner, so there is no 'ic_elimination' layer ("before eliminations"); deal journals and topside are actuals-only. Nothing is missing from the sum because nothing else is posted. Fixture: test_fixtures/assert_budget_consolidated_balances.sql (a EUR entity in a USD group, 80% owned, two layers, two periods; hand values in its header). Vacuous when no Budget Cycle is approved: the model is then empty. Tolerance 0.01 in the group's currency: the amounts are Float64 sums of Decimal x Float64 products.
+
+<sub>`error` · `tests/assert_budget_consolidated_balances.sql` · konsol#348 konsol#427 konsolidat#425</sub>
 
 ### `budget_consolidated_hand_table`
 
