@@ -129,3 +129,8 @@ VALUES
   ('ZZBB1', 'ZZ-TBS-B1', 'ZZB', 2026, 1, 2, '2026-02-05 09:00:00', 'Period movement'),
   ('ZZBA2', 'ZZ-TBS-A2', 'ZZA', 2026, 2, 2, '2026-03-05 09:00:00', 'Period movement'),
   ('ZZBB2', 'ZZ-TBS-B2', 'ZZB', 2026, 2, 2, '2026-03-05 09:00:00', 'Period movement');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation guard refuses a build with zero flagged sets even when nothing is translated.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

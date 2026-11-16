@@ -118,3 +118,9 @@ INSERT INTO epm_staging.ic_balances
   (selling_entity, buying_entity, fiscal_year, fiscal_period, ic_sales_amount, ending_inventory_from_ic)
 VALUES
   ('ZZP', 'ZZJ', 2026, 1, 1000, 1000);
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

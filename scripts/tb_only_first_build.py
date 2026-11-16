@@ -79,11 +79,49 @@ FIXTURE_DIMENSIONS = [
 ]
 
 
-def fixture_dimension_vars():
-    """dbt arguments that build at the fixtures' declared dimensions."""
+#: konsol#348 S4 (W3 review): a singular test that re-runs the consolidation
+#: core (assert_consolidation_core_grain_extra_is_a_partition) is disabled by
+#: default, `config(enabled=var('fixture_only_tests', false))`: on a site it cost
+#: twice the model it guards, and an error in it skips the consolidated trial
+#: balance's children. ci_full_build.py's two legs enable it (a full build has
+#: no refuse path), and the gate enables it for a fixture that names such a
+#: test and for no other: enabled on every gate call, it joined the build of a
+#: `refuse` fixture, errored first, and dbt SKIPPED the model the fixture
+#: expected REFUSED. dbt takes ONE --vars flag, so the var rides in the same
+#: payload as the dimensions. tests/test_fixture_only_tests.py pins all of it.
+FIXTURE_ONLY_TESTS = {"fixture_only_tests": True}
+FIXTURE_ONLY_CONFIG = re.compile(
+    r"\{\{\s*config\(\s*enabled\s*=\s*var\(\s*'fixture_only_tests'\s*,\s*false\s*\)\s*\)\s*\}\}")
+
+
+def fixture_only_tests():
+    """The singular tests that carry the fixture-only config, by name."""
+    tests_dir = os.path.join(REPO, "dbt_project", "tests")
+    found = set()
+    for root, _dirs, files in os.walk(tests_dir):
+        for name in files:
+            if name.endswith(".sql"):
+                with open(os.path.join(root, name), encoding="utf-8") as f:
+                    if FIXTURE_ONLY_CONFIG.search(f.read()):
+                        found.add(name[:-4])
+    return found
+
+
+def fixture_dimension_vars(fixture_only=False):
+    """dbt arguments that build at the fixtures' declared dimensions; with
+    fixture_only=True the fixture-only tests are enabled too."""
     import json
 
-    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS})]
+    return ["--vars", json.dumps({"dimensions": FIXTURE_DIMENSIONS, **(FIXTURE_ONLY_TESTS if fixture_only else {})})]
+
+
+def zero_dimension_vars(fixture_only=False):
+    """dbt arguments for the zero-dimension leg (konsolidat#220's guard: a site
+    that declares no dimension); with fixture_only=True the fixture-only tests
+    are enabled too."""
+    import json
+
+    return ["--vars", json.dumps({"dimensions": [], **(FIXTURE_ONLY_TESTS if fixture_only else {})})]
 
 
 def project_dimensions():
@@ -219,6 +257,12 @@ def fixture_sql(p):
         # assert_scenario_rows_declared fails rows under an undeclared id
         f"INSERT INTO {p}_gold.scenario_definitions (scenario_id, scenario_name, scenario_type, is_active) VALUES "
         "('ACTUAL', 'Actual', 'actual', 1), ('BUDGET', 'Budget', 'budget', 1), ('FORECAST', 'Forecast', 'forecast', 1)",
+        # konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals that a real
+        # site gets from konsol's patch (ACTUAL). gold_consolidated_trial_balance
+        # translates at that set's rates only, and its guard refuses a build
+        # with zero or two flagged sets even when nothing is translated
+        # (tests/test_rate_sets_ddl.py pins this row).
+        f"INSERT INTO {p}_staging.rate_sets (rate_set, label, is_actuals) VALUES ('ACTUAL', 'Actual', 1)",
         f"INSERT INTO {p}_raw.trial_balance_submissions (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at) VALUES "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ1000', 150, 0, '', 'ZZ-TBS-1', now()), "
         "('ZZB1', 'ZZOP', 2026, 1, 'ZZ3000', 0, 50, '', 'ZZ-TBS-1', now()), "

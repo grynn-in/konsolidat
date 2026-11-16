@@ -96,8 +96,15 @@ VALUES
   ('ZZC', 2026, 3, 'ZZ2000', 'ZZ payables', 'Liability', 1, 0, 0, 600, -600, 1),
   ('ZZC', 2026, 3, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 500, 0, 500, 1),
   ('ZZC', 2026, 3, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 500, -500, 1);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals; the consolidation reads rates of this set only.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03'),
-  ('USD', 'SEK', 2026, 3, 'Average', 0.10, 'ZZ-GER-2026-03');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'SEK', 2026, 3, 'Closing', 0.10, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'SEK', 2026, 3, 'Average', 0.10, 'ZZ-GER-2026-03', 'ZZACT');

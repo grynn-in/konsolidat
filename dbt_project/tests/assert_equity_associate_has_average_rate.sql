@@ -88,6 +88,7 @@ governed_average_rates as (
         countIf(rate_type = 'Average') as n_average,
         countIf(rate_type = 'Average' and not (isFinite(rate) and rate > 0)) as n_invalid
     from {{ source('epm_staging', 'group_exchange_rates') }}
+    where {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 )
 
