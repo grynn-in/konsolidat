@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **183** |
-| carrying their reasoning | 162 |
-| citing the issue that caused them | 156 |
+| assertions | **184** |
+| carrying their reasoning | 163 |
+| citing the issue that caused them | 157 |
 | severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 161 |
+| severity `error` (stops the build, and its children) | 162 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -28,7 +28,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Currency and translation](#currency-and-translation) — 32
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 16
+- [Intercompany](#intercompany) — 17
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
@@ -835,6 +835,14 @@ gold_ic_side_slices must be gold_ic_reconciliation's `sides` CTE split by the de
 No elimination slice may be moved further than it moved itself. THE ASSERTION NO TEST IN THIS LAYER MAKES, and the reason five rounds of guards all passed while the numbers were wrong. Every existing assertion here is satisfied by construction: shares lie in [0,1] and sum to 1, so "the slices sum to the leg" and "no slice exceeds the leg" cannot fail. The quantity that CAN be wrong is the one none of them compares — a slice's share of the leg against that slice's OWN movement. amount_i = |leg| x aligned_i / aligned_gross, so amount_i <= aligned_i holds exactly when aligned_gross >= |leg|. At leg_coverage() = 0.5 the gate allowed |leg| <= 2 x aligned_gross, so a slice could take twice what it booked: measured through the real chain, a cost centre that ever booked +100 ended at -100, on an intercompany receivable, with the account total exactly right. That is what this test exists to catch. Only the SLICED rows are checked. A whole-leg row is blank-dimensioned by design and carries the entire leg, which is the declared answer when the side cannot account for it. Error severity: a slice moved past its own movement is a wrong consolidated number that every total-based check accepts. Two passes, because ClickHouse refuses a window function inside an aggregate (ILLEGAL_AGGREGATION) — the same limit the model hit.
 
 <sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_to_date_eliminated`
+
+**konsolidat#245 option C, PR #260 review F1.**
+
+A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. The difference leg's slicing is an open decision (HMD Q1 on #260), so it is not asserted here. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
+
+<sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `unrealized_profit_at_operator_share`
 
