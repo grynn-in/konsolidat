@@ -1,32 +1,16 @@
--- konsol#348 S4 (W4): the hand-computed translated amounts of
+-- konsol#348 S4 (W4): the hand-computed translated amounts of the consolidated budget fixture
 -- test_fixtures/assert_budget_consolidated_hand_table.sql, as literals. Two Budget Cycles of one
--- scenario on DIFFERENT Rate Sets (ZZ-CY-HAND-A on ZZB1, ZZ-CY-HAND-B on ZZB2), each with two
--- layers (base, challenge) holding the same local rows: one EUR entity ZZE1 in a USD group ZZG,
--- 100% owned, FY2026 P6 and P7; ZZ1000 cash (balance sheet, closing) and ZZ4000 revenue (P&L,
--- average). The actuals set ZZACT holds a different rate (1.0) for every key.
---
---   set    P6 closing / average   P7 closing / average
---   ZZB1   1.10 / 1.05            1.20 / 1.15
---   ZZB2   2.00 / 1.90            2.20 / 2.10
---   ZZACT  1.00 / 1.00            1.00 / 1.00      (never read for a budget)
---
---   local, every (cycle, layer):  P6 ZZ1000 +100, ZZ4000 -100;  P7 ZZ1000 +50, ZZ4000 -50
---
--- translated = local x rate + retranslation (konsolidat#257: a closing-rate balance sheet key is
--- revalued at each period's closing rate: cum_local(prev) x (C(p) - C(prev))), per (cycle, layer):
---
---   cycle A: P6 ZZ1000 100 x 1.10 = 110;  P6 ZZ4000 -100 x 1.05 = -105
---            P7 ZZ1000 50 x 1.20 + 100 x (1.20 - 1.10) = 70;  P7 ZZ4000 -50 x 1.15 = -57.5
---   cycle B: P6 ZZ1000 100 x 2.00 = 200;  P6 ZZ4000 -100 x 1.90 = -190
---            P7 ZZ1000 50 x 2.20 + 100 x (2.20 - 2.00) = 130;  P7 ZZ4000 -50 x 2.10 = -105
---
--- What each wrong reading would give instead: the actuals set, 100 / -100 / 50 / -50; both sets
--- read without the Cycle's set on the rate key, two Closing rates per key, so NULL and a refused
--- build; the two layers telescoped in the retranslation window (cum_local 200 at P7), 80 and 150
--- for ZZ1000 P7; the two cycles telescoped, a closing-rate lag across sets. The test is vacuous
--- where the Cycle ZZ-CY-HAND-A is not approved (every real site): no expected row is built.
--- Flags one row per (cycle, layer, account, period) that is missing, unexpected or off by more
--- than 0.01.
+-- scenario declare DIFFERENT Rate Sets, each has two layers, and every (cycle, layer) holds the
+-- same local rows (one EUR entity in a USD group, 100% owned, FY2026 P6 and P7: a closing-rate
+-- cash account and an average-rate revenue account); the actuals set holds a different rate for
+-- every key. The fixture's header shows the rates and the arithmetic. Each (cycle, layer) must
+-- come out as that Cycle's set translates it alone, including the closing-rate retranslation of
+-- the cash balance at P7 (konsolidat#257). A model that read the actuals set, read every set
+-- without the Cycle's set on the rate key, or lost the layer or the cycle in a window partition
+-- (so one layer's balance was retranslated against another's) gives a different number here,
+-- and this test does not use the macros it checks. It is vacuous where the Cycle ZZ-CY-HAND-A
+-- is not approved (every real site): no expected row is built. Flags one row per (cycle, layer,
+-- account, period) that is missing, unexpected or off by more than 0.01.
 {{ config(severity='error') }}
 
 with expected as (

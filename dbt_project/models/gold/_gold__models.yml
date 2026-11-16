@@ -71,6 +71,48 @@ models:
           translated result (whatever its fx_method); the close period's CTA is
           then 0. Last column, added by the pre_hook ALTER.
 
+  - name: gold_consolidated_budget_tb
+    description: >
+      konsol#348 S4 (W4; S4-Q3 a, S4-Q4 a): the translated and consolidated BUDGET, in
+      gold_consolidated_trial_balance's shape plus scenario_id, cycle and layer, built
+      by the same consolidation_core macro. One row per (group, scenario, cycle, layer,
+      entity, period, account, budget dimensions), for the APPROVED Budget Cycles only
+      (epm_staging.budget_cycles; assert_budget_cycle_is_approved names the rest). Each
+      row translates at its Cycle's Rate Set (BUD-3), never the actuals set and never
+      1.0: a missing rate in that set stops this build by name (budget_rate_guard), and
+      only this build. Ownership is resolved on the budget's own period spine, so a
+      budget period with no trial balance row is consolidated
+      (assert_budget_consolidated_periods_complete). Before eliminations (konsol#427):
+      partner_data_area_id is '' on every row. A table, rebuilt whole; no orchestrator
+      scope. The CTA and NCI attribution layers are the FCTB-shaped model's (W6).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: scenario_id
+        description: "The budget or forecast scenario the Cycle belongs to."
+      - name: cycle
+        description: "The approved Budget Cycle (epm_staging.budget_cycles.name) the row was entered under; a forecast round is its own Cycle, and rounds are never summed."
+      - name: layer
+        description: "The budget layer (base / challenge / management / board); the final budget is the sum of layers, each consolidated on its own."
+      - name: local_amount
+        description: "The budget's period movement in the entity's accounting currency, signed debit - credit like the actuals (BUD-7), at the actuals' Decimal scale."
+      - name: translated_amount
+        description: "local_amount * translation_rate + retranslation_amount, at the rates of the Cycle's Rate Set."
+      - name: group_amount
+        description: "As gold_consolidated_trial_balance: 'full' equals translated_amount; 'proportional' is translated_amount * ownership_pct."
+      - name: nci_amount
+        description: "As gold_consolidated_trial_balance: 'full' is translated_amount * (1 - ownership_pct); 'proportional' is 0."
+      - name: partner_data_area_id
+        description: "Always '': a budget has no partner (konsol#427), so no intercompany elimination runs on it."
+      - name: retranslation_amount
+        description: "The balance sheet retranslation (konsolidat#257) on a closing-rate key, per (cycle, layer); 0 otherwise. A budget has no year-end close rows."
+      - name: rate_set
+        description: "The Rate Set the row translated at: its Cycle's (epm_staging.budget_cycles.rate_set)."
+
   - name: gold_ic_eliminations
     description: >
       Intercompany elimination entries, each with a debit and a credit leg that

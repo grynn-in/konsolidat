@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **180** |
-| carrying their reasoning | 159 |
-| citing the issue that caused them | 153 |
-| severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 158 |
+| assertions | **183** |
+| carrying their reasoning | 162 |
+| citing the issue that caused them | 156 |
+| severity `warn` (reports, does not stop a build) | 23 |
+| severity `error` (stops the build, and its children) | 160 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 28
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 16
@@ -977,6 +977,30 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
+
+### `budget_consolidated_hand_table`
+
+**konsol#348 S4 (W4): the hand-computed translated amounts of the consolidated budget fixture test_fixtures/assert_budget_consolidated_hand_table.sql, as literals.**
+
+Two Budget Cycles of one scenario declare DIFFERENT Rate Sets, each has two layers, and every (cycle, layer) holds the same local rows (one EUR entity in a USD group, 100% owned, FY2026 P6 and P7: a closing-rate cash account and an average-rate revenue account); the actuals set holds a different rate for every key. The fixture's header shows the rates and the arithmetic. Each (cycle, layer) must come out as that Cycle's set translates it alone, including the closing-rate retranslation of the cash balance at P7 (konsolidat#257). A model that read the actuals set, read every set without the Cycle's set on the rate key, or lost the layer or the cycle in a window partition (so one layer's balance was retranslated against another's) gives a different number here, and this test does not use the macros it checks. It is vacuous where the Cycle ZZ-CY-HAND-A is not approved (every real site): no expected row is built. Flags one row per (cycle, layer, account, period) that is missing, unexpected or off by more than 0.01.
+
+<sub>`error` · `tests/assert_budget_consolidated_hand_table.sql` · konsol#348 konsolidat#257</sub>
+
+### `budget_consolidated_periods_complete`
+
+**konsol#348 S4 (W4): every budget period an entity line-consolidates in is in the consolidated budget.**
+
+gold_consolidated_budget_tb resolves ownership on the BUDGET's own period spine (budget_consolidation_inputs(), macros/budget_rates.sql, through ownership_resolution_ctes()), not on gold_entity_ownership, whose spine is the periods the ACTUALS have rows in. A budget is entered before its year starts, so most budget periods have no trial balance row; joined to the actuals' ownership they had no ownership and vanished from the consolidation without an error. This test rebuilds the expected keys the same way the model does and names every one the model lacks: (group, scenario, cycle, layer, entity, year, period) for every fact row of an APPROVED Cycle (epm_staging.budget_cycles) whose entity has a currency and, at that period, a complete ownership chain into the group with method full or proportional. The core keeps every source row that survives the ownership join (a missing rate stops the build rather than dropping a row), so an expected key with no row in the model is a row the consolidation lost. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
+
+<sub>`error` · `tests/assert_budget_consolidated_periods_complete.sql` · konsol#348</sub>
+
+### `budget_cycle_is_approved`
+
+**konsol#348 S4 (W4, S4-Q2 a): a budget fact row names a Budget Cycle that is not approved.**
+
+gold_consolidated_budget_tb consolidates the APPROVED Cycles only: it joins gold_spread_budget to epm_staging.budget_cycles (konsol's write-through of submitted Cycles, which carries the Cycle's Rate Set) on the Cycle's name, and a row whose Cycle has no row there is not translated. That is correct (a Cycle still being entered has no declared rates to translate at), but it must not be silent: this test names every (scenario, cycle) the fact holds and the consolidation does not. Warn, not error: approved budget lines under a Cycle not yet approved are a normal state of entry, and a draft budget must never stop the build. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
+
+<sub>`warn` · `tests/assert_budget_cycle_is_approved.sql` · konsol#348</sub>
 
 ### `budget_fact_grain_unique`
 
