@@ -52,13 +52,25 @@
                        caller's: the windows need every period of the scope.
    p                   a prefix for every CTE name, so one query can call the
                        core twice (the partition test does).
+   rate_set_column     konsol#348 S4 (W4): none for the actuals (every row of
+                       one call translates at the one set rate_set_predicate
+                       selects, as before). The budget passes the name of a
+                       source column holding EACH ROW's Rate Set (its Cycle's,
+                       from epm_staging.budget_cycles): the set then joins the
+                       rate key, so one model holds Cycles on different sets
+                       and a key's rates are counted per set, never across
+                       sets. rate_set_predicate still narrows the rate rows to
+                       the sets in play (budget_rate_set_predicate(),
+                       macros/budget_rates.sql). With it none, nothing below
+                       changes: the three `if rate_set_column` blocks render
+                       nothing.
 
    Nothing here may add a column before partner_data_area_id of
    {p}consolidated: the actuals model appends by position (see its notes), and
    its final select orders partner_data_area_id, uses_historical_rate,
    retranslation_amount last. grain_extra columns sit after the dims, so a
    caller that passes any must place them in its own final select. #}
-{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='') %}
+{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='', rate_set_column=none) %}
 {%- if ownership_cte is none %}{{ exceptions.raise_compiler_error('consolidation_core: ownership_cte is required: a CTE or relation with gold_entity_ownership\'s columns, resolved on the caller\'s period spine') }}{% endif -%}
 {%- if rate_set_predicate is none or (rate_set_predicate | trim) == '' or (rate_set_predicate | trim) == '1 = 1' %}{{ exceptions.raise_compiler_error('consolidation_core: rate_set_predicate is required: actuals_rate_set_predicate() for the actuals, the Cycle\'s set for a budget; a predicate that selects every set reads two rates for one key') }}{% endif -%}
 {%- set extra = [] -%}
@@ -123,11 +135,33 @@
            early, so it translates at the closing rate, and assert_trial_balance_period_declared names it.
            Read by the as-of join and never selected: no column may be added (positional append). #}
         dp.window_end_date as period_date
+        {%- if rate_set_column %},
+        {# konsol#348 S4 (W4): the row's own Rate Set (the budget's Cycle's);
+           read by `rated`'s two rate joins and never selected into it. #}
+        tb.{{ rate_set_column }} as rate_set
+        {%- endif %}
     {# The caller's source CTE (its contract is in the header): the actuals
        model's is the partner-grained trial balance (konsol#159,
        gold_trial_balance_by_partner); the budget model's is the spread budget
        fact with the chart's statement flags. #}
     from {{ source_cte }} as tb
+    {# konsolidat#369: one table read that always produces a plan step. ClickHouse
+       24.8 sets a query's max_threads cap only on a storage read that produced a
+       step; an empty MergeTree table becomes "Read from NullSource" and sets
+       none. On a warehouse where EVERY table this reads is empty (a fresh site's
+       first build) the plan therefore has no cap: the sort before each window
+       step scatters its input into the pipeline's accumulated stream count
+       instead of max_threads, the stacked windows multiply it (5 -> 10 -> 50
+       window transforms for the actuals at max_threads 4, one stage more for
+       the budget) and the executor starts a thread per stream: 163 threads at
+       max_threads 8 for the actuals, CANNOT_SCHEDULE_TASK for the budget.
+       system.one always produces a read step, so the cap holds: peak threads =
+       max_threads + 1 on the same empty warehouse. One row, no column read,
+       nothing in the result. tests/test_consolidation_core_thread_cap.py holds
+       the measurements; query_plan_enable_multithreading_after_window_functions
+       = 0 on the callers removes the resize AFTER each window and is still
+       needed, but does not touch this scatter. #}
+    cross join system.one
     {# konsol#110: the currency comes from silver_entity_currencies — konsol's
        Entity master, and since konsolidat#255 nothing else. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a
@@ -250,9 +284,14 @@
         countIf(rate_type = 'Closing') as n_closing,
         countIf(rate_type = 'Average') as n_average,
         countIf(not (isFinite(rate) and rate > 0)) as n_invalid
+        {%- if rate_set_column %},
+        {# konsol#348 S4 (W4): counted per set, so two Cycles' sets holding a
+           rate for one key are two keys here, not a duplicate. #}
+        rate_set
+        {%- endif %}
     from {{ source('epm_staging', 'group_exchange_rates') }}
     where {{ rate_set_predicate }}
-    group by from_currency, to_currency, fiscal_year, fiscal_period
+    group by from_currency, to_currency, fiscal_year, fiscal_period{% if rate_set_column %}, rate_set{% endif %}
 ),
 
 {# Resolve per-row rate, ownership and translation_rate once.
@@ -338,6 +377,9 @@
         and eo.reporting_currency = gr.to_currency
         and etb.rate_year = gr.fiscal_year
         and etb.rate_period = gr.fiscal_period
+        {%- if rate_set_column %}
+        and etb.rate_set = gr.rate_set
+        {%- endif %}
     {# PRD-10: Historical equity rate — as-of the period: pick the latest tranche
        whose rate_date <= period_date. The previous row_number()/rn=1 took the
        single most-recent rate_date EVER, ignoring the period entirely, so an
@@ -360,6 +402,9 @@
                balance) instead of closing_rate. Same defaulting trap the
                ownership block above guards against. #}
             cast(toFloat64(historical_rate) as Nullable(Float64)) as historical_rate
+            {%- if rate_set_column %},
+            rate_set
+            {%- endif %}
         from {{ source('epm_staging', 'historical_equity_rates') }}
         where {{ rate_set_predicate }}
     ) as hr
@@ -383,6 +428,9 @@
         and etb.data_area_id = hr.data_area_id
         and etb.main_account = hr.main_account
         and eo.reporting_currency = hr.to_currency
+        {%- if rate_set_column %}
+        and etb.rate_set = hr.rate_set
+        {%- endif %}
         and etb.period_date >= hr.rate_date
     {# Line consolidation takes 'full' (100%, pair 2) and 'proportional' (the
        operator's share, a joint operation, IFRS 11.20, konsol#117 pair 3).
