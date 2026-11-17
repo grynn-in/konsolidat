@@ -1173,3 +1173,17 @@ models:
         description: "Signed amount in the row's currency: the actual for a source 'actual' row, the forecast summed over layers for 'forecast'."
       - name: source
         description: "'actual' (at or before the as-of period) or 'forecast' (after it, within the horizon)."
+
+  - name: gold_latest_estimate_current
+    description: >
+      konsol#348 S6-Q1 (b), S6-Q2 (a): gold_latest_estimate narrowed to each
+      forecast (scenario, fiscal year)'s declared current round
+      (gold_forecast_current_round). A view with the estimate's columns;
+      konsol's latest_estimate Dataset (the Excel K.EPM read) reads it, so one
+      round is read, never the sum of rounds. A year with no declaration has no
+      row.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+      - name: source
+        description: "'actual' at or before the round's as-of period, 'forecast' after it."
