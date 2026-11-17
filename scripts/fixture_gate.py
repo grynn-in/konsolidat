@@ -239,6 +239,31 @@ def scratch_dimension_columns(scratch_tables):
             if any(s.startswith(f"ALTER TABLE {t} ") for t in scratch_tables)]
 
 
+SEED_TABLE_RE = re.compile(r"^\s*(?:INSERT\s+INTO|ALTER\s+TABLE)\s+(zzg_\w+\.\w+)", re.I)
+MISSING_TABLE_RE = re.compile(r"Could not find table|UNKNOWN_TABLE|Code: 60\b|doesn't exist|does not exist", re.I)
+
+
+def seed_problem(stmt, error):
+    """Why a seed statement failed, as the fixture's verdict (konsol#348 S4b live test).
+
+    A fixture that seeds a MODEL table (a .must_flag over gold_fully_consolidated_budget,
+    say) presupposes the stack has built that model: the gate clones every table it
+    names from the live epm_* DDL, and a model never built has no DDL to clone (only
+    init-db.sql tables are created from text, missing_table_statements). Until now the
+    ClickHouse error escaped run_fixture, the fixture got no verdict and the rest of
+    the run was lost. Pure, so tests/test_fixture_gate_seed_errors.py can pin it."""
+    first = (error or "").strip().splitlines()
+    first = next((l.strip() for l in first if "DB::Exception" in l), first[0].strip() if first else "")
+    m = SEED_TABLE_RE.match(stmt)
+    table = m.group(1) if m else None
+    if table and MISSING_TABLE_RE.search(error or ""):
+        epm = table.replace(PREFIX + "_", "epm_", 1)
+        return (f"seeds {table}, which does not exist on this stack ({epm} is not built, and it is not "
+                f"an init-db.sql table the gate can create): build the model first, or seed its inputs "
+                f"and build it with `-- gate: build`. ClickHouse: {first}")
+    return f"seed statement refused: {stmt.strip().splitlines()[0][:120]} ... ClickHouse: {first}"
+
+
 def clone_empty(client, epm_name, engine):
     zzg_name = rewrite(epm_name, PREFIX)
     if engine in ("View", "MaterializedView"):
@@ -314,7 +339,14 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir, dim_vars=DIM
     for stmt in split_sql(rewrite(s["text"], PREFIX)):
         if re.search(r"\bepm_", stmt):
             raise SystemExit(f"{s['name']}: unrewritten epm_ reference: {stmt[:120]}")
-        client.command(stmt)
+        try:
+            client.command(stmt)
+        except Exception as e:  # clickhouse_connect raises its own DatabaseError
+            # This fixture fails with the reason; the run goes on to the next one.
+            problem = seed_problem(stmt, str(e))
+            reset_scratch(client, create=False)
+            print(f"    PROBLEM: {problem}", flush=True)
+            return "failed", [problem]
         m = INSERT_RE.match(stmt)
         if m and m.group(1) not in loaded:
             loaded.append(m.group(1))
