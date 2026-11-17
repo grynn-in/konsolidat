@@ -205,6 +205,10 @@ jobs:
       # widened tables names its columns.
       - name: ownership graph DDL, sources and column-named inserts
         run: python -m unittest -v tests.test_ownership_graph_ddl
+      # konsolidat#335 (X22): the integration fixture that ends links with no
+      # Business Disposal declares the exit journal's gain or loss account.
+      - name: integration fixture declares its exit account
+        run: python -m unittest -v tests.test_ic_decisions_exit_account
       # konsol#269 (W1): the six cost allocation staging tables are konsol's DDL,
       # verbatim, and declared dbt sources.
       - name: cost allocation staging DDL and sources
