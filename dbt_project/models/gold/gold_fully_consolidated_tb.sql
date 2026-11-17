@@ -15,7 +15,9 @@
 {# PRD-5 R4: Unified consolidated trial balance
    Unions: entity balances + IC eliminations + CTA + topside adjustments
    PRD-14: + Layer 5: equity method entries
-   PRD-11/12: + Layer 6: acquisition/disposal adjustments #}
+   PRD-11/12: + Layer 6: acquisition/disposal adjustments
+   konsolidat#316: + Layer 8: journal close (decided 14 Nov 2026 by Deepak Pai, option A;
+   design note on #316, chosen under the 5 Nov 2026 standing rule) #}
 
 {# Layer 1: Entity translated balances.
    konsol#159: gold_consolidated_trial_balance has one row per intercompany
@@ -269,8 +271,8 @@ acquisition_disposal as (
              adjustment_type
 ),
 
-{# Union all layers #}
-all_layers as (
+{# Union of the posted layers (every layer except the close itself) #}
+posted_layers as (
     select * from entity_balances
     union all
     select * from ic_elims
@@ -284,6 +286,134 @@ all_layers as (
     select * from acquisition_disposal
     union all
     select * from nci_attribution
+),
+
+{# Layer 8: journal close (konsolidat#316, decided 14 Nov 2026 by Deepak Pai: option A, one
+   journal_close layer in this model; rejected B, each journal closes its own lines, and C, close
+   at report time). Design note on #316, chosen under the 5 Nov 2026 standing rule.
+   In each fiscal year's Closing period (the first period_type = 'Closing' of the year in
+   fiscal_periods, as silver_tb_movements finds it) the year's P&L of every journal layer not in
+   journal_close_excluded_layers() (entity: the #259 close; ic_elimination: reverses its own P&L
+   legs) moves into retained_earnings_account(). P&L = silver_main_accounts.is_pnl = 1, or a
+   pseudo-account in journal_pnl_pseudo_accounts() (EQ_INCOME). Summed over the year's periods up
+   to AND including the Closing period; postings after it are not closed (the year-end test names
+   them, reason after_closing).
+   The year rule is the #259 entity close's (#357 review F2, re-review R1; chosen under the 5 Nov 2026
+   standing rule: the journal close follows the #259 entity close): a (group, fiscal year) is closed
+   only when a LATER fiscal year exists in the group's ENTITY layer, the members' own TB rows
+   (journal_close_years(), shared with the year-end test). A journal posting into a later year (a
+   topside auto-reversing into next year's P1) does not close a year: until a member files the later
+   year #259 leaves the entity P&L open (silver_tb_movements years_to_close: fiscal_year < last_year),
+   and so the journal P&L stays open beside it. Residual: a group of members that post no entity rows
+   for the later year (only associates, or only deal journals) is not closed until one does.
+   Lines are rounded to 4 places (journals are kept to 4 places, #353; re-review R2), so Float dust
+   (0.1 + 0.2 - 0.3) posts no line.
+   One negating line per (group, entity, year, account, dimensions) and one retained-earnings
+   line per (group, entity, year, dimensions); no partner (this table has none). When the chart
+   flags not exactly one retained-earnings account, nothing is posted:
+   assert_retained_earnings_account_unique fails naming the group. Reads posted_layers, never this
+   model, so there is no cycle. #}
+journal_close_periods as (
+    select fiscal_year, min(fiscal_period) as closing_period
+    from {{ source('epm_staging', 'fiscal_periods') }}
+    where period_type = 'Closing'
+    group by fiscal_year
+),
+
+journal_close_source as (
+    select
+        l.consolidation_group as consolidation_group,
+        l.data_area_id as data_area_id,
+        l.fiscal_year as fiscal_year,
+        c.closing_period as closing_period,
+        l.main_account as main_account,
+        {# aliased: dim_select(prefix=) leaves the column named `l.<dim>` #}
+        {% for d in get_dimensions() -%}
+        l.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
+        l.amount as amount
+    from posted_layers as l
+    inner join journal_close_periods as c on c.fiscal_year = l.fiscal_year
+    inner join {{ journal_close_years() }} as y on y.consolidation_group = l.consolidation_group
+    left join {{ ref('silver_main_accounts') }} as ma on ma.main_account_id = l.main_account
+    where l.fiscal_year < y.last_year
+      and l.adjustment_type not in ({{ "'" ~ journal_close_excluded_layers() | join("','") ~ "'" }})
+      and l.fiscal_period <= c.closing_period
+      and (ma.is_pnl = 1
+           or l.main_account in ({{ "'" ~ journal_pnl_pseudo_accounts() | join("','") ~ "'" }}))
+),
+
+{# Per-account lines: one per (group, entity, year, account, dimensions) whose year P&L, rounded to 4
+   places, is not 0 (#357 review F5: a topside and its auto-reversal that net to 0 post no line;
+   re-review R2: Float dust rounds to 0 and posts no line). #}
+journal_close_lines as (
+    select
+        s.consolidation_group as consolidation_group,
+        s.data_area_id as data_area_id,
+        s.fiscal_year as fiscal_year,
+        s.closing_period as fiscal_period,
+        s.main_account as main_account,
+        {# aliased: dim_select(prefix=) leaves the column named `s.<dim>` #}
+        {% for d in get_dimensions() -%}
+        s.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
+        round(-sum(s.amount), 4) as amount
+    from journal_close_source as s
+    cross join {{ retained_earnings_account() }} as re
+    where re.re_count = 1
+    group by s.consolidation_group, s.data_area_id, s.fiscal_year, s.closing_period,
+             s.main_account{{ dim_group_by(prefix='s.', leading=true) }}
+    having round(sum(s.amount), 4) != 0
+),
+
+{# The retained-earnings line is minus the sum of the KEPT, rounded lines, itself rounded to 4 places,
+   so the journal balances to 4 places by construction; a dropped line rounds to 0. #}
+journal_close as (
+    select
+        l.consolidation_group as consolidation_group,
+        l.data_area_id as data_area_id,
+        l.fiscal_year as fiscal_year,
+        l.fiscal_period as fiscal_period,
+        l.main_account as main_account,
+        'Journal close' as account_name,
+        {% for d in get_dimensions() -%}
+        l.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
+        '' as reporting_currency,
+        l.amount as amount,
+        'journal_close' as adjustment_type,
+        concat('JCLOSE_', l.consolidation_group, '_', toString(l.fiscal_year)) as journal_id
+    from journal_close_lines as l
+
+    union all
+
+    select
+        l.consolidation_group as consolidation_group,
+        l.data_area_id as data_area_id,
+        l.fiscal_year as fiscal_year,
+        l.fiscal_period as fiscal_period,
+        any(re.retained_earnings_account) as main_account,
+        'Journal close' as account_name,
+        {% for d in get_dimensions() -%}
+        l.{{ d.name }} as {{ d.name }},
+        {% endfor -%}
+        '' as reporting_currency,
+        round(-sum(l.amount), 4) as amount,
+        'journal_close' as adjustment_type,
+        concat('JCLOSE_', l.consolidation_group, '_', toString(l.fiscal_year)) as journal_id
+    from journal_close_lines as l
+    cross join {{ retained_earnings_account() }} as re
+    where re.re_count = 1
+    group by l.consolidation_group, l.data_area_id, l.fiscal_year,
+             l.fiscal_period{{ dim_group_by(prefix='l.', leading=true) }}
+    having round(sum(l.amount), 4) != 0
+),
+
+{# Union all layers #}
+all_layers as (
+    select * from posted_layers
+    union all
+    select * from journal_close
 )
 
 select * from all_layers
