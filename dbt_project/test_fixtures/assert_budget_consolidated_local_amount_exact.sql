@@ -1,4 +1,4 @@
--- gate: build gold_budget_entity_ownership gold_consolidated_budget_tb assert_budget_consolidated_local_amount_exact
+-- gate: build gold_ownership_exits gold_budget_entity_ownership gold_consolidated_budget_tb assert_budget_consolidated_local_amount_exact
 -- gate: expect gold_consolidated_budget_tb built
 -- gate: expect assert_budget_consolidated_local_amount_exact pass
 -- assert_budget_consolidated_local_amount_exact (konsol#348 S4b live test, must fix): must PASS, and

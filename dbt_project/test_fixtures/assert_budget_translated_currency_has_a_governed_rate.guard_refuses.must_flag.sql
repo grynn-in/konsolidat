@@ -1,4 +1,4 @@
--- gate: build gold_budget_entity_ownership gold_consolidated_budget_tb
+-- gate: build gold_ownership_exits gold_budget_entity_ownership gold_consolidated_budget_tb
 -- gate: refuse gold_consolidated_budget_tb no usable governed rate in the Rate Set its Cycle declares
 -- budget_rate_guard (konsol#348 S4 W5): gold_consolidated_budget_tb's pre_hook must REFUSE the
 -- build, by name, when a budget key has no usable rate IN ITS CYCLE'S Rate Set, although the
