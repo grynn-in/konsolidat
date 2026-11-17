@@ -512,9 +512,7 @@ sources:
           - name: fiscal_year
             description: "The fiscal year the declaration covers; one row per (scenario_id, fiscal_year)."
           - name: cycle
-            description: "The declared round: the approved Budget Cycle's name (budget_cycles.name)."
-          - name: as_of_date
-            description: "The round's as-of date, copied from the Cycle; 1900-01-01 is the declared 'none'."
+            description: "The declared round: the approved Budget Cycle's name (budget_cycles.name). The round's as_of_date, horizon and Rate Set are budget_cycles', read by this name; no copy is kept here."
       - name: ownership_periods
         description: >
           PRD-9/11/12: Temporal ownership periods with acquisition and disposal

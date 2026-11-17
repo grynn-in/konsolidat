@@ -33,9 +33,9 @@ VALUES
   ('ZZ-FC-R2', 'ZZ_FC_2026', 2026, 'ZZRS', '2026-06-30', 6),
   ('ZZ-CY-A', 'ZZ_PLAN_2026', 2026, 'ZZRS', DEFAULT, 0);
 INSERT INTO epm_staging.current_forecasts
-  (scenario_id, fiscal_year, cycle, as_of_date)
+  (scenario_id, fiscal_year, cycle)
 VALUES
-  ('ZZ_FC_2026', 2026, 'ZZ-FC-R2', '2026-06-30');
+  ('ZZ_FC_2026', 2026, 'ZZ-FC-R2');
 INSERT INTO epm_raw.budget_entries
   (entry_name, cycle, scenario_id, layer, data_area_id, fiscal_year, fiscal_period, main_account, debit, credit, currency, amount_basis, dim_cost_center, dim_department)
 VALUES

@@ -33,7 +33,7 @@
      scenario's declaration stands until it is cancelled, as a budget scenario's Cycle does in
      gold_scenario_trial_balance.
    The Cycle's as_of_date, horizon_periods and rate_set ride along from budget_cycles (the one
-   source; the declaration's as_of_date copy is not read), so the readers that count the horizon
+   source; the declaration carries no copy), so the readers that count the horizon
    (forecast_round_periods(), gold_latest_estimate) need no second join.
    assert_forecast_current_round_unique (error) pins one row per pair. #}
 

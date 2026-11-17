@@ -235,10 +235,11 @@ CREATE TABLE IF NOT EXISTS epm_staging.budget_cycles (name String, scenario_id S
 -- balance, the Excel forecast reads, the latest estimate) takes that round
 -- alone. A year with approved rounds and no row here has no forecast rows
 -- anywhere, and assert_forecast_year_has_current_round WARNs naming it.
--- as_of_date is the round's, a Date32 with an explicit 1900-01-01 default
--- (a Date clamps to a silent 1970-01-01). Keep identical to konsol's
--- _REFERENCE_TABLE_DDL (tests/test_current_forecasts_ddl.py pins both).
-CREATE TABLE IF NOT EXISTS epm_staging.current_forecasts (scenario_id String, fiscal_year UInt16, cycle String, as_of_date Date32 DEFAULT '1900-01-01') ENGINE = MergeTree ORDER BY (scenario_id, fiscal_year);
+-- The round's as_of_date, horizon and Rate Set are read from budget_cycles
+-- by `cycle`, never copied here (one source; S6 pair A review m4). Keep
+-- identical to konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_current_forecasts_ddl.py pins both).
+CREATE TABLE IF NOT EXISTS epm_staging.current_forecasts (scenario_id String, fiscal_year UInt16, cycle String) ENGINE = MergeTree ORDER BY (scenario_id, fiscal_year);
 
 -- F3: governed reference data written through from konsol (Dimension Mapping,
 -- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated

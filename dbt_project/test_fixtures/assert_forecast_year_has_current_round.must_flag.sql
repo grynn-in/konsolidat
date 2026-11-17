@@ -19,6 +19,6 @@ VALUES
   ('ZZ-FC-R3', 'ZZ_FC_2026', 2027, 'ZZRS', '2027-03-31', 9),
   ('ZZ-CY-A', 'ZZ_PLAN_2026', 2026, 'ZZRS', DEFAULT, 0);
 INSERT INTO epm_staging.current_forecasts
-  (scenario_id, fiscal_year, cycle, as_of_date)
+  (scenario_id, fiscal_year, cycle)
 VALUES
-  ('ZZ_FC_2026', 2027, 'ZZ-FC-R3', '2027-03-31');
+  ('ZZ_FC_2026', 2027, 'ZZ-FC-R3');
