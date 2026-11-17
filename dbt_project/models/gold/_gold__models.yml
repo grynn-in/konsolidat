@@ -1096,3 +1096,30 @@ models:
         description: "Seed sub-line, or 'Net Income (Consolidated)' / 'Consolidation and Non-Cash Adjustments'"
       - name: cash_flow_amount
         description: "FX-translated cash effect = -amount (signed TB), summed per line"
+
+  - name: gold_forecast_current_round
+    description: >
+      konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026: THE current
+      round of each forecast (scenario, fiscal year), one row per declared pair.
+      konsol's Current Forecast declaration (epm_staging.current_forecasts)
+      joined to budget_cycles on the Cycle's name and the pair, forecast
+      scenarios only. Every entity-grain forecast reader joins this table and
+      reads one round; a pair with approved rounds and no declaration has no
+      row, reads empty everywhere, and assert_forecast_year_has_current_round
+      WARNs naming it. FC-3-1 rejected "latest round wins": nothing here orders
+      by as-of date.
+    columns:
+      - name: scenario_id
+        description: "The forecast scenario (scenario_definitions.scenario_type = 'forecast')."
+        tests:
+          - not_null
+      - name: fiscal_year
+        description: "The fiscal year the declaration covers; one row per (scenario_id, fiscal_year) (assert_forecast_current_round_unique)."
+      - name: cycle
+        description: "The declared round: the approved Budget Cycle's name, as gold_spread_budget.cycle carries it."
+      - name: as_of_date
+        description: "The round's as-of date, from budget_cycles: the actuals cut-off the round forecasts from."
+      - name: horizon_periods
+        description: "The round's horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1)."
+      - name: rate_set
+        description: "The Rate Set the round is translated at, from budget_cycles (BUD-3)."
