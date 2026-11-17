@@ -44,6 +44,10 @@ START = (
     "gold_forecast_current_at_hierarchy_node",
     "gold_latest_estimate",
     "gold_latest_estimate_current",
+    # konsol#348 S6 pair C: the group budget fact and forecast accuracy
+    "gold_consolidated_budget_fact",
+    "gold_forecast_accuracy",
+    "gold_forecast_accuracy_group",
 )
 ALLOWED_BRONZE = {"bronze_trial_balance_submissions"}
 FORBIDDEN_MODELS = {"silver_budget_entries"}

@@ -243,7 +243,13 @@ models:
       # --- Domain: scenarios ---
       gold_budget_entity_ownership:
         +tags: ['gold', 'domain:scenarios']
+      gold_consolidated_budget_fact:
+        +tags: ['gold', 'domain:scenarios']
       gold_consolidated_budget_tb:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_accuracy:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_accuracy_group:
         +tags: ['gold', 'domain:scenarios']
       gold_forecast_current:
         +tags: ['gold', 'domain:scenarios']

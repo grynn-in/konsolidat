@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **203** |
-| carrying their reasoning | 181 |
-| citing the issue that caused them | 176 |
+| assertions | **208** |
+| carrying their reasoning | 186 |
+| citing the issue that caused them | 181 |
 | severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 176 |
+| severity `error` (stops the build, and its children) | 181 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,10 +32,10 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 36
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 37
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 21
+- [Platform and data integrity](#platform-and-data-integrity) — 25
 - [Other](#other) — 8
 
 ---
@@ -1118,6 +1118,14 @@ Q21-a was chosen under the standing rule (#348 comment 6875869375). konsol refus
 
 <sub>`error` · `tests/assert_budget_ytd_periods_contiguous.sql` · konsol#348</sub>
 
+### `consolidated_budget_fact_hand_table`
+
+**konsol#348 S6 WC1 (S6-Q7 a): gold_consolidated_budget_fact equals a table worked out by hand.**
+
+The view is gold_fully_consolidated_budget rolled to the group (consolidation_group in the entity slot, data_area_id) per (fiscal_year, fiscal_period, main_account, scenario_id, cycle, layer), every adjustment type summed into consolidated_amount, the shape of gold_consolidated_fact plus the three budget grain columns. A budget-type scenario keeps its Cycle; a forecast-type scenario keeps its DECLARED current round only (gold_forecast_current_round), so a second approved round is never added. The fixture (test_fixtures/assert_consolidated_budget_fact_hand_table.sql) seeds two groups and two layers of budget ZZ_PLAN_CBF and two rounds of forecast ZZ_FC_CBF (R2 declared); the expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places. Vacuous where the fixture's scenarios are absent (every real site, and the full CI build): no expected row is built and only ZZ_PLAN_CBF / ZZ_FC_CBF produced rows are read. They are present when a Budget Cycle names one (the build-mode fixture, so a view that drops a whole scenario still fails) or when the view holds one (the test-mode must_flag, which seeds the view's scratch table directly). Not a `fixture_only_tests` test: that var is ON in ci_full_build.py's full builds (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_consolidated_budget_fact_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
 ### `cost_allocation_amounts`
 
 **The amounts of a published cost allocation follow the run's policy (konsol#269, W5b).**
@@ -1421,6 +1429,38 @@ The consolidation core (macros/consolidation_core.sql) takes `grain_extra`, the 
 Silver derives debit/credit from the SIGN of the amount (konsolidat#112), so the amount has to arrive signed. The demo generator shipped magnitudes with the sign only in IsCredit; every credit was booked as a debit, every trial balance went one-sided, and nothing failed until assert_silver_gl_debit_credit_balance, three layers down, by entity-year, where it was mistaken for "demo-data tension". This fails at the source, per voucher, whatever the feed. It deliberately does not re-derive the sign from IsCredit: on real D365 that flag can disagree with the sign on storno lines (#112/#118, assert_is_credit_retired). A correctly signed voucher nets to zero either way. Grouped by voucher alone, entity-less headers included: a voucher must balance whatever entity it is attributed to.
 
 <sub>`error (default)` · `tests/assert_d365_gl_vouchers_balance.sql` · konsolidat#112 konsolidat#118 konsolidat#155</sub>
+
+### `forecast_accuracy_grain_unique`
+
+**konsol#348 S6 WC2: gold_forecast_accuracy has one row per (scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, budget dimensions, currency).**
+
+A second row on a key means the forecast and the actual of one key did not meet (each side on a row of its own, so the error is wrong on both) or a grain the model's group by missed; a K.EPM read or the Forecast Accuracy report would add them. Error severity. Fixtures: assert_forecast_accuracy_hand_table.sql (pass, build mode), assert_forecast_accuracy_grain_unique.must_flag.sql (the two sides of one key on two rows: 1).
+
+<sub>`error` · `tests/assert_forecast_accuracy_grain_unique.sql` · konsol#348</sub>
+
+### `forecast_accuracy_group_hand_table`
+
+**konsol#348 S6 WC3 (FC-4-2, S6-Q8 a): gold_forecast_accuracy_group equals a table worked out by hand.**
+
+The group-currency twin of gold_forecast_accuracy: per consolidation group, the round's translated budget (gold_consolidated_budget_tb.group_amount, at the Cycle's Rate Set, layers summed) against the consolidated actuals (gold_consolidated_trial_balance.group_amount, at the actuals' rates), summed to the budget dimensions, in closed Regular periods after the round's as-of within its horizon, for the entities the round forecasts in that group. The rates differ, so an entity outside the group's currency carries the FX movement in its error; that is the point of a group-currency view. The fixture (test_fixtures/assert_forecast_accuracy_group_hand_table.sql) and its expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, konsolidat#361) names every row that differs. Amounts rounded to 4 places; the percentage compared as text ('NULL' for NULL). Vacuous where the fixture's scenario ZZ_FC_ACG is absent (every real site, and the full CI build), as assert_forecast_accuracy_hand_table. Not a `fixture_only_tests` test.
+
+<sub>`error` · `tests/assert_forecast_accuracy_group_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `forecast_accuracy_hand_table`
+
+**konsol#348 S6 WC2 (FC-4-2, S6-Q8 a): gold_forecast_accuracy equals a table worked out by hand.**
+
+Per approved forecast round, per CLOSED Regular period after its as-of period within its horizon (epm_staging.fiscal_periods.status Closed or Locked, the effective status konsol publishes), per entity the round forecasts, account, budget dimensions and currency: the forecast (layers summed), the actual, error = forecast - actual, |error|, error % = error / |actual| x 100 (NULL when the actual is 0) and the lag in declared Regular periods from the as-of period. The fixture (test_fixtures/assert_forecast_accuracy_hand_table.sql) has round R1 as of P3 (horizon 9) and R2 as of P5 (horizon 2), P1-P6 closed and P7 onwards open; the expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places; the percentage is compared as text so a NULL is a value of its own ('NULL'). Vacuous where the fixture's scenario ZZ_FC_ACC is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_ACC's produced rows are read. ZZ_FC_ACC is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_forecast_accuracy holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_forecast_accuracy_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `forecast_accuracy_pct_null_on_zero_actual`
+
+**konsol#348 S6 WC2: the error percentage of gold_forecast_accuracy is NULL exactly when the actual is 0, and otherwise is forecast_error / |actual_amount| x 100 (the sign of the error, the scale of the actual;**
+
+variance_pct's convention). A percentage of a zero actual has no value: 0 would read as a perfect forecast and an infinity would break every average, so it is NULL and the report shows "n/a". One row per breach: a non-NULL percentage on a zero actual, a NULL on a non-zero one, or a value off the formula by more than 0.0001 percentage points. Error severity. Fixtures: assert_forecast_accuracy_hand_table.sql (pass, build mode, one zero actual), assert_forecast_accuracy_pct_null_on_zero_actual.must_flag.sql (a 0 on a zero actual and a NULL on a non-zero one: 2).
+
+<sub>`error` · `tests/assert_forecast_accuracy_pct_null_on_zero_actual.sql` · konsol#348</sub>
 
 ### `forecast_as_of_in_declared_period`
 

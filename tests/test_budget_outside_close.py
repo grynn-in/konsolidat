@@ -35,7 +35,9 @@ GOLD_YML = os.path.join(MODELS, "gold", "_gold__models.yml")
 
 CLOSE_ROOT = "gold_fully_consolidated_tb"
 ACTUALS_CONSOLIDATION = {"gold_fully_consolidated_tb", "gold_consolidated_trial_balance"}
-BUDGET_MODELS = ("gold_consolidated_budget_tb", "gold_fully_consolidated_budget")
+BUDGET_MODELS = ("gold_consolidated_budget_tb", "gold_fully_consolidated_budget",
+                 # konsol#348 S6 WC1: the group budget for K.EPM, a view over the FCTB-shaped one
+                 "gold_consolidated_budget_fact")
 BUDGET_FACT_MODELS = {"gold_spread_budget", "gold_budget_entity_ownership"}
 BUDGET_SOURCES = {
     "epm_raw.budget_entries",
@@ -52,6 +54,13 @@ FORECAST_MODELS = (
     "gold_forecast_current_at_hierarchy_node",
     "gold_latest_estimate",
     "gold_latest_estimate_current",
+)
+# konsol#348 S6 pair C (FC-4-2): forecast accuracy. gold_forecast_accuracy_group
+# READS gold_consolidated_trial_balance (the actuals it measures), so it is not a
+# BUDGET_MODELS entry; the close fingerprint's table must still reach none of them.
+ACCURACY_MODELS = (
+    "gold_forecast_accuracy",
+    "gold_forecast_accuracy_group",
 )
 # Each budget model's yml description must name both limits, so the reader of
 # the catalogue meets them without opening the SQL.
@@ -108,12 +117,13 @@ class BudgetOutsideClose(unittest.TestCase):
         self.models = _models()
 
     def test_models_exist(self):
-        missing = [m for m in (CLOSE_ROOT,) + BUDGET_MODELS + FORECAST_MODELS if m not in self.models]
+        missing = [m for m in (CLOSE_ROOT,) + BUDGET_MODELS + FORECAST_MODELS + ACCURACY_MODELS if m not in self.models]
         self.assertEqual(missing, [], f"models not found under {MODELS}: {missing}")
 
     def test_the_close_table_reads_no_budget_model_or_source(self):
         reached, sources = _reach(self.models, CLOSE_ROOT)
-        budget_hits = sorted(reached & (set(BUDGET_MODELS) | BUDGET_FACT_MODELS | set(FORECAST_MODELS)))
+        budget_hits = sorted(reached & (set(BUDGET_MODELS) | BUDGET_FACT_MODELS | set(FORECAST_MODELS)
+                                        | set(ACCURACY_MODELS)))
         source_hits = sorted(sources & BUDGET_SOURCES)
         self.assertEqual(
             budget_hits, [],
