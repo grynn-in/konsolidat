@@ -1129,3 +1129,25 @@ models:
         description: "The round's horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1)."
       - name: rate_set
         description: "The Rate Set the round is translated at, from budget_cycles (BUD-3)."
+
+  - name: gold_forecast_current
+    description: >
+      konsol#348 S6-Q1 (b): gold_spread_budget narrowed to each forecast
+      (scenario, fiscal year)'s declared current round (gold_forecast_current_round).
+      A view with the fact's columns; konsol's forecast_input Dataset (the Excel
+      K.EPM flat forecast read) reads it so two approved rounds never sum. A
+      budget scenario has no row here; a forecast pair with no declaration has
+      none either. assert_forecast_current_ties_to_fact ties it to the fact.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+
+  - name: gold_forecast_current_at_hierarchy_node
+    description: >
+      konsol#348 S6-Q1 (b): gold_budget_at_hierarchy_node narrowed to each
+      forecast (scenario, fiscal year)'s declared current round. A view with the
+      rollup's columns; konsol's hierarchy forecast read (hierarchy_query) reads
+      it, because that read binds scenario_id and layer but never cycle.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
