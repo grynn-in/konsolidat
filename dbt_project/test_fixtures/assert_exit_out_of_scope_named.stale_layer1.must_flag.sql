@@ -1,4 +1,8 @@
 -- gate: expect assert_exit_out_of_scope_named flag 1
+-- gate: build gold_ownership_exits assert_exit_out_of_scope_named
+-- Build mode (#335, X23): the test reads the exit events from gold_ownership_exits, so the gate builds it from
+-- the sources seeded here; gold_consolidated_trial_balance is NOT built, so the seeded stale row stays. The
+-- test's other input, epm_gold.gold_consolidation_adjustments, is named here so the gate creates it empty.
 -- konsolidat#335 task X8, case (c): ZZQS (full 70%) ends 2026-03-31, so the exit is FY2026 P3 (#358 review F1; first out P4). gold_consolidated_trial_balance
 -- is seeded with a layer-1 row in P3 (live: fine) and one in P4 (not live: a stale #154 incremental slice that survived a
 -- back-dated end_date). A fresh build never makes the P4 row (the model keeps only complete chains), so this seeds the table.

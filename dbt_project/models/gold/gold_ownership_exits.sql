@@ -14,9 +14,14 @@
    chained CTEs 18 times; on an empty site its INSERT took 1.5-2.5 min and 1.44 GiB, and the server was
    OOM-killed in the TB-only first build. The readers that build (gold_ownership_exit_journal,
    gold_goodwill_amortisation_journal, consolidation_core's spine_stints for gold_consolidated_trial_balance)
-   and assert_exit_accounts_declared ref this model, so the graph is resolved once per build. Readers whose
-   fixtures run in test mode (no build: assert_ownership_exit_events and others) keep the macro, so a fixture
-   seeds the sources and the test still sees the events.
+   and assert_exit_accounts_declared ref this model, so the graph is resolved once per build. So do
+   assert_exit_derecognises_carried, assert_exit_matches_ic_left, assert_exit_out_of_scope_named and
+   assert_reentry_carries_full_balance (task X23): every fixture of theirs builds this model. Two readers keep the
+   macro because a fixture of theirs runs in test mode on seeded sources and builds nothing:
+   assert_ownership_exit_events (it tests the macro itself) and assert_bs_translated_at_closing_rate (its
+   .must_flag fixture runs the test alone on a seeded CTB). A test-mode fixture of a reader of this model would
+   see it cloned EMPTY, or ERROR where the warehouse lacks it: such a fixture declares `-- gate: build
+   gold_ownership_exits <test>`.
 
    It reads sources only (ownership periods, ancestry, method declarations, business disposals, the fiscal
    calendar), so it has no model parent and sorts before every reader. Domain actuals: the actuals scope

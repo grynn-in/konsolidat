@@ -30,7 +30,8 @@
 with exits as (
     select consolidation_group, data_area_id, toUInt16(fiscal_year) as fiscal_year,
         toUInt16(fiscal_period) as fiscal_period, method_before, end_date
-    from {{ ownership_exits() }}
+    {#- the events of ownership_exits(), materialised once (#335, X23): every fixture of this test builds it #}
+    from {{ ref('gold_ownership_exits') }}
 ),
 
 {# the Regular period holding end_date, read from the calendar (header: A) #}

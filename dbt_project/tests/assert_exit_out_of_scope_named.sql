@@ -66,7 +66,8 @@ os_marked as (
 exits as (
     select consolidation_group, data_area_id, toUInt16(fiscal_year) as fiscal_year,
         toUInt16(fiscal_period) as fiscal_period
-    from {{ ownership_exits() }}
+    {#- the events of ownership_exits(), materialised once (#335, X23): every fixture of this test builds it #}
+    from {{ ref('gold_ownership_exits') }}
 ),
 
 case_a as (
