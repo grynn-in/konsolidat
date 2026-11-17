@@ -26,6 +26,7 @@ on:
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
       - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
@@ -65,6 +66,7 @@ on:
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
       - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
@@ -226,6 +228,10 @@ jobs:
       # reaches the warehouse; init-db.sql carries konsol's DDL verbatim.
       - name: current forecasts DDL is konsol's declaration
         run: python -m unittest -v tests.test_current_forecasts_ddl
+      # konsol#348 S6: the interim one-approved-round rule left with konsol's
+      # refusal; every forecast reader takes the declared current round.
+      - name: the interim forecast rule is gone
+        run: python -m unittest -v tests.test_no_interim_forecast_rule
       # konsol#348 S4 (W2): every reader of a governed or historical rate names
       # the Rate Set it reads; the model, the guard and the deploy precheck take
       # the one flagged Is Actuals.
