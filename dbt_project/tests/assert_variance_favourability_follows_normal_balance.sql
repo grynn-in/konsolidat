@@ -19,11 +19,12 @@
 
    The retired S3 Bool read false for "unfavourable" and for "no direction" alike, and konsol
    registered it as a sum Measure, which added flags together (konsolidat#214). This test derives the expected
-   state from the chart and the amounts, never from the model's own column, so a model that guesses a direction
-   for an undeclared account, or marks a zero variance either way, is named. One row per variance row whose
+   state from the chart (is_pnl and normal_balance) and the amounts, never from the model's own columns, so a
+   model that guesses a direction for an undeclared account, marks a zero variance either way, or mislabels a
+   balance-sheet account as P&L, is named. One row per variance row whose
    state differs; error severity.
    Fixtures: dbt_project/test_fixtures/variance_favourability_signed.sql (build, pass),
-   assert_variance_favourability_follows_normal_balance.sql (pass), .must_flag.sql (flag 4). #}
+   assert_variance_favourability_follows_normal_balance.sql (pass), .must_flag.sql (flag 5). #}
 {{ config(severity='error') }}
 
 with judged as (
@@ -34,12 +35,13 @@ with judged as (
         v.main_account as main_account,
         v.budget_scenario_id as budget_scenario_id,
         v.is_pnl as is_pnl,
+        am.is_pnl as chart_is_pnl,
         v.actual_amount as actual_amount,
         v.budget_amount as budget_amount,
         v.variance_favourability as model_state,
         am.normal_balance as chart_normal_balance,
         multiIf(
-            v.is_pnl = 0, 'not_applicable',
+            coalesce(am.is_pnl, 0) = 0, 'not_applicable',
             am.normal_balance not in ('Credit', 'Debit'), 'not_applicable',
             v.actual_amount < coalesce(v.budget_amount, 0), 'favourable',
             v.actual_amount > coalesce(v.budget_amount, 0), 'unfavourable',
@@ -58,6 +60,7 @@ select
     main_account,
     budget_scenario_id,
     chart_normal_balance,
+    chart_is_pnl,
     is_pnl,
     actual_amount,
     budget_amount,
