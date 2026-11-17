@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **208** |
-| carrying their reasoning | 186 |
-| citing the issue that caused them | 181 |
+| assertions | **209** |
+| carrying their reasoning | 187 |
+| citing the issue that caused them | 182 |
 | severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 181 |
+| severity `error` (stops the build, and its children) | 182 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -35,7 +35,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 37
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 25
+- [Platform and data integrity](#platform-and-data-integrity) — 26
 - [Other](#other) — 8
 
 ---
@@ -1453,6 +1453,14 @@ The group-currency twin of gold_forecast_accuracy: per consolidation group, the 
 Per approved forecast round, per CLOSED Regular period after its as-of period within its horizon (epm_staging.fiscal_periods.status Closed or Locked, the effective status konsol publishes), per entity the round forecasts, account, budget dimensions and currency: the forecast (layers summed), the actual, error = forecast - actual, |error|, error % = error / |actual| x 100 (NULL when the actual is 0) and the lag in declared Regular periods from the as-of period. The fixture (test_fixtures/assert_forecast_accuracy_hand_table.sql) has round R1 as of P3 (horizon 9) and R2 as of P5 (horizon 2), P1-P6 closed and P7 onwards open; the expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places; the percentage is compared as text so a NULL is a value of its own ('NULL'). Vacuous where the fixture's scenario ZZ_FC_ACC is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_ACC's produced rows are read. ZZ_FC_ACC is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_forecast_accuracy holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
 
 <sub>`error` · `tests/assert_forecast_accuracy_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `forecast_accuracy_horizon_hand_table`
+
+**konsol#348 S6 WC2 review (m1, m2): gold_forecast_accuracy measures a round to the ROUND's horizon, and counts the lag across a year end, worked out by hand.**
+
+A round is (scenario_id, as_of_date): every approved Cycle sharing the as-of (Q24 a, one Cycle per fiscal year). Its horizon is the LONGEST horizon_periods among those Cycles, as konsol's horizon_coverage_model counts the round's coverage; a Cycle's own shorter horizon does not cut the round short. The lag is in declared Regular periods from the as-of period, so the first period of the next year is lag 1 for an as-of in the last period of the year before. The fixture (test_fixtures/assert_forecast_accuracy_horizon_hand_table.sql) has round A as of 2026-09-30 (FY2026 P9: FY2026 Cycle horizon 12, FY2027 Cycle horizon 3) and round B as of 2026-12-31 (FY2026 P12: FY2027 Cycle horizon 2); FY2026 and FY2027 P1-P3 closed, FY2027 P4 onwards open. The multiset diff, rounding and NULL text are assert_forecast_accuracy_hand_table's. Vacuous where the fixture's scenario ZZ_FC_HZN is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_HZN's produced rows are read. ZZ_FC_HZN is present when a Budget Cycle names it (the build-mode fixture) or when gold_forecast_accuracy holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_forecast_accuracy_horizon_hand_table.sql` · konsol#348</sub>
 
 ### `forecast_accuracy_pct_null_on_zero_actual`
 

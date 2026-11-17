@@ -38,6 +38,10 @@
      no figure means zero). Both are real misses and stay in the error.
    - A round's rows stay inside its own fiscal year (Q24 a: a horizon crossing the year end is one Cycle per
      year sharing the as-of), and the lag still counts from the shared as-of across the year end.
+   - The horizon is the ROUND's: the longest horizon_periods among the approved Cycles sharing the
+     (scenario_id, as_of_date), as konsol's horizon_coverage_model counts coverage. A Cycle's own shorter
+     horizon does not drop its periods inside the round's (konsol#348 S6 review m1,
+     assert_forecast_accuracy_horizon_hand_table).
 
    The (round, period) pairs come from forecast_accuracy_round_periods() (macros/forecast_rounds.sql), the
    one definition this model and gold_forecast_accuracy_group share.

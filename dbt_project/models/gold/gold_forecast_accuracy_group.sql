@@ -8,7 +8,8 @@
 {# konsol#348 S6 WC3 (FC-4-2): gold_forecast_accuracy in the GROUP's currency, per consolidation group.
 
    One row per (consolidation group, approved forecast round, closed Regular period after its as-of within
-   its horizon, entity the round forecasts in that group, account, budget dimensions, reporting currency):
+   the round's horizon (the longest of the Cycles sharing its as-of; forecast_accuracy_round_periods()),
+   entity the round forecasts in that group, account, budget dimensions, reporting currency):
      forecast_amount     gold_consolidated_budget_tb.group_amount of the round's Cycle, layers summed:
                          translated at the Cycle's Rate Set, at the group's share (proportional) as the
                          budget consolidation computes it;

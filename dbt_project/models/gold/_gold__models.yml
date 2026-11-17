@@ -1232,6 +1232,9 @@ models:
       round was from the actuals, in the entity's currency. One row per
       (round, closed Regular period after its as-of period within its horizon,
       entity the round forecasts, account, budget dimensions, currency).
+      The horizon is the longest horizon_periods among the approved Cycles
+      sharing the (scenario_id, as_of_date), as konsol's horizon coverage
+      counts it.
       Closed = epm_staging.fiscal_periods.status Closed or Locked, the
       effective status konsol publishes (the stricter of the year's and the
       period's). Every approved round is here, side by side (FC-4); a reader
