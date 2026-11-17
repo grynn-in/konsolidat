@@ -1259,3 +1259,37 @@ models:
         description: "|forecast_error|; sum it for a total miss, sum forecast_error for the bias."
       - name: forecast_error_pct
         description: "forecast_error / |actual_amount| x 100 (variance_pct's convention); NULL when the actual is 0, shown as n/a. Average it, never sum it."
+
+  - name: gold_forecast_accuracy_group
+    description: >
+      konsol#348 S6 WC3 (FC-4-2; S6-Q8 a): gold_forecast_accuracy in the
+      group's reporting currency, per consolidation group: the round's
+      translated budget (gold_consolidated_budget_tb.group_amount at the
+      Cycle's Rate Set, layers summed) against the consolidated actuals
+      (gold_consolidated_trial_balance.group_amount at the actuals' rates),
+      summed to the budget dimensions, for the entities the round forecasts in
+      that group. Entity rows only, before eliminations (konsol#427, konsol#425
+      on the budget side). The two sides translate at different rates, so an
+      entity outside the group's currency carries the FX movement in its error.
+      Same periods, lag and rules as gold_forecast_accuracy (one shared macro,
+      forecast_accuracy_round_periods()). Pinned by
+      assert_forecast_accuracy_group_hand_table.
+    columns:
+      - name: consolidation_group
+        description: "The group whose currency and share both sides are in."
+      - name: cycle
+        description: "The round (an approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: reporting_currency
+        description: "The group's reporting currency."
+      - name: lag
+        description: "Declared Regular periods from the round's as-of period to this one: 1 is the period after the as-of."
+      - name: forecast_amount
+        description: "The round's translated budget for the key, layers summed, signed debit - credit."
+      - name: actual_amount
+        description: "The consolidated actual's group_amount for the key, signed debit - credit."
+      - name: forecast_error
+        description: "forecast_amount - actual_amount; for an entity outside the group's currency it includes the FX movement."
+      - name: forecast_abs_error
+        description: "|forecast_error|."
+      - name: forecast_error_pct
+        description: "forecast_error / |actual_amount| x 100; NULL when the actual is 0. Average it, never sum it."

@@ -39,6 +39,8 @@
    - A round's rows stay inside its own fiscal year (Q24 a: a horizon crossing the year end is one Cycle per
      year sharing the as-of), and the lag still counts from the shared as-of across the year end.
 
+   The (round, period) pairs come from forecast_accuracy_round_periods() (macros/forecast_rounds.sql), the
+   one definition this model and gold_forecast_accuracy_group share.
    Joins are inner and on equalities only (join_use_nulls=0: an unmatched side would read ''/0); the two
    sides meet by UNION ALL + GROUP BY, never an outer join. Round and period columns are renamed (rp_*,
    re_*, a_*) so no alias matches a column another table in the join carries; the sums are taken under
@@ -48,31 +50,7 @@
 
 {%- set budget_dims = get_budget_dimensions() %}
 
-with closed_periods as (
-    select
-        toUInt16(fiscal_year) as cp_fiscal_year,
-        toUInt16(fiscal_period) as cp_fiscal_period
-    from {{ source('epm_staging', 'fiscal_periods') }}
-    group by fiscal_year, fiscal_period
-    having countIf(status not in ('Closed', 'Locked')) = 0
-),
-
-round_periods as (
-    select
-        cycle as rp_cycle,
-        scenario_id as rp_scenario,
-        as_of_date as rp_as_of_date,
-        toUInt16(fiscal_year) as rp_fiscal_year,
-        toUInt16(fiscal_period) as rp_fiscal_period,
-        lag as rp_lag
-    from {{ forecast_round_periods() }}
-    where fiscal_year = cycle_fiscal_year
-      and lag >= 1
-      and lag <= horizon_periods
-      and (toUInt16(fiscal_year), toUInt16(fiscal_period)) in (
-          select cp_fiscal_year, cp_fiscal_period from closed_periods
-      )
-),
+with round_periods as {{ forecast_accuracy_round_periods() }},
 
 round_entities as (
     select distinct
