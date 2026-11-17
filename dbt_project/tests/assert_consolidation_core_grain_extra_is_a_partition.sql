@@ -28,6 +28,9 @@
 -- The test calls the macro directly, so it needs no model of its own and the fixture
 -- (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's
 -- inputs only: a retranslated balance, a year-end close and a historical tranche.
+-- Both calls pass exits_relation=ref('gold_ownership_exits'), as the actuals model does, so the
+-- re-entry stint reset (spine_stints / densified_stints) is threaded too (#358 review F4 a; the
+-- .with_exit fixture seeds an exit and a re-entry that cross a stint boundary under each layer).
 -- Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or
 -- -1 (produced, not expected).
 {{ config(enabled=var('fixture_only_tests', false)) }}
@@ -74,7 +77,8 @@ with base_source as (
 ),
 
 {{ consolidation_core(source_cte='base_source', dims=get_dimensions(), rate_set_predicate=actuals_rate_set_predicate(),
-                      ownership_cte=ref('gold_entity_ownership'), grain_extra=[], scoped=false, p='base_') }},
+                      ownership_cte=ref('gold_entity_ownership'), grain_extra=[], scoped=false, p='base_',
+                      exits_relation=ref('gold_ownership_exits')) }},
 
 {# the same rows under two layers: each layer must consolidate as the whole does #}
 layered_source as (
@@ -84,7 +88,8 @@ layered_source as (
 ),
 
 {{ consolidation_core(source_cte='layered_source', dims=get_dimensions(), rate_set_predicate=actuals_rate_set_predicate(),
-                      ownership_cte=ref('gold_entity_ownership'), grain_extra=['zz_layer'], scoped=false, p='layered_') }},
+                      ownership_cte=ref('gold_entity_ownership'), grain_extra=['zz_layer'], scoped=false, p='layered_',
+                      exits_relation=ref('gold_ownership_exits')) }},
 
 expected as (
     select c.*, zz_layer

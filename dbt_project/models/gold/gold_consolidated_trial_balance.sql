@@ -150,7 +150,8 @@ with entity_tb_source as (
                       rate_set_predicate=actuals_rate_set_predicate(),
                       ownership_cte=ref('gold_entity_ownership'),
                       grain_extra=[],
-                      scoped=true) }}
+                      scoped=true,
+                      exits_relation=ref('gold_ownership_exits')) }}
 
 {# partner_data_area_id, then uses_historical_rate, then retranslation_amount,
    last: see the notes at the top. Each was added to an already-built table by

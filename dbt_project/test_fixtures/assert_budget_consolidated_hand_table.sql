@@ -1,4 +1,4 @@
--- gate: build gold_ownership_exits gold_budget_entity_ownership gold_consolidated_budget_tb assert_budget_consolidated_hand_table assert_budget_consolidated_periods_complete
+-- gate: build gold_budget_entity_ownership gold_consolidated_budget_tb assert_budget_consolidated_hand_table assert_budget_consolidated_periods_complete
 -- gate: expect gold_consolidated_budget_tb built
 -- gate: expect assert_budget_consolidated_hand_table pass
 -- gate: expect assert_budget_consolidated_periods_complete pass

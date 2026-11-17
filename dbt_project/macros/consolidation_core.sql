@@ -64,13 +64,25 @@
                        macros/budget_rates.sql). With it none, nothing below
                        changes: the three `if rate_set_column` blocks render
                        nothing.
+   exits_relation      konsolidat#335 (#358 review F1, F2): the relation holding
+                       the exit events, gold_ownership_exits' columns, or none.
+                       Actuals: ref('gold_ownership_exits'); the re-entry stint
+                       reset (spine_stints below) then applies, which is right
+                       because gold_ownership_exit_journal derecognises the
+                       pre-exit balance and the acquisition journal's line (0)
+                       brings it back in. Budget: none (the default). A budget
+                       posts no exit journal, so no reset: stint is 0 on every
+                       row, as before #358, and the core renders no join to the
+                       exits and no ref, so a tag:domain:scenarios build never
+                       reads a model it does not build. What a budget does at
+                       an exit is open (follow-up).
 
    Nothing here may add a column before partner_data_area_id of
    {p}consolidated: the actuals model appends by position (see its notes), and
    its final select orders partner_data_area_id, uses_historical_rate,
    retranslation_amount last. grain_extra columns sit after the dims, so a
    caller that passes any must place them in its own final select. #}
-{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='', rate_set_column=none) %}
+{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='', rate_set_column=none, exits_relation=none) %}
 {%- if ownership_cte is none %}{{ exceptions.raise_compiler_error('consolidation_core: ownership_cte is required: a CTE or relation with gold_entity_ownership\'s columns, resolved on the caller\'s period spine') }}{% endif -%}
 {%- if rate_set_predicate is none or (rate_set_predicate | trim) == '' or (rate_set_predicate | trim) == '1 = 1' %}{{ exceptions.raise_compiler_error('consolidation_core: rate_set_predicate is required: actuals_rate_set_predicate() for the actuals, the Cycle\'s set for a budget; a predicate that selects every set reads two rates for one key') }}{% endif -%}
 {%- set extra = [] -%}
@@ -620,7 +632,10 @@
    does, and the join below keeps each value on its own spine rows. The
    events are read from gold_ownership_exits (the macro materialised once,
    task X22), not from the macro: one more copy of the ownership graph inside
-   the core's pipeline is what that model takes out of every build. #}
+   the core's pipeline is what that model takes out of every build. The
+   caller passes them as exits_relation; with it none (the budget) neither
+   CTE below joins anything and stint is 0 on every row (see the header). #}
+{%- if exits_relation is not none %}
 {{ p }}spine_stints as (
     select consolidation_group, data_area_id, fiscal_year, fiscal_period,
         {{ dim_select(dims=extra, trailing=true) }}
@@ -637,7 +652,7 @@
             {{ dim_select(dims=extra, prefix='s.', trailing=true) }}
             toUInt32(1)
         from {{ p }}entity_spine as s
-        inner join {{ ref('gold_ownership_exits') }} as x
+        inner join {{ exits_relation }} as x
             on x.consolidation_group = s.consolidation_group
             and x.data_area_id = s.data_area_id
         where (toUInt16(x.out_fiscal_year), toUInt16(x.out_fiscal_period))
@@ -658,6 +673,12 @@
         and ss.fiscal_period = d.fiscal_period
         {{ dim_join_on('ss', 'd', dims=extra) }}
 ),
+{%- else %}
+{{ p }}densified_stints as (
+    select d.*, toUInt32(0) as stint
+    from {{ p }}densified as d
+),
+{%- endif %}
 
 {# The windows run over every row of every period (period_filter is applied
    only in the final select), so a scoped build sees the key's history.
