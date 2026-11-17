@@ -74,7 +74,7 @@ class CurrentForecastsDDL(unittest.TestCase):
         sources = _read(SOURCES)
         self.assertIn("- name: current_forecasts", sources)
         block = sources[sources.index("- name: current_forecasts"):]
-        block = block[:block.index("- name: ", 10)]
+        block = block[:block.index("\n      - name: ", 10)]   # up to the next TABLE entry
         for column in ("scenario_id", "fiscal_year", "cycle", "as_of_date"):
             self.assertIn(f"- name: {column}", block, column)
         self.assertIn("S6-Q1", block, "the source names the decision it implements")
