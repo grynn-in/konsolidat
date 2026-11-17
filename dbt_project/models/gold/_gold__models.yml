@@ -291,6 +291,9 @@ models:
       - name: line_type
         data_type: String
         description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
+      - name: hop_kind
+        data_type: String
+        description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -354,6 +357,9 @@ models:
       - name: line_type
         data_type: String
         description: "sent (negative, at the sender) or received (positive, at the receiver); see macros/cost_allocation.sql for the account of each"
+      - name: hop_kind
+        data_type: String
+        description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -382,7 +388,13 @@ models:
         description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"
 
   - name: gold_scenario_trial_balance
-    description: "Union of actual + budget + forecast across all scenarios"
+    description: >
+      Union of actual + budget + forecast across all scenarios. A forecast
+      scenario's rows are its DECLARED current round's only (konsol#348 S6-Q1 b,
+      Deepak Pai, 17 Nov 2026: gold_forecast_current_round, from konsol's
+      Current Forecast); a forecast (scenario, year) with no declaration has no
+      rows here, and assert_forecast_year_has_current_round WARNs naming it.
+      Rounds are never summed (assert_scenario_tb_forecast_is_current_round).
     columns:
       - name: scenario_id
         description: >
@@ -1106,3 +1118,93 @@ models:
         description: "Seed sub-line, or 'Net Income (Consolidated)' / 'Consolidation and Non-Cash Adjustments'"
       - name: cash_flow_amount
         description: "FX-translated cash effect = -amount (signed TB), summed per line"
+
+  - name: gold_forecast_current_round
+    description: >
+      konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026: THE current
+      round of each forecast (scenario, fiscal year), one row per declared pair.
+      konsol's Current Forecast declaration (epm_staging.current_forecasts)
+      joined to budget_cycles on the Cycle's name and the pair, forecast
+      scenarios only. Every entity-grain forecast reader joins this table and
+      reads one round; a pair with approved rounds and no declaration has no
+      row, reads empty everywhere, and assert_forecast_year_has_current_round
+      WARNs naming it. FC-3-1 rejected "latest round wins": nothing here orders
+      by as-of date.
+    columns:
+      - name: scenario_id
+        description: "The forecast scenario (scenario_definitions.scenario_type = 'forecast')."
+        tests:
+          - not_null
+      - name: fiscal_year
+        description: "The fiscal year the declaration covers; one row per (scenario_id, fiscal_year) (assert_forecast_current_round_unique)."
+      - name: cycle
+        description: "The declared round: the approved Budget Cycle's name, as gold_spread_budget.cycle carries it."
+      - name: as_of_date
+        description: "The round's as-of date, from budget_cycles: the actuals cut-off the round forecasts from."
+      - name: horizon_periods
+        description: "The round's horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1)."
+      - name: rate_set
+        description: "The Rate Set the round is translated at, from budget_cycles (BUD-3)."
+
+  - name: gold_forecast_current
+    description: >
+      konsol#348 S6-Q1 (b): gold_spread_budget narrowed to each forecast
+      (scenario, fiscal year)'s declared current round (gold_forecast_current_round).
+      A view with the fact's columns; konsol's forecast_input Dataset (the Excel
+      K.EPM flat forecast read) reads it so two approved rounds never sum. A
+      budget scenario has no row here; a forecast pair with no declaration has
+      none either. assert_forecast_current_ties_to_fact ties it to the fact.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+
+  - name: gold_forecast_current_at_hierarchy_node
+    description: >
+      konsol#348 S6-Q1 (b): gold_budget_at_hierarchy_node narrowed to each
+      forecast (scenario, fiscal year)'s declared current round. A view with the
+      rollup's columns; konsol's hierarchy forecast read (hierarchy_query) reads
+      it, because that read binds scenario_id and layer but never cycle.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+
+  - name: gold_latest_estimate
+    description: >
+      konsol#348 S6 (FC-2-1, S6-Q2 a): the latest estimate of EVERY approved
+      forecast round, keyed by cycle and as_of_date. Per round: the GL actuals
+      (gold_scenario_trial_balance, data_source gl) of the entities the round
+      forecasts in Regular periods at or before the as-of period, and the
+      round's own forecast (gold_spread_budget, layers summed) in Regular
+      periods after it within the horizon, inside the round's fiscal year.
+      Periods are counted on the declared calendar (forecast_round_periods()).
+      A forecast row at or before the as-of is not here; a missing actual is
+      reported (assert_latest_estimate_actuals_present), never filled.
+      A forecast row after the horizon is not here either, and is reported
+      (assert_latest_estimate_forecast_beyond_horizon, WARN, naming scenario,
+      cycle, entity, account and period; a key summing to zero drops nothing
+      and is not named): the horizon declared on the Cycle bounds the
+      estimate, and a sheet that entered more is told so.
+      gold_latest_estimate_current narrows to the declared round.
+    columns:
+      - name: cycle
+        description: "The round (approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: as_of_date
+        description: "The round's as-of date (budget_cycles)."
+      - name: period_amount
+        description: "Signed amount in the row's currency: the actual for a source 'actual' row, the forecast summed over layers for 'forecast'."
+      - name: source
+        description: "'actual' (at or before the as-of period) or 'forecast' (after it, within the horizon)."
+
+  - name: gold_latest_estimate_current
+    description: >
+      konsol#348 S6-Q1 (b), S6-Q2 (a): gold_latest_estimate narrowed to each
+      forecast (scenario, fiscal year)'s declared current round
+      (gold_forecast_current_round). A view with the estimate's columns;
+      konsol's latest_estimate Dataset (the Excel K.EPM read) reads it, so one
+      round is read, never the sum of rounds. A year with no declaration has no
+      row.
+    columns:
+      - name: cycle
+        description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+      - name: source
+        description: "'actual' at or before the round's as-of period, 'forecast' after it."

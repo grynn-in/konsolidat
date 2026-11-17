@@ -64,15 +64,21 @@ union all
 -- row per (scenario, entity, period, account, dims, currency) here. The fact's
 -- currency joins the grain (B6); konsol keeps it one per entity, and
 -- assert_budget_currency_is_entity_currency names a line that is not.
--- The fact also carries the Budget Cycle (B4), which this model does NOT carry:
--- the cycles of one scenario-year are summed here, as the layers are. A
--- budget-type scenario has one cycle per year (assert_budget_one_cycle_per_
--- scenario_year); a forecast scenario has one per round, and this model is not
--- the place to read a forecast round (the variance models read budget-type
--- scenarios only; S6's latest-estimate read picks its round on the fact).
--- Until then a forecast holds one approved round (konsol refuses the second Approve;
--- assert_forecast_one_approved_round_until_s6 is the backstop), so this sum is
--- one round, never two.
+-- The fact also carries the Budget Cycle (B4), which this model does NOT carry.
+-- A budget-type scenario has one cycle per year (assert_budget_one_cycle_per_
+-- scenario_year), so summing its rows without `cycle` is one Cycle. A forecast
+-- scenario has one approved Cycle per ROUND, several per year, and rounds never
+-- sum (konsol#348 S6-Q1 b, Deepak Pai, 17 Nov 2026): the WHERE below keeps,
+-- for a forecast-type scenario, only the rows of its DECLARED current round
+-- (gold_forecast_current_round, from konsol's Current Forecast), so this sum is
+-- one round, never two. A forecast (scenario, year) with no declaration has NO
+-- rows here (nothing is summed, nothing is guessed; FC-3-1 rejected "latest
+-- round wins"), and assert_forecast_year_has_current_round WARNs naming it.
+-- Budget-type (and any non-forecast) scenarios pass unchanged. IN with a
+-- tuple, not a join: join_use_nulls=0 would fill an unmatched join with ''.
+-- assert_scenario_tb_forecast_is_current_round ties every forecast key to the
+-- declared round's fact rows (its hand fixture: R1 100 + R2 110, R2 declared
+-- -> 110, never 210). The select list below is positional and unchanged.
 select
     scenario_id,
     data_area_id,
@@ -86,6 +92,15 @@ select
     {{ cast_to_decimal128('sum(period_amount)', amount_scale()) }} as amount,
     'budget' as data_source
 from {{ ref('gold_spread_budget') }}
+where scenario_id not in (
+        select scenario_id
+        from {{ source('epm_gold', 'scenario_definitions') }}
+        where scenario_type = 'forecast'
+    )
+   or (scenario_id, toUInt16(fiscal_year), cycle) in (
+        select scenario_id, toUInt16(fiscal_year), cycle
+        from {{ ref('gold_forecast_current_round') }}
+    )
 group by
     scenario_id,
     data_area_id,

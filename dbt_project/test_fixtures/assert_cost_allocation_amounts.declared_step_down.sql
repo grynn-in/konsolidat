@@ -12,14 +12,14 @@ INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation
 ('ZZRD','ZZRS1','Step-Down','dim_cost_center','Declared Allocation Account','ZZ6999','Follow Latest Data','ZZE1','ZZSC',2026,1);
 INSERT INTO epm_staging.cost_allocation_run_accounts (parent, idx, main_account, declared_account) VALUES
 ('ZZRD',1,'ZZ6000',''),('ZZRD',2,'ZZ6100','');
-INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES
-('ZZRD','ZZIT',1,'ZZIT','ZZHR','ZZ Headcount',1,0.2),
-('ZZRD','ZZIT',1,'ZZIT','ZZP1','ZZ Headcount',1,0.5),
-('ZZRD','ZZIT',1,'ZZIT','ZZP2','ZZ Headcount',1,0.3),
-('ZZRD','ZZIT',2,'ZZHR','ZZP1','ZZ Headcount',0.2,0.125),
-('ZZRD','ZZIT',2,'ZZHR','ZZP2','ZZ Headcount',0.2,0.075),
-('ZZRD','ZZHR',2,'ZZHR','ZZP1','ZZ Headcount',1,0.625),
-('ZZRD','ZZHR',2,'ZZHR','ZZP2','ZZ Headcount',1,0.375);
+INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, hop_kind, pool_coefficient, coefficient) VALUES
+('ZZRD','ZZIT',1,'ZZIT','ZZHR','ZZ Headcount','own',1,0.2),
+('ZZRD','ZZIT',1,'ZZIT','ZZP1','ZZ Headcount','own',1,0.5),
+('ZZRD','ZZIT',1,'ZZIT','ZZP2','ZZ Headcount','own',1,0.3),
+('ZZRD','ZZIT',2,'ZZHR','ZZP1','ZZ Headcount','pass',0.2,0.125),
+('ZZRD','ZZIT',2,'ZZHR','ZZP2','ZZ Headcount','pass',0.2,0.075),
+('ZZRD','ZZHR',2,'ZZHR','ZZP1','ZZ Headcount','own',1,0.625),
+('ZZRD','ZZHR',2,'ZZHR','ZZP2','ZZ Headcount','own',1,0.375);
 INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, dim_cost_center, amount) VALUES
 ('ZZSC','ZZE1',2026,1,'ZZ6000','ZZIT',10000000.1234),
 ('ZZSC','ZZE1',2026,1,'ZZ6000','ZZHR',400),
