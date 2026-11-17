@@ -9,10 +9,14 @@ which added flags together. S6-Q4 (a) replaces it with
 
 - ``favourable``: the signed actual is below the signed budget;
 - ``unfavourable``: above it;
-- ``not_applicable``: no budget, a balance-sheet account, an undeclared
-  normal balance, or a zero variance (the statement shows "On budget" for
-  that last case; the warehouse column does not distinguish it, as the
-  yml declares).
+- ``not_applicable``: a balance-sheet account, an undeclared normal
+  balance, or a zero variance (the statement shows "On budget" for that
+  last case; the warehouse column does not distinguish it, as the yml
+  declares).
+
+No budget line is a budget of zero ("Unbudgeted is unfavourable", Deepak
+Pai, 22 Sep 2026), never "no direction": the model and the test compare
+against ``coalesce(budget_amount, 0)``, as ``variance_abs`` does.
 
 Static pins, no ClickHouse:
 
@@ -62,6 +66,14 @@ class ModelDeclaresThreeStates(unittest.TestCase):
         self.assertIn(f"as {COLUMN}", sql)
         for literal in LITERALS:
             self.assertIn(f"'{literal}'", sql, literal)
+
+    def test_no_budget_is_budget_zero_never_no_direction(self):
+        """22 Sep 2026: budget 0, actual 10 is unfavourable 10."""
+        for path in (MODEL, os.path.join(TESTS, TEST + ".sql")):
+            sql = _read(path)
+            self.assertNotRegex(sql, r"budget_amount\s+is\s+null\s*,\s*'not_applicable'", path)
+            self.assertRegex(sql, r"actual_amount\s*<\s*coalesce\(\s*\w+\.budget_amount\s*,\s*0\s*\)", path)
+        self.assertIn("budget zero", _read(YML))
 
     def test_model_no_longer_has_the_boolean(self):
         self.assertNotIn(OLD_COLUMN, _read(MODEL))

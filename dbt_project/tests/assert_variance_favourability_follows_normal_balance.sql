@@ -9,9 +9,13 @@
      budget"; they are spelled out so the rule reads in accounting terms.
    - 'unfavourable': the signed actual is above the signed budget (1,200 costs against 1,000; -800 revenue
      against -1,000).
-   - 'not_applicable': no favourable direction. No budget, a balance-sheet account, an account whose normal
-     balance is not declared or not in the chart (join_use_nulls=0 reads ''), and a zero variance (the
-     statement shows "On budget" for it; the warehouse column does not distinguish it, as the yml declares).
+   - 'not_applicable': no favourable direction. A balance-sheet account, an account whose normal balance is
+     not declared or not in the chart (join_use_nulls=0 reads ''), and a zero variance (the statement shows
+     "On budget" for it; the warehouse column does not distinguish it, as the yml declares).
+
+   No budget line is a budget of ZERO, never "no direction" ("Unbudgeted is unfavourable", Deepak Pai,
+   22 Sep 2026: budget 0, actual 10 is an unfavourable variance of 10), the same zero variance_abs already
+   uses: an unbudgeted cost is 'unfavourable', unbudgeted revenue 'favourable'.
 
    The retired S3 Bool read false for "unfavourable" and for "no direction" alike, and konsol
    registered it as a sum Measure, which added flags together (konsolidat#214). This test derives the expected
@@ -19,7 +23,7 @@
    for an undeclared account, or marks a zero variance either way, is named. One row per variance row whose
    state differs; error severity.
    Fixtures: dbt_project/test_fixtures/variance_favourability_signed.sql (build, pass),
-   assert_variance_favourability_follows_normal_balance.sql (pass), .must_flag.sql (flag 3). #}
+   assert_variance_favourability_follows_normal_balance.sql (pass), .must_flag.sql (flag 4). #}
 {{ config(severity='error') }}
 
 with judged as (
@@ -35,11 +39,10 @@ with judged as (
         v.variance_favourability as model_state,
         am.normal_balance as chart_normal_balance,
         multiIf(
-            v.budget_amount is null, 'not_applicable',
             v.is_pnl = 0, 'not_applicable',
             am.normal_balance not in ('Credit', 'Debit'), 'not_applicable',
-            v.actual_amount < v.budget_amount, 'favourable',
-            v.actual_amount > v.budget_amount, 'unfavourable',
+            v.actual_amount < coalesce(v.budget_amount, 0), 'favourable',
+            v.actual_amount > coalesce(v.budget_amount, 0), 'unfavourable',
             'not_applicable'
         ) as expected_state
     from {{ ref('gold_variance_analysis') }} as v

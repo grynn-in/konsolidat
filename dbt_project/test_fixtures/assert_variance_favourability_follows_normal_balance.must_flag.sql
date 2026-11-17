@@ -1,9 +1,10 @@
--- gate: expect assert_variance_favourability_follows_normal_balance flag 3
--- assert_variance_favourability_follows_normal_balance: must FLAG 3. The same hand-computed rows as the PASS
--- fixture, with three states wrong: ZZ4000 revenue -1,200 against -1,000 (more revenue) marked 'unfavourable',
+-- gate: expect assert_variance_favourability_follows_normal_balance flag 4
+-- assert_variance_favourability_follows_normal_balance: must FLAG 4. The same hand-computed rows as the PASS
+-- fixture, with four states wrong: ZZ6100 unbudgeted costs 30 marked 'not_applicable' (the first S6 rule, which
+-- read no budget as no direction; "Unbudgeted is unfavourable", 22 Sep 2026, makes it budget zero), ZZ4000 revenue -1,200 against -1,000 (more revenue) marked 'unfavourable',
 -- ZZ5000 costs 1,200 against 1,000 (more cost) marked 'favourable' (the two the retired Bool rule once set the
 -- wrong way round), and ZZ9000 rent 700 against 700 (a zero variance) marked 'favourable' where no direction
--- exists. The other five rows are right and must not be named.
+-- exists. The other five rows (ZZ7000, unbudgeted revenue, is 'favourable') are right and must not be named.
 INSERT INTO epm_silver.silver_main_accounts
   (main_account_id, account_name, account_type, account_type_name, is_pnl, is_balance_sheet, normal_balance)
 VALUES
@@ -12,6 +13,7 @@ VALUES
   ('ZZ4100', 'ZZ fees', 'Revenue', 'Revenue', 1, 0, 'Credit'),
   ('ZZ5000', 'ZZ costs', 'Expense', 'Expense', 1, 0, 'Debit'),
   ('ZZ6000', 'ZZ other costs', 'Expense', 'Expense', 1, 0, 'Debit'),
+  ('ZZ6100', 'ZZ unbudgeted costs', 'Expense', 'Expense', 1, 0, 'Debit'),
   ('ZZ7000', 'ZZ other revenue', 'Revenue', 'Revenue', 1, 0, 'Credit'),
   ('ZZ8000', 'ZZ undeclared', 'Profit and loss', 'Profit and loss', 1, 0, ''),
   ('ZZ9000', 'ZZ rent', 'Expense', 'Expense', 1, 0, 'Debit');
@@ -23,7 +25,8 @@ VALUES
   ('ZZE1', 2026, 1, 'ZZ4000', 'ZZ revenue', 'Revenue', 1, '', '', 'USD', -1200, -1000, -200, 20, 'unfavourable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ5000', 'ZZ costs', 'Expense', 1, '', '', 'USD', 1200, 1000, 200, 20, 'favourable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ6000', 'ZZ other costs', 'Expense', 1, '', '', 'USD', 900, 1000, -100, -10, 'favourable', 'ZZ_PLAN_2026'),
-  ('ZZE1', 2026, 1, 'ZZ7000', 'ZZ other revenue', 'Revenue', 1, '', '', 'USD', -50, NULL, -50, NULL, 'not_applicable', 'ZZ_PLAN_2026'),
+  ('ZZE1', 2026, 1, 'ZZ7000', 'ZZ other revenue', 'Revenue', 1, '', '', 'USD', -50, NULL, -50, NULL, 'favourable', 'ZZ_PLAN_2026'),
+  ('ZZE1', 2026, 1, 'ZZ6100', 'ZZ unbudgeted costs', 'Expense', 1, '', '', 'USD', 30, NULL, 30, NULL, 'not_applicable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ1000', 'ZZ cash', 'Asset', 0, '', '', 'USD', 500, 400, 100, 25, 'not_applicable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ8000', 'ZZ undeclared', 'Profit and loss', 1, '', '', 'USD', 100, 200, -100, -50, 'not_applicable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ9000', 'ZZ rent', 'Expense', 1, '', '', 'USD', 700, 700, 0, 0, 'favourable', 'ZZ_PLAN_2026'),

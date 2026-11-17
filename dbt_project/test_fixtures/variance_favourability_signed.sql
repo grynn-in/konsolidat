@@ -9,7 +9,9 @@
 -- (-1,000) | ZZ5000 Dr 1,000 (+1,000) | ZZ6000 Dr 700 (+700).
 -- Hand-computed: revenue 1,200 actual against 1,000 budget is MORE revenue, 'favourable'; expense 1,200 against
 -- 1,000 is MORE cost, 'unfavourable'; rent 700 against 700 is a zero variance, 'not_applicable' (the statement
--- shows it as "On budget"). `+gold_variance_analysis assert_variance_favourability_follows_normal_balance` must
+-- shows it as "On budget"). ZZ6100 unbudgeted costs Dr 30 with no Budget Entry: budget zero ("Unbudgeted is
+-- unfavourable", Deepak Pai, 22 Sep 2026), so 30 against 0 is 'unfavourable', never 'not_applicable'.
+-- `+gold_variance_analysis assert_variance_favourability_follows_normal_balance` must
 -- BUILD and PASS.
 --
 -- Red on the S5 model: the column is the S3 Bool (favourable yes/no), so the test does not compile (no
@@ -37,7 +39,8 @@ INSERT INTO epm_staging.main_accounts
 VALUES
   ('ZZ4000', 'ZZ revenue', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published', 0),
   ('ZZ5000', 'ZZ costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
-  ('ZZ6000', 'ZZ rent', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0);
+  ('ZZ6000', 'ZZ rent', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
+  ('ZZ6100', 'ZZ unbudgeted costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0);
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
@@ -48,11 +51,12 @@ INSERT INTO epm_raw.trial_balance_submissions
 VALUES
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1200, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ5000', 1200, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
-  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6100', 30, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
 INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
-  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 3, '2026-02-05 09:00:00', 'Period movement');
+  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 4, '2026-02-05 09:00:00', 'Period movement');
 INSERT INTO epm_gold.scenario_definitions
   (scenario_id, scenario_name, scenario_type, is_active)
 VALUES
