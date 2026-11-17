@@ -1,4 +1,4 @@
--- gate: build gold_consolidated_trial_balance
+-- gate: build gold_ownership_exits gold_consolidated_trial_balance
 -- gate: refuse gold_consolidated_trial_balance 0 Rate Set(s) flagged Is Actuals
 -- governed_rate_guard (konsol#348 S4-Q7 a, W2): the consolidated trial balance's first pre_hook must
 -- REFUSE the build when no Rate Set is flagged Is Actuals, naming the count, even when nothing is

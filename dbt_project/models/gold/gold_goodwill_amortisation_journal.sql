@@ -134,7 +134,8 @@ stop_events as (
        exit period (the Regular period holding the end date, as the
        disposal period holds its date): gold_ownership_exit_journal
        derecognises the goodwill net of the amortisation posted to date
-       through the exit period, in which none is posted. #}
+       through the exit period, in which none is posted. Read from
+       gold_ownership_exits, the macro materialised once (task X22). #}
     select
         x.consolidation_group as consolidation_group,
         x.data_area_id as data_area_id,
@@ -142,7 +143,7 @@ stop_events as (
         toUInt16(x.fiscal_period) as ev_period,
         {# 1970-01-01 = no end date caused the exit (a method change): the period comparison decides #}
         ifNull(x.end_date, toDate('1970-01-01')) as ev_date
-    from {{ ownership_exits() }} as x
+    from {{ ref('gold_ownership_exits') }} as x
 ),
 
 {# the stop of each deal (konsolidat#335 review F5; #358 re-review F3): the

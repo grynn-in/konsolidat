@@ -569,7 +569,10 @@
    is not an exit (ownership_exits()) and keeps one stint. An exit belongs to
    (group, entity), not to a grain_extra value, so every value of the extra
    grain counts the same exits; the spine carries `extra` as entity_spine
-   does, and the join below keeps each value on its own spine rows. #}
+   does, and the join below keeps each value on its own spine rows. The
+   events are read from gold_ownership_exits (the macro materialised once,
+   task X22), not from the macro: one more copy of the ownership graph inside
+   the core's pipeline is what that model takes out of every build. #}
 {{ p }}spine_stints as (
     select consolidation_group, data_area_id, fiscal_year, fiscal_period,
         {{ dim_select(dims=extra, trailing=true) }}
@@ -586,7 +589,7 @@
             {{ dim_select(dims=extra, prefix='s.', trailing=true) }}
             toUInt32(1)
         from {{ p }}entity_spine as s
-        inner join {{ ownership_exits() }} as x
+        inner join {{ ref('gold_ownership_exits') }} as x
             on x.consolidation_group = s.consolidation_group
             and x.data_area_id = s.data_area_id
         where (toUInt16(x.out_fiscal_year), toUInt16(x.out_fiscal_period))

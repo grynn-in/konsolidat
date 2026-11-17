@@ -38,15 +38,15 @@
    (a WARN names it, task X8). Layer 2 (IC) is never read: its 'left' row reverses the eliminations
    (gold_ic_reconciliation); gold_fully_consolidated_tb is never read (it unions this model).
 
-   Methods. method_before 'full' (full_exits), 'proportional' (proportional_exits, task X4) and 'equity'
-   (equity_exits, task X5) post here. An equity-method associate carries only the reserved pseudo-account
-   EQ_INVEST, outside the chart (gold_equity_method_associates posts EQ_INCOME / EQ_INVEST per period). Its exit
-   reverses the to-date EQ_INVEST (line 105) against the exit account and nothing else: no CTA leg, because that
-   model translates every result at the period's Average rate and carries no revaluation. EQ_INCOME stays (the
-   share of past results is in group reserves). gold_equity_method_associates stops by itself at the end: it
-   reads gold_entity_ownership with consolidation_method = 'equity', which has no row for the associate from
-   the first period it is out (out_fiscal_period) on; what it posted through the exit period is reversed here,
-   so nothing is carried after the exit (the fixture .equity pins it).
+   Methods. method_before 'full', 'proportional' (task X4) and 'equity' (task X5) post here (exit_events). An
+   equity-method associate carries only the reserved pseudo-account EQ_INVEST, outside the chart
+   (gold_equity_method_associates posts EQ_INCOME / EQ_INVEST per period). Its exit reverses the to-date EQ_INVEST
+   (line 105) against the exit account and nothing else: no CTA leg, because that model translates every result at
+   the period's Average rate and carries no revaluation. EQ_INCOME stays (the share of past results is in group
+   reserves). gold_equity_method_associates stops by itself at the end: it reads gold_entity_ownership with
+   consolidation_method = 'equity', which has no row for the associate from the first period it is out
+   (out_fiscal_period) on; what it posted through the exit period is reversed here, so nothing is carried after the
+   exit (the fixture .equity pins it).
 
    The accounts come from the group's root row (data_area_id = ''), read with any() per column as
    gold_business_disposal_journal reads it. A group without a root row, or whose root declares no
@@ -66,8 +66,19 @@ with group_policy as (
     group by consolidation_group
 ),
 
-{# The exit events, read once: ClickHouse inlines a WITH subquery at every reference, and this one is the
-   ownership graph on a period spine. #}
+{# The exit events. ClickHouse inlines a WITH subquery at every reference, so the events are read from
+   gold_ownership_exits (the ownership_exits() macro, materialised once; task X22), not from the macro: the
+   chain below referenced it 18 times (3 method CTEs, x3 for the previous-exit and previous-disposal lookups,
+   x2 for reversal_lines' two readers), each a copy of the ownership graph on the period spine, and the
+   model's INSERT was OOM-killed on an empty site. Each reference here is now a scan of a small table.
+
+   Methods. method_before 'full' (task X3: 100% of what layer 1 carried), 'proportional' (task X4: an IFRS 11
+   joint operation; layer 1 already carries group_amount = translated x share of each period, nci_amount 0, so
+   reversing the to-date group_amount is exactly the carried share, including after an earlier share step;
+   gold_fx_revaluation's plug is on the group share too, so the 'CTA' line needs no minority leg; no goodwill,
+   FVA or NCI, a deal into a joint operation is refused) and 'equity' (task X5: EQ_INVEST, line 105, against
+   the exit account; no CTA leg) post here. Every method reads the same lines below and the same balancing
+   line (199): the carried sources decide which lines a method has, so no method needs its own expression. #}
 exit_events as (
     select
         x.consolidation_group as consolidation_group,
@@ -79,86 +90,56 @@ exit_events as (
         gp.exit_gain_loss_account as exit_gain_loss_account,
         concat('EXIT_', x.consolidation_group, '_', x.data_area_id, '_',
                toString(x.fiscal_year), '_', toString(x.fiscal_period)) as journal_id
-    from {{ ownership_exits() }} as x
+    from {{ ref('gold_ownership_exits') }} as x
     inner join group_policy as gp
         on gp.consolidation_group = x.consolidation_group
     where gp.exit_gain_loss_account != ''
+      and x.method_before in ('full', 'proportional', 'equity')
 ),
 
-{# task X3: the full method, 100% of what layer 1 carried #}
-full_exits as (
-    select * from exit_events where method_before = 'full'
-),
-
-{# task X4: a proportional exit (IFRS 11 joint operation) reverses what layer 1 carried at the carried share.
-   Layer 1 already carries group_amount = translated x share of each period (nci_amount 0), so reversing the
-   to-date group_amount is exactly the carried share, including after an earlier share step; gold_fx_revaluation's
-   plug is on the group share too (its header, proportional), so the 'CTA' line needs no minority leg. No goodwill,
-   FVA or NCI: a deal into a joint operation is refused. Same lines, same balancing line (199) as full. #}
-proportional_exits as (
-    select * from exit_events where method_before = 'proportional'
-),
-
-{# task X5: an equity-method exit reverses EQ_INVEST (line 105) against the exit account; no CTA leg #}
-equity_exits as (
-    select * from exit_events where method_before = 'equity'
-),
-
-posting_exits_all as (
-    select * from full_exits
-    union all
-    select * from proportional_exits
-    union all
-    select * from equity_exits
+{# The full Business Disposals of each (G, E), as ords, for the lower bound below. #}
+disposal_ords as (
+    select
+        consolidation_group,
+        data_area_id,
+        groupUniqArray(toUInt32(fiscal_year) * 1000 + fiscal_period) as ords
+    from {{ ref('gold_business_disposal_journal') }}
+    group by consolidation_group, data_area_id
 ),
 
 {# What an earlier journal already derecognised is not carried any more: after a re-entry (the
    joint_operation_gap shape, task X7) the next exit reverses only from the period after the previous exit
    period (that exit's journal reversed everything up to and including its period), and only after the latest
    full Business Disposal of E in G before P (its journal derecognised up to and including its period), so both
-   bounds are the period + 1. ord = FY x 1000 + period. #}
-previous_exit as (
-    select
-        consolidation_group, data_area_id, fiscal_year, fiscal_period,
-        lagInFrame(toUInt32(fiscal_year) * 1000 + fiscal_period, 1, toUInt32(0)) over (
-            partition by consolidation_group, data_area_id
-            order by fiscal_year, fiscal_period
-            rows between unbounded preceding and current row
-        ) as previous_exit_ord
-    from posting_exits_all
-),
-
-previous_disposal as (
-    select
-        x.consolidation_group as consolidation_group,
-        x.data_area_id as data_area_id,
-        x.fiscal_year as fiscal_year,
-        x.fiscal_period as fiscal_period,
-        max(toUInt32(d.fiscal_year) * 1000 + d.fiscal_period) as disposal_ord
-    from posting_exits_all as x
-    inner join (
-        select distinct consolidation_group, data_area_id, fiscal_year, fiscal_period
-        from {{ ref('gold_business_disposal_journal') }}
-    ) as d
-        on d.consolidation_group = x.consolidation_group
-        and d.data_area_id = x.data_area_id
-    where (toUInt16(d.fiscal_year), toUInt16(d.fiscal_period)) < (x.fiscal_year, x.fiscal_period)
-    group by x.consolidation_group, x.data_area_id, x.fiscal_year, x.fiscal_period
-),
-
-{# join_use_nulls = 0: no earlier exit or disposal reads 0, so the lower bound is 0 (all history) #}
-posting_exits as (
+   bounds are the period + 1. ord = FY x 1000 + period. Both are read in one pass over exit_events: the
+   previous exit by a window over the exits of (G, E), the latest earlier disposal from that pair's disposal
+   ords (join_use_nulls = 0: a pair with no disposal reads an empty array; the 0 pushed in front is the
+   "none" value, as is the window's default). #}
+exit_bounds as (
     select
         x.*,
-        greatest(if(pe.previous_exit_ord = 0, toUInt32(0), pe.previous_exit_ord + 1),
-                 if(pd.disposal_ord = 0, toUInt32(0), pd.disposal_ord + 1)) as from_ord
-    from posting_exits_all as x
-    left join previous_exit as pe
-        on pe.consolidation_group = x.consolidation_group and pe.data_area_id = x.data_area_id
-        and pe.fiscal_year = x.fiscal_year and pe.fiscal_period = x.fiscal_period
-    left join previous_disposal as pd
-        on pd.consolidation_group = x.consolidation_group and pd.data_area_id = x.data_area_id
-        and pd.fiscal_year = x.fiscal_year and pd.fiscal_period = x.fiscal_period
+        lagInFrame(toUInt32(x.fiscal_year) * 1000 + x.fiscal_period, 1, toUInt32(0)) over (
+            partition by x.consolidation_group, x.data_area_id
+            order by x.fiscal_year, x.fiscal_period
+            rows between unbounded preceding and current row
+        ) as previous_exit_ord,
+        arrayMax(arrayPushFront(
+            arrayFilter(o -> o < toUInt32(x.fiscal_year) * 1000 + x.fiscal_period, d.ords),
+            toUInt32(0))) as disposal_ord
+    from exit_events as x
+    left join disposal_ords as d
+        on d.consolidation_group = x.consolidation_group
+        and d.data_area_id = x.data_area_id
+),
+
+{# no earlier exit or disposal reads 0, so the lower bound is 0 (all history) #}
+posting_exits as (
+    select
+        consolidation_group, data_area_id, fiscal_year, fiscal_period, method_before, end_date,
+        exit_gain_loss_account, journal_id,
+        greatest(if(previous_exit_ord = 0, toUInt32(0), previous_exit_ord + 1),
+                 if(disposal_ord = 0, toUInt32(0), disposal_ord + 1)) as from_ord
+    from exit_bounds
 ),
 
 equity_accounts as (

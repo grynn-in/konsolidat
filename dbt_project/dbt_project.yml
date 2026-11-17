@@ -171,6 +171,8 @@ models:
         +tags: ['gold', 'domain:actuals']
       gold_fx_revaluation:
         +tags: ['gold', 'domain:actuals']
+      gold_ownership_exits:
+        +tags: ['gold', 'domain:actuals']
       gold_pnl_by_period:
         +tags: ['gold', 'domain:actuals']
       gold_pnl_half_yearly:

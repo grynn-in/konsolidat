@@ -1,4 +1,4 @@
--- gate: build gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
+-- gate: build gold_ownership_exits gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
 -- assert_equity_historical_rate_is_asof, April fiscal year (konsolidat#189 PR3, konsol#348 QA2 c): must PASS
 -- once the model dates a period by its DECLARED window_end_date. FY2026 runs Apr 2025 - Mar 2026, so P1 is
 -- 2025-04-01 .. 2025-04-30 and a rate tranche dated 2025-06-15 must NOT apply to it. Today the model dates P1

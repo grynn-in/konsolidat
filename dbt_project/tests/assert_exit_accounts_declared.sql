@@ -7,7 +7,8 @@
 -- (passes), .flagged_without_disposal.must_flag.sql (1 row).
 --
 -- Exit events come from macros/ownership_exits() (X1): E live in G the previous declared period, not live in P,
--- not ended by its own full Business Disposal. The accounts are required only for an exit whose journal posts
+-- not ended by its own full Business Disposal. Read from gold_ownership_exits, the macro materialised once (task
+-- X22): this test referenced the macro four times, each a copy of the ownership graph. The accounts are required only for an exit whose journal posts
 -- something (konsolidat#335 review F3): an exit with carried lines in gold_ownership_exit_journal (joined on
 -- group, entity, exit period; ref()d so dbt orders it). An exit with no carried balances (e.g. a legacy link
 -- ended years ago with no trial balance rows) posts nothing and needs no account.
@@ -64,7 +65,7 @@ exit_prev as (
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and current row
         ) as previous_exit_ord
-    from {{ ownership_exits() }}
+    from {{ ref('gold_ownership_exits') }}
 ),
 
 exit_prev_disposal as (
@@ -74,7 +75,7 @@ exit_prev_disposal as (
         x.fiscal_year as fiscal_year,
         x.fiscal_period as fiscal_period,
         max(toUInt32(d.fiscal_year) * 1000 + d.fiscal_period) as disposal_ord
-    from {{ ownership_exits() }} as x
+    from {{ ref('gold_ownership_exits') }} as x
     inner join (
         select distinct consolidation_group, data_area_id, fiscal_year, fiscal_period
         from {{ ref('gold_business_disposal_journal') }}
@@ -93,7 +94,7 @@ exit_span as (
         x.fiscal_period as fiscal_period,
         greatest(if(pe.previous_exit_ord = 0, toUInt32(0), pe.previous_exit_ord + 1),
                  if(pd.disposal_ord = 0, toUInt32(0), pd.disposal_ord + 1)) as from_ord
-    from {{ ownership_exits() }} as x
+    from {{ ref('gold_ownership_exits') }} as x
     left join exit_prev as pe
         on pe.consolidation_group = x.consolidation_group and pe.data_area_id = x.data_area_id
         and pe.fiscal_year = x.fiscal_year and pe.fiscal_period = x.fiscal_period
@@ -164,7 +165,7 @@ exits as (
         toUInt8(coalesce(r.n_root, 0) > 0) as has_root,
         coalesce(r.exit_gain_loss_account, '') as exit_gain_loss_account,
         coalesce(r.nci_account, '') as nci_account
-    from {{ ownership_exits() }} as x
+    from {{ ref('gold_ownership_exits') }} as x
     left join root as r
         on r.consolidation_group = x.consolidation_group
     left join carried as c

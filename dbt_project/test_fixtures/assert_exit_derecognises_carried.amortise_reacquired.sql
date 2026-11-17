@@ -1,4 +1,4 @@
--- gate: build +gold_fully_consolidated_tb gold_ownership_exit_journal gold_goodwill_amortisation_journal assert_goodwill_amortised_after_reacquisition assert_goodwill_amortisation_journal_balances
+-- gate: build gold_ownership_exits +gold_fully_consolidated_tb gold_ownership_exit_journal gold_goodwill_amortisation_journal assert_goodwill_amortised_after_reacquisition assert_goodwill_amortisation_journal_balances
 -- gate: expect assert_goodwill_amortised_after_reacquisition pass
 -- gate: expect assert_goodwill_amortisation_journal_balances pass
 -- konsolidat#335 review F5 (X15): the gap_no_double_count fixture with goodwill Amortise over 1 year (12 periods). ZZJ exits

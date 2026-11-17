@@ -1,4 +1,4 @@
--- gate: build +gold_fully_consolidated_tb gold_ownership_exit_journal assert_reentry_carries_full_balance assert_exit_derecognises_carried assert_bs_translated_at_closing_rate
+-- gate: build gold_ownership_exits +gold_fully_consolidated_tb gold_ownership_exit_journal assert_reentry_carries_full_balance assert_exit_derecognises_carried assert_bs_translated_at_closing_rate
 -- gate: expect assert_reentry_carries_full_balance pass
 -- gate: expect assert_exit_derecognises_carried pass
 -- gate: expect assert_bs_translated_at_closing_rate pass

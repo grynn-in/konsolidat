@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_exit_out_of_scope_named
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_exit_out_of_scope_named
 -- gate: expect assert_exit_out_of_scope_named flag 1
 -- konsolidat#335 task X8, case (a): ZZQS is full at 70% to 2026-02-28 and equity at 30% from 2026-03-01 (a successor
 -- period, the link continues). Exactly one WARN row: FY2026 P3, 'step to equity'. No exit, so nothing else.
