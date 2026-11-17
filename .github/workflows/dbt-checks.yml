@@ -10,6 +10,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_consolidation_core_thread_cap.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -47,6 +48,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_consolidation_core_thread_cap.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -160,6 +162,11 @@ jobs:
         run: python -m unittest -v tests.test_budget_ownership_materialised
       # konsol#348 S4b live test: a seed statement ClickHouse refuses fails its
       # fixture with a reason instead of crashing the gate.
+      # konsolidat#369: the core keeps ClickHouse's thread cap on an all-empty
+      # warehouse (system.one in entity_tb) and the budget's partner is a column,
+      # not a constant, so its window chain has the actuals' shape.
+      - name: consolidation core keeps the thread cap on an empty warehouse
+        run: python -m unittest -v tests.test_consolidation_core_thread_cap
       - name: fixture gate fails a refused seed per fixture
         run: python -m unittest -v tests.test_fixture_gate_seed_errors
       # konsolidat#199: the TB submission control table's DDL is konsol's,
