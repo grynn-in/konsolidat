@@ -28,7 +28,10 @@
    rounds must never sum: both branches carry the cycle and the manual branch
    groups by it, so round 2 is a second set of rows beside round 1, never added
    to it. assert_budget_fact_per_cycle is the backstop. Which round a read takes
-   (the latest estimate) is the reader's choice, with S6's budget_cycles table.
+   is declared (konsol#348 S6-Q1 b, Deepak Pai, 17 Nov 2026): konsol's Current
+   Forecast, gold_forecast_current_round, which every forecast reader joins
+   (gold_scenario_trial_balance, gold_forecast_current, the hierarchy view,
+   gold_latest_estimate_current). gold_latest_estimate keeps every round.
 
    CURRENCY (QB3 a): each row carries the currency its line declares. konsol
    refuses a line that is not in the entity's accounting currency;

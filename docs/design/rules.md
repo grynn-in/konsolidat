@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **193** |
-| carrying their reasoning | 171 |
-| citing the issue that caused them | 166 |
-| severity `warn` (reports, does not stop a build) | 24 |
-| severity `error` (stops the build, and its children) | 169 |
+| assertions | **203** |
+| carrying their reasoning | 181 |
+| citing the issue that caused them | 176 |
+| severity `warn` (reports, does not stop a build) | 27 |
+| severity `error` (stops the build, and its children) | 176 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -31,12 +31,12 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 35
+- [Reporting hierarchies](#reporting-hierarchies) — 10
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 36
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 16
-- [Other](#other) — 5
+- [Platform and data integrity](#platform-and-data-integrity) — 21
+- [Other](#other) — 8
 
 ---
 
@@ -908,6 +908,14 @@ A1 (#119) asserted that under an orchestrator scope close every row in the WHOLE
 
 ## Reporting hierarchies
 
+### `forecast_current_at_node_ties_to_rollup`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026): gold_forecast_current_at_hierarchy_node is gold_budget_at_hierarchy_node narrowed to each forecast pair's DECLARED current round, and nothing else.**
+
+konsol's hierarchy forecast read (the Excel K.EPM read at a reporting-hierarchy node) reads it and binds scenario_id and layer, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the rollup's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every hierarchy forecast read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_forecast_current_at_node_ties_to_rollup.sql (R1 100 and R2 110 at two nodes, R2 declared: pass), assert_forecast_current_at_node_ties_to_rollup.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_forecast_current_at_node_ties_to_rollup.sql` · konsol#348 konsolidat#361</sub>
+
 ### `hierarchy_all_entities_resolved`
 
 **PRD-8 / F2: every entity node in the consolidation structure must be reachable by the tree walk.**
@@ -1074,7 +1082,7 @@ A forecast scenario holds one approved Cycle per round, and several rounds share
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Until S6, assert_forecast_one_approved_round_until_s6 is the forecast side: it holds a forecast to one approved round (interim rule on konsol#348, 15 Nov 2026), because the readers still sum rounds. Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Since S6 (konsol#348 S6-Q1 b, Deepak Pai, 17 Nov 2026) a forecast's approved rounds sit side by side and every reader takes the declared current round (gold_forecast_current_round); the interim one-approved-round test left with konsol's refusal. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -1213,6 +1221,14 @@ Every weight row of a run must equal a value of the named statistic at value_per
 This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl       -> actual budget   -> budget or forecast (The ERP branch 'd365_budget' is gone, konsol#348 S3 B1.) Forecasts are legitimate rows of the scenario trial balance, so the budget branch accepts them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
 
 <sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsol#348 konsolidat#206 konsolidat#211</sub>
+
+### `scenario_tb_forecast_is_current_round`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast scenario's rows in gold_scenario_trial_balance are the DECLARED current round's and no other's.**
+
+Rounds never sum. The scenario TB's budget branch groups without `cycle`, so before S6 WA4 it added every approved round of a forecast (scenario, year) together (R1 100 + R2 110 = 210, and konsol refused the second Approve to keep that from happening). Now the branch keeps, for a forecast-type scenario, only the rows of gold_forecast_current_round's cycle; a pair with no declaration has no rows at all. This ties the two: per (scenario, entity, year, period, account, currency) of every forecast scenario, the TB's amount must equal the fact's period_amount summed over layers (and budget dimensions) for the declared cycle; a key on one side only, or an amount off by more than the materiality floor, is one row here. A key present in the TB with no declared round is therefore named (the TB holds rows the declaration does not back), and so is a declared round whose rows the TB dropped. Budget-type scenarios pass through the branch unchanged and are not read here. Error severity: every reader of the scenario TB (the variance models, the cost-allocation pool) would report a doubled or an empty forecast. join_use_nulls=0: an unmatched FULL OUTER JOIN side reads '' (never NULL), so the "missing" test is coalesce(..., '') = '' on the key's scenario_id, as assert_budget_node_per_cycle_and_currency does; output aliases differ from the joined columns' names so no alias shadows a stripped qualifier. Fixtures: assert_scenario_tb_forecast_is_current_round.sql (R1 100, R2 110, R2 declared: the TB shows 110, pass), assert_scenario_tb_forecast_is_current_round.must_flag.sql (the TB seeded with the summed 210 against the same declaration: 1 result, the shape of the pre-WA4 model).
+
+<sub>`error` · `tests/assert_scenario_tb_forecast_is_current_round.sql` · konsol#348</sub>
 
 ### `spread_covers_declared_periods`
 
@@ -1406,13 +1422,37 @@ Silver derives debit/credit from the SIGN of the amount (konsolidat#112), so the
 
 <sub>`error (default)` · `tests/assert_d365_gl_vouchers_balance.sql` · konsolidat#112 konsolidat#118 konsolidat#155</sub>
 
-### `forecast_one_approved_round_until_s6`
+### `forecast_as_of_in_declared_period`
 
-**INTERIM RULE, REMOVED IN S6 (konsol#348, review of grynn-in/konsol#540 / konsolidat#362, 15 Nov 2026).**
+**konsol#348 S6 WA3 (BUD-10-1: horizons and lags are counted in DECLARED periods).**
 
-A forecast (scenario, fiscal year) holds at most ONE approved round for now. Four readers still sum a forecast's rounds across the cycle: gold_scenario_trial_balance (its GROUP BY leaves `cycle` out), the cost-allocation pool (konsol cost_allocation_run.py), the forecast_input Dataset (konsol defaults/dataset.json) and hierarchy_query. Two approved rounds in one year would therefore add two forecasts together silently. konsol refuses the second Approve by name (Budget Cycle.before_submit, under the pair lock); this is the warehouse backstop, one row per forecast (scenario, fiscal year) that gold_spread_budget holds under more than one distinct cycle. The fact carries only approved Cycles (konsol syncs docstatus 1), so a second cycle here IS a second approved round. Forecasts only, by the declared type in epm_gold.scenario_definitions, as assert_budget_one_cycle_per_ scenario_year (B5) does for the budget side: that test leaves forecasts out, this one is the forecast guard. IN, not a join: join_use_nulls=0 would fill an unmatched join with ''. An undeclared scenario is B5's and assert_scenario_rows_declared's business, not read here. Goes in S6 with konsol's refusal, when the latest-estimate read picks the round (FC-2-1) and approved rounds sit side by side (FC-4). Error severity: every reader above would report a doubled forecast. Fixtures: assert_forecast_one_approved_round_until_s6.must_flag.sql (two cycles: 1 result), assert_forecast_one_approved_round_until_s6.one_round.sql (one cycle, and a two-cycle budget: pass).
+A forecast round's as-of date must fall inside a declared Regular period of the fiscal calendar (epm_staging.fiscal_periods, through declared_periods()): that period is where "actual up to the as-of" ends and the horizon starts (forecast_round_as_of(), macros/forecast_rounds.sql). A round whose as-of date is in no Regular period (a year not yet declared, a gap between periods, a date on an Opening/Closing day with no Regular period around it) cannot be counted: the latest estimate and the accuracy model have no row for it, silently, and this names it instead. Every approved round of a forecast scenario is checked, not only the declared current one: the accuracy model (pair C) reads every round. Error severity: a reader that drops a round is wrong, and the fix is to declare the period in EPM Fiscal Year. NOT IN, not a LEFT JOIN null test (join_use_nulls=0). Fixtures: assert_forecast_as_of_in_declared_period.must_flag.sql (as-of in an undeclared year: 1 result), assert_forecast_as_of_in_declared_period.sql (as-of inside a declared period: pass).
 
-<sub>`error` · `tests/assert_forecast_one_approved_round_until_s6.sql` · konsol#348 konsol#540 konsolidat#362</sub>
+<sub>`error` · `tests/assert_forecast_as_of_in_declared_period.sql` · konsol#348</sub>
+
+### `forecast_current_round_unique`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast (scenario, fiscal year) has at most ONE current round.**
+
+gold_forecast_current_round is the one selection every forecast reader joins (gold_scenario_trial_balance, gold_forecast_current, gold_forecast_current_at_hierarchy_node, gold_latest_estimate_current); two rows for one pair would make those readers sum two rounds again, which is what the declaration exists to prevent. konsol holds one live Current Forecast per pair (FOR UPDATE on its live index) and the write-through replaces the whole table, so a second row here is sync drift or a hand-written row, and the build must stop rather than double a forecast. Error severity. Fixtures: assert_forecast_current_round_unique.must_flag.sql (two declarations for one pair: 1 result), gold_forecast_current_round.two_rounds.sql (two approved rounds, one declared: pass).
+
+<sub>`error` · `tests/assert_forecast_current_round_unique.sql` · konsol#348</sub>
+
+### `forecast_current_ties_to_fact`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): gold_forecast_current is gold_spread_budget narrowed to each forecast pair's DECLARED current round, and nothing else.**
+
+It is what konsol's `forecast_input` Dataset (the Excel K.EPM forecast read) reads instead of the fact, so a read of a forecast scenario sums one round, never two. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN would leave it empty while the fact holds the round) or be re-widened by a later edit (the "plain copy" that summed rounds); this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the fact's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every Excel forecast read would be doubled or empty. join_use_nulls=0: the missing side reads '' (coalesce(..., '') = '' covers both settings); output aliases differ from the joined columns' names. Fixtures: assert_forecast_current_ties_to_fact.sql (R1 100, R2 110, R2 declared: the view holds R2's row alone, pass), assert_forecast_current_ties_to_fact.must_flag.sql (the view seeded with both rounds, the pre-S6 shape: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_forecast_current_ties_to_fact.sql` · konsol#348</sub>
+
+### `forecast_year_has_current_round`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast (scenario, fiscal year) with approved rounds and NO Current Forecast declaration has no forecast rows anywhere.**
+
+gold_forecast_current_round holds only declared pairs, and every forecast reader joins it, so an undeclared year reads EMPTY (never the sum of its rounds, never the latest round: FC-3-1 rejected "latest wins"). Empty is correct and deliberate, but it is a reporting gap the user must see, so this names every such pair with its approved rounds: declare one in konsol (Planning > Current Forecasts). Approved rounds are the budget_cycles rows (konsol syncs submitted Cycles only) of a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions; a budget scenario has no rounds and is not read here (Approved Budget is its declaration, assert_budget_one_cycle_per_scenario_year its rule). A declaration whose Cycle is cancelled or belongs to another pair leaves the pair without a row in gold_forecast_current_round and is named here too (the model joins budget_cycles on the pair as well as on the name). IN / NOT IN, not joins: join_use_nulls=0 would fill an unmatched join with ''. WARN, not error: the actuals and the budget still build; the gap is a declaration the user owes. Fixtures: assert_forecast_year_has_current_round.must_flag.sql (two approved rounds, no declaration: 1 result), gold_forecast_current_round.two_rounds.sql (declared: pass).
+
+<sub>`warn` · `tests/assert_forecast_year_has_current_round.sql` · konsol#348</sub>
 
 ### `incremental_slice_preserved`
 
@@ -1437,6 +1477,22 @@ Since konsolidat#112 silver derives debit/credit purely from the SIGN of the (al
 konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — it passed gold_consolidation_adjustments lines through unsummed, so two topside lines on one account, entity and period (or an auto_reversal line next to its original, konsol#305-D2-11) gave two running totals instead of one. Layer 4 now SUMs to this grain like layer 6, so this check also covers 'topside', 'reclassification' and 'auto_reversal'. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql. The journals themselves post several lines to one account in one period when the roles differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's derecognised and proceeds lines on the same cash account. gold_consolidated_ytd runs a `rows between unbounded preceding and current row` window ordered by fiscal_period, so two rows in one period give two running totals (-687.5, then 0) instead of one (0). Layer 6 SUMs each journal branch to this grain, like the proration branch and layer 1 already do; a row here means a branch passes journal lines through unsummed. Row J13: journal_id is NOT part of the key. The YTD window does not partition by it, so two journals of one entity posting to one account in one period (a second deal, or an amortisation instalment next to a disposal in the same period) would again be two rows under one running total; layer 6 therefore groups without journal_id (emitting any(journal_id)) and this test keys on exactly the window's partition columns plus fiscal_period. The journals seen so far are reported as journal_ids for the reader. Fixtures: dbt_project/test_fixtures/business_combination_history.sql and business_disposal.sql (`+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`).
 
 <sub>`error (default)` · `tests/assert_journal_grain_unique.sql` · konsol#305 konsolidat#198 konsolidat#203</sub>
+
+### `latest_estimate_forecast_beyond_horizon`
+
+**konsol#348 S6 pair A review M1 (FC-2-1): a round's forecast after its horizon is reported, never dropped silently.**
+
+gold_latest_estimate keeps a round's own gold_spread_budget rows in the Regular periods after its as-of period up to `horizon_periods` of them (1 <= lag <= horizon); a row at or before the as-of is replaced by the actual (the declared rule, not reported here). A row AFTER the horizon has nowhere to go: the estimate leaves it out and the year reads short of what was entered. This names each (scenario, round, entity, account, year, period) of an approved round's fact rows whose period is beyond the horizon, with the amount left out. A key summing to exactly zero drops nothing and is not named. WARN: the horizon may simply be declared shorter than the sheet entered, and the estimate is right for the horizon declared; extend the horizon or remove the rows. Periods come from forecast_round_periods() (declared calendar, BUD-10-1), the round's own fiscal year (a horizon crossing the year end is one Cycle per year, Q24 a). The round columns are renamed (b_*) so no alias matches a column the joined fact carries. Fixtures: assert_latest_estimate_forecast_beyond_horizon.must_flag.sql (the hand table's R1 P7 -41: 1) and assert_latest_estimate_forecast_beyond_horizon.sql (nothing beyond, a zero row: pass).
+
+<sub>`warn` · `tests/assert_latest_estimate_forecast_beyond_horizon.sql` · konsol#348</sub>
+
+### `latest_estimate_grain_unique`
+
+**konsol#348 S6 WA7: gold_latest_estimate has one row per (scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, budget dimensions, currency).**
+
+A second row on a key is an actual and a forecast for the same period of one round (the as-of split failed) or a grain the model's group by missed; either way a K.EPM read of the latest estimate would add them. Error severity. Fixtures: assert_latest_estimate_hand_table.sql (pass, build mode), assert_latest_estimate_grain_unique.must_flag.sql (an actual and a forecast row on one key: 1).
+
+<sub>`error` · `tests/assert_latest_estimate_grain_unique.sql` · konsol#348</sub>
 
 ### `partner_grain_not_fanned_out`
 
@@ -1511,6 +1567,30 @@ An equity account's translated movement is its local movement at the rate the ro
 A joint operation reached through a partly owned FULL link is carried at the wrong share and with no NCI. P -> S full 80%, S -> J proportional 50%: the weakest link is proportional and the path sum is 0.40, so layer 1 posts 40% of J's lines with nci 0. S itself recognises 50% of J's lines (IFRS 11.20) and P consolidates S in full with a 20% minority, so the group should carry 50% of J's lines with NCI = 10% (20% x 50%). Computing that needs an NCI attribution for the intermediary's minority of a joint operation, which is a later pair. The flag is entity-wide: any resolved path with a partial full link on a proportional entity fires it, even when that path has no proportional link itself (several paths), hence the general sentence. Until then the case is refused: the build fails naming the entity. A path of all-100% full links plus proportional links (P -> S full 100, S -> J proportional 50) stays allowed: 0.50 is exactly the operator's share.
 
 <sub>`error (default)` · `tests/assert_joint_operation_path_has_no_partial_full_link.sql` · konsol#117 konsolidat#331</sub>
+
+### `latest_estimate_actuals_present`
+
+**konsol#348 S6 WA8 (FC-2-1: a missing actual is reported, never filled): every entity a forecast round forecasts has an actual in each Regular period of the round's year up to and including its as-of period.**
+
+gold_latest_estimate takes the actual side from the GL rows; where an entity has none for such a period, the estimate simply has no actual there (it never substitutes the forecast or a zero), so the round's year-to-date reads short. This names each (scenario, round, entity, period) with forecast rows in the round and no actual row in the estimate. One row per missing period; WARN: the TB may simply not be uploaded yet, and the estimate is still right for what is there. Periods come from forecast_round_periods() (declared calendar, BUD-10-1). NOT IN, not a LEFT JOIN (join_use_nulls=0). Fixtures: assert_latest_estimate_actuals_present.must_flag.sql (ZZE2 has no P2 actual: 1); assert_latest_estimate_actuals_present.sql (the estimate built, every actual present: pass).
+
+<sub>`warn` · `tests/assert_latest_estimate_actuals_present.sql` · konsol#348</sub>
+
+### `latest_estimate_current_ties_to_estimate`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026;**
+
+S6-Q2 a): gold_latest_estimate_current is gold_latest_estimate narrowed to each forecast pair's DECLARED current round, and nothing else. konsol's `latest_estimate` Dataset (the Excel K.EPM latest-estimate read) reads it and binds scenario_id, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the estimate's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every Excel latest-estimate read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_latest_estimate_current_ties_to_estimate.sql (R1 and R2 in the estimate, R2 declared: pass), assert_latest_estimate_current_ties_to_estimate.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_latest_estimate_current_ties_to_estimate.sql` · konsol#348 konsolidat#361</sub>
+
+### `latest_estimate_hand_table`
+
+**konsol#348 S6 WA7 (FC-2-1, S6-Q2 a): gold_latest_estimate equals a table worked out by hand.**
+
+The fixture (test_fixtures/assert_latest_estimate_hand_table.sql) declares FY2026 P1-P12 and two approved rounds of forecast scenario ZZ_FC_LE: ZZ-LE-R1 as of 2026-03-31 (P3), horizon 3, and ZZ-LE-R2 as of 2026-06-30 (P6), horizon 6. Each round's estimate is its year's actuals up to and including the as-of period plus its own forecast after the as-of within the horizon, layers summed; an entity the round does not forecast is absent, and a forecast row at or before the as-of is not in the estimate (the actual replaces it). The expected rows are below; a multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places. The expected table is the fixture's, so, like every hand table (assert_budget_ytd_hand_table, assert_budget_consolidated_hand_table), it is vacuous where the fixture's scenario ZZ_FC_LE is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_LE's produced rows are read. ZZ_FC_LE is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_latest_estimate holds it (the test-mode must_flag, which seeds the table directly). It is not a `fixture_only_tests` test: that var is ON in ci_full_build.py's full builds (it marks a costly test, not fixture-shaped expectations), which ran this test there on data without ZZ_FC_LE: 6 expected rows missing.
+
+<sub>`error` · `tests/assert_latest_estimate_hand_table.sql` · konsol#348 konsolidat#361</sub>
 
 ### `method_declared_for_multi_path`
 

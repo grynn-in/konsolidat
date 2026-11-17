@@ -496,6 +496,23 @@ sources:
         columns:
           - name: rate_set
             description: "The Rate Set the Cycle declared; the budget's rates come from this set only."
+      - name: current_forecasts
+        description: >
+          konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026: a forecast
+          scenario's DECLARED current round per fiscal year, one row per
+          submitted Current Forecast. A forecast (scenario, year) holds several
+          approved rounds side by side and they never sum;
+          gold_forecast_current_round joins this to budget_cycles on `cycle`,
+          and every forecast reader takes that round alone. A year with
+          approved rounds and no row here has no forecast rows anywhere
+          (assert_forecast_year_has_current_round WARNs naming it).
+        columns:
+          - name: scenario_id
+            description: "The forecast scenario (scenario_definitions.scenario_type = 'forecast')."
+          - name: fiscal_year
+            description: "The fiscal year the declaration covers; one row per (scenario_id, fiscal_year)."
+          - name: cycle
+            description: "The declared round: the approved Budget Cycle's name (budget_cycles.name). The round's as_of_date, horizon and Rate Set are budget_cycles', read by this name; no copy is kept here."
       - name: ownership_periods
         description: >
           PRD-9/11/12: Temporal ownership periods with acquisition and disposal

@@ -41,7 +41,18 @@ BUDGET_SOURCES = {
     "epm_raw.budget_entries",
     "epm_gold.budget_annual_input",
     "epm_staging.budget_cycles",
+    # konsol#348 S6 pair A: the declared current round of a forecast
+    "epm_staging.current_forecasts",
 }
+# konsol#348 S6 pair A (S6-Q1 b, S6-Q2 a): the forecast rounds' relations. The
+# close fingerprint's table must reach none of them, and each must exist.
+FORECAST_MODELS = (
+    "gold_forecast_current_round",
+    "gold_forecast_current",
+    "gold_forecast_current_at_hierarchy_node",
+    "gold_latest_estimate",
+    "gold_latest_estimate_current",
+)
 # Each budget model's yml description must name both limits, so the reader of
 # the catalogue meets them without opening the SQL.
 LIMIT_MARKERS = ("before eliminations", "konsol#427", "konsol#425")
@@ -97,12 +108,12 @@ class BudgetOutsideClose(unittest.TestCase):
         self.models = _models()
 
     def test_models_exist(self):
-        missing = [m for m in (CLOSE_ROOT,) + BUDGET_MODELS if m not in self.models]
+        missing = [m for m in (CLOSE_ROOT,) + BUDGET_MODELS + FORECAST_MODELS if m not in self.models]
         self.assertEqual(missing, [], f"models not found under {MODELS}: {missing}")
 
     def test_the_close_table_reads_no_budget_model_or_source(self):
         reached, sources = _reach(self.models, CLOSE_ROOT)
-        budget_hits = sorted(reached & (set(BUDGET_MODELS) | BUDGET_FACT_MODELS))
+        budget_hits = sorted(reached & (set(BUDGET_MODELS) | BUDGET_FACT_MODELS | set(FORECAST_MODELS)))
         source_hits = sorted(sources & BUDGET_SOURCES)
         self.assertEqual(
             budget_hits, [],
