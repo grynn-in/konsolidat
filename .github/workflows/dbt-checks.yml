@@ -29,6 +29,7 @@ on:
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
+      - 'tests/test_fixture_gate_shard.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -66,6 +67,7 @@ on:
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
+      - 'tests/test_fixture_gate_shard.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -214,6 +216,8 @@ jobs:
       # workflow's --vars payloads, and its header does not swallow its query.
       - name: fixture-only tests stay out of site builds
         run: python -m unittest -v tests.test_fixture_only_tests
+      - name: fixture gate shards partition the fixture list
+        run: python -m unittest -v tests.test_fixture_gate_shard
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
@@ -286,10 +290,20 @@ jobs:
   fixture-gate:
     name: test fixtures make their tests pass or flag
     runs-on: ubuntu-latest
-    # 75, raised from 45 on 11 Nov 2026: #345 took the fixtures from 153 to 186
-    # and the job from ~26 min to 35-45 min; on main it was cancelled at 45 min
-    # after 175 of 186 fixtures, twice. The fixtures run one by one (~14 s each).
-    timeout-minutes: 75
+    # Sharded 3 ways on 17 Nov 2026 (CI-1), timeout back to 45 min. Why: #358
+    # had 293 fixtures and the serial job ran 73.5 min against a 75 min limit
+    # and was cancelled. Each shard prepares its own throwaway ClickHouse
+    # (service container per matrix job) and runs every third fixture by sorted
+    # path (scripts/fixture_gate.py --shard K/N). Matrix jobs are named
+    # "test fixtures make their tests pass or flag (1)" .. "(3)".
+    # History: 45 min until 11 Nov 2026; 75 min then, because #345 took the
+    # fixtures from 153 to 186 and main was cancelled at 45 min twice (~14 s
+    # each, run one by one); 3 x 45 min from 17 Nov 2026.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     # konsolidat#266 (Deepak Pai, 11 Oct 2026, option G-1). Every fixture in
     # dbt_project/test_fixtures runs: a `.must_flag.` fixture must make its
     # test FAIL or WARN, any other must make it PASS. A test that cannot fail
@@ -330,12 +344,12 @@ jobs:
           python-version: '3.11'
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       - name: every fixture, against the DDL of a fresh build
-        run: python scripts/fixture_gate.py --all --prepare-ci --log-dir ci-logs/fixtures
+        run: python scripts/fixture_gate.py --all --prepare-ci --shard ${{ matrix.shard }}/3 --log-dir ci-logs/fixtures-${{ matrix.shard }}
       - name: upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fixture-gate-logs
+          name: fixture-gate-logs-${{ matrix.shard }}
           path: ci-logs/
           if-no-files-found: ignore
 

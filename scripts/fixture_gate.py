@@ -425,6 +425,22 @@ def prepare_ci(client, dbt, log_dir):
         sys.exit(f"--prepare-ci: dbt run failed (exit {code}); see {log_dir}/prepare-run.log")
 
 
+def parse_shard(text):
+    """'K/N' -> (K, N), 1 <= K <= N. Anything else raises ValueError."""
+    parts = text.split("/")
+    if len(parts) != 2 or not all(x.isdigit() for x in parts):
+        raise ValueError(f"--shard wants K/N with whole numbers (e.g. 2/3), got {text!r}")
+    k, n = int(parts[0]), int(parts[1])
+    if not 1 <= k <= n:
+        raise ValueError(f"--shard K/N needs 1 <= K <= N, got {text!r}")
+    return k, n
+
+
+def select_shard(paths, k, n):
+    """Shard k of n (1-based): sort by path, keep every file whose 0-based index i has i % n == k-1."""
+    return [p for i, p in enumerate(sorted(paths)) if i % n == k - 1]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("fixtures", nargs="*", help="fixture files (default with --all: every one)")
@@ -435,12 +451,24 @@ def main():
     ap.add_argument("--yes-destroy-this-warehouse", action="store_true",
                     help="confirm the target ClickHouse is disposable (for --prepare-ci)")
     ap.add_argument("--log-dir", default=None, help="where to write the dbt logs")
+    ap.add_argument("--shard", default=None, metavar="K/N",
+                    help="run only shard K of N (1-based) of the selected fixtures, split by sorted path")
     a = ap.parse_args()
 
     paths = sorted(os.path.join(FIXTURES, f) for f in os.listdir(FIXTURES) if f.endswith(".sql")) \
         if a.all else [os.path.abspath(p) for p in a.fixtures]
     if not paths:
         sys.exit("no fixtures: name some, or pass --all")
+    if a.shard:
+        try:
+            k, n = parse_shard(a.shard)
+        except ValueError as e:
+            sys.exit(str(e))
+        total = len(paths)
+        paths = select_shard(paths, k, n)
+        print(f"== shard {k}/{n}: {len(paths)} of {total} fixtures", flush=True)
+        if not paths:
+            sys.exit(f"shard {k}/{n} has no fixtures")
     specs = [spec(p) for p in paths]  # every contract is checked before anything runs
 
     log_dir = a.log_dir or os.path.join(REPO, "ci-logs", "fixtures")
