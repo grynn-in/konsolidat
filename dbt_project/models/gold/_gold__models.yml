@@ -1163,6 +1163,11 @@ models:
       Periods are counted on the declared calendar (forecast_round_periods()).
       A forecast row at or before the as-of is not here; a missing actual is
       reported (assert_latest_estimate_actuals_present), never filled.
+      A forecast row after the horizon is not here either, and is reported
+      (assert_latest_estimate_forecast_beyond_horizon, WARN, naming scenario,
+      cycle, entity, account and period; a key summing to zero drops nothing
+      and is not named): the horizon declared on the Cycle bounds the
+      estimate, and a sheet that entered more is told so.
       gold_latest_estimate_current narrows to the declared round.
     columns:
       - name: cycle

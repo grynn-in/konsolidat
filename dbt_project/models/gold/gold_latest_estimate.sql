@@ -16,7 +16,8 @@
                           as-of period and within the horizon (1 <= lag <= horizon_periods), in the round's
                           fiscal year, layers summed (the actuals have no layer, so the estimate is the final
                           forecast). A forecast row at or before the as-of period is NOT in the estimate:
-                          the actual replaces it.
+                          the actual replaces it. A forecast row AFTER the horizon is not in it either:
+                          assert_latest_estimate_forecast_beyond_horizon (WARN) names it (review M1).
    Periods are counted on the declared calendar (forecast_round_periods(), BUD-10-1); a round whose as-of
    is in no declared Regular period has no row (assert_forecast_as_of_in_declared_period, error, names it).
    A horizon that crosses the year end is one Cycle per fiscal year sharing the as-of (Q24 a), so each

@@ -13,10 +13,10 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **197** |
-| carrying their reasoning | 175 |
-| citing the issue that caused them | 170 |
-| severity `warn` (reports, does not stop a build) | 26 |
+| assertions | **198** |
+| carrying their reasoning | 176 |
+| citing the issue that caused them | 171 |
+| severity `warn` (reports, does not stop a build) | 27 |
 | severity `error` (stops the build, and its children) | 171 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
@@ -35,7 +35,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 33
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 20
+- [Platform and data integrity](#platform-and-data-integrity) — 21
 - [Other](#other) — 7
 
 ---
@@ -1445,6 +1445,14 @@ Since konsolidat#112 silver derives debit/credit purely from the SIGN of the (al
 konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — it passed gold_consolidation_adjustments lines through unsummed, so two topside lines on one account, entity and period (or an auto_reversal line next to its original, konsol#305-D2-11) gave two running totals instead of one. Layer 4 now SUMs to this grain like layer 6, so this check also covers 'topside', 'reclassification' and 'auto_reversal'. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql. The journals themselves post several lines to one account in one period when the roles differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's derecognised and proceeds lines on the same cash account. gold_consolidated_ytd runs a `rows between unbounded preceding and current row` window ordered by fiscal_period, so two rows in one period give two running totals (-687.5, then 0) instead of one (0). Layer 6 SUMs each journal branch to this grain, like the proration branch and layer 1 already do; a row here means a branch passes journal lines through unsummed. Row J13: journal_id is NOT part of the key. The YTD window does not partition by it, so two journals of one entity posting to one account in one period (a second deal, or an amortisation instalment next to a disposal in the same period) would again be two rows under one running total; layer 6 therefore groups without journal_id (emitting any(journal_id)) and this test keys on exactly the window's partition columns plus fiscal_period. The journals seen so far are reported as journal_ids for the reader. Fixtures: dbt_project/test_fixtures/business_combination_history.sql and business_disposal.sql (`+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`).
 
 <sub>`error (default)` · `tests/assert_journal_grain_unique.sql` · konsol#305 konsolidat#198 konsolidat#203</sub>
+
+### `latest_estimate_forecast_beyond_horizon`
+
+**konsol#348 S6 pair A review M1 (FC-2-1): a round's forecast after its horizon is reported, never dropped silently.**
+
+gold_latest_estimate keeps a round's own gold_spread_budget rows in the Regular periods after its as-of period up to `horizon_periods` of them (1 <= lag <= horizon); a row at or before the as-of is replaced by the actual (the declared rule, not reported here). A row AFTER the horizon has nowhere to go: the estimate leaves it out and the year reads short of what was entered. This names each (scenario, round, entity, account, year, period) of an approved round's fact rows whose period is beyond the horizon, with the amount left out. A key summing to exactly zero drops nothing and is not named. WARN: the horizon may simply be declared shorter than the sheet entered, and the estimate is right for the horizon declared; extend the horizon or remove the rows. Periods come from forecast_round_periods() (declared calendar, BUD-10-1), the round's own fiscal year (a horizon crossing the year end is one Cycle per year, Q24 a). The round columns are renamed (b_*) so no alias matches a column the joined fact carries. Fixtures: assert_latest_estimate_forecast_beyond_horizon.must_flag.sql (the hand table's R1 P7 -41: 1) and assert_latest_estimate_forecast_beyond_horizon.sql (nothing beyond, a zero row: pass).
+
+<sub>`warn` · `tests/assert_latest_estimate_forecast_beyond_horizon.sql` · konsol#348</sub>
 
 ### `latest_estimate_grain_unique`
 
