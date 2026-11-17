@@ -120,9 +120,7 @@ class RunnersEnableFixtureOnlyTests(unittest.TestCase):
 
     def test_fixture_only_tests_are_found_by_their_config(self):
         self.assertEqual(self.tb.fixture_only_tests(),
-                         {"assert_consolidation_core_grain_extra_is_a_partition",
-                          # konsol#348 S6 WA7: its expected rows are the fixture's own
-                          "assert_latest_estimate_hand_table"})
+                         {"assert_consolidation_core_grain_extra_is_a_partition"})
 
     def test_the_full_build_enables_them_on_both_legs_from_the_helper(self):
         """No refuse path runs in ci_full_build.py: every ERROR or SKIP fails it."""
