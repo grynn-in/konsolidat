@@ -6,8 +6,8 @@
 -- forecast rows in the round and no actual row in the estimate. One row per missing period; WARN: the
 -- TB may simply not be uploaded yet, and the estimate is still right for what is there.
 -- Periods come from forecast_round_periods() (declared calendar, BUD-10-1). NOT IN, not a LEFT JOIN
--- (join_use_nulls=0). Fixture: assert_latest_estimate_actuals_present.must_flag.sql (ZZE2 has no P2
--- actual: 1).
+-- (join_use_nulls=0). Fixtures: assert_latest_estimate_actuals_present.must_flag.sql (ZZE2 has no P2
+-- actual: 1); assert_latest_estimate_actuals_present.sql (the estimate built, every actual present: pass).
 {{ config(severity='warn') }}
 
 with expected as (
