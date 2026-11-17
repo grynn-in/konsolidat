@@ -71,6 +71,31 @@ models:
           translated result (whatever its fx_method); the close period's CTA is
           then 0. Last column, added by the pre_hook ALTER.
 
+  - name: gold_budget_entity_ownership
+    description: >
+      konsol#348 S4 / konsolidat#369: the budget's ownership, resolved once on the budget's
+      own period spine (distinct entity x period of the approved Cycles' fact rows x the
+      declared calendar) and materialised in gold_entity_ownership's shape. gold_entity_ownership
+      cannot serve a budget: its spine is the actuals' periods, and a budget is entered before
+      its year starts. Resolved inline in gold_consolidated_budget_tb it was re-planned at every
+      CTE reference (33 KB of SQL, ~6.6 s per statement on an empty budget, CANNOT_SCHEDULE_TASK
+      on CI); every budget reader of ownership now joins this table: gold_consolidated_budget_tb,
+      budget_rate_gaps() and assert_budget_declared_historical_has_a_rate
+      (tests/test_budget_ownership_materialised.py). A table, rebuilt whole; no orchestrator scope.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: owner_group
+        description: "The group node that holds the entity; the key a Historical Equity Rate is recorded under."
+      - name: effective_ownership_pct
+        description: "The chain-product share, a fraction; 0 when the chain is incomplete."
+      - name: consolidation_method
+        description: "full / proportional / equity / none, resolved as gold_entity_ownership resolves it."
+
   - name: gold_consolidated_budget_tb
     description: >
       konsol#348 S4 (W4; S4-Q3 a, S4-Q4 a): the translated and consolidated BUDGET, in

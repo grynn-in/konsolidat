@@ -35,7 +35,8 @@ READERS = {
     "assert_budget_declared_historical_has_a_rate":
         os.path.join(DBT, "tests", "assert_budget_declared_historical_has_a_rate.sql"),
 }
-RESOLVES = re.compile(r"ownership_resolution_ctes\s*\(")
+# A Jinja CALL of the macro; its name in a comment is documentation, not a resolution.
+RESOLVES = re.compile(r"\{\{-?\s*ownership_resolution_ctes\s*\(")
 REF = re.compile(r"ref\(\s*['\"]gold_budget_entity_ownership['\"]\s*\)")
 
 

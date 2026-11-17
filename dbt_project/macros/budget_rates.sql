@@ -41,7 +41,8 @@
                      the Cycle's rate_set. A fact row whose Cycle is not
                      approved is not consolidated; assert_budget_cycle_is_approved
                      (warn) names it, so nothing leaves silently.
-    {p}budget_periods  the distinct (entity, fiscal_year, fiscal_period) the
+    {p}budget_periods  (omitted with with_periods=false, for a caller that only
+                     needs the fact) the distinct (entity, fiscal_year, fiscal_period) the
                      BUDGET has rows in, with the dates konsol's calendar
                      declares for the period (declared_periods()), in the shape
                      ownership_resolution_ctes() takes. This is the spine the
@@ -49,11 +50,13 @@
                      spine is the ACTUALS' periods, so a budget period with no
                      trial balance row (next year's budget, entered before the
                      year starts) has no ownership there and vanished from an
-                     ownership join on it. A budget period the calendar does
+                     ownership join on it. gold_budget_entity_ownership
+                     materialises the resolution on this spine (konsolidat#369).
+                     A budget period the calendar does
                      not declare is dropped by the inner join and named by
                      assert_budget_period_declared.
 #}
-{% macro budget_consolidation_inputs(p='') %}
+{% macro budget_consolidation_inputs(p='', with_periods=true) %}
 {{ p }}budget_fact as (
     select
         b.scenario_id as scenario_id,
@@ -73,7 +76,8 @@
         from {{ source('epm_staging', 'budget_cycles') }}
     ) as bc
         on bc.name = b.cycle
-),
+)
+{%- if with_periods %},
 
 {{ p }}budget_periods as (
     select distinct
@@ -87,6 +91,7 @@
         on dp.fiscal_year = f.fiscal_year
         and dp.fiscal_period = f.fiscal_period
 )
+{%- endif %}
 {% endmacro %}
 
 {#
@@ -102,8 +107,8 @@
 
     The keys are the model's own: the budget fact of the approved Cycles, the
     entity's currency (silver_entity_currencies), the groups the entity
-    line-consolidates into at that period (ownership_resolution_ctes on the
-    budget's own spine, as the model resolves it), the group's reporting
+    line-consolidates into at that period (gold_budget_entity_ownership, the
+    ownership the model consolidates on; konsolidat#369), the group's reporting
     currency, same-currency rows excluded, the period mapped through
     rate_period_map() (a Closing period's rates are its year's last Regular
     period's, konsolidat#199 row D9). The rate rows are the Cycles' sets only
@@ -113,9 +118,7 @@
 #}
 {% macro budget_rate_gaps() %}
     {%- set with_refs = fx_reference_column_present() %}
-    with {{ budget_consolidation_inputs(p='gap_') }},
-
-    {{ ownership_resolution_ctes('gap_budget_periods', 'gap_own_') }},
+    with {{ budget_consolidation_inputs(p='gap_', with_periods=false) }},
 
     translated as (
         select distinct
@@ -136,7 +139,7 @@
             where accounting_currency != ''
         ) as ec
             on ec.data_area_id = f.data_area_id
-        inner join gap_own_resolution as eo
+        inner join {{ ref('gold_budget_entity_ownership') }} as eo
             on eo.data_area_id = f.data_area_id
             and eo.fiscal_year = f.fiscal_year
             and eo.fiscal_period = f.fiscal_period

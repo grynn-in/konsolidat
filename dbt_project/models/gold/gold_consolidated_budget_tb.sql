@@ -42,7 +42,10 @@
      the Cycles' sets. A key with no usable rate in its Cycle's set stops this build by name
      (budget_rate_guard, the pre_hook; macros/budget_rates.sql), and only this build.
    - Ownership: resolved on the BUDGET's own period spine, distinct (entity, year, period) of the
-     fact x the declared calendar, through ownership_resolution_ctes(), not read from
+     fact x the declared calendar, materialised once in gold_budget_entity_ownership
+     (konsolidat#369: resolved inline here, the core's four reads of its rated CTE re-planned the
+     whole resolution each time, 33 KB of SQL, ~6.6 s per statement on an empty budget and
+     CANNOT_SCHEDULE_TASK on CI's ClickHouse), not read from
      gold_entity_ownership, whose spine is the periods the ACTUALS have rows in: a budget is entered
      before its year starts, so most of its periods have no trial balance row and vanished from an
      ownership join with nothing failing. assert_budget_consolidated_periods_complete pins it.
@@ -66,9 +69,7 @@
    calendar and the Cycles itself). #}
 -- depends_on: {{ source('epm_gold', 'currencies') }} {{ source('epm_staging', 'fiscal_periods') }} {{ source('epm_staging', 'budget_cycles') }}
 
-with {{ budget_consolidation_inputs() }},
-
-{{ ownership_resolution_ctes('budget_periods', 'own_') }},
+with {{ budget_consolidation_inputs(with_periods=false) }},
 
 {# The core's source contract (macros/consolidation_core.sql header), filled from the budget fact and
    the chart. LEFT on the chart: an undeclared account stays in the consolidation at the closing rate
@@ -107,7 +108,7 @@ budget_source as (
 {{ consolidation_core(source_cte='budget_source',
                       dims=get_budget_dimensions(),
                       rate_set_predicate=budget_rate_set_predicate(),
-                      ownership_cte='own_resolution',
+                      ownership_cte=ref('gold_budget_entity_ownership'),
                       grain_extra=['scenario_id', 'cycle', 'layer'],
                       scoped=false,
                       rate_set_column='rate_set') }},

@@ -228,7 +228,7 @@ konsol refuses an Annual Input or a Budget Entry line whose currency is not the 
 
 ### `budget_declared_historical_has_a_rate`
 
-<sub>`warn` · `tests/assert_budget_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#368 konsolidat#92</sub>
+<sub>`warn` · `tests/assert_budget_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#368 konsolidat#369 konsolidat#92</sub>
 
 ### `budget_node_per_cycle_and_currency`
 

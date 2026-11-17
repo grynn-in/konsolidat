@@ -9,6 +9,7 @@
 --   ZZ3000 share capital, uses_historical_rate = 1, FY2026 P6 and P7   -- covered by ZZBUD's tranche
 --   ZZ1000 cash,          uses_historical_rate = 0, FY2026 P6          -- never a candidate
 -- The test reads these relations, seeded or empty: epm_gold.gold_consolidated_budget_tb,
+-- epm_gold.gold_budget_entity_ownership (seeded),
 -- epm_staging.fiscal_periods, epm_staging.budget_cycles, epm_staging.historical_equity_rates,
 -- epm_staging.consolidation_ancestry, epm_staging.ownership_periods,
 -- epm_staging.consolidation_method_declarations, epm_staging.business_disposals.
@@ -59,3 +60,12 @@ VALUES
   ('ZZG', 'ZZE1', 2026, 6, 'ZZ3000', 'ZZ share capital', '', '', 'ZZ_PLAN_2026', 'ZZ-CY-HER', 'base', -200.00, 'EUR', 'USD', 1, 'full', 1.10, 1.05, 1.25, 1.25, 1, 'ZZBUD'),
   ('ZZG', 'ZZE1', 2026, 7, 'ZZ3000', 'ZZ share capital', '', '', 'ZZ_PLAN_2026', 'ZZ-CY-HER', 'base', -50.00, 'EUR', 'USD', 1, 'full', 1.20, 1.15, 1.25, 1.25, 1, 'ZZBUD'),
   ('ZZG', 'ZZE1', 2026, 6, 'ZZ1000', 'ZZ cash', '', '', 'ZZ_PLAN_2026', 'ZZ-CY-HER', 'base', 200.00, 'EUR', 'USD', 1, 'full', 1.10, 1.05, NULL, 1.10, 0, 'ZZBUD');
+-- konsolidat#369: the ownership the model consolidates on, as gold_budget_entity_ownership builds it
+-- (test mode seeds the table the test reads; the resolution of the ancestry above gives these rows).
+INSERT INTO epm_gold.gold_budget_entity_ownership
+  (consolidation_group, data_area_id, fiscal_year, fiscal_period, period_date, period_start_date, chain_depth, owner_group,
+   has_complete_chain, outside_ownership_window, effective_ownership_pct, direct_ownership_pct, method_source, consolidation_method,
+   path_count, direct_owner_count, has_partial_full_link)
+VALUES
+  ('ZZG', 'ZZE1', 2026, 6, '2026-06-30', '2026-06-01', 1, 'ZZG', 1, 0, 1.0, 1.0, 'link', 'full', 1, 1, 0),
+  ('ZZG', 'ZZE1', 2026, 7, '2026-07-31', '2026-07-01', 1, 'ZZG', 1, 0, 1.0, 1.0, 'link', 'full', 1, 1, 0);

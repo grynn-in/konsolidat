@@ -14,13 +14,13 @@
 -- Coverage is resolved EXACTLY the way the core resolves the rate, or the test would disagree with
 -- the numbers:
 --   * keys   (owner_group, data_area_id, main_account, to_currency, rate_set): the entity's OWNING
---            group (the node that holds the entity, ownership_resolution_ctes' owner_group, resolved
---            here on the budget's own period spine as the model does, since the model does not emit
---            it), the consolidating group's reporting_currency (konsol#374 option b), and the row's
---            rate_set.
+--            group (the node that holds the entity: gold_budget_entity_ownership.owner_group, the
+--            table the model consolidates on, since the model does not emit it), the consolidating
+--            group's reporting_currency (konsol#374 option b), and the row's rate_set.
 --   * as-of  the latest tranche whose rate_date <= period_date; a period before the first tranche
 --            has none (konsolidat#92 finding 2).
---   * period_date the DECLARED window_end_date (declared_periods()), the date the core joins on.
+--   * period_date the DECLARED window_end_date (gold_budget_entity_ownership.period_date, from
+--            declared_periods()), the date the core joins on.
 --   * rate rows the Cycles' sets only (budget_rate_set_predicate()), as the model reads them.
 -- Same-currency rows are skipped (konsolidat#295): accounting_currency = reporting_currency
 -- translates at 1.0 before the core looks at any rate. The declaration is the row's own
@@ -31,26 +31,12 @@
 -- Fixtures: test_fixtures/assert_budget_declared_historical_has_a_rate.sql (tranche in the Cycle's
 -- set: pass) and .must_flag.sql (tranche in the actuals set only: 2 rows).
 
-{# The budget's own period spine, in the shape ownership_resolution_ctes() takes. #}
-with spine as (
-    select distinct
-        b.data_area_id as data_area_id,
-        b.fiscal_year as fiscal_year,
-        b.fiscal_period as fiscal_period,
-        dp.window_start_date as period_start_date,
-        dp.window_end_date as period_date
-    from {{ ref('gold_consolidated_budget_tb') }} as b
-    inner join {{ declared_periods() }} as dp
-        on dp.fiscal_year = toUInt16(b.fiscal_year)
-        and dp.fiscal_period = toUInt16(b.fiscal_period)
-),
-
-{{ ownership_resolution_ctes('spine', 'own_') }},
-
 {# One row per (scenario, cycle, set, owning group, entity, declared account, presentation
-   currency, period) that was consolidated. DISTINCT: the TB is grained finer (layer, dimensions),
-   and ancestors presenting in one currency share the one owner_group. #}
-candidates as (
+   currency, period) that was consolidated. owner_group and period_date come from
+   gold_budget_entity_ownership, the ownership the model consolidates on (konsolidat#369).
+   DISTINCT: the TB is grained finer (layer, dimensions), and ancestors presenting in one
+   currency share the one owner_group. #}
+with candidates as (
     select distinct
         b.scenario_id as scenario_id,
         b.cycle as cycle,
@@ -61,13 +47,9 @@ candidates as (
         b.reporting_currency as reporting_currency,
         b.fiscal_year as fiscal_year,
         b.fiscal_period as fiscal_period,
-        s.period_date as period_date
+        eo.period_date as period_date
     from {{ ref('gold_consolidated_budget_tb') }} as b
-    inner join spine as s
-        on s.data_area_id = b.data_area_id
-        and s.fiscal_year = b.fiscal_year
-        and s.fiscal_period = b.fiscal_period
-    inner join own_resolution as eo
+    inner join {{ ref('gold_budget_entity_ownership') }} as eo
         on eo.consolidation_group = b.consolidation_group
         and eo.data_area_id = b.data_area_id
         and eo.fiscal_year = b.fiscal_year

@@ -6,7 +6,8 @@
 -- flagged row is (ZZ_PLAN_2026, ZZ-CY-2026, ZZBUD, EUR, USD, 2026, 7, 'missing'): the actuals set's
 -- P7 rate is not read for a budget. P6 is not flagged.
 -- Test mode: the test reads gold_spread_budget, silver_entity_currencies and these sources, seeded
--- or empty: epm_staging.budget_cycles, epm_staging.consolidation_ancestry,
+-- or empty: epm_gold.gold_budget_entity_ownership (seeded: the ownership the model consolidates on),
+-- epm_staging.budget_cycles, epm_staging.consolidation_ancestry,
 -- epm_staging.ownership_periods, epm_staging.consolidation_method_declarations,
 -- epm_staging.business_disposals, epm_staging.fiscal_periods, epm_gold.consolidation_groups,
 -- epm_gold.currencies, epm_staging.group_exchange_rates.
@@ -66,3 +67,12 @@ INSERT INTO epm_gold.gold_spread_budget
 VALUES
   ('ZZ_PLAN_2026', 'ZZ-CY-2026', 'ZZE1', 2026, 6, 'ZZ4000', '', '', 'base', 'EUR', -150, 'manual', 'Manual (as-entered)', 0.6667, -100, ''),
   ('ZZ_PLAN_2026', 'ZZ-CY-2026', 'ZZE1', 2026, 7, 'ZZ4000', '', '', 'base', 'EUR', -150, 'manual', 'Manual (as-entered)', 0.3333, -50, '');
+-- konsolidat#369: the ownership the model consolidates on, as gold_budget_entity_ownership builds it
+-- (test mode seeds the table the test reads; the resolution of the ancestry above gives these rows).
+INSERT INTO epm_gold.gold_budget_entity_ownership
+  (consolidation_group, data_area_id, fiscal_year, fiscal_period, period_date, period_start_date, chain_depth, owner_group,
+   has_complete_chain, outside_ownership_window, effective_ownership_pct, direct_ownership_pct, method_source, consolidation_method,
+   path_count, direct_owner_count, has_partial_full_link)
+VALUES
+  ('ZZG', 'ZZE1', 2026, 6, '2026-06-30', '2026-06-01', 1, 'ZZG', 1, 0, 1.0, 1.0, 'link', 'full', 1, 1, 0),
+  ('ZZG', 'ZZE1', 2026, 7, '2026-07-31', '2026-07-01', 1, 'ZZG', 1, 0, 1.0, 1.0, 'link', 'full', 1, 1, 0);

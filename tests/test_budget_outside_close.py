@@ -36,7 +36,7 @@ GOLD_YML = os.path.join(MODELS, "gold", "_gold__models.yml")
 CLOSE_ROOT = "gold_fully_consolidated_tb"
 ACTUALS_CONSOLIDATION = {"gold_fully_consolidated_tb", "gold_consolidated_trial_balance"}
 BUDGET_MODELS = ("gold_consolidated_budget_tb", "gold_fully_consolidated_budget")
-BUDGET_FACT_MODELS = {"gold_spread_budget"}
+BUDGET_FACT_MODELS = {"gold_spread_budget", "gold_budget_entity_ownership"}
 BUDGET_SOURCES = {
     "epm_raw.budget_entries",
     "epm_gold.budget_annual_input",
