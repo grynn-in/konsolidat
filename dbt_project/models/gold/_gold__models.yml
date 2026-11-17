@@ -1151,3 +1151,25 @@ models:
     columns:
       - name: cycle
         description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
+
+  - name: gold_latest_estimate
+    description: >
+      konsol#348 S6 (FC-2-1, S6-Q2 a): the latest estimate of EVERY approved
+      forecast round, keyed by cycle and as_of_date. Per round: the GL actuals
+      (gold_scenario_trial_balance, data_source gl) of the entities the round
+      forecasts in Regular periods at or before the as-of period, and the
+      round's own forecast (gold_spread_budget, layers summed) in Regular
+      periods after it within the horizon, inside the round's fiscal year.
+      Periods are counted on the declared calendar (forecast_round_periods()).
+      A forecast row at or before the as-of is not here; a missing actual is
+      reported (assert_latest_estimate_actuals_present), never filled.
+      gold_latest_estimate_current narrows to the declared round.
+    columns:
+      - name: cycle
+        description: "The round (approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: as_of_date
+        description: "The round's as-of date (budget_cycles)."
+      - name: period_amount
+        description: "Signed amount in the row's currency: the actual for a source 'actual' row, the forecast summed over layers for 'forecast'."
+      - name: source
+        description: "'actual' (at or before the as-of period) or 'forecast' (after it, within the horizon)."
