@@ -8,7 +8,7 @@ konsol's Consolidated Statement (S5) reads two warehouse tables by column name:
     literals main_account 'UNBALANCED' and 'CTA'; the four adjustment_type
     values entity, unbalanced, cta, nci_attribution.
   - epm_gold.gold_consolidated_budget_tb: data_area_id, main_account,
-    scenario_id, cycle, layer, translation_rate, rate_set.
+    scenario_id, cycle, layer, translation_rate, fx_method, rate_set.
 
 Pinned here as static text, like test_budget_outside_close: the model SQL, the
 consolidation_core macro that supplies the columns the budget model selects with
@@ -16,8 +16,10 @@ consolidation_core macro that supplies the columns the budget model selects with
 descriptions carry the note that konsol reads them. Renaming or dropping any of
 these breaks the reader in konsol, so it must break this test first.
 
-Not pinned: fx_method. gold_consolidated_budget_tb drops it (`select * except
-(... fx_method ...)`), so a reader cannot rely on it; see the PR notes.
+fx_method is pinned as a SELECTED column of gold_consolidated_budget_tb (S5
+G1): the drill shows the method each row was translated by, as the warehouse
+applied it, not the chart's method of today. The core supplies it; the model
+must carry it through its final select, not drop it with `except (...)`.
 
 Plain unittest, static source, no third-party imports.
 `python -m unittest -v tests.test_fully_consolidated_budget_contract`
@@ -45,13 +47,16 @@ FCB_COLUMNS = (
 ADJUSTMENT_TYPES = ("entity", "unbalanced", "cta", "nci_attribution")
 PLUG_ACCOUNTS = ("UNBALANCED", "CTA")
 CBT_SQL_COLUMNS = ("main_account", "scenario_id", "cycle", "layer", "rate_set")
+# Carried by the model's own final select (named outside its `except (...)`).
+CBT_CARRIED_COLUMNS = ("fx_method", "rate_set")
 # Supplied by the core through the budget model's `select *`.
 CBT_CORE_COLUMNS = ("data_area_id", "main_account", "translation_rate")
 # Documented in the yml entry of each model (column `- name:` lines).
 YML_COLUMNS = {
     FCB: ("consolidation_group", "data_area_id", "scenario_id", "cycle", "layer",
           "adjustment_type", "amount"),
-    CBT: ("consolidation_group", "data_area_id", "scenario_id", "cycle", "layer", "rate_set"),
+    CBT: ("consolidation_group", "data_area_id", "scenario_id", "cycle", "layer",
+          "fx_method", "rate_set"),
 }
 NOTE = "read by konsol's Consolidated Statement (S5)"
 
@@ -127,6 +132,21 @@ class ConsolidatedBudgetTbSql(unittest.TestCase):
         for c in CBT_CORE_COLUMNS:
             self.assertTrue(_word(core, c), f"consolidation_core no longer produces {c}")
         self.assertRegex(core, r"end\s+as\s+translation_rate\b")
+
+    def test_carries_fx_method_and_rate_set_in_its_final_select(self):
+        """S5 G1: the drill's "rate used" names the method the warehouse
+        translated the row by, so the model selects fx_method itself (the core
+        produces it); a name inside `except (...)` only does not count."""
+        sql = _read(CBT_SQL)
+        final = sql[sql.rfind("\nselect"):]
+        self.assertTrue(final.strip(), f"{CBT}.sql has no final select")
+        outside_except = re.sub(r"except\s*\([^)]*\)", "", final)
+        for c in CBT_CARRIED_COLUMNS:
+            self.assertTrue(
+                _word(outside_except, c),
+                f"{CBT}.sql's final select does not carry {c} (only inside `except (...)`, or not at all)",
+            )
+        self.assertTrue(_word(_read(CORE_SQL), "fx_method"), "consolidation_core no longer produces fx_method")
 
 
 class GoldYml(unittest.TestCase):
