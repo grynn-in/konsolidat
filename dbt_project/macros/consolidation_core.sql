@@ -612,15 +612,15 @@
     from {{ p }}fillers
 ),
 
-{# konsolidat#335 (task X7): a key's retranslation history starts again at a
+{# konsolidat#335 (task X7, X25): a key's retranslation restarts at a
    re-entry. An exit (ownership_exits(): a bare link end) derecognises
    everything the group carried for the entity up to it
    (gold_ownership_exit_journal), and a later acquisition brings the balance
    back in at the acquisition period's closing rate (the acquisition journal's
    line (0)). Without a boundary the windows below would reach back across the
-   gap and retranslate the derecognised pre-exit rows at 100% again (the
-   joint_operation_gap shape: 50% carried, then 100% from the deal, plus
-   cum_local(pre-exit) x (C(re-entry) - C(last pre-exit period))). stint
+   gap at the re-entry row and add cum_local(pre-exit) x (C(re-entry) -
+   C(last pre-exit period)) on top of line (0). After the re-entry row the
+   balance line (0) brought in is retranslated as usual (stint_marks). stint
    counts the exits of (group, entity) whose first period out (out_fiscal_*,
    the period after the last one the entity was consolidated in) is at or
    before the row's period, so the rows of the exit period itself, which the
@@ -690,17 +690,35 @@
    max_threads x streams outputs, and the extra one grew the pipeline past
    the server's memory while building it, on an empty site (ClickHouse 24.8:
    the first TB-only build and the fixture gate's --prepare-ci both failed
-   there). The stint boundary is applied by arithmetic instead:
-   cum_local_before is the key's cumulative local amount before the row, and
-   the anyLast over key_to_row is its value at the first row of the row's
-   stint, so their difference is the cumulative within the stint. At a
-   stint's first row it is 0, so that row retranslates nothing, whatever the
-   previous row's rate; later rows of the stint follow rows of the same stint
-   (stint never falls as the period rises). An entity that never exited has
-   one stint starting at its first row, the subtracted value is 0, and the
-   figures are unchanged. The key here is the threaded grain (dims +
-   grain_extra), as in every other window of the core. stint is dropped after
-   use: the core's output columns are unchanged. #}
+   there). The stint boundary is applied by arithmetic instead.
+
+   konsolidat#335 (task X25): what restarts at a stint's first row is the
+   rate the balance was last carried at, not the balance. The out-of-group
+   periods have no row here (rated keeps in-group rows only), so a stint's
+   first row is its re-entry row: the first spine period at or after the
+   exit's first period out, and for a key with earlier rows always a row
+   (a filler when the key did not move). The acquisition journal's line (0)
+   brings the balance at the last pre-acquisition period-end in at that
+   period's closing rate, so the re-entry row retranslates nothing (0,
+   whatever the rate before the gap: X7's cum_local(pre-exit) x
+   (C(re-entry) - C(last pre-exit)) double count). Every later row is the
+   normal formula on the key's whole cumulative local balance,
+   cum_local_before x (C(t) - C(t-1)): the balance line (0) brought in is
+   retranslated like any other from then on. X7's subtraction of the
+   cumulative at the stint's first row left exactly that balance at the
+   re-entry rate for good (two_exits: FY2026 P10 short by
+   cum_local(P9) x (C(P10) - C(P9))). An entity that never exited has one
+   stint starting at its first row, where cum_local_before is 0 and the
+   previous rate is its own, so the figures are unchanged. The key here is
+   the threaded grain (dims + grain_extra), as in every other window of the
+   core. stint is dropped after use: the core's output columns are
+   unchanged.
+
+   The whole cumulative is the core's in-group local movements before the
+   row. It equals line (0)'s base plus the stint's movements when the entity
+   did not move while out of the group and had no history before its first
+   entry; a movement outside every stint is in line (0) but not here, so it
+   stays at the re-entry rate (follow-up, reported with X25). #}
 {{ p }}stint_marks as (
     select
         *,
@@ -725,19 +743,12 @@
         * except (cum_local_before, is_stint_start, stint),
         if(
             is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
-            toFloat64(ifNull(
-                cum_local_before - anyLast(if(is_stint_start = 1, cum_local_before, null)) over key_to_row,
-                0))
+            if(is_stint_start = 1, toFloat64(0), toFloat64(ifNull(cum_local_before, 0)))
                 * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
             0
         ) as retranslation_amount
     from {{ p }}stint_marks
     window
-        key_to_row as (
-            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(dims=grain, leading=true) }}
-            order by fiscal_year, fiscal_period
-            rows between unbounded preceding and current row
-        ),
         key_all as (
             partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(dims=grain, leading=true) }}
             order by fiscal_year, fiscal_period
