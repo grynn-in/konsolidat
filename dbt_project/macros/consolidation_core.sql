@@ -145,6 +145,23 @@
        gold_trial_balance_by_partner); the budget model's is the spread budget
        fact with the chart's statement flags. #}
     from {{ source_cte }} as tb
+    {# konsolidat#369: one table read that always produces a plan step. ClickHouse
+       24.8 sets a query's max_threads cap only on a storage read that produced a
+       step; an empty MergeTree table becomes "Read from NullSource" and sets
+       none. On a warehouse where EVERY table this reads is empty (a fresh site's
+       first build) the plan therefore has no cap: the sort before each window
+       step scatters its input into the pipeline's accumulated stream count
+       instead of max_threads, the stacked windows multiply it (5 -> 10 -> 50
+       window transforms for the actuals at max_threads 4, one stage more for
+       the budget) and the executor starts a thread per stream: 163 threads at
+       max_threads 8 for the actuals, CANNOT_SCHEDULE_TASK for the budget.
+       system.one always produces a read step, so the cap holds: peak threads =
+       max_threads + 1 on the same empty warehouse. One row, no column read,
+       nothing in the result. tests/test_consolidation_core_thread_cap.py holds
+       the measurements; query_plan_enable_multithreading_after_window_functions
+       = 0 on the callers removes the resize AFTER each window and is still
+       needed, but does not touch this scatter. #}
+    cross join system.one
     {# konsol#110: the currency comes from silver_entity_currencies — konsol's
        Entity master, and since konsolidat#255 nothing else. This used to join
        silver_legal_entities, which knows only entities an ERP extracted, so a

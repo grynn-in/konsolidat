@@ -45,7 +45,11 @@
    build on a fresh TB-only site" ran 48 minutes and never finished. With the
    setting at 0, each window step keeps its input's streams (40 at most). It
    does not change any result: it only decides how many threads run the rows
-   after a window. #}
+   after a window. konsolidat#369: necessary, not sufficient. On a warehouse
+   where every table is empty the plan has no max_threads cap at all and the
+   sort BEFORE each window scatters into the accumulated stream count (51
+   threads here at max_threads 4, 163 at 8); the core's entity_tb anchors the
+   plan on system.one so the cap holds. #}
 {# konsolidat#93: the first pre_hook (macros/governed_rates.sql) raises when a
    currency this run translates has no approved governed rate, BEFORE the
    DELETE below, so a missing rate leaves the table as it was. The throwIf in

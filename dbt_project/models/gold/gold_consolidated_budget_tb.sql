@@ -44,8 +44,9 @@
    - Ownership: resolved on the BUDGET's own period spine, distinct (entity, year, period) of the
      fact x the declared calendar, materialised once in gold_budget_entity_ownership
      (konsolidat#369: resolved inline here, the core's four reads of its rated CTE re-planned the
-     whole resolution each time, 33 KB of SQL, ~6.6 s per statement on an empty budget and
-     CANNOT_SCHEDULE_TASK on CI's ClickHouse), not read from
+     whole resolution each time, 33 KB of SQL and ~6.6 s per statement on an empty budget;
+     the CANNOT_SCHEDULE_TASK that issue opened with was not this but the thread cap, see
+     partner_data_area_id below and the core's entity_tb), not read from
      gold_entity_ownership, whose spine is the periods the ACTUALS have rows in: a budget is entered
      before its year starts, so most of its periods have no trial balance row and vanished from an
      ownership join with nothing failing. assert_budget_consolidated_periods_complete pins it.
@@ -84,8 +85,14 @@ budget_source as (
         ma.account_type_name as account_type_name,
         ma.is_balance_sheet as is_balance_sheet,
         ma.is_pnl as is_pnl,
-        {# konsol#427: a budget has no partner #}
-        '' as partner_data_area_id,
+        {# konsol#427: a budget has no partner. materialize, not a bare constant:
+           this column sits in every window partition of the core, and ClickHouse
+           24.8 loses the sorted-stream property across a constant sort column, so
+           with '' the budget sorted and scattered a third time between
+           retranslated and close_pnl (500 window transforms against the actuals'
+           50 on an empty warehouse) and exhausted the thread pool
+           (konsolidat#369; tests/test_consolidation_core_thread_cap.py). #}
+        materialize('') as partner_data_area_id,
         {{ dim_select(dims=get_budget_dimensions(), prefix='f.', trailing=true) }}
         f.scenario_id as scenario_id,
         f.cycle as cycle,
