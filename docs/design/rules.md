@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **198** |
-| carrying their reasoning | 176 |
-| citing the issue that caused them | 171 |
+| assertions | **200** |
+| carrying their reasoning | 178 |
+| citing the issue that caused them | 173 |
 | severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 171 |
+| severity `error` (stops the build, and its children) | 173 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -31,12 +31,12 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Intercompany](#intercompany) — 12
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 9
+- [Reporting hierarchies](#reporting-hierarchies) — 10
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 33
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 21
-- [Other](#other) — 7
+- [Other](#other) — 8
 
 ---
 
@@ -908,6 +908,14 @@ A1 (#119) asserted that under an orchestrator scope close every row in the WHOLE
 
 ## Reporting hierarchies
 
+### `forecast_current_at_node_ties_to_rollup`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026): gold_forecast_current_at_hierarchy_node is gold_budget_at_hierarchy_node narrowed to each forecast pair's DECLARED current round, and nothing else.**
+
+konsol's hierarchy forecast read (the Excel K.EPM read at a reporting-hierarchy node) reads it and binds scenario_id and layer, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the rollup's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every hierarchy forecast read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_forecast_current_at_node_ties_to_rollup.sql (R1 100 and R2 110 at two nodes, R2 declared: pass), assert_forecast_current_at_node_ties_to_rollup.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_forecast_current_at_node_ties_to_rollup.sql` · konsol#348 konsolidat#361</sub>
+
 ### `hierarchy_all_entities_resolved`
 
 **PRD-8 / F2: every entity node in the consolidation structure must be reachable by the tree walk.**
@@ -1543,6 +1551,14 @@ A joint operation reached through a partly owned FULL link is carried at the wro
 gold_latest_estimate takes the actual side from the GL rows; where an entity has none for such a period, the estimate simply has no actual there (it never substitutes the forecast or a zero), so the round's year-to-date reads short. This names each (scenario, round, entity, period) with forecast rows in the round and no actual row in the estimate. One row per missing period; WARN: the TB may simply not be uploaded yet, and the estimate is still right for what is there. Periods come from forecast_round_periods() (declared calendar, BUD-10-1). NOT IN, not a LEFT JOIN (join_use_nulls=0). Fixture: assert_latest_estimate_actuals_present.must_flag.sql (ZZE2 has no P2 actual: 1).
 
 <sub>`warn` · `tests/assert_latest_estimate_actuals_present.sql` · konsol#348</sub>
+
+### `latest_estimate_current_ties_to_estimate`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026;**
+
+S6-Q2 a): gold_latest_estimate_current is gold_latest_estimate narrowed to each forecast pair's DECLARED current round, and nothing else. konsol's `latest_estimate` Dataset (the Excel K.EPM latest-estimate read) reads it and binds scenario_id, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the estimate's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every Excel latest-estimate read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_latest_estimate_current_ties_to_estimate.sql (R1 and R2 in the estimate, R2 declared: pass), assert_latest_estimate_current_ties_to_estimate.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_latest_estimate_current_ties_to_estimate.sql` · konsol#348 konsolidat#361</sub>
 
 ### `latest_estimate_hand_table`
 
