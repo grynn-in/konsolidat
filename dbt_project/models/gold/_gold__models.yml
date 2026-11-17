@@ -1198,3 +1198,30 @@ models:
         description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
       - name: source
         description: "'actual' at or before the round's as-of period, 'forecast' after it."
+
+  - name: gold_consolidated_budget_fact
+    description: >
+      konsol#348 S6 WC1 (S6-Q7 a): the K.EPM-queryable shape of the GROUP-level
+      consolidated budget, as gold_consolidated_fact is for the actuals. A view
+      over gold_fully_consolidated_budget rolled to (consolidation_group AS
+      data_area_id, fiscal_year, fiscal_period, main_account, scenario_id,
+      cycle, layer), every adjustment type (entity, unbalanced, cta,
+      nci_attribution) summed into consolidated_amount. A budget-type scenario
+      keeps its one Cycle per year; a forecast-type scenario keeps its declared
+      current round only (gold_forecast_current_round, konsol#348 S6-Q1 b), so a
+      second approved round is never added. konsol's consolidated_budget Dataset
+      reads it, binding scenario_id and layer (no layer = the layers summed).
+      BEFORE ELIMINATIONS, like the model it reads: no ic_elimination
+      (konsol#427), no deal journals, topside or equity method (konsol#425).
+      assert_consolidated_budget_fact_hand_table pins it.
+    columns:
+      - name: data_area_id
+        description: "The consolidation group, in the entity slot K.EPM reads."
+      - name: scenario_id
+        description: "The budget or forecast scenario."
+      - name: cycle
+        description: "The budget's Cycle, or the forecast's declared current round."
+      - name: layer
+        description: "The budget layer; each consolidated on its own, summed by a read that names none."
+      - name: consolidated_amount
+        description: "In the group's reporting currency, signed debit - credit, every consolidation layer summed."
