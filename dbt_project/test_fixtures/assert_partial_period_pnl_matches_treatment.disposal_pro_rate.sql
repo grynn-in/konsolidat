@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_partial_period_pnl_matches_treatment assert_partial_period_treatment_declared assert_disposal_journal_balances assert_end_to_end_bs_balances
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_partial_period_pnl_matches_treatment assert_partial_period_treatment_declared assert_disposal_journal_balances assert_end_to_end_bs_balances
 -- gate: expect assert_partial_period_pnl_matches_treatment pass
 -- gate: expect assert_partial_period_treatment_declared pass
 -- gate: expect assert_disposal_journal_balances pass
@@ -11,6 +11,8 @@
 -- Journal convention: adjustment_amount is Dr positive / Cr negative, added to the consolidated amount. Line (0) = -(balance); the
 -- post-disposal P&L (line 105) = -group_amount * removed fraction; the gain/loss (199) = -(sum of the other lines).
 -- Expected: line 0 ZZ1000 -1,500; 105 ZZ4000 +1,000 and ZZ5000 -500 (= -group_amount x 10/30); 110 ZZ1000 +2,000; 199 ZZ4950 -1,000 (gain, = 2,000 - net assets at the disposal date 1,000). P9 P&L -2,000 in total.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 ALTER TABLE epm_staging.ownership_periods ADD COLUMN IF NOT EXISTS owner_group String, ADD COLUMN IF NOT EXISTS owner_data_area_id String, MODIFY ORDER BY (consolidation_group, data_area_id, effective_date, owner_group, owner_data_area_id);
 CREATE TABLE IF NOT EXISTS epm_staging.consolidation_method_declarations (consolidation_group String, data_area_id String, consolidation_method String, effective_date Date, end_date Date DEFAULT '9999-12-31', reason String, updated_at DateTime DEFAULT now()) ENGINE = ReplacingMergeTree(updated_at) ORDER BY (consolidation_group, data_area_id, effective_date);

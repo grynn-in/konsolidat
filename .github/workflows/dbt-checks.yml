@@ -11,6 +11,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_consolidation_core_thread_cap.py'
+      - 'tests/test_consolidation_core_exits_relation.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -49,6 +50,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_consolidation_core_thread_cap.py'
+      - 'tests/test_consolidation_core_exits_relation.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -121,6 +123,12 @@ jobs:
         run: >
           dbt parse --no-partial-parse
           --profiles-dir dbt_project --project-dir dbt_project
+      # konsolidat#335 (#358 review F1, F2): the core resets stints only when
+      # given the exits; the budget model's parents exclude gold_ownership_exits
+      # (dbt ls, no connection), so a tag:domain:scenarios build reads no
+      # model it does not build.
+      - name: budget consolidation reads no exit events
+        run: python -m unittest -v tests.test_consolidation_core_exits_relation
 
   contract-tests:
     name: warehouse contract tests
@@ -226,6 +234,10 @@ jobs:
       # widened tables names its columns.
       - name: ownership graph DDL, sources and column-named inserts
         run: python -m unittest -v tests.test_ownership_graph_ddl
+      # konsolidat#335 (X22): the integration fixture that ends links with no
+      # Business Disposal declares the exit journal's gain or loss account.
+      - name: integration fixture declares its exit account
+        run: python -m unittest -v tests.test_ic_decisions_exit_account
       # konsol#269 (W1): the six cost allocation staging tables are konsol's DDL,
       # verbatim, and declared dbt sources.
       - name: cost allocation staging DDL and sources

@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_no_ownership_step_on_partial_full_subsidiary
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_no_ownership_step_on_partial_full_subsidiary
 -- gate: expect assert_no_ownership_step_on_partial_full_subsidiary flag 1
 -- MUST FLAG (konsol#117 pair 2 review, finding 3, konsolidat#318): layer1_full_at_100pct.sql with two periods. ZZP holds
 -- 70% of ZZC (method full) until 2026-03-31 and 80% from 2026-04-01, with no acquisition or disposal journal: the share
@@ -14,6 +14,8 @@
 --
 -- The live tables may predate konsol#117's graph columns and the declarations table: bring the
 -- scratch clones to the shape the macro reads.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 -- The owner joins the sorting key (konsol#117): two owners of one node from one date are two rows, not one
 -- ReplacingMergeTree duplicate. This is the live upgrade statement; it is a no-op on an upgraded table.

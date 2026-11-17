@@ -136,6 +136,8 @@ sources:
             description: "P&L account debited with acquisition costs when acquisition_costs_treatment is 'Expense'."
           - name: partial_period_treatment
             description: "How the acquiree's P&L enters the consolidation when control passes mid-period (konsolidat#171): 'Whole period', 'Pro-rate by days' (period P&L x days held / days in period; assumes even accrual) or 'Stub trial balance' (the uploaded period trial balance is the stub, used unscaled). Declared by the group, no default; '' until declared. Read by gold_acquisition_adjustments and gold_business_disposal_journal (the P&L adjustments) and by assert_partial_period_treatment_declared and assert_partial_period_pnl_matches_treatment (tests)."
+          - name: exit_gain_loss_account
+            description: "Account an ownership exit posts its gain or loss to (konsolidat#335): the balancing line when an entity leaves a group by an Ownership Period end that is neither a Business Disposal nor a successor or owner transfer. May equal disposal_gain_loss_account; there is no fallback to it. Declared by the group; '' until declared. Last column of the table, as in konsol."
 
   - name: budget_raw
     description: >

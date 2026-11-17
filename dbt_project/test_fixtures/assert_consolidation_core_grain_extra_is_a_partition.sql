@@ -1,5 +1,9 @@
 -- assert_consolidation_core_grain_extra_is_a_partition (konsol#348 S4, W3): must PASS.
--- The core's inputs only, seeded directly (test mode: no model is built). Two EUR entities in a
+-- gate: build gold_ownership_exits assert_consolidation_core_grain_extra_is_a_partition
+-- The core's inputs only, seeded directly. Build mode, so that gold_ownership_exits is built (#335, X23):
+-- the core reads the exit events from that table (spine_stints), and test mode would clone it empty from
+-- epm_gold, or ERROR where the warehouse has no such table. It builds from the empty ownership sources, so
+-- it holds no exit, as this case needs; no other model is built. Two EUR entities in a
 -- USD group, 100% owned, the same case as assert_year_end_close_carries_no_cta so every window
 -- in the core has work to do: ZZ1000 cash is a closing-rate balance sheet key retranslated at
 -- every rate change (key_before / key_all); ZZE1's ZZ1100 receivable and ZZ2000 payable move in

@@ -1,10 +1,12 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_no_ownership_step_on_partial_full_subsidiary
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_no_ownership_step_on_partial_full_subsidiary
 -- gate: expect assert_no_ownership_step_on_partial_full_subsidiary flag 1
 -- MUST FLAG (konsol#117 pair 3 review, finding R): a share step dated 1 January. ZZP holds 50% of ZZJ (joint operation) to
 -- 2025-12-31 and 60% from 2026-01-01; trial balances in FY2025 P12 and FY2026 P1. The calendar has an Opening period
 -- (FY2026 P0, 2026-01-01..2026-01-01) between them. It is not a gap: only Regular periods count, and a period is a gap only if
 -- no ownership period of the entity covers its start. Expect 1 row (P12 -> P1). A rule that counted the Opening row passed this.
 --
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 -- The owner joins the sorting key (konsol#117): two owners of one node from one date are two rows, not one
 -- ReplacingMergeTree duplicate. This is the live upgrade statement; it is a no-op on an upgraded table.

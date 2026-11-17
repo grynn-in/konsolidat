@@ -35,7 +35,10 @@ waterfall as (
            plus the P&L proration gold_acquisition_adjustments still posts. The one-sided
            'goodwill' / 'fair_value_adjustment' / 'disposal_gain_loss' / 'cta_recycling' rows no
            longer exist; the names stay so an older build of the TB still sums. #}
-        sum(case when adjustment_type in ('pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
+        {# konsolidat#335: 'ownership_exit' (gold_ownership_exit_journal) is the deemed disposal when an
+           Ownership Period ends with no Business Disposal. It nets to 0, so assert_waterfall_reconciles
+           passes without it; assert_waterfall_buckets_every_layer is what catches an unbucketed layer. #}
+        sum(case when adjustment_type in ('pnl_proration', 'ownership_exit', 'acquisition', 'goodwill_amortisation', 'disposal',
                                            'goodwill', 'fair_value_adjustment',
                                            'disposal_gain_loss', 'cta_recycling') then layer_amount else 0 end) as acq_disposal_amount,
         sum(layer_amount) as final_amount

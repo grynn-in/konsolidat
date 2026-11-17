@@ -1,4 +1,4 @@
--- gate: build gold_consolidated_trial_balance assert_exactly_one_actuals_rate_set
+-- gate: build gold_ownership_exits gold_consolidated_trial_balance assert_exactly_one_actuals_rate_set
 -- gate: expect gold_consolidated_trial_balance built
 -- gate: expect assert_exactly_one_actuals_rate_set pass
 -- The fresh stack (review of konsolidat#365, 15 Nov 2026): konsol has synced its structure (a chart,

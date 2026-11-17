@@ -1,4 +1,4 @@
--- gate: build gold_consolidated_trial_balance assert_translation_rates_are_the_actuals_sets assert_equity_historical_rate_is_asof assert_bs_translated_at_closing_rate
+-- gate: build gold_ownership_exits gold_consolidated_trial_balance assert_translation_rates_are_the_actuals_sets assert_equity_historical_rate_is_asof assert_bs_translated_at_closing_rate
 -- assert_translation_rates_are_the_actuals_sets (konsol#348 S4 W2, S4-Q1 c): must PASS. Two Rate Sets
 -- hold different rates for the same keys; the actuals consolidation translates at the flagged set's
 -- rates only, and the build goes through.

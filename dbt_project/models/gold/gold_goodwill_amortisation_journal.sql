@@ -31,6 +31,14 @@
    A deal that booked no goodwill (a bargain purchase, or goodwill 0) has no
    schedule.
 
+   The exit stop (konsolidat#335, X3c): a bare end of the link with no
+   Business Disposal (ownership_exits()) stops the schedule the same way, before
+   the exit period; the earlier of the disposal and the exit counts. Per deal
+   (review F5, #358 re-review F3): only an exit (end_date) or disposal
+   (disposal_date) dated AFTER the deal's acquisition date stops its schedule;
+   one before it ended an earlier holding, and a re-acquisition amortises on
+   its own schedule. Bought and lost in one period: no instalment posts.
+
    The disposal stop (row J5b): a submitted Business Disposal
    (epm_staging.business_disposals) for the same group and entity ends the
    schedule BEFORE its disposal period: the last instalment falls in the
@@ -103,22 +111,66 @@ periods_per_year as (
     group by fiscal_year
 ),
 
-{# the earliest submitted disposal of each entity in each group, as the
-   calendar period holding its date: the lowest-numbered Regular period (deal_period_holds())
-   whose span holds it, exactly as gold_business_disposal_journal maps it.
-   The schedule ends before that period. A range condition is not a
+{# every submitted disposal and every bare ownership exit of an entity in a
+   group, as the calendar period holding its date: the lowest-numbered Regular
+   period (deal_period_holds()) whose span holds it, exactly as
+   gold_business_disposal_journal maps it. A range condition is not a
    ClickHouse join key, so the calendar is cross-joined and filtered. #}
-disposal_stop as (
+stop_events as (
     select
         bd.consolidation_group as consolidation_group,
         bd.disposed_entity as data_area_id,
-        argMin(toUInt16(fp.fiscal_year), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as stop_year,
-        argMin(toUInt16(fp.fiscal_period), (toUInt16(fp.fiscal_year), toUInt16(fp.fiscal_period))) as stop_period,
-        toUInt8(1) as has_disposal
+        toUInt16(fp.fiscal_year) as ev_year,
+        toUInt16(fp.fiscal_period) as ev_period,
+        bd.disposal_date as ev_date
     from {{ source('epm_staging', 'business_disposals') }} as bd
     cross join {{ source('epm_staging', 'fiscal_periods') }} as fp
     where {{ deal_period_holds('fp', 'bd.disposal_date') }}
-    group by bd.consolidation_group, bd.disposed_entity
+
+    union all
+
+    {# konsolidat#335 (X3c): a bare end of the link (ownership_exits(),
+       no Business Disposal) stops the schedule the same way, before the
+       exit period (the Regular period holding the end date, as the
+       disposal period holds its date): gold_ownership_exit_journal
+       derecognises the goodwill net of the amortisation posted to date
+       through the exit period, in which none is posted. Read from
+       gold_ownership_exits, the macro materialised once (task X22). #}
+    select
+        x.consolidation_group as consolidation_group,
+        x.data_area_id as data_area_id,
+        toUInt16(x.fiscal_year) as ev_year,
+        toUInt16(x.fiscal_period) as ev_period,
+        {# 1970-01-01 = no end date caused the exit (a method change): the period comparison decides #}
+        ifNull(x.end_date, toDate('1970-01-01')) as ev_date
+    from {{ ref('gold_ownership_exits') }} as x
+),
+
+{# the stop of each deal (konsolidat#335 review F5; #358 re-review F3): the
+   first exit (its end_date) or disposal (its disposal_date) of its entity
+   dated AFTER the deal's acquisition_date. An event before the deal ended an
+   earlier holding; a re-acquisition starts a new schedule that it must not
+   stop. By date, not period: an entity bought and lost in the same period
+   stops (the exit journal reverses its goodwill through that period, so the
+   schedule posts nothing), while an earlier holding's end in the
+   re-acquisition's own period, dated before the acquisition, does not. An
+   exit with no end date (ev_date 1970-01-01) falls back to the period
+   comparison. The equi-join keys match the group and entity; the comparison
+   is a post-join filter. #}
+disposal_stop as (
+    select
+        dg.deal as deal,
+        argMin(e.ev_year, (e.ev_year, e.ev_period)) as stop_year,
+        argMin(e.ev_period, (e.ev_year, e.ev_period)) as stop_period,
+        toUInt8(1) as has_disposal
+    from deal_goodwill as dg
+    inner join stop_events as e
+        on e.consolidation_group = dg.consolidation_group
+        and e.data_area_id = dg.data_area_id
+    where if(e.ev_date = toDate('1970-01-01'),
+             (e.ev_year, e.ev_period) > (dg.acquisition_year, dg.acquisition_period),
+             e.ev_date > dg.acquisition_date)
+    group by dg.deal
 ),
 
 {# one row per amortised deal: the goodwill, the number of instalments, the
@@ -146,8 +198,7 @@ schedules as (
     inner join periods_per_year as ppy
         on ppy.fiscal_year = dg.acquisition_year
     left join disposal_stop as ds
-        on ds.consolidation_group = dg.consolidation_group
-        and ds.data_area_id = dg.data_area_id
+        on ds.deal = dg.deal
 ),
 
 {# every declared Regular period from the acquisition period on and, when the

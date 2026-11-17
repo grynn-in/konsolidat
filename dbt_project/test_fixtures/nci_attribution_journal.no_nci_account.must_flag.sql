@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_fully_consolidated_tb assert_nci_attribution_equals_minority_result
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_fully_consolidated_tb assert_nci_attribution_equals_minority_result
 -- gate: expect assert_nci_attribution_equals_minority_result flag 1
 -- MUST FLAG: the root row declares no nci_account, so no journal is posted and the minority's share (-18.00 in P3)
 -- has no home: the equality test flags the one (group, entity, period). assert_nci_account_declared_for_partial_subs (error)
@@ -14,6 +14,8 @@
 -- into retained earnings: ZZ4000 +1,000, ZZ5000 -400, ZZ3100 -600 SEK, all is_year_end_close = 1. Read as P13
 -- activity it reverses the year (NCI +18.00 style entry, result_share +16.20). Expected: NO journal in P13: the
 -- close is excluded from result_share and the close period's CTA plug is 0.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS nci_measurement String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS accounting_framework String DEFAULT '';
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS framework_note String DEFAULT '';
