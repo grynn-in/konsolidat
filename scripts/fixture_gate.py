@@ -88,14 +88,12 @@ sys.path.insert(0, os.path.join(REPO, "scripts"))
 
 from tb_only_first_build import (  # noqa: E402
     FIXTURE_DIMENSIONS, LAYERS, budget_dimension_columns, copy_project, fixture_dimension_vars, rewrite,
-    run_dbt, split_sql,
+    fixture_only_tests, run_dbt, split_sql, zero_dimension_vars,
 )
 
 #: konsol#287: dbt_project.yml ships no dimension, so every dbt call here passes
 #: the fixtures' own declaration (FIXTURE_DIMENSIONS in tb_only_first_build.py).
-#: RF8: also switches on the checks keyed to fixture data (var cost_allocation_fixture_values).
-GATE_VARS = {"cost_allocation_fixture_values": True}
-DIM_VARS = ["--vars", json.dumps({**json.loads(fixture_dimension_vars()[1]), **GATE_VARS})]
+DIM_VARS = fixture_dimension_vars()
 #: konsol#287 review: every fixture runs at FIXTURE_DIMENSIONS, so a model that
 #: breaks at zero dimensions (konsolidat#220's class: dim_select call sites that
 #: leave a dangling comma or an empty CTE) would pass the gate. These budget and
@@ -104,7 +102,15 @@ DIM_VARS = ["--vars", json.dumps({**json.loads(fixture_dimension_vars()[1]), **G
 #: ALTERs those columns onto the input table itself and every value the zero pass
 #: relies on is the entity/account/period grain, so they run unchanged.
 ZERO_DIM_FIXTURES = ("variance_budget_scenario.sql", "variance_node_two_budgets.sql")
-ZERO_DIM_VARS = ["--vars", json.dumps({"dimensions": [], **GATE_VARS})]
+#: konsol#348 S4 (W3 review): a fixture-only test (fixture_only_tests(), the
+#: ones carrying config(enabled=var('fixture_only_tests', false))) is enabled
+#: only for a fixture that names it, in an `expect` line or by its file name
+#: (fixture_vars below). Enabled on every call, it joined the build of a
+#: `refuse` fixture, errored on the data the model is meant to refuse, and dbt
+#: SKIPPED the model the fixture expected REFUSED. The parse alone always
+#: enables them, so the manifest knows such a test's parents when a fixture
+#: needs them; a parse-time node is never run.
+PARSE_VARS = fixture_dimension_vars(fixture_only=True)
 
 FIXTURES = os.path.join(REPO, "dbt_project", "test_fixtures")
 TESTS = os.path.join(REPO, "dbt_project", "tests")
@@ -233,6 +239,31 @@ def scratch_dimension_columns(scratch_tables):
             if any(s.startswith(f"ALTER TABLE {t} ") for t in scratch_tables)]
 
 
+SEED_TABLE_RE = re.compile(r"^\s*(?:INSERT\s+INTO|ALTER\s+TABLE)\s+(zzg_\w+\.\w+)", re.I)
+MISSING_TABLE_RE = re.compile(r"Could not find table|UNKNOWN_TABLE|Code: 60\b|doesn't exist|does not exist", re.I)
+
+
+def seed_problem(stmt, error):
+    """Why a seed statement failed, as the fixture's verdict (konsol#348 S4b live test).
+
+    A fixture that seeds a MODEL table (a .must_flag over gold_fully_consolidated_budget,
+    say) presupposes the stack has built that model: the gate clones every table it
+    names from the live epm_* DDL, and a model never built has no DDL to clone (only
+    init-db.sql tables are created from text, missing_table_statements). Until now the
+    ClickHouse error escaped run_fixture, the fixture got no verdict and the rest of
+    the run was lost. Pure, so tests/test_fixture_gate_seed_errors.py can pin it."""
+    first = (error or "").strip().splitlines()
+    first = next((l.strip() for l in first if "DB::Exception" in l), first[0].strip() if first else "")
+    m = SEED_TABLE_RE.match(stmt)
+    table = m.group(1) if m else None
+    if table and MISSING_TABLE_RE.search(error or ""):
+        epm = table.replace(PREFIX + "_", "epm_", 1)
+        return (f"seeds {table}, which does not exist on this stack ({epm} is not built, and it is not "
+                f"an init-db.sql table the gate can create): build the model first, or seed its inputs "
+                f"and build it with `-- gate: build`. ClickHouse: {first}")
+    return f"seed statement refused: {stmt.strip().splitlines()[0][:120]} ... ClickHouse: {first}"
+
+
 def clone_empty(client, epm_name, engine):
     zzg_name = rewrite(epm_name, PREFIX)
     if engine in ("View", "MaterializedView"):
@@ -268,11 +299,19 @@ def test_parents(manifest, tests):
 
 # ── one fixture ─────────────────────────────────────────────────────────────
 
+def fixture_vars(s, zero=False):
+    """The one --vars payload for this fixture: its dimensions, plus
+    fixture_only_tests only when the fixture names a fixture-only test."""
+    named = {t for t, v, _n in s["expect"] if v != "built"}
+    needs = bool(named & fixture_only_tests())
+    return zero_dimension_vars(fixture_only=needs) if zero else fixture_dimension_vars(fixture_only=needs)
+
+
 def passes(specs):
     """(spec, dim_vars, label) for each run: every fixture at FIXTURE_DIMENSIONS,
     then each ZERO_DIM_FIXTURES one again at `dimensions: []`."""
-    plan = [(s, DIM_VARS, s["name"]) for s in specs]
-    plan += [(s, ZERO_DIM_VARS, s["name"] + " [dimensions: []]")
+    plan = [(s, fixture_vars(s), s["name"]) for s in specs]
+    plan += [(s, fixture_vars(s, zero=True), s["name"] + " [dimensions: []]")
              for s in specs if s["name"] in ZERO_DIM_FIXTURES]
     return plan
 
@@ -300,7 +339,14 @@ def run_fixture(client, dbt, project, manifest, tables, s, log_dir, dim_vars=DIM
     for stmt in split_sql(rewrite(s["text"], PREFIX)):
         if re.search(r"\bepm_", stmt):
             raise SystemExit(f"{s['name']}: unrewritten epm_ reference: {stmt[:120]}")
-        client.command(stmt)
+        try:
+            client.command(stmt)
+        except Exception as e:  # clickhouse_connect raises its own DatabaseError
+            # This fixture fails with the reason; the run goes on to the next one.
+            problem = seed_problem(stmt, str(e))
+            reset_scratch(client, create=False)
+            print(f"    PROBLEM: {problem}", flush=True)
+            return "failed", [problem]
         m = INSERT_RE.match(stmt)
         if m and m.group(1) not in loaded:
             loaded.append(m.group(1))
@@ -459,7 +505,7 @@ def main():
     if leaks:
         sys.exit(f"refusing: the project copy still names epm_ in {leaks[:5]}")
     reset_scratch(client)
-    code, out = run_dbt(a.dbt, project, ["parse", *DIM_VARS], os.path.join(log_dir, "parse.log"))
+    code, out = run_dbt(a.dbt, project, ["parse", *PARSE_VARS], os.path.join(log_dir, "parse.log"))
     if code != 0:
         sys.exit(f"dbt parse failed (exit {code}); see {log_dir}/parse.log")
     with open(os.path.join(project, "target", "manifest.json"), encoding="utf-8") as f:

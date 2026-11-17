@@ -55,11 +55,14 @@ ORDER BY (consolidation_group, data_area_id);
 -- konsol#374 (option b; Deepak Pai, 7 Nov 2026): a rate converts INTO one
 -- presentation currency (to_currency), so a sub-group presenting in EUR and
 -- its parent presenting in USD each carry their own rate for the same entity
--- and account. to_currency is LAST in the sort key and has no DEFAULT: konsol
--- upgrades an existing table with one ALTER (ADD COLUMN, MODIFY ORDER BY), and
--- ClickHouse appends to a sorting key only a column that ALTER adds, without a
--- default expression. Keep in step with konsol's _REFERENCE_TABLE_DDL
--- (tests/test_historical_equity_rates_ddl.py pins both).
+-- and account. konsol#348 (S4-Q1 c, 15 Nov 2026): a rate belongs to one Rate
+-- Set (rate_set), so the actuals and the budget rate of one tranche are two
+-- rows. Each column is LAST in the sort key when added and has no DEFAULT:
+-- konsol upgrades an existing table with one ALTER (ADD COLUMN IF NOT EXISTS
+-- to_currency, ADD COLUMN IF NOT EXISTS rate_set, MODIFY ORDER BY), and
+-- ClickHouse appends to a sorting key only the columns that ALTER adds,
+-- without a default expression. Keep in step with konsol's
+-- _REFERENCE_TABLE_DDL (tests/test_historical_equity_rates_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.historical_equity_rates (
     consolidation_group String,
     data_area_id String,
@@ -67,9 +70,10 @@ CREATE TABLE IF NOT EXISTS epm_staging.historical_equity_rates (
     rate_date Date,
     historical_rate Decimal(18,6),
     to_currency LowCardinality(String),
+    rate_set String,
     updated_at DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(updated_at)
-ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency);
+ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency, rate_set);
 
 -- ============================================================
 -- PRD-9 / PRD-11 / PRD-12: Ownership periods (temporal ownership,
@@ -211,6 +215,17 @@ CREATE TABLE IF NOT EXISTS epm_raw.budget_entries (
 ) ENGINE = MergeTree
 ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_account);
 
+-- konsol#348 S4-Q2 (a), chosen under the standing rule (15 Nov 2026): the
+-- approved Budget Cycles, one row per submitted Cycle, written through from
+-- konsol (K6). rate_set is the Rate Set the Cycle declared (BUD-3): the
+-- consolidated budget joins its fact on `cycle` and translates at that set,
+-- never at the actuals set. scenario_type is not here; the warehouse reads it
+-- from scenario_definitions by scenario_id. as_of_date is a Date32 with an
+-- explicit 1900-01-01 default (a Date clamps to a silent 1970-01-01);
+-- horizon_periods unset is 0. Keep identical to konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_budget_cycles_ddl.py pins both).
+CREATE TABLE IF NOT EXISTS epm_staging.budget_cycles (name String, scenario_id String, fiscal_year UInt16, rate_set String, as_of_date Date32 DEFAULT '1900-01-01', horizon_periods UInt16) ENGINE = MergeTree ORDER BY name;
+
 -- F3: governed reference data written through from konsol (Dimension Mapping,
 -- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated
 -- into the dbt repo on every save and migrate. One metadata path now: Frappe
@@ -325,8 +340,23 @@ CREATE TABLE IF NOT EXISTS epm_staging.entities (
 -- identical to _REFERENCE_TABLE_DDL.
 -- rate is the TRUE rate, units of to_currency per 1 from_currency, published by
 -- konsol (the single source of FX rates); the warehouse never scales or inverts
--- it.
-CREATE TABLE IF NOT EXISTS epm_staging.group_exchange_rates (to_currency String, from_currency String, fiscal_year UInt16, fiscal_period UInt8, rate_type String, rate Float64, document String) ENGINE = MergeTree ORDER BY (to_currency, from_currency, fiscal_year, fiscal_period, rate_type);
+-- it. konsol#348 (S4-Q1 c): rate_set names the Rate Set the rate belongs to;
+-- the consolidation translates actuals at the one set flagged is_actuals in
+-- epm_staging.rate_sets below, a budget at its Cycle's set. LAST, as konsol's
+-- ADD COLUMN upgrade appends it; not in ORDER BY, as konsol publishes the
+-- table by swapping the whole set in (tests/test_group_exchange_rates_ddl.py
+-- pins both).
+CREATE TABLE IF NOT EXISTS epm_staging.group_exchange_rates (to_currency String, from_currency String, fiscal_year UInt16, fiscal_period UInt8, rate_type String, rate Float64, document String, rate_set String) ENGINE = MergeTree ORDER BY (to_currency, from_currency, fiscal_year, fiscal_period, rate_type);
+-- konsol#348 S4-Q7 (a), chosen under the standing rule (15 Nov 2026): the Rate
+-- Sets, written through from konsol's Rate Set doctype (every row). Exactly one
+-- is flagged is_actuals; the consolidation reads which here, the way it reads
+-- every reference table, and filters both rate tables by it
+-- (macros/governed_rates.sql: actuals_rate_set_predicate). Zero or two flagged
+-- sets stop the build (assert_exactly_one_actuals_rate_set, and the rate guard
+-- names it). A dbt var konsol regenerates was rejected as a second copy of the
+-- flag that goes stale. Keep identical to konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_rate_sets_ddl.py pins both).
+CREATE TABLE IF NOT EXISTS epm_staging.rate_sets (rate_set String, label String, is_actuals UInt8) ENGINE = MergeTree ORDER BY rate_set;
 -- konsol#159: the intercompany flag on the group chart, written through from
 -- konsol's Intercompany Account doctype (Published rows). counterpart_account
 -- is the account the partner books the other side on ('' = the same account).

@@ -1,18 +1,23 @@
 """konsol#374 (option b; Deepak Pai, 7 Nov 2026): a Historical Equity Rate is
-keyed by the presentation currency it converts into, and the two repos that
-shape epm_staging.historical_equity_rates agree on it.
+keyed by the presentation currency it converts into; konsol#348 (S4-Q1 c, 15
+Nov 2026): and by the Rate Set it belongs to, so the actuals and the budget
+rate of one tranche are two rows. The two repos that shape
+epm_staging.historical_equity_rates agree on both.
 
 clickhouse/init-db.sql creates the table on a fresh volume; konsol's
 _REFERENCE_TABLE_DDL creates it on a stack that predates this file's version
-and upgrades an existing one with ONE ALTER (ADD COLUMN to_currency, MODIFY
-ORDER BY). ClickHouse appends to a sorting key only the column the same ALTER
-adds, without a DEFAULT clause, and only at the END of the key: so the fresh
-shape must put to_currency last in ORDER BY and give it no default, or the
-fresh and the upgraded table differ. KONSOL_BODY is konsol's string, verbatim.
+and upgrades an existing one with ONE ALTER (ADD COLUMN IF NOT EXISTS
+to_currency, ADD COLUMN IF NOT EXISTS rate_set, MODIFY ORDER BY). ClickHouse
+appends to a sorting key only the columns the same ALTER adds, without a
+DEFAULT clause, and only at the END of the key: so the fresh shape must put
+to_currency and then rate_set last in ORDER BY and give neither a default, or
+the fresh and the upgraded table differ. KONSOL_BODY is konsol's string,
+verbatim.
 
-The model matches a rate on the consolidating group's reporting_currency, so
-a fixture that seeds a rate without to_currency seeds a rate that nothing can
-match: every INSERT into the table names the column.
+The model matches a rate on the consolidating group's reporting_currency and
+reads only the Rate Set flagged Is Actuals (epm_staging.rate_sets), so a
+fixture that seeds a rate without to_currency or rate_set seeds a rate that
+nothing can match: every INSERT into the table names both columns.
 
 Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_historical_equity_rates_ddl`.
@@ -24,7 +29,8 @@ import unittest
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INIT_DB = os.path.join(PROJECT_ROOT, "clickhouse", "init-db.sql")
-MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "models", "gold", "gold_consolidated_trial_balance.sql")
+# konsol#348 S4 (W3): the ASOF join is in the consolidation core the model calls.
+MODEL = os.path.join(PROJECT_ROOT, "dbt_project", "macros", "consolidation_core.sql")
 SOURCES = os.path.join(PROJECT_ROOT, "dbt_project", "models", "staging", "_staging__sources.yml")
 WORKFLOW = os.path.join(PROJECT_ROOT, ".github", "workflows", "dbt-checks.yml")
 FIXTURE_DIRS = (
@@ -38,16 +44,17 @@ TABLE = "epm_staging.historical_equity_rates"
 KONSOL_BODY = (
     "(consolidation_group String, data_area_id String, main_account String, "
     "rate_date Date, historical_rate Decimal(18,6), to_currency LowCardinality(String), "
-    "updated_at DateTime DEFAULT now()) "
+    "rate_set String, updated_at DateTime DEFAULT now()) "
     "ENGINE = ReplacingMergeTree(updated_at) "
-    "ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency)"
+    "ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency, rate_set)"
 )
 EXPECTED_STATEMENT = f"CREATE TABLE IF NOT EXISTS {TABLE} {KONSOL_BODY};"
 # konsol's upgrade ALTER for a table created before the column, verbatim.
 KONSOL_UPGRADE = (
     f"ALTER TABLE {TABLE} "
     "ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String) AFTER historical_rate, "
-    "MODIFY ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency)"
+    "ADD COLUMN IF NOT EXISTS rate_set String AFTER to_currency, "
+    "MODIFY ORDER BY (consolidation_group, data_area_id, main_account, rate_date, to_currency, rate_set)"
 )
 
 
@@ -80,17 +87,22 @@ class HistoricalEquityRatesDDL(unittest.TestCase):
         self.assertEqual(len(statements), 1, statements)
         self.assertEqual(_normalise(statements[0]), _normalise(EXPECTED_STATEMENT))
 
-    def test_to_currency_is_last_in_the_key_and_has_no_default(self):
-        """The upgraded table's key is the old key plus the new column at the end
-        (MODIFY ORDER BY may only append), and ClickHouse refuses to put a newly
-        added column with a DEFAULT into the sorting key; the fresh shape must
-        match the upgraded one."""
+    def test_to_currency_then_rate_set_are_last_in_the_key_and_have_no_default(self):
+        """The upgraded table's key is the old key plus the new columns at the
+        end, in the order the ALTER adds them (MODIFY ORDER BY may only
+        append), and ClickHouse refuses to put a newly added column with a
+        DEFAULT into the sorting key; the fresh shape must match the upgraded
+        one. rate_set follows to_currency in the column list too (AFTER
+        to_currency), so a fresh and an upgraded table read the same."""
         order_by = re.search(r"ORDER BY\s*\(([^)]*)\)", _normalise(EXPECTED_STATEMENT)).group(1)
-        self.assertTrue(order_by.endswith(",to_currency"), order_by)
-        column = re.search(r"to_currency [^,]*", KONSOL_BODY).group(0)
-        self.assertNotIn("DEFAULT", column, column)
+        self.assertTrue(order_by.endswith(",to_currency,rate_set"), order_by)
+        for name in ("to_currency", "rate_set"):
+            column = re.search(name + r" [^,]*", KONSOL_BODY).group(0)
+            self.assertNotIn("DEFAULT", column, column)
+        self.assertIn("to_currency LowCardinality(String), rate_set String, updated_at", KONSOL_BODY)
         upgrade_key = re.search(r"MODIFY ORDER BY\s*\(([^)]*)\)", _normalise(KONSOL_UPGRADE)).group(1)
         self.assertEqual(upgrade_key, order_by)
+        self.assertIn("ADD COLUMN IF NOT EXISTS rate_set String AFTER to_currency", KONSOL_UPGRADE)
 
     def test_the_model_matches_a_rate_on_the_reporting_currency(self):
         model = _read(MODEL)
@@ -104,19 +116,26 @@ class HistoricalEquityRatesDDL(unittest.TestCase):
             sql = _read(os.path.join(TESTS_DIR, name + ".sql"))
             self.assertIn("reporting_currency = r.to_currency", sql, name)
 
-    def test_every_fixture_rate_names_its_to_currency(self):
+    def test_every_fixture_rate_names_its_to_currency_and_rate_set(self):
         """A rate seeded without to_currency is '' in the key and matches no
-        group: the fixture would pass or flag for the wrong reason."""
+        group; one without rate_set belongs to no Rate Set and is never read:
+        the fixture would pass or flag for the wrong reason."""
         missing = []
         for folder in FIXTURE_DIRS:
             for path in sorted(glob.glob(os.path.join(folder, "*.sql"))):
                 for columns in _inserts(_read(path), TABLE):
-                    if "to_currency" not in columns:
-                        missing.append(os.path.relpath(path, PROJECT_ROOT))
+                    names = [c.strip() for c in columns.split(",")]
+                    for required in ("to_currency", "rate_set"):
+                        if required not in names:
+                            missing.append(f"{os.path.relpath(path, PROJECT_ROOT)}: {required}")
         self.assertEqual(missing, [])
 
     def test_the_source_describes_the_key(self):
-        self.assertIn("to_currency", _read(SOURCES))
+        sources = _read(SOURCES)
+        block = sources[sources.index("- name: historical_equity_rates"):]
+        block = block[:block.index("- name: ", 10)]
+        self.assertIn("to_currency", block)
+        self.assertIn("rate_set", block)
 
     def test_ci_runs_this_test_and_watches_its_inputs(self):
         wf = _read(WORKFLOW)

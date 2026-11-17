@@ -51,10 +51,17 @@ VALUES
   ('ZZG', 'ZZE2', 2026, 1, '2026-01-31', 1, 'ZZG', 1, 0, 1.0, 1.0, 'full');
 -- The live table may predate to_currency (konsol#374): add it to the scratch clone first.
 ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
-INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90, 'USD');
+  ('ZZACT', 'ZZ actuals', 1);
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.historical_equity_rates
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency, rate_set)
+VALUES
+  ('ZZG', 'ZZE1', 'ZZ3100', '2020-01-01', 0.90, 'USD', 'ZZACT');
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
@@ -67,15 +74,17 @@ INSERT INTO epm_gold.currencies
 VALUES
   ('EUR', 'Euro', 'E', 2, -0.05),
   ('USD', 'US Dollar', '$', 2, 0);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
 INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
 VALUES
-  ('USD', 'EUR', 2025, 11, 'Closing', 1.05, 'ZZ-GER-2025-11'),
-  ('USD', 'EUR', 2025, 11, 'Average', 1.00, 'ZZ-GER-2025-11'),
-  ('USD', 'EUR', 2025, 12, 'Closing', 1.20, 'ZZ-GER-2025-12'),
-  ('USD', 'EUR', 2025, 12, 'Average', 1.10, 'ZZ-GER-2025-12'),
-  ('USD', 'EUR', 2026, 1, 'Closing', 1.25, 'ZZ-GER-2026-01'),
-  ('USD', 'EUR', 2026, 1, 'Average', 1.22, 'ZZ-GER-2026-01');
+  ('USD', 'EUR', 2025, 11, 'Closing', 1.05, 'ZZ-GER-2025-11', 'ZZACT'),
+  ('USD', 'EUR', 2025, 11, 'Average', 1.00, 'ZZ-GER-2025-11', 'ZZACT'),
+  ('USD', 'EUR', 2025, 12, 'Closing', 1.20, 'ZZ-GER-2025-12', 'ZZACT'),
+  ('USD', 'EUR', 2025, 12, 'Average', 1.10, 'ZZ-GER-2025-12', 'ZZACT'),
+  ('USD', 'EUR', 2026, 1, 'Closing', 1.25, 'ZZ-GER-2026-01', 'ZZACT'),
+  ('USD', 'EUR', 2026, 1, 'Average', 1.22, 'ZZ-GER-2026-01', 'ZZACT');
 INSERT INTO epm_silver.silver_gl_entries
   (recid, data_area_id, accounting_date, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_balance_sheet, is_pnl, debit_amount, credit_amount, partner_data_area_id, posting_layer)
 VALUES

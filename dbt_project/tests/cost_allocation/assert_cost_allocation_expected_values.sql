@@ -4,8 +4,8 @@
 -- The expected values below belong to the fixture runs ZZEV (RC6 reciprocal
 -- coefficients, pools IT 1,000 and HR 400, Declared Allocation Account) and ZZEW
 -- (Step-Down coefficients, must flag). The names are fixture data, so the test is
--- enabled only under the fixture gate (var cost_allocation_fixture_values, which
--- scripts/fixture_gate.py passes); on a real site it does not exist, so a run named
+-- enabled only under the fixture gate (var fixture_only_tests, which
+-- scripts/fixture_gate.py passes to a fixture that names the test); on a real site it does not exist, so a run named
 -- ZZEV there cannot fail it. Rows returned are violations:
 --   net:<member>      the member's net on the run's allocation account
 --   gross:<s>><r>:<k> received lines from sender s at receiver r of hop kind k
@@ -13,7 +13,7 @@
 -- Expected and actual are summed per run and key side by side: a missing or a
 -- wrong number differs. UNION ALL + GROUP BY, no join
 -- (join_use_nulls=0 would fill a missing side with 0).
-{{ config(enabled=var('cost_allocation_fixture_values', false)) }}
+{{ config(enabled=var('fixture_only_tests', false)) }}
 with expected as (
     select r.run as run, tupleElement(x.m, 1) as metric, toDecimal128(tupleElement(x.m, 2), 16) as expected_value
     from (

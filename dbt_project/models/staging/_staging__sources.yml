@@ -448,22 +448,54 @@ sources:
           PRD-10: Historical FX rates for equity accounts (IAS 21), written
           through from konsol's Historical Equity Rate (submitted rows). Keyed
           (consolidation_group, data_area_id, main_account, rate_date,
-          to_currency): the owning group, the entity, the account, the tranche
-          date and the presentation currency the rate converts into
-          (konsol#374). gold_consolidated_trial_balance matches a rate on the
+          to_currency, rate_set): the owning group, the entity, the account,
+          the tranche date, the presentation currency the rate converts into
+          (konsol#374) and the Rate Set the rate belongs to (konsol#348
+          S4-Q1 c). gold_consolidated_trial_balance matches a rate on the
           consolidating group's reporting_currency, so a group presenting in a
-          different currency from its sub-group carries its own rate.
+          different currency from its sub-group carries its own rate, and
+          reads only the set flagged is_actuals in rate_sets; the
+          consolidated budget reads its Cycle's set.
         loaded_at_field: updated_at
       - name: group_exchange_rates
         description: >
           konsol#103 / konsolidat#93: the group's governed exchange rates. One
           approved Closing and one Average rate per (group reporting currency,
-          from-currency, fiscal year, fiscal period), written through from
-          konsol's Group Exchange Rate. gold_consolidated_trial_balance
+          from-currency, fiscal year, fiscal period, rate set), written through
+          from konsol's Group Exchange Rate. gold_consolidated_trial_balance
           translates from this and nothing else; the ERP feed only pre-fills
           drafts in konsol. `rate` is the TRUE rate (units of to_currency per
           1 from_currency), published by konsol, the single source of FX
-          rates; the warehouse never scales or inverts it.
+          rates; the warehouse never scales or inverts it. `rate_set` names
+          the Rate Set the rate belongs to (konsol#348 S4-Q1 c): actuals
+          translate at the one set flagged is_actuals in rate_sets, a budget
+          at its Cycle's set (budget_cycles.rate_set).
+      - name: rate_sets
+        description: >
+          konsol#348 S4-Q7 (a): the Rate Sets, from konsol's Rate Set doctype
+          (every row). Exactly one row has is_actuals = 1; the consolidation
+          filters group_exchange_rates and historical_equity_rates by it
+          (macros/governed_rates.sql: actuals_rate_set_predicate), and
+          assert_exactly_one_actuals_rate_set (error) refuses a build with
+          zero or two flagged sets.
+        columns:
+          - name: rate_set
+            description: "The Rate Set's name, as the rate tables' rate_set column carries it."
+          - name: label
+            description: "Its label in konsol."
+          - name: is_actuals
+            description: "1 on the one set the actuals consolidation translates at; 0 on every other."
+      - name: budget_cycles
+        description: >
+          konsol#348 S4-Q2 (a): the approved Budget Cycles, one row per
+          submitted Cycle (name, scenario_id, fiscal_year, rate_set,
+          as_of_date, horizon_periods). The consolidated budget joins its fact
+          on `cycle` and translates at the Cycle's rate_set (BUD-3), never at
+          the actuals set. scenario_type is read from scenario_definitions by
+          scenario_id. as_of_date is 1900-01-01 when the Cycle has none.
+        columns:
+          - name: rate_set
+            description: "The Rate Set the Cycle declared; the budget's rates come from this set only."
       - name: ownership_periods
         description: >
           PRD-9/11/12: Temporal ownership periods with acquisition and disposal

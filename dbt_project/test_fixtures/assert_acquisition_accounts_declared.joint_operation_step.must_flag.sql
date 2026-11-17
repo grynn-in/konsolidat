@@ -102,11 +102,19 @@ INSERT INTO epm_staging.ownership_periods
 VALUES
   ('ZZH', 'ZZJ', '2020-01-01', '2026-03-31', 50, 'proportional', 'ZZH', ''),
   ('ZZH', 'ZZJ', '2026-04-01', '2149-06-06', 100, 'full', 'ZZH', '');
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03'),
-  ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'EUR', 2026, 3, 'Closing', 1.0, 'ZZ-GER-2026-03', 'ZZACT'),
+  ('USD', 'EUR', 2026, 3, 'Average', 1.0, 'ZZ-GER-2026-03', 'ZZACT');
 INSERT INTO epm_staging.business_combinations
   (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement)
 VALUES

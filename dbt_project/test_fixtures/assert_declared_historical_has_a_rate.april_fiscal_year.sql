@@ -59,22 +59,31 @@ INSERT INTO epm_gold.currencies
 VALUES
   ('EUR', 'Euro', 'E', 2, -0.05),
   ('USD', 'US Dollar', '$', 2, 0);
-INSERT INTO epm_staging.group_exchange_rates
-  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('USD', 'EUR', 2025, 1, 'Closing', 1.10, 'ZZ-GER-2025-01'),
-  ('USD', 'EUR', 2025, 1, 'Average', 1.05, 'ZZ-GER-2025-01'),
-  ('USD', 'EUR', 2025, 2, 'Closing', 1.20, 'ZZ-GER-2025-02'),
-  ('USD', 'EUR', 2025, 2, 'Average', 1.15, 'ZZ-GER-2025-02');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.group_exchange_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.group_exchange_rates
+  (to_currency, from_currency, fiscal_year, fiscal_period, rate_type, rate, document, rate_set)
+VALUES
+  ('USD', 'EUR', 2025, 1, 'Closing', 1.10, 'ZZ-GER-2025-01', 'ZZACT'),
+  ('USD', 'EUR', 2025, 1, 'Average', 1.05, 'ZZ-GER-2025-01', 'ZZACT'),
+  ('USD', 'EUR', 2025, 2, 'Closing', 1.20, 'ZZ-GER-2025-02', 'ZZACT'),
+  ('USD', 'EUR', 2025, 2, 'Average', 1.15, 'ZZ-GER-2025-02', 'ZZACT');
 -- The rates themselves, keyed (consolidation_group, data_area_id, main_account, to_currency) on the
 -- entity's OWNING group and the consolidating group's presentation currency (konsol#374). ZZ3000's
 -- only tranche is dated 2025-04-15, inside P1 (declared end 2025-04-30), so it covers P1 and P2 at the
 -- declared as-of date; ZZ3100's predates both periods. Nothing may be named.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS rate_set String;
 INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency, rate_set)
 VALUES
-  ('ZZGRP', 'ZZOP', 'ZZ3000', '2025-04-15', 1.30, 'USD'),
-  ('ZZGRP', 'ZZOP', 'ZZ3100', '2025-01-01', 1.10, 'USD');
+  ('ZZGRP', 'ZZOP', 'ZZ3000', '2025-04-15', 1.30, 'USD', 'ZZACT'),
+  ('ZZGRP', 'ZZOP', 'ZZ3100', '2025-01-01', 1.10, 'USD', 'ZZACT');
 INSERT INTO epm_raw.trial_balance_submissions
   (batch_id, data_area_id, fiscal_year, fiscal_period, main_account, debit_amount, credit_amount, description, submission_name, submitted_at, partner_data_area_id)
 VALUES

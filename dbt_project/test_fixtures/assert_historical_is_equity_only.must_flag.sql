@@ -29,8 +29,16 @@ VALUES
 -- the closing rate with nothing said. That silence is konsolidat#92 finding 4.
 --   ZZGRP/ZZ01/ZZ1400 -> the ignored rate, must be named
 --   ZZGRP/ZZ01/ZZ3000 -> applied as declared, must NOT be named
-INSERT INTO epm_staging.historical_equity_rates
-  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency)
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
 VALUES
-  ('ZZGRP', 'ZZ01', 'ZZ1400', '2026-01-01', 1.25, 'USD'),
-  ('ZZGRP', 'ZZ01', 'ZZ3000', '2026-01-01', 1.25, 'USD');
+  ('ZZACT', 'ZZ actuals', 1);
+-- The live rate tables may predate konsol#348's rate_set: add it to the scratch clones first.
+ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS rate_set String;
+INSERT INTO epm_staging.historical_equity_rates
+  (consolidation_group, data_area_id, main_account, rate_date, historical_rate, to_currency, rate_set)
+VALUES
+  ('ZZGRP', 'ZZ01', 'ZZ1400', '2026-01-01', 1.25, 'USD', 'ZZACT'),
+  ('ZZGRP', 'ZZ01', 'ZZ3000', '2026-01-01', 1.25, 'USD', 'ZZACT');

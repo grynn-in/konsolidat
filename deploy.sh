@@ -374,10 +374,21 @@ case "$FX_OK:$FX_HEAD" in
         err "Run the konsol migration (konsol #174) first, then re-run this deploy."
         exit 1
         ;;
+    1:FX_RATE_SETS_MISSING)
+        err "epm_staging.rate_sets does not exist: konsol has not synced the Rate Sets yet (konsol#348 S4-Q7), and gold_consolidated_trial_balance's guard refuses every build until exactly one set is flagged Is Actuals."
+        err "Run the konsol migration (konsol#348: it creates the table and the ACTUAL set), then re-run this deploy."
+        exit 1
+        ;;
+    1:FX_ACTUALS_SETS*)
+        FX_N="${FX_HEAD#FX_ACTUALS_SETS }"
+        err "${FX_N} Rate Set(s) flagged Is Actuals in epm_staging.rate_sets; exactly one is required (konsol#348 S4-Q7). gold_consolidated_trial_balance's guard refuses every build until it is."
+        err "In konsol: Rate Set, flag exactly one set Is Actuals (the konsol#348 patch creates ACTUAL), then re-run this deploy."
+        exit 1
+        ;;
     1:FX_GAPS_TOTAL*)
         FX_N="${FX_HEAD#FX_GAPS_TOTAL }"
         if [ "$FX_N" -gt 0 ] 2>/dev/null; then
-            warn "${FX_N} translated key(s) have no usable governed rate (from->to, year, period, reason):"
+            warn "${FX_N} translated key(s) have no usable governed rate in the actuals Rate Set (from->to, year, period, reason):"
             printf '%s\n' "$FX_LINES" | grep '^FX_GAP ' | sed 's/^FX_GAP /    /'
             [ "$FX_N" -gt 200 ] && echo "    ... and $((FX_N - 200)) more (assert_every_translated_currency_has_a_governed_rate lists all)"
             warn "Continuing: at step 5 every model not downstream of gold_consolidated_trial_balance refreshes; the consolidated TB and the models that read it keep their last figures (nothing is deleted), and step 5 fails the deploy until these rates are approved in konsol (Group Exchange Rate)."

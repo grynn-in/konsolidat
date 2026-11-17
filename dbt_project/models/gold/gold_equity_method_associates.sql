@@ -29,8 +29,9 @@
    it) and the journal is labelled with the GROUP's reporting_currency, so it
    is translated at the period's governed Average rate from
    epm_staging.group_exchange_rates (konsolidat#93: the one source of FX
-   rates; the rate is used as published), 1.0 when the two currencies are the
-   same. Until 7 Nov 2026 no rate was applied: a SEK figure was posted into a
+   rates; the rate is used as published; konsol#348 S4 W2: the one Rate Set
+   flagged is_actuals, actuals_rate_set_predicate), 1.0 when the two
+   currencies are the same. Until 7 Nov 2026 no rate was applied: a SEK figure was posted into a
    EUR group as if it were EUR. A Closing-type period has no rates of its own
    and is keyed on its year's last Regular period (rate_period_map(),
    konsolidat#199 row D9), the same rule the consolidated trial balance uses.
@@ -230,6 +231,7 @@ governed_average_rates as (
         countIf(rate_type = 'Average') as n_average,
         countIf(rate_type = 'Average' and not (isFinite(rate) and rate > 0)) as n_invalid
     from {{ source('epm_staging', 'group_exchange_rates') }}
+    where {{ actuals_rate_set_predicate() }}
     group by from_currency, to_currency, fiscal_year, fiscal_period
 ),
 

@@ -76,3 +76,9 @@ INSERT INTO epm_raw.trial_balance_submission_control
 VALUES
   ('ZZB1', 'ZZ-TBS-1', 'ZZOP', 2026, 1, 3, now(), 'Period movement'),
   ('ZZB2', 'ZZ-TBS-2', 'ZZOP', 2026, 2, 3, now(), 'Period movement');
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

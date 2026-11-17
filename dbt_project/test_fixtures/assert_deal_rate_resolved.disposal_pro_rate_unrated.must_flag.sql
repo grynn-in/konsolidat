@@ -112,3 +112,9 @@ VALUES
   ('ZZD', 2026, 9, 'ZZ1000', 'ZZ cash', 'Asset', 1, 0, 1500, 0, 1500, 1),
   ('ZZD', 2026, 9, 'ZZ4000', 'ZZ revenue', 'Revenue', 0, 1, 0, 3000, -3000, 1),
   ('ZZD', 2026, 9, 'ZZ5000', 'ZZ cost', 'Expense', 0, 1, 1500, 0, 1500, 1);
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The consolidation reads rates of
+-- this set only, and its guard refuses a build with zero or two flagged sets.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

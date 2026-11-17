@@ -71,6 +71,131 @@ models:
           translated result (whatever its fx_method); the close period's CTA is
           then 0. Last column, added by the pre_hook ALTER.
 
+  - name: gold_budget_entity_ownership
+    description: >
+      konsol#348 S4 / konsolidat#369: the budget's ownership, resolved once on the budget's
+      own period spine (distinct entity x period of the approved Cycles' fact rows x the
+      declared calendar) and materialised in gold_entity_ownership's shape. gold_entity_ownership
+      cannot serve a budget: its spine is the actuals' periods, and a budget is entered before
+      its year starts. Resolved inline in gold_consolidated_budget_tb it was re-planned at every
+      CTE reference (33 KB of SQL, ~6.6 s per statement on an empty budget, CANNOT_SCHEDULE_TASK
+      on CI); every budget reader of ownership now joins this table: gold_consolidated_budget_tb,
+      budget_rate_gaps() and assert_budget_declared_historical_has_a_rate
+      (tests/test_budget_ownership_materialised.py). A table, rebuilt whole; no orchestrator scope.
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: owner_group
+        description: "The group node that holds the entity; the key a Historical Equity Rate is recorded under."
+      - name: effective_ownership_pct
+        description: "The chain-product share, a fraction; 0 when the chain is incomplete."
+      - name: consolidation_method
+        description: "full / proportional / equity / none, resolved as gold_entity_ownership resolves it."
+
+  - name: gold_consolidated_budget_tb
+    description: >
+      konsol#348 S4 (W4; S4-Q3 a, S4-Q4 a): the translated and consolidated BUDGET, in
+      gold_consolidated_trial_balance's shape plus scenario_id, cycle and layer, built
+      by the same consolidation_core macro. One row per (group, scenario, cycle, layer,
+      entity, period, account, budget dimensions), for the APPROVED Budget Cycles only
+      (epm_staging.budget_cycles; assert_budget_cycle_is_approved names the rest). Each
+      row translates at its Cycle's Rate Set (BUD-3), never the actuals set and never
+      1.0: a missing rate in that set stops this build by name (budget_rate_guard), and
+      only this build. Ownership is resolved on the budget's own period spine, so a
+      budget period with no trial balance row is consolidated
+      (assert_budget_consolidated_periods_complete). Before eliminations (konsol#427):
+      partner_data_area_id is '' on every row, so no intercompany elimination runs on a
+      budget; no deal journal, topside or equity-method entry reaches it either
+      (konsol#425). A table, rebuilt whole; no orchestrator scope. The CTA and NCI
+      attribution layers are gold_fully_consolidated_budget's (W6).
+      Note: read by konsol's Consolidated Statement (S5).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: scenario_id
+        description: "The budget or forecast scenario the Cycle belongs to."
+      - name: cycle
+        description: "The approved Budget Cycle (epm_staging.budget_cycles.name) the row was entered under; a forecast round is its own Cycle, and rounds are never summed."
+      - name: layer
+        description: "The budget layer (base / challenge / management / board); the final budget is the sum of layers, each consolidated on its own."
+      - name: local_amount
+        description: "The budget's period movement in the entity's accounting currency, signed debit - credit like the actuals (BUD-7), at the actuals' Decimal scale."
+      - name: translated_amount
+        description: "local_amount * translation_rate + retranslation_amount, at the rates of the Cycle's Rate Set."
+      - name: group_amount
+        description: "As gold_consolidated_trial_balance: 'full' equals translated_amount; 'proportional' is translated_amount * ownership_pct."
+      - name: nci_amount
+        description: "As gold_consolidated_trial_balance: 'full' is translated_amount * (1 - ownership_pct); 'proportional' is 0."
+      - name: partner_data_area_id
+        description: "Always '': a budget has no partner (konsol#427), so no intercompany elimination runs on it."
+      - name: retranslation_amount
+        description: "The balance sheet retranslation (konsolidat#257) on a closing-rate key, per (cycle, layer); 0 otherwise. A budget has no year-end close rows."
+      - name: fx_method
+        description: "The chart's DECLARED Translation Method for the row's account (closing, average, historical; '' for an account the chart does not declare), as the chart stood at build time. Not the method the core applied: an undeclared account ('') is translated at closing, and a historical account is translated at closing before its first tranche (consolidation_core falls through to the closing rate when no historical rate matches). Read by konsol's Statement Drill as the budget's 'Declared method' (S5 G1; konsol PR #554 review m6); the actuals' table drops it."
+      - name: rate_set
+        description: "The Rate Set the row translated at: its Cycle's (epm_staging.budget_cycles.rate_set)."
+
+  - name: gold_fully_consolidated_budget
+    description: >
+      konsol#348 S4 (W6; S4-Q3 a, S4-Q4 a, S4-Q8 b): the fully consolidated BUDGET, in
+      gold_fully_consolidated_tb's shape plus scenario_id, cycle and layer, over
+      gold_consolidated_budget_tb, so S5 reads the same columns for a budget as for the
+      actuals. Four layers, each per (scenario, cycle, layer), with L = the sum of the
+      local amounts, G = the sum of group_amount and C = the period's Closing rate in the
+      Cycle's Rate Set: 'entity' (group_amount at the account and budget-dimension grain),
+      'unbalanced' (-L x C, S4-Q8 b: the budget's OWN local imbalance, typically a P&L-only
+      budget whose one-sided Annual Inputs do not sum to zero, translated at closing; 0 for
+      a double-entry budget), 'cta' (-(G - L x C): the TRANSLATION DIFFERENCE only, which is
+      gold_fx_revaluation's whole residual when L = 0) and 'nci_attribution'
+      (gold_nci_attribution_journal's formula: the minority's share of the result and of
+      the CTA on the retained-earnings account, 'CTA' and the group's nci_account). Within
+      one (group, scenario, cycle, layer, entity, period) the layers sum to 0
+      (assert_budget_consolidated_balances, error); the two plugs are pinned as literals
+      (assert_budget_consolidated_plugs_hand_table). A closing rate that is not a positive
+      finite number refuses the build by name; no plug is translated at 0 or 1.0. BEFORE
+      ELIMINATIONS
+      (konsol#427): a budget has no partner, so there is no 'ic_elimination' layer, and
+      every reader labels the figure so. The deal journals, 'topside' and 'equity_method'
+      are absent too (konsol#425): actuals-only journals with no scenario key. A table,
+      rebuilt whole; no orchestrator scope; nothing here reads or is read by the close.
+      Note: read by konsol's Consolidated Statement (S5).
+    columns:
+      - name: consolidation_group
+        tests:
+          - not_null
+      - name: data_area_id
+        tests:
+          - not_null
+      - name: scenario_id
+        description: "The budget or forecast scenario the Cycle belongs to; part of the grain."
+      - name: cycle
+        description: "The approved Budget Cycle the rows were entered under; part of the grain, rounds are never summed."
+      - name: layer
+        description: "The budget layer (base / challenge / management / board); part of the grain, each consolidated on its own."
+      - name: adjustment_type
+        description: >
+          Layer: entity, unbalanced (the budget's own local imbalance at the closing rate,
+          main_account 'UNBALANCED'), cta (the translation difference, main_account 'CTA') or
+          nci_attribution. Never ic_elimination (konsol#427, before eliminations) nor a deal,
+          topside or equity_method journal (konsol#425).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['entity', 'unbalanced', 'cta', 'nci_attribution']
+      - name: amount
+        description: "In the group's reporting currency, signed debit - credit like the actuals."
+      - name: journal_id
+        description: "'' on entity, unbalanced and cta rows; 'NCI-{group}-{entity}-{FY}-P{period}-{scenario}-{cycle}-{layer}' on an attribution line."
+
   - name: gold_ic_eliminations
     description: >
       Intercompany elimination entries, each with a debit and a credit leg that

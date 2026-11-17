@@ -241,6 +241,12 @@ models:
       gold_variance_at_hierarchy_node:
         +tags: ['gold', 'domain:reporting']
       # --- Domain: scenarios ---
+      gold_budget_entity_ownership:
+        +tags: ['gold', 'domain:scenarios']
+      gold_consolidated_budget_tb:
+        +tags: ['gold', 'domain:scenarios']
+      gold_fully_consolidated_budget:
+        +tags: ['gold', 'domain:scenarios']
       gold_scenario_trial_balance:
         +tags: ['gold', 'domain:scenarios']
       gold_variance_analysis:

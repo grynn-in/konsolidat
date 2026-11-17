@@ -66,3 +66,10 @@ INSERT INTO epm_raw.trial_balance_submission_control (batch_id, submission_name,
 
 -- Deliberately no INSERT INTO epm_staging.historical_equity_rates: that absence
 -- is what the test must catch.
+-- konsol#348 S4-Q7 (a): the one Rate Set flagged Is Actuals. The test reads tranches of this set
+-- only, and `+assert_equity_rate_coverage` selects assert_exactly_one_actuals_rate_set (error), which
+-- needs exactly one flagged set. Still no tranche in it: the absence above is what the test catches.
+INSERT INTO epm_staging.rate_sets
+  (rate_set, label, is_actuals)
+VALUES
+  ('ZZACT', 'ZZ actuals', 1);

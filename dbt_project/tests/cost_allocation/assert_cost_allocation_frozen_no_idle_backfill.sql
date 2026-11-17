@@ -6,7 +6,7 @@
 -- (the upgrade), and the test would fail for no fault. It judges only the fixture run
 -- ZZRK, whose frozen table is seeded in the new shape; the old-shape fixture's build
 -- legitimately runs the backfill and must not trip it.
-{{ config(enabled=var('cost_allocation_fixture_values', false)) }}
+{{ config(enabled=var('fixture_only_tests', false)) }}
 select command
 from system.mutations
 where database = '{{ ref("gold_cost_allocation_frozen").schema }}'
