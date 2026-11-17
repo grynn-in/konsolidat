@@ -38,6 +38,8 @@ START = (
     "gold_variance_quarterly",
     "gold_budget_at_hierarchy_node",
     "gold_variance_at_hierarchy_node",
+    # konsol#348 S6 pair A: the declared current round and its readers
+    "gold_forecast_current_round",
 )
 ALLOWED_BRONZE = {"bronze_trial_balance_submissions"}
 FORBIDDEN_MODELS = {"silver_budget_entries"}
