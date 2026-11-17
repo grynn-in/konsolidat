@@ -43,8 +43,8 @@ TABLES = {
     ),
     "epm_staging.cost_allocation_coefficients": (
         "(run String, origin_member String, step UInt16, sender_member String, "
-        "receiver_member String, driver String, pool_coefficient Decimal(38,12), "
-        "coefficient Decimal(38,12)) "
+        "receiver_member String, driver String, hop_kind String, "
+        "pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) "
         "ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member)"
     ),
     "epm_staging.cost_allocation_statistics": (

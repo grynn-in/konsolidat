@@ -5,8 +5,8 @@
 -- One row per frozen run x account x origin member. Warn, not error: a frozen run
 -- is meant to differ from later data; this tells the accountant it has.
 -- The current pool is the macro's own (cost_allocation_pools), so the rule is
--- not written twice. Pools are read from the origin's own sent lines (sender =
--- origin): a declared-mode pass-through sent line sits on the allocation account.
+-- not written twice. Pools are read from the origin's own sent lines
+-- (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account.
 -- Both directions are judged: a frozen key whose origin has
 -- lost its TB data, and an origin that got TB data after the freeze (no frozen
 -- lines, current pool != 0). The current side is limited to origins that have
@@ -22,7 +22,7 @@ with runs as (
 sides as (
     select run, main_account, origin_member, max(origin_amount) as pool, 'frozen' as side
     from {{ ref('gold_cost_allocation_frozen') }}
-    where line_type = 'sent' and sender_member = origin_member
+    where line_type = 'sent' and hop_kind = 'own'
     group by run, main_account, origin_member
 
     union all

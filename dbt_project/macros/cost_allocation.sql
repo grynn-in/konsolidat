@@ -17,11 +17,15 @@
    Accounts:
      - received: the pool account in "Sender's Own Accounts" mode, the run's
        allocation_account in 'Declared Allocation Account' mode;
-     - sent at the origin itself (sender = origin): the pool account, always; this
-       is the relief of the origin's pool;
-     - sent by a pass-through sender (sender != origin): the account the sender
+     - sent on an `own` hop (hop_kind = 'own', the origin's relief of its pool): the
+       pool account, always;
+     - sent on a `pass` hop (hop_kind = 'pass'; the sender may be the origin itself in
+       a Reciprocal solve): the account the sender
        received the cost on, so its received and sent lines net to zero there
        (review H2: booking it on the pool account over-relieved the pool account).
+     - any other hop_kind goes to NEITHER account: the line is booked on the marker
+       account `?hop_kind`, so balanced_per_account fails loudly, and
+       assert_cost_allocation_hop_kind_valid names the row (RF5, review finding 6).
    pool_account is on every line, so the lines of two pools that share an account
    (every received line in declared mode) stay apart (review M1).
 
@@ -101,6 +105,7 @@ hops as (
         c.sender_member as sender_member,
         c.receiver_member as receiver_member,
         c.driver as driver,
+        c.hop_kind as hop_kind,
         c.coefficient as coefficient,
         p.origin_amount * c.coefficient as hop_amount
     from runs as r
@@ -114,12 +119,16 @@ hops as (
 lines as (
     select
         run, rule_set, method, scenario_id, data_area_id, fiscal_year, fiscal_period,
-        if(sender_member != origin_member and receiver_account_mode = 'Declared Allocation Account',
-           allocation_account, pool_account) as main_account,
+        multiIf(
+            hop_kind = 'own', pool_account,
+            hop_kind = 'pass', if(receiver_account_mode = 'Declared Allocation Account',
+                                  allocation_account, pool_account),
+            '?hop_kind') as main_account,
         pool_account,
         allocation_dimension,
         sender_member as member,
         'sent' as line_type,
+        hop_kind,
         origin_member, sender_member, receiver_member, driver, step, coefficient, origin_amount,
         -hop_amount as amount
     from hops
@@ -133,6 +142,7 @@ lines as (
         allocation_dimension,
         receiver_member as member,
         'received' as line_type,
+        hop_kind,
         origin_member, sender_member, receiver_member, driver, step, coefficient, origin_amount,
         hop_amount as amount
     from hops
@@ -140,9 +150,24 @@ lines as (
 
 select
     run, rule_set, method, scenario_id, data_area_id, main_account, pool_account,
-    allocation_dimension, member, line_type, origin_member, sender_member, receiver_member,
+    allocation_dimension, member, line_type, hop_kind, origin_member, sender_member, receiver_member,
     driver, fiscal_year, fiscal_period, step, coefficient, origin_amount,
     toDecimal128(amount, 16) as amount,
     {{ frozen_at_expr }} as frozen_at
 from lines
+{% endmacro %}
+
+
+{#- RF8: backfill hop_kind on frozen rows written by phase 1 (sender = origin -> 'own',
+    else 'pass'), only when a blank row exists. An ALTER ... UPDATE is a mutation that
+    rewrites parts, so it must not run on every incremental build. Runs as a pre_hook,
+    after the ADD COLUMN hook. The UPDATE is executed here and the macro returns an empty
+    string, which dbt skips as a hook. mutations_sync = 2 waits on every replica. -#}
+{% macro cost_allocation_backfill_hop_kind(relation) %}
+    {%- if execute -%}
+        {%- set blank = run_query("select count() from " ~ relation ~ " where hop_kind = ''") -%}
+        {%- if blank.columns[0].values()[0] | int > 0 -%}
+            {%- do run_query("ALTER TABLE " ~ relation ~ " UPDATE hop_kind = if(sender_member = origin_member, 'own', 'pass') WHERE hop_kind = '' SETTINGS mutations_sync = 2") -%}
+        {%- endif -%}
+    {%- endif -%}
 {% endmacro %}
