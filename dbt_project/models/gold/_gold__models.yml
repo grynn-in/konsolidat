@@ -1225,3 +1225,37 @@ models:
         description: "The budget layer; each consolidated on its own, summed by a read that names none."
       - name: consolidated_amount
         description: "In the group's reporting currency, signed debit - credit, every consolidation layer summed."
+
+  - name: gold_forecast_accuracy
+    description: >
+      konsol#348 S6 WC2 (FC-4-2; S6-Q8 a): how far each approved forecast
+      round was from the actuals, in the entity's currency. One row per
+      (round, closed Regular period after its as-of period within its horizon,
+      entity the round forecasts, account, budget dimensions, currency).
+      Closed = epm_staging.fiscal_periods.status Closed or Locked, the
+      effective status konsol publishes (the stricter of the year's and the
+      period's). Every approved round is here, side by side (FC-4); a reader
+      that wants the current round joins gold_forecast_current_round. An
+      account with an actual and no forecast is a forecast of 0, a forecast
+      with no actual is measured against 0. A round's rows stay in its own
+      fiscal year; the lag counts declared Regular periods from the as-of
+      across a year end. Pinned by assert_forecast_accuracy_hand_table,
+      assert_forecast_accuracy_grain_unique and
+      assert_forecast_accuracy_pct_null_on_zero_actual.
+    columns:
+      - name: cycle
+        description: "The round (an approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: as_of_date
+        description: "The round's as-of date (budget_cycles)."
+      - name: lag
+        description: "Declared Regular periods from the round's as-of period to this one: 1 is the period after the as-of."
+      - name: forecast_amount
+        description: "The round's forecast for the key, layers summed, signed debit - credit, in the entity's currency."
+      - name: actual_amount
+        description: "The GL actual for the key (gold_scenario_trial_balance, data_source gl), signed debit - credit."
+      - name: forecast_error
+        description: "forecast_amount - actual_amount."
+      - name: forecast_abs_error
+        description: "|forecast_error|; sum it for a total miss, sum forecast_error for the bias."
+      - name: forecast_error_pct
+        description: "forecast_error / |actual_amount| x 100 (variance_pct's convention); NULL when the actual is 0, shown as n/a. Average it, never sum it."

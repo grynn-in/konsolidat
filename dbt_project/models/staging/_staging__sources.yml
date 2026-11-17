@@ -298,7 +298,7 @@ sources:
           - name: quarter
             description: "The fiscal quarter the period falls in, as konsol labels it."
           - name: status
-            description: "konsol's period status (Open, Closed, ...); the warehouse does not filter on it."
+            description: "konsol's EFFECTIVE period status (Open, Closed, Locked): the stricter of the Fiscal Year's and the period row's (konsol fiscal_calendar.fiscal_period_rows). gold_forecast_accuracy and gold_forecast_accuracy_group measure only Closed or Locked periods (konsol#348 S6-Q8 a); nothing else filters on it."
       - name: business_combinations
         description: >
           konsolidat#198: one row per submitted Business Combination (konsol
