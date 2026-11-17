@@ -2,7 +2,11 @@
 -- published lines can disagree with epm_staging.cost_allocation_runs:
 --   1. duplicate line: the same hop of the same pool appears twice (a frozen run
 --      frozen again). pool_account is in the key: in declared mode the received
---      lines of two pools share the allocation account (review M1);
+--      lines of two pools share the allocation account (review M1). hop_kind is in
+--      the key too (konsol#269 RC6): under Reciprocal one sender sends to one
+--      receiver at one step twice, once as `own` and once as `pass` (origin IT's
+--      own unit and the cost HR returned to IT, both to HR at step 1), and those are
+--      two lines, not a duplicate;
 --   2. run not in staging: lines of a cancelled run were not removed;
 --   3. freeze stamp does not match the policy: a 'Freeze at Approval' run
 --      with a NULL frozen_at, or a 'Follow Latest Data' run with one.
@@ -19,7 +23,7 @@ runs as (
 
 select run, 'duplicate line' as problem
 from lines
-group by run, main_account, pool_account, origin_member, step, sender_member, receiver_member, line_type
+group by run, main_account, pool_account, origin_member, step, sender_member, receiver_member, line_type, hop_kind
 having count() > 1
 
 union all

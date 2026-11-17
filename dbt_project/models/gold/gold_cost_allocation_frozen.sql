@@ -5,6 +5,8 @@
         on_schema_change='fail',
         full_refresh=false,
         pre_hook=[
+            "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS hop_kind String AFTER line_type{% endif %}",
+            "{% if is_incremental() %}{{ cost_allocation_backfill_hop_kind(this) }}{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE run NOT IN (SELECT name FROM {{ source('epm_staging', 'cost_allocation_runs') }}){% endif %}"
         ],
         engine='MergeTree()',
@@ -29,6 +31,19 @@
 -- frozen afresh only if a build ran between the cancel and the re-submit; if
 -- not, its old rows are still here under that name and are kept. An amend gets a
 -- new name, so it is frozen afresh whatever the build order.
+--
+-- Upgrade in place (RF2): hop_kind (own / pass) came with Reciprocal; a table built
+-- by phase 1 lacks it, and `on_schema_change='fail'` plus full_refresh=false would
+-- leave that table unbuildable and unrepairable. The first two pre_hooks run
+-- BEFORE dbt compares the table's columns with the SELECT (dbt-clickhouse runs
+-- pre-hooks first), so they add the column and fill it. Freeze runs approved
+-- under phase 1 keep their amounts untouched; only hop_kind is backfilled, by
+-- the phase-1 rule: only Direct and Step-Down existed, and there sender = origin
+-- meant the origin's own relief ('own'), anything else a pass-through ('pass').
+-- The ADD is a no-op once the column exists. The backfill is the macro
+-- cost_allocation_backfill_hop_kind: it counts the rows with hop_kind = '' and
+-- issues the UPDATE (a mutation: it rewrites parts) only when there are some, so
+-- a build of a new-shape table runs no mutation (RF8). Any other column change still fails loudly.
 --
 -- full_refresh=false: `dbt build --full-refresh` skips the rebuild of this table
 -- (dbt treats the model as a normal incremental run), so it cannot re-freeze
