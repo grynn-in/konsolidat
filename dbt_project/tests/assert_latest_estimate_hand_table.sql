@@ -7,9 +7,15 @@
 -- the estimate (the actual replaces it). The expected rows are below; a multiset diff (UNION ALL +
 -- GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs:
 -- net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places.
--- Fixture-only: the expected table is the fixture's, so on a site it would always fail. It is enabled
--- only when a run passes `fixture_only_tests: true` (tests/test_fixture_only_tests.py).
-{{ config(enabled=var('fixture_only_tests', false)) }}
+-- The expected table is the fixture's, so, like every hand table (assert_budget_ytd_hand_table,
+-- assert_budget_consolidated_hand_table), it is vacuous where the fixture's scenario ZZ_FC_LE is absent
+-- (every real site, and the full CI build): no expected row is built and only ZZ_FC_LE's produced rows
+-- are read. ZZ_FC_LE is present when a Budget Cycle names it (the build-mode fixture, so a model that
+-- drops the whole scenario still fails) or when gold_latest_estimate holds it (the test-mode must_flag,
+-- which seeds the table directly). It is not a `fixture_only_tests` test: that var is ON in
+-- ci_full_build.py's full builds (it marks a costly test, not fixture-shaped expectations), which ran
+-- this test there on data without ZZ_FC_LE: 6 expected rows missing.
+{{ config(severity='error') }}
 
 with expected as (
     select
@@ -36,6 +42,8 @@ with expected as (
         ('ZZ_FC_LE', 'ZZ-LE-R2', 'ZZE1', 2026, 7, 'ZZ4000', 'USD', 'forecast', -72),
         ('ZZ_FC_LE', 'ZZ-LE-R2', 'ZZE1', 2026, 12, 'ZZ4000', 'USD', 'forecast', -120)
     )
+    where 'ZZ_FC_LE' in (select scenario_id from {{ source('epm_staging', 'budget_cycles') }})
+       or 'ZZ_FC_LE' in (select scenario_id from {{ ref('gold_latest_estimate') }})
 ),
 
 produced as (
@@ -51,6 +59,7 @@ produced as (
         round(sum(toFloat64(period_amount)), 4) as k_amount,
         -1 as sign
     from {{ ref('gold_latest_estimate') }}
+    where scenario_id = 'ZZ_FC_LE'
     group by scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, currency, source
 )
 
