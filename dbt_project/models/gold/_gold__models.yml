@@ -112,6 +112,7 @@ models:
       budget; no deal journal, topside or equity-method entry reaches it either
       (konsol#425). A table, rebuilt whole; no orchestrator scope. The CTA and NCI
       attribution layers are gold_fully_consolidated_budget's (W6).
+      Note: read by konsol's Consolidated Statement (S5).
     columns:
       - name: consolidation_group
         tests:
@@ -137,6 +138,8 @@ models:
         description: "Always '': a budget has no partner (konsol#427), so no intercompany elimination runs on it."
       - name: retranslation_amount
         description: "The balance sheet retranslation (konsolidat#257) on a closing-rate key, per (cycle, layer); 0 otherwise. A budget has no year-end close rows."
+      - name: fx_method
+        description: "The chart's DECLARED Translation Method for the row's account (closing, average, historical; '' for an account the chart does not declare), as the chart stood at build time. Not the method the core applied: an undeclared account ('') is translated at closing, and a historical account is translated at closing before its first tranche (consolidation_core falls through to the closing rate when no historical rate matches). Read by konsol's Statement Drill as the budget's 'Declared method' (S5 G1; konsol PR #554 review m6); the actuals' table drops it."
       - name: rate_set
         description: "The Rate Set the row translated at: its Cycle's (epm_staging.budget_cycles.rate_set)."
 
@@ -163,6 +166,7 @@ models:
       every reader labels the figure so. The deal journals, 'topside' and 'equity_method'
       are absent too (konsol#425): actuals-only journals with no scenario key. A table,
       rebuilt whole; no orchestrator scope; nothing here reads or is read by the close.
+      Note: read by konsol's Consolidated Statement (S5).
     columns:
       - name: consolidation_group
         tests:
