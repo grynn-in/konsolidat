@@ -9,10 +9,10 @@ assert_forecast_year_has_current_round WARNs naming it.
 
 clickhouse/init-db.sql creates the table on a fresh volume; konsol's
 _REFERENCE_TABLE_DDL creates it on a stack that predates this file's version
-(reconcile_all fills it). KONSOL_BODY is konsol's string, verbatim: as_of_date
-is a Date32 with an explicit 1900-01-01 default, never a Date's silent
-1970-01-01 (the budget_cycles precedent). Sorted by (scenario_id, fiscal_year),
-the key the readers join on.
+(reconcile_all fills it). KONSOL_BODY is konsol's string, verbatim. It holds
+no copy of the round: as_of_date, horizon_periods and rate_set are read from
+budget_cycles by `cycle`, the one source (S6 pair A review m4). Sorted by
+(scenario_id, fiscal_year), the key the readers join on.
 
 Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_current_forecasts_ddl`.
@@ -29,8 +29,7 @@ WORKFLOW = os.path.join(PROJECT_ROOT, ".github", "workflows", "dbt-checks.yml")
 TABLE = "epm_staging.current_forecasts"
 # konsol's _REFERENCE_TABLE_DDL[TABLE], verbatim.
 KONSOL_BODY = (
-    "(scenario_id String, fiscal_year UInt16, cycle String, "
-    "as_of_date Date32 DEFAULT '1900-01-01') "
+    "(scenario_id String, fiscal_year UInt16, cycle String) "
     "ENGINE = MergeTree ORDER BY (scenario_id, fiscal_year)"
 )
 EXPECTED_STATEMENT = f"CREATE TABLE IF NOT EXISTS {TABLE} {KONSOL_BODY};"
@@ -59,13 +58,15 @@ class CurrentForecastsDDL(unittest.TestCase):
         self.assertEqual(len(statements), 1, statements)
         self.assertEqual(_normalise(statements[0]), _normalise(EXPECTED_STATEMENT))
 
-    def test_as_of_date_is_a_date32_with_a_declared_default_and_the_key_is_the_pair(self):
+    def test_the_round_is_not_copied_and_the_key_is_the_pair(self):
         """Read from init-db.sql, the statement a fresh volume runs: asserting on
         this file's KONSOL_BODY could not fail when the source changed (review
-        of konsolidat#365)."""
+        of konsolidat#365). The round's as_of_date, horizon and Rate Set live in
+        budget_cycles only (S6 pair A review m4)."""
         [statement] = _create_statements(_read(INIT_DB), TABLE)
         normalised = _normalise(statement)
-        self.assertIn("as_of_date Date32 DEFAULT '1900-01-01'", normalised)
+        for copy in ("as_of_date", "horizon_periods", "rate_set"):
+            self.assertNotIn(copy, statement, copy)
         self.assertIn("ORDER BY(scenario_id,fiscal_year)", normalised)
         self.assertNotIn("scenario_type", statement)
         self.assertNotIn("1970", statement)
@@ -75,8 +76,9 @@ class CurrentForecastsDDL(unittest.TestCase):
         self.assertIn("- name: current_forecasts", sources)
         block = sources[sources.index("- name: current_forecasts"):]
         block = block[:block.index("\n      - name: ", 10)]   # up to the next TABLE entry
-        for column in ("scenario_id", "fiscal_year", "cycle", "as_of_date"):
+        for column in ("scenario_id", "fiscal_year", "cycle"):
             self.assertIn(f"- name: {column}", block, column)
+        self.assertNotIn("- name: as_of_date", block, "budget_cycles holds the as-of")
         self.assertIn("S6-Q1", block, "the source names the decision it implements")
 
     def test_ci_runs_this_test_and_watches_its_inputs(self):
