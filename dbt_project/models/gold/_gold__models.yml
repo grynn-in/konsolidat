@@ -471,11 +471,13 @@ models:
           signed actual is below the signed budget (a credit-normal account
           with more credit than budgeted, a debit-normal account with less
           debit), 'unfavourable' when it is above, 'not_applicable' when there
-          is no favourable direction: no budget, a balance-sheet account, a
+          is no favourable direction: a balance-sheet account, a
           chart with no normal balance declared for the account, or a zero
           variance (konsol's statement shows "On budget" for that case; this
           column does not distinguish it). Replaces the S3 Bool, whose false
-          meant both "unfavourable" and "no direction".
+          meant both "unfavourable" and "no direction". No budget line is
+          budget zero ("Unbudgeted is unfavourable", 22 Sep 2026): an
+          unbudgeted cost is 'unfavourable', unbudgeted revenue 'favourable'.
           assert_variance_favourability_follows_normal_balance checks it from
           the chart and the amounts.
         tests:

@@ -190,11 +190,14 @@ combined as (
            states in one String, never a summable flag:
              'favourable'     the signed actual is below the signed budget;
              'unfavourable'   above it;
-             'not_applicable' no favourable direction: no budget, a
+             'not_applicable' no favourable direction: a
                               balance-sheet account, an account whose normal
                               balance is not declared or that is not in the
                               chart (join_use_nulls=0 reads ''), and a zero
                               variance (the statement shows "On budget").
+           No budget line is a budget of zero, never "no direction"
+           ("Unbudgeted is unfavourable", Deepak Pai, 22 Sep 2026: budget 0,
+           actual 10 is unfavourable 10), the zero variance_abs uses.
            Amounts are signed debit - credit (QB6 a), so a credit-normal
            account (revenue) is favourable when the actual is more credit than
            the budget, i.e. its signed actual is below its signed budget, and a
@@ -205,11 +208,10 @@ combined as (
            not refused). assert_variance_favourability_follows_normal_balance
            checks it from the chart and the amounts. #}
         multiIf(
-            g.budget_amount is null, 'not_applicable',
             coalesce(am.is_pnl, 0) = 0, 'not_applicable',
             am.normal_balance not in ('Credit', 'Debit'), 'not_applicable',
-            g.actual_amount < g.budget_amount, 'favourable',
-            g.actual_amount > g.budget_amount, 'unfavourable',
+            g.actual_amount < coalesce(g.budget_amount, 0), 'favourable',
+            g.actual_amount > coalesce(g.budget_amount, 0), 'unfavourable',
             'not_applicable'
         ) as variance_favourability,
         g.budget_scenario_id as budget_scenario_id
