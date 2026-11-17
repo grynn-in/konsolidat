@@ -94,6 +94,11 @@ class TheTestAndItsFixtures(unittest.TestCase):
         sql = _read(path)
         self.assertRegex(sql, r"config\(\s*severity\s*=\s*'error'\s*\)")
         self.assertIn("silver_main_accounts", sql, "the expectation comes from the chart")
+        # PR #374 review m4: P&L or not is the chart's too, never the model's
+        # own is_pnl (a model that mislabels a balance-sheet account as P&L
+        # would otherwise be judged by its own mistake).
+        self.assertRegex(sql, r"coalesce\(\s*am\.is_pnl\s*,\s*0\s*\)\s*=\s*0")
+        self.assertNotRegex(sql, r"v\.is_pnl\s*=")
         for literal in LITERALS:
             self.assertIn(f"'{literal}'", sql, literal)
 

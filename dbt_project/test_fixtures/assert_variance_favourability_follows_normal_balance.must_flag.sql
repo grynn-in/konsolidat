@@ -1,14 +1,18 @@
--- gate: expect assert_variance_favourability_follows_normal_balance flag 4
--- assert_variance_favourability_follows_normal_balance: must FLAG 4. The same hand-computed rows as the PASS
+-- gate: expect assert_variance_favourability_follows_normal_balance flag 5
+-- assert_variance_favourability_follows_normal_balance: must FLAG 5. The same hand-computed rows as the PASS
 -- fixture, with four states wrong: ZZ6100 unbudgeted costs 30 marked 'not_applicable' (the first S6 rule, which
 -- read no budget as no direction; "Unbudgeted is unfavourable", 22 Sep 2026, makes it budget zero), ZZ4000 revenue -1,200 against -1,000 (more revenue) marked 'unfavourable',
 -- ZZ5000 costs 1,200 against 1,000 (more cost) marked 'favourable' (the two the retired Bool rule once set the
 -- wrong way round), and ZZ9000 rent 700 against 700 (a zero variance) marked 'favourable' where no direction
 -- exists. The other five rows (ZZ7000, unbudgeted revenue, is 'favourable') are right and must not be named.
+-- A fifth (PR #374 review m4): ZZ1100 deposits, a balance-sheet account in the chart (is_pnl 0, Debit), that
+-- the model row mislabels is_pnl 1 and marks 'unfavourable' (500 against 400): the chart says no direction,
+-- 'not_applicable'. A test that read the model's own is_pnl would agree with the model and miss it.
 INSERT INTO epm_silver.silver_main_accounts
   (main_account_id, account_name, account_type, account_type_name, is_pnl, is_balance_sheet, normal_balance)
 VALUES
   ('ZZ1000', 'ZZ cash', 'Asset', 'Asset', 0, 1, 'Debit'),
+  ('ZZ1100', 'ZZ deposits', 'Asset', 'Asset', 0, 1, 'Debit'),
   ('ZZ4000', 'ZZ revenue', 'Revenue', 'Revenue', 1, 0, 'Credit'),
   ('ZZ4100', 'ZZ fees', 'Revenue', 'Revenue', 1, 0, 'Credit'),
   ('ZZ5000', 'ZZ costs', 'Expense', 'Expense', 1, 0, 'Debit'),
@@ -30,4 +34,5 @@ VALUES
   ('ZZE1', 2026, 1, 'ZZ1000', 'ZZ cash', 'Asset', 0, '', '', 'USD', 500, 400, 100, 25, 'not_applicable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ8000', 'ZZ undeclared', 'Profit and loss', 1, '', '', 'USD', 100, 200, -100, -50, 'not_applicable', 'ZZ_PLAN_2026'),
   ('ZZE1', 2026, 1, 'ZZ9000', 'ZZ rent', 'Expense', 1, '', '', 'USD', 700, 700, 0, 0, 'favourable', 'ZZ_PLAN_2026'),
-  ('ZZE1', 2026, 1, 'ZZ4100', 'ZZ fees', 'Revenue', 1, '', '', 'USD', -800, -1000, 200, -20, 'unfavourable', 'ZZ_PLAN_2026');
+  ('ZZE1', 2026, 1, 'ZZ4100', 'ZZ fees', 'Revenue', 1, '', '', 'USD', -800, -1000, 200, -20, 'unfavourable', 'ZZ_PLAN_2026'),
+  ('ZZE1', 2026, 1, 'ZZ1100', 'ZZ deposits', 'Asset', 1, '', '', 'USD', 500, 400, 100, 25, 'unfavourable', 'ZZ_PLAN_2026');
