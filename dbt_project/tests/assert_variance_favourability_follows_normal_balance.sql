@@ -13,7 +13,7 @@
      balance is not declared or not in the chart (join_use_nulls=0 reads ''), and a zero variance (the
      statement shows "On budget" for it; the warehouse column does not distinguish it, as the yml declares).
 
-   The retired Bool (variance_favorable) read false for "unfavourable" and for "no direction" alike, and konsol
+   The retired S3 Bool read false for "unfavourable" and for "no direction" alike, and konsol
    registered it as a sum Measure, which added flags together (konsolidat#214). This test derives the expected
    state from the chart and the amounts, never from the model's own column, so a model that guesses a direction
    for an undeclared account, or marks a zero variance either way, is named. One row per variance row whose

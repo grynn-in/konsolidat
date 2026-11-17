@@ -448,7 +448,7 @@ models:
           - not_null
 
   - name: gold_variance_analysis
-    description: "Actual vs budget variance with favorable/unfavorable logic"
+    description: "Actual vs budget variance with a three-state favourability (favourable / unfavourable / not_applicable)"
     columns:
       - name: main_account
         tests:
@@ -464,15 +464,23 @@ models:
         description: "actual_amount - budget_amount"
       - name: variance_pct
         description: "Variance as percentage of budget"
-      - name: variance_favorable
+      - name: variance_favourability
         description: >
-          True when the variance is favourable by the account's normal balance
-          (konsol#348 S3 B13, QB7 a): a credit-normal account when the actual is
-          more credit than the budget, a debit-normal account when it is less
-          debit; on amounts signed debit - credit both mean the actual is below
-          the budget. False with no budget, on a balance-sheet account, or when
-          the chart declares no normal balance.
-          assert_variance_favorable_follows_normal_balance checks it.
+          Three states, a row attribute and never a summable flag (konsol#348
+          S6 WB1, S6-Q4 a; BUD-7-a; konsolidat#214): 'favourable' when the
+          signed actual is below the signed budget (a credit-normal account
+          with more credit than budgeted, a debit-normal account with less
+          debit), 'unfavourable' when it is above, 'not_applicable' when there
+          is no favourable direction: no budget, a balance-sheet account, a
+          chart with no normal balance declared for the account, or a zero
+          variance (konsol's statement shows "On budget" for that case; this
+          column does not distinguish it). Replaces the S3 Bool, whose false
+          meant both "unfavourable" and "no direction".
+          assert_variance_favourability_follows_normal_balance checks it from
+          the chart and the amounts.
+        tests:
+          - accepted_values:
+              values: ['favourable', 'unfavourable', 'not_applicable']
       - name: budget_scenario_id
         description: >
           The budget-type scenario these rows compare the actuals with
