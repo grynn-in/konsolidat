@@ -4,7 +4,8 @@
 -- signed amounts and is three states (favourable / unfavourable / not_applicable), never a summable flag.
 -- Entity ZZE1 (USD), FY2026 P1. Chart: ZZ4000 revenue (Profit and Loss, normal balance Credit), ZZ5000 costs
 -- (Profit and Loss, normal balance Debit), ZZ6000 rent (Profit and Loss, Debit). Trial balance (period
--- movement): ZZ4000 Cr 1,200 | ZZ5000 Dr 1,200 | ZZ6000 Dr 700, so the actuals are ZZ4000 -1,200, ZZ5000
+-- movement): ZZ4000 Cr 1,200 | ZZ5000 Dr 1,200 | ZZ6000 Dr 700 | ZZ6100 Dr 30 | ZZ1000 cash Cr 730 (balance
+-- sheet, so the batch balances for assert_tb_submission_batches_balance), so the actuals are ZZ4000 -1,200, ZZ5000
 -- +1,200 and ZZ6000 +700. Budget scenario ZZ_PLAN_2026, base layer, Period movement, USD: ZZ4000 Cr 1,000
 -- (-1,000) | ZZ5000 Dr 1,000 (+1,000) | ZZ6000 Dr 700 (+700).
 -- Hand-computed: revenue 1,200 actual against 1,000 budget is MORE revenue, 'favourable'; expense 1,200 against
@@ -40,7 +41,8 @@ VALUES
   ('ZZ4000', 'ZZ revenue', 'ZZCOA', '', 0, 'Revenue', 'Profit and Loss', 'Revenue', 'Credit', 'Period', 'average', 1, 0, 0, '', '', 0, 'REVENUE', 'Published', 0),
   ('ZZ5000', 'ZZ costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
   ('ZZ6000', 'ZZ rent', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
-  ('ZZ6100', 'ZZ unbudgeted costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0);
+  ('ZZ6100', 'ZZ unbudgeted costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
+  ('ZZ1000', 'ZZ cash', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'ASSET', 'Published', 0);
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
 VALUES
@@ -52,11 +54,12 @@ VALUES
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1200, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ5000', 1200, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
-  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6100', 30, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6100', 30, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ1000', 0, 730, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
 INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
-  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 4, '2026-02-05 09:00:00', 'Period movement');
+  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 5, '2026-02-05 09:00:00', 'Period movement');
 INSERT INTO epm_gold.scenario_definitions
   (scenario_id, scenario_name, scenario_type, is_active)
 VALUES
