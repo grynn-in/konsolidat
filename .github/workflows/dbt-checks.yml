@@ -156,6 +156,11 @@ jobs:
       # eliminations" (konsol#427, #425).
       - name: budget outside the close
         run: python -m unittest -v tests.test_budget_outside_close
+      # konsol#348 S5 (W1): the columns, literals and adjustment types konsol's
+      # Consolidated Statement reads from the two budget models are pinned, and
+      # both yml descriptions say konsol reads them.
+      - name: budget warehouse contract for konsol's readers
+        run: python -m unittest -v tests.test_fully_consolidated_budget_contract
       # konsolidat#369: the budget's ownership resolution is materialised once
       # (gold_budget_entity_ownership); no budget reader re-plans it inline.
       - name: budget ownership materialised once

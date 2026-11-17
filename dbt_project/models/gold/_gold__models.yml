@@ -112,6 +112,7 @@ models:
       budget; no deal journal, topside or equity-method entry reaches it either
       (konsol#425). A table, rebuilt whole; no orchestrator scope. The CTA and NCI
       attribution layers are gold_fully_consolidated_budget's (W6).
+      Note: read by konsol's Consolidated Statement (S5).
     columns:
       - name: consolidation_group
         tests:
@@ -163,6 +164,7 @@ models:
       every reader labels the figure so. The deal journals, 'topside' and 'equity_method'
       are absent too (konsol#425): actuals-only journals with no scenario key. A table,
       rebuilt whole; no orchestrator scope; nothing here reads or is read by the close.
+      Note: read by konsol's Consolidated Statement (S5).
     columns:
       - name: consolidation_group
         tests:
