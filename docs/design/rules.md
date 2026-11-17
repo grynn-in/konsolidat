@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **187** |
-| carrying their reasoning | 166 |
-| citing the issue that caused them | 160 |
-| severity `warn` (reports, does not stop a build) | 22 |
-| severity `error` (stops the build, and its children) | 165 |
+| assertions | **197** |
+| carrying their reasoning | 175 |
+| citing the issue that caused them | 170 |
+| severity `warn` (reports, does not stop a build) | 24 |
+| severity `error` (stops the build, and its children) | 173 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,14 +25,14 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 33
+- [Currency and translation](#currency-and-translation) — 36
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 14
 - [Intercompany](#intercompany) — 17
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 25
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 32
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 16
@@ -226,6 +226,10 @@ konsol refuses an Annual Input or a Budget Entry line whose currency is not the 
 
 <sub>`error` · `tests/assert_budget_currency_is_entity_currency.sql` · konsol#110 konsol#348</sub>
 
+### `budget_declared_historical_has_a_rate`
+
+<sub>`warn` · `tests/assert_budget_declared_historical_has_a_rate.sql` · konsol#348 konsol#374 konsolidat#213 konsolidat#218 konsolidat#295 konsolidat#368 konsolidat#369 konsolidat#92</sub>
+
 ### `budget_node_per_cycle_and_currency`
 
 **konsol#348 S3 B11 (QB2 a, QB3 a;**
@@ -233,6 +237,22 @@ konsol refuses an Annual Input or a Budget Entry line whose currency is not the 
 decided 14 Nov 2026 under Deepak Pai's standing rule): the budget rollup to a reporting hierarchy node keeps every Budget Cycle and every currency apart. gold_spread_budget carries `cycle` (B4) and `currency` (B4, B7): a forecast scenario holds one approved Cycle per round, and rounds must never sum; a budget line is in its entity's accounting currency, and amounts in two currencies must never sum. gold_budget_at_hierarchy_node therefore carries both and groups by both, as gold_tb_at_hierarchy_node carries every column of its row grain (gold_trial_balance has no currency; the entity's is one, so grouping by it never splits a row). Checked at the leaves. Summed over the leaf rows (hierarchy_is_group = 0) of one hierarchy and dimension, the node model's period_amount per (scenario, cycle, currency, entity, year, period, account, layer) must equal the fact's over the rows whose dimension value is a leaf of that hierarchy. A node model without the cycle (or currency) column is compared on the rest of the key, so each round's fact rows meet the node's sum across rounds and the test fails rather than errors: two rounds of -100 and -110 against one node row of -210. konsolidat#220: a code may be a leaf in several dated tranches. A fact row matches only the leaf tranche whose window covers its period's end_date (declared calendar, epm_staging.fiscal_periods; a period the calendar does not declare drops out of both sides, QA3 a). Output aliases differ from the joined columns' names: ClickHouse strips the qualifier from the left table's columns in a join, so a same-named alias would shadow them. One row per mismatched key; error severity. Fixtures: dbt_project/test_fixtures/budget_node_two_rounds.sql.
 
 <sub>`error` · `tests/assert_budget_node_per_cycle_and_currency.sql` · konsol#348 konsolidat#220</sub>
+
+### `budget_translated_currency_has_a_governed_rate`
+
+**konsol#348 S4 (W5): every currency the consolidated budget translates has a usable governed rate IN ITS CYCLE'S Rate Set, for its rate period.**
+
+A budget translates at the set its Budget Cycle declares (BUD-3; epm_staging.budget_cycles.rate_set), never at the actuals set and never at 1.0, so a rate approved only in the actuals set leaves the budget key missing here. One row per (scenario, cycle, rate set, from-currency, group reporting currency, rate year, rate period) with the reason: missing (no approved Closing and Average rate in that set), duplicate (more than one of a type in that set), invalid (zero, negative or not finite), implausible (more than 10x from the two currencies' reference magnitudes, when both are known). Built from the same macro as the model's pre_hook guard (budget_rate_gaps(), macros/ budget_rates.sql): the guard stops the budget build on the first 50 keys, this test lists all. The keys are the model's own: the approved Cycles' fact rows, the entity's currency, the groups the entity line-consolidates into at that period (ownership resolved on the budget's spine), the group's reporting currency, same-currency rows excluded, the period mapped through rate_period_map(). The actuals' twin is assert_every_translated_currency_has_a_governed_rate; neither reads the other's keys, so a missing budget rate never stops the actuals build, and a missing actuals rate never stops the budget. The rate rows are read through budget_rate_set_predicate, the budget's rate_set_predicate: the Cycles' sets, counted per set.
+
+<sub>`error` · `tests/assert_budget_translated_currency_has_a_governed_rate.sql` · konsol#348</sub>
+
+### `budget_translation_rate_resolved`
+
+**konsol#348 S4 (W8): every row of gold_consolidated_budget_tb carries a resolved translation rate, the budget twin of assert_translation_rate_resolved (konsolidat#109, #194) over gold_consolidated_trial_balance.**
+
+The same two failure modes, both of which silently misstate a translated budget: 1. translation_rate = 0: a LEFT-join miss defaulted the rate column to 0 (join_use_nulls=0) and the row's translated, group and NCI amounts collapse to 0; 2. translation_rate IS NULL: a Nullable rate that escaped every rate branch of the core; the core's throwIf and the budget_rate_guard pre_hook should have stopped the build first. A cross-currency row translating at exactly 1.0 is NOT a failure (konsolidat#194): near-parity pairs are quoted to 3 decimals, and the budget has no parity fallback: a Cycle whose Rate Set has no usable rate for a key is refused by name before the table is replaced (budget_rate_guard), so 1.0 here can only be a real quote in that set. Reports the Cycle and its Rate Set with the key, so the row can be traced to the set it should have been translated at. Fixture: test_fixtures/assert_budget_translation_rate_resolved.must_flag.sql.
+
+<sub>`error` · `tests/assert_budget_translation_rate_resolved.sql` · konsol#348 konsolidat#109 konsolidat#194</sub>
 
 ### `conversion_factor_known`
 
@@ -1025,6 +1045,62 @@ gold_spread_budget inner-joins epm_gold.spread_profiles on profile_id = spread_p
 2, R9; narrowed by R10 under Q15-c). gold_spread_budget reads two bases: 'Period movement' lines as landed, and 'Year-to-date movement' lines converted to movements within the Cycle year (macros/period_movements.sql). Keep the two literals below identical to the filters there. * A 'Period-end balance' line is not read: converting it needs an opening balance, which is an open policy question (Q15-c). Each such line is named, so none is dropped silently. So is a line on any other string, which the spread would drop the same way. * A (cycle, entity, layer, year) that holds more than one basis is named once: a YTD figure cannot be differenced against a movement, and the spread would sum the two shapes as one. Error severity: the budget fact would be wrong or incomplete.
 
 <sub>`error` · `tests/assert_budget_basis_supported.sql` · konsol#348</sub>
+
+### `budget_consolidated_balances`
+
+**konsol#348 S4 (W6;**
+
+S4-Q3 a, S4-Q8 b): the fully consolidated BUDGET balances by construction, per consolidation of its own. gold_fully_consolidated_budget is gold_fully_consolidated_tb's shape over gold_consolidated_budget_tb, with four layers; per (group, scenario, cycle, layer, entity, period), L = sum of local amounts, G = sum of group_amount, C = the Closing rate in the Cycle's Rate Set: 'entity' (G, by account), 'unbalanced' (-L x C, the budget's own local imbalance), 'cta' (-(G - L x C), the translation difference only; the whole residual when L = 0) and 'nci_attribution' (the gold_nci_attribution_journal formula: the minority's share of the result and of the CTA, a journal that sums to zero). So within one consolidation the adjustment types sum to 0: G - L x C - (G - L x C) is 0 by definition, and the attribution journal nets to 0 on its own. A row here means a layer was computed on a different key than the others: a plug summed across budget layers or Cycles (telescoping), the two plugs read from different sums, an NCI journal whose lines were dropped by the zero-line filter on one side only, or an entity layer that lost rows the plugs saw. The plugs' values are pinned by assert_budget_consolidated_plugs_hand_table; this test proves only that they close. Not covered, by design (konsol#427, #425): a budget has no partner, so there is no 'ic_elimination' layer ("before eliminations"); deal journals and topside are actuals-only. Nothing is missing from the sum because nothing else is posted. Fixture: test_fixtures/assert_budget_consolidated_balances.sql (a EUR entity in a USD group, 80% owned, two layers, two periods; hand values in its header). Vacuous when no Budget Cycle is approved: the model is then empty. Tolerance 0.01 in the group's currency: the amounts are Float64 sums of Decimal x Float64 products.
+
+<sub>`error` · `tests/assert_budget_consolidated_balances.sql` · konsol#348 konsol#427 konsolidat#425</sub>
+
+### `budget_consolidated_grain_unique`
+
+**konsol#348 S4 (W8;**
+
+S4-Q3 a): gold_fully_consolidated_budget holds exactly one row per (consolidation_group, data_area_id, scenario_id, cycle, layer, fiscal_year, fiscal_period, main_account, adjustment_type, the budget dimension columns). That is the grain a reader windows or sums over (S5's YTD running total, the budget side of a variance), as gold_consolidated_ytd's ROWS window does over gold_fully_consolidated_tb (assert_journal_grain_unique): a second row on one key is a second running total, not a larger one. The model's four layers are each grouped or keyed to this grain: 'entity' by GROUP BY, 'unbalanced' and 'cta' one plug each per (group, entity, period, scenario, cycle, layer) on their own literal accounts, 'nci_attribution' three lines on three accounts of one journal. A row here means a layer passes rows through unsummed, or a grain column (scenario_id, cycle, layer) was dropped from one layer's key so two consolidations landed on one key. journal_id is not part of the grain; the journals seen are reported for the reader. Fixture: test_fixtures/assert_budget_consolidated_grain_unique.must_flag.sql (one duplicated 'entity' key, flagged; the same account under another layer or another adjustment_type, not).
+
+<sub>`error` · `tests/assert_budget_consolidated_grain_unique.sql` · konsol#348</sub>
+
+### `budget_consolidated_hand_table`
+
+**konsol#348 S4 (W4): the hand-computed translated amounts of the consolidated budget fixture test_fixtures/assert_budget_consolidated_hand_table.sql, as literals.**
+
+Two Budget Cycles of one scenario declare DIFFERENT Rate Sets, each has two layers, and every (cycle, layer) holds the same local rows (one EUR entity in a USD group, 100% owned, FY2026 P6 and P7: a closing-rate cash account and an average-rate revenue account); the actuals set holds a different rate for every key. The fixture's header shows the rates and the arithmetic. Each (cycle, layer) must come out as that Cycle's set translates it alone, including the closing-rate retranslation of the cash balance at P7 (konsolidat#257). A model that read the actuals set, read every set without the Cycle's set on the rate key, or lost the layer or the cycle in a window partition (so one layer's balance was retranslated against another's) gives a different number here, and this test does not use the macros it checks. It is vacuous where the Cycle ZZ-CY-HAND-A is not approved (every real site): no expected row is built. Flags one row per (cycle, layer, account, period) that is missing, unexpected or off by more than 0.01.
+
+<sub>`error` · `tests/assert_budget_consolidated_hand_table.sql` · konsol#348 konsolidat#257</sub>
+
+### `budget_consolidated_local_amount_exact`
+
+**konsol#348 S4 (S4b live test, must fix): every local_amount of gold_consolidated_budget_tb equals its budget fact row's period_amount ROUNDED to the actuals' Decimal scale (amount_scale(), 4), never truncated.**
+
+period_amount is a Float64 (gold_spread_budget: annual_amount x period_weight, or a manual line's net), and toDecimal128(Float64, 4) truncates the binary double toward zero (konsolidat#191): 1234567.89 becomes 1234567.8899, and an annual 1000.01 spread evenly, 83.33416666..., becomes 83.3341 where rounding gives 83.3342. 14 of 16 live ZZ budget rows were off by 0.0001 on the first live build. cast_to_decimal128() (macros/db_adapter.sql) rounds to the scale, goes through the shortest exact text and parses that; the model must use it, and this test recomputes the expected value with the same macro from the fact, so the two can only agree when the model rounds. Exact Decimal comparison, no tolerance. Join: the fact's grain (scenario, cycle, layer, entity, year, period, account, budget dims) to the consolidated rows, which fan out once per ancestor group; every fan-out row is compared. Filler rows the core adds for a retranslation (is_filler, local_amount 0) have no fact row and are not judged; a fact row whose Cycle is not approved has no consolidated row and is not judged (assert_budget_cycle_is_approved names it). Fixture: test_fixtures/assert_budget_consolidated_local_amount_exact.sql (1234567.89 and the 1000.01 / 12 spread; red on toDecimal128(Float64), green on cast_to_decimal128).
+
+<sub>`error` · `tests/assert_budget_consolidated_local_amount_exact.sql` · konsol#348 konsolidat#191</sub>
+
+### `budget_consolidated_periods_complete`
+
+**konsol#348 S4 (W4): every budget period an entity line-consolidates in is in the consolidated budget.**
+
+gold_consolidated_budget_tb resolves ownership on the BUDGET's own period spine (budget_consolidation_inputs(), macros/budget_rates.sql, through ownership_resolution_ctes()), not on gold_entity_ownership, whose spine is the periods the ACTUALS have rows in. A budget is entered before its year starts, so most budget periods have no trial balance row; joined to the actuals' ownership they had no ownership and vanished from the consolidation without an error. This test rebuilds the expected keys the same way the model does and names every one the model lacks: (group, scenario, cycle, layer, entity, year, period) for every fact row of an APPROVED Cycle (epm_staging.budget_cycles) whose entity has a currency and, at that period, a complete ownership chain into the group with method full or proportional. The core keeps every source row that survives the ownership join (a missing rate stops the build rather than dropping a row), so an expected key with no row in the model is a row the consolidation lost. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
+
+<sub>`error` · `tests/assert_budget_consolidated_periods_complete.sql` · konsol#348</sub>
+
+### `budget_consolidated_plugs_hand_table`
+
+**konsol#348 S4 (S4-Q8 b;**
+
+W6): the two plug layers of gold_fully_consolidated_budget, as hand literals, over two fixtures. For each (group, scenario, cycle, layer, entity, period), with L = sum of the local amounts, G = sum of group_amount and C = the period's Closing rate in the Cycle's Rate Set (entity currency -> group currency): unbalanced = -L x C          the budget's own local imbalance, translated at closing; cta        = -(G - L x C)    the translation difference only. Before S4-Q8 cta was the whole residual -G, which for a budget that is not double-entry (a P&L-only budget: every Budget Annual Input is one-sided) carried the budget's own gap as if it were a currency effect. Both rows are emitted for every consolidation, 0 when there is nothing to plug. Fixture 1, test_fixtures/assert_budget_consolidated_balances.sql (Cycle ZZ-CY-BAL, EUR entity in a USD group, 80% owned, double-entry rows, L = 0): unbalanced 0 everywhere, and cta exactly what the whole residual gave before: base P6 -5, base P7 -12.5 (the P7 cash retranslation is in G), challenge P6 -2. Fixture 2, test_fixtures/assert_budget_consolidated_balances.pnl_only.sql (Cycle ZZ-CY-PNL, the same entity 100% owned, a P&L-ONLY budget: revenue and an expense, nothing on the balance sheet): P6: revenue -100, expense +60, L = -40; average 1.05, closing 1.10. G = -40 x 1.05 = -42; L x C = -44; unbalanced = +44; cta = -(-42 + 44) = -2 (the hand translation difference: -40 x (1.05 - 1.10) = +2, plugged by -2). P7: revenue -50, expense +30, L = -20; average 1.15, closing 1.20. G = -23; L x C = -24; unbalanced = +24; cta = -1. Red before S4-Q8: no 'unbalanced' row exists, and the P&L-only cta is the whole residual (+42, +23 instead of -2, -1). Each fixture's block is vacuous where its Cycle is not approved (every real site). Flags one row per (cycle, layer, period, adjustment_type) missing, unexpected or off by more than 0.01.
+
+<sub>`error` · `tests/assert_budget_consolidated_plugs_hand_table.sql` · konsol#348</sub>
+
+### `budget_cycle_is_approved`
+
+**konsol#348 S4 (W4, S4-Q2 a;**
+
+premise reworded after the #368 review): a sync-drift check between the three budget write-throughs. Since S3, Budget Annual Input rows (epm_gold.budget_annual_input) and Budget Entry lines (epm_raw.budget_entries) reach ClickHouse only while their Cycle is approved, and the approved Cycle itself reaches epm_staging.budget_cycles with its Rate Set. So in a consistent warehouse every Cycle gold_spread_budget names has a budget_cycles row, and gold_consolidated_budget_tb (which joins the fact to budget_cycles on the Cycle's name) consolidates every fact row. A row here is drift between the three write-throughs, not a draft budget: a Cycle cancelled or deleted after its lines synced, a reconcile_all that repaired one table and not another, a load that seeded the fact without the Cycle. The fact rows of such a Cycle are silently not translated, so this names every (scenario, cycle) the fact holds and budget_cycles does not, with the row count and years, for konsol.clickhouse.reconcile_all() to repair. Warn, not error: the missing Cycle's rows are the only ones affected, and the rest of the budget must still build. NOT IN rather than a LEFT JOIN null test (join_use_nulls=0).
+
+<sub>`warn` · `tests/assert_budget_cycle_is_approved.sql` · konsol#348 konsolidat#368</sub>
 
 ### `budget_fact_grain_unique`
 

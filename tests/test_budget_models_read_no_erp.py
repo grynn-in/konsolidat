@@ -29,6 +29,9 @@ MODELS = os.path.join(PROJECT_ROOT, "dbt_project", "models")
 
 START = (
     "gold_spread_budget",
+    "gold_budget_entity_ownership",
+    "gold_consolidated_budget_tb",
+    "gold_fully_consolidated_budget",
     "gold_scenario_trial_balance",
     "gold_variance_analysis",
     "gold_variance_ytd",
