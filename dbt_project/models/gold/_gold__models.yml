@@ -382,7 +382,13 @@ models:
         description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"
 
   - name: gold_scenario_trial_balance
-    description: "Union of actual + budget + forecast across all scenarios"
+    description: >
+      Union of actual + budget + forecast across all scenarios. A forecast
+      scenario's rows are its DECLARED current round's only (konsol#348 S6-Q1 b,
+      Deepak Pai, 17 Nov 2026: gold_forecast_current_round, from konsol's
+      Current Forecast); a forecast (scenario, year) with no declaration has no
+      rows here, and assert_forecast_year_has_current_round WARNs naming it.
+      Rounds are never summed (assert_scenario_tb_forecast_is_current_round).
     columns:
       - name: scenario_id
         description: >
