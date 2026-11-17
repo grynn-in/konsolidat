@@ -128,6 +128,18 @@ class TheTestAndItsFixtures(unittest.TestCase):
         self.assertEqual([n for n in _files(FIXTURES) if n.startswith("variance_favorable_")], [])
 
 
+class TheDocsNameTheNewColumn(unittest.TestCase):
+    def test_no_doc_names_the_boolean(self):
+        """PR #374 review m5: a PRD that still names the Bool sends a reader
+        to a column the warehouse no longer has."""
+        stale = []
+        for root, _dirs, files in os.walk(os.path.join(ROOT, "docs")):
+            for name in files:
+                if name.endswith(".md") and OLD_COLUMN in _read(os.path.join(root, name)):
+                    stale.append(os.path.relpath(os.path.join(root, name), ROOT))
+        self.assertEqual(stale, [])
+
+
 class RegisteredInCI(unittest.TestCase):
     def test_workflow_runs_this_module(self):
         self.assertRegex(_read(WORKFLOW), r"python -m unittest -v tests\.test_variance_favourability\b")
