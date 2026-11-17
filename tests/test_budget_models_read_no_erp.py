@@ -42,6 +42,8 @@ START = (
     "gold_forecast_current_round",
     "gold_forecast_current",
     "gold_forecast_current_at_hierarchy_node",
+    "gold_latest_estimate",
+    "gold_latest_estimate_current",
 )
 ALLOWED_BRONZE = {"bronze_trial_balance_submissions"}
 FORBIDDEN_MODELS = {"silver_budget_entries"}
