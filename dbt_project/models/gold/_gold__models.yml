@@ -1208,3 +1208,101 @@ models:
         description: "The declared current round; exactly one per (scenario_id, fiscal_year)."
       - name: source
         description: "'actual' at or before the round's as-of period, 'forecast' after it."
+
+  - name: gold_consolidated_budget_fact
+    description: >
+      konsol#348 S6 WC1 (S6-Q7 a): the K.EPM-queryable shape of the GROUP-level
+      consolidated budget, as gold_consolidated_fact is for the actuals. A view
+      over gold_fully_consolidated_budget rolled to (consolidation_group AS
+      data_area_id, fiscal_year, fiscal_period, main_account, scenario_id,
+      cycle, layer), every adjustment type (entity, unbalanced, cta,
+      nci_attribution) summed into consolidated_amount. A budget-type scenario
+      keeps its one Cycle per year; a forecast-type scenario keeps its declared
+      current round only (gold_forecast_current_round, konsol#348 S6-Q1 b), so a
+      second approved round is never added. konsol's consolidated_budget Dataset
+      reads it, binding scenario_id and layer (no layer = the layers summed).
+      BEFORE ELIMINATIONS, like the model it reads: no ic_elimination
+      (konsol#427), no deal journals, topside or equity method (konsol#425).
+      assert_consolidated_budget_fact_hand_table pins it.
+    columns:
+      - name: data_area_id
+        description: "The consolidation group, in the entity slot K.EPM reads."
+      - name: scenario_id
+        description: "The budget or forecast scenario."
+      - name: cycle
+        description: "The budget's Cycle, or the forecast's declared current round."
+      - name: layer
+        description: "The budget layer; each consolidated on its own, summed by a read that names none."
+      - name: consolidated_amount
+        description: "In the group's reporting currency, signed debit - credit, every consolidation layer summed."
+
+  - name: gold_forecast_accuracy
+    description: >
+      konsol#348 S6 WC2 (FC-4-2; S6-Q8 a): how far each approved forecast
+      round was from the actuals, in the entity's currency. One row per
+      (round, closed Regular period after its as-of period within its horizon,
+      entity the round forecasts, account, budget dimensions, currency).
+      The horizon is the longest horizon_periods among the approved Cycles
+      sharing the (scenario_id, as_of_date), as konsol's horizon coverage
+      counts it.
+      Closed = epm_staging.fiscal_periods.status Closed or Locked, the
+      effective status konsol publishes (the stricter of the year's and the
+      period's). Every approved round is here, side by side (FC-4); a reader
+      that wants the current round joins gold_forecast_current_round. An
+      account with an actual and no forecast is a forecast of 0, a forecast
+      with no actual is measured against 0. A round's rows stay in its own
+      fiscal year; the lag counts declared Regular periods from the as-of
+      across a year end. Pinned by assert_forecast_accuracy_hand_table,
+      assert_forecast_accuracy_grain_unique and
+      assert_forecast_accuracy_pct_null_on_zero_actual.
+    columns:
+      - name: cycle
+        description: "The round (an approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: as_of_date
+        description: "The round's as-of date (budget_cycles)."
+      - name: lag
+        description: "Declared Regular periods from the round's as-of period to this one: 1 is the period after the as-of."
+      - name: forecast_amount
+        description: "The round's forecast for the key, layers summed, signed debit - credit, in the entity's currency."
+      - name: actual_amount
+        description: "The GL actual for the key (gold_scenario_trial_balance, data_source gl), signed debit - credit."
+      - name: forecast_error
+        description: "forecast_amount - actual_amount."
+      - name: forecast_abs_error
+        description: "|forecast_error|; sum it for a total miss, sum forecast_error for the bias."
+      - name: forecast_error_pct
+        description: "forecast_error / |actual_amount| x 100 (variance_pct's convention); NULL when the actual is 0, shown as n/a. Average it, never sum it."
+
+  - name: gold_forecast_accuracy_group
+    description: >
+      konsol#348 S6 WC3 (FC-4-2; S6-Q8 a): gold_forecast_accuracy in the
+      group's reporting currency, per consolidation group: the round's
+      translated budget (gold_consolidated_budget_tb.group_amount at the
+      Cycle's Rate Set, layers summed) against the consolidated actuals
+      (gold_consolidated_trial_balance.group_amount at the actuals' rates),
+      summed to the budget dimensions, for the entities the round forecasts in
+      that group. Entity rows only, before eliminations (konsol#427, konsol#425
+      on the budget side). The two sides translate at different rates, so an
+      entity outside the group's currency carries the FX movement in its error.
+      Same periods, lag and rules as gold_forecast_accuracy (one shared macro,
+      forecast_accuracy_round_periods()). Pinned by
+      assert_forecast_accuracy_group_hand_table.
+    columns:
+      - name: consolidation_group
+        description: "The group whose currency and share both sides are in."
+      - name: cycle
+        description: "The round (an approved forecast Budget Cycle). Rounds sit side by side; never sum them."
+      - name: reporting_currency
+        description: "The group's reporting currency."
+      - name: lag
+        description: "Declared Regular periods from the round's as-of period to this one: 1 is the period after the as-of."
+      - name: forecast_amount
+        description: "The round's translated budget for the key, layers summed, signed debit - credit."
+      - name: actual_amount
+        description: "The consolidated actual's group_amount for the key, signed debit - credit."
+      - name: forecast_error
+        description: "forecast_amount - actual_amount; for an entity outside the group's currency it includes the FX movement."
+      - name: forecast_abs_error
+        description: "|forecast_error|."
+      - name: forecast_error_pct
+        description: "forecast_error / |actual_amount| x 100; NULL when the actual is 0. Average it, never sum it."

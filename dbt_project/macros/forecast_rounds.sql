@@ -119,3 +119,47 @@
         cross join {{ regular_period_ranks() }} as rp
     )
 {% endmacro %}
+
+
+{# konsol#348 S6 WC2/WC3 (FC-4-2, S6-Q8 a): the (round, period) pairs forecast accuracy measures, one
+   definition for gold_forecast_accuracy (entity currency) and gold_forecast_accuracy_group (group
+   currency). From forecast_round_periods(): the Cycle's own fiscal year (Q24 a), 1 <= lag <= the
+   ROUND's horizon, and only CLOSED periods. The round's horizon is the longest horizon_periods among the
+   approved Cycles sharing its (scenario_id, as_of_date), as konsol's horizon_coverage_model counts the
+   round's coverage: a FY2027 Cycle at horizon 3 in a round as of FY2026 P9 whose FY2026 Cycle declares
+   12 is measured to lag 12, not cut at 3 (konsol#348 S6 review m1,
+   assert_forecast_accuracy_horizon_hand_table). Closed: epm_staging.fiscal_periods.status Closed or Locked, which konsol publishes as
+   the EFFECTIVE status (the stricter of the Fiscal Year's and the row's; fiscal_calendar.fiscal_period_rows),
+   on every row that declares the period. Columns are prefixed rp_ so a reader's join never meets a
+   same-named column (fiscal_year, cycle). #}
+{% macro forecast_accuracy_round_periods() %}
+    (
+        select
+            cycle as rp_cycle,
+            scenario_id as rp_scenario,
+            as_of_date as rp_as_of_date,
+            toUInt16(fiscal_year) as rp_fiscal_year,
+            toUInt16(fiscal_period) as rp_fiscal_period,
+            lag as rp_lag
+        from {{ forecast_round_periods() }} as frp
+        inner join (
+            select
+                scenario_id as rh_scenario,
+                as_of_date as rh_as_of_date,
+                max(horizon_periods) as rh_horizon
+            from {{ forecast_rounds() }}
+            group by scenario_id, as_of_date
+        ) as rh
+            on rh.rh_scenario = frp.scenario_id
+            and rh.rh_as_of_date = frp.as_of_date
+        where fiscal_year = cycle_fiscal_year
+          and lag >= 1
+          and lag <= rh_horizon
+          and (toUInt16(fiscal_year), toUInt16(fiscal_period)) in (
+              select toUInt16(fiscal_year), toUInt16(fiscal_period)
+              from {{ source('epm_staging', 'fiscal_periods') }}
+              group by fiscal_year, fiscal_period
+              having countIf(status not in ('Closed', 'Locked')) = 0
+          )
+    )
+{% endmacro %}
