@@ -205,7 +205,7 @@ combined as (
            below the budget. Both branches read "actual below budget" under
            debit-positive signs; normal_balance decides only whether a
            direction is declared (BUD-7-a: an undeclared account is reported,
-           not refused). assert_variance_favourability_follows_normal_balance
+           not refused). assert_variance_favourability_follows_sign
            checks it from the chart and the amounts. #}
         multiIf(
             coalesce(am.is_pnl, 0) = 0, 'not_applicable',

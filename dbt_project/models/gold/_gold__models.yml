@@ -490,7 +490,7 @@ models:
           meant both "unfavourable" and "no direction". No budget line is
           budget zero ("Unbudgeted is unfavourable", 22 Sep 2026): an
           unbudgeted cost is 'unfavourable', unbudgeted revenue 'favourable'.
-          assert_variance_favourability_follows_normal_balance checks it from
+          assert_variance_favourability_follows_sign checks it from
           the chart and the amounts.
         tests:
           - accepted_values:
