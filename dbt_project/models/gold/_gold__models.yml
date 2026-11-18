@@ -460,7 +460,7 @@ models:
           - not_null
 
   - name: gold_variance_analysis
-    description: "Actual vs budget variance with a three-state favourability (favourable / unfavourable / not_applicable)"
+    description: "Actual vs budget variance with a four-state favourability (favourable / unfavourable / on_budget / not_applicable)"
     columns:
       - name: main_account
         tests:
@@ -478,23 +478,21 @@ models:
         description: "Variance as percentage of budget"
       - name: variance_favourability
         description: >
-          Three states, a row attribute and never a summable flag (konsol#348
-          S6 WB1, S6-Q4 a; BUD-7-a; konsolidat#214): 'favourable' when the
-          signed actual is below the signed budget (a credit-normal account
-          with more credit than budgeted, a debit-normal account with less
-          debit), 'unfavourable' when it is above, 'not_applicable' when there
-          is no favourable direction: a balance-sheet account, a
-          chart with no normal balance declared for the account, or a zero
-          variance (konsol's statement shows "On budget" for that case; this
-          column does not distinguish it). Replaces the S3 Bool, whose false
-          meant both "unfavourable" and "no direction". No budget line is
-          budget zero ("Unbudgeted is unfavourable", 22 Sep 2026): an
-          unbudgeted cost is 'unfavourable', unbudgeted revenue 'favourable'.
-          assert_variance_favourability_follows_sign checks it from
-          the chart and the amounts.
+          Four states, a row attribute and never a summable flag (konsol#562
+          E + ii, Deepak Pai, 18 Nov 2026; amends the gate half of BUD-7-a;
+          konsol#348 S6 WB1; konsolidat#214). The variance sign alone decides
+          it for every P&L account, whatever its normal balance: 'favourable'
+          when the signed actual is below the signed budget (below budget is
+          good for revenue and cost alike), 'unfavourable' when above,
+          'on_budget' when equal, 'not_applicable' for a balance-sheet account
+          or one not in the chart. No budget line is budget zero ("Unbudgeted
+          is unfavourable", 22 Sep 2026): an unbudgeted cost is
+          'unfavourable', unbudgeted revenue 'favourable'.
+          assert_variance_favourability_follows_sign checks it from the chart
+          and the amounts.
         tests:
           - accepted_values:
-              values: ['favourable', 'unfavourable', 'not_applicable']
+              values: ['favourable', 'unfavourable', 'on_budget', 'not_applicable']
       - name: budget_scenario_id
         description: >
           The budget-type scenario these rows compare the actuals with
