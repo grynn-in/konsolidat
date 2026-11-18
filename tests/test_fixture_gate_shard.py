@@ -43,5 +43,67 @@ class ShardSelection(unittest.TestCase):
         self.assertEqual(g.select_shard(PATHS, 1, 1), sorted(PATHS))
 
 
+# konsolidat#370 B (Deepak Pai, 18 Nov 2026): a final CI job proves that the
+# shards together ran every fixture exactly once. Without it, a shard that never
+# starts, or one whose list was cut short, leaves the workflow green.
+NAMES = ["a.sql", "b.must_flag.sql", "c.sql", g.ZERO_DIM_FIXTURES[0]]
+
+
+def _reports(n, names=NAMES):
+    out = []
+    for k in range(1, n + 1):
+        mine = [os.path.basename(p) for p in g.select_shard(names, k, n)]
+        out.append({"shard": [k, n], "labels": g.expected_labels(mine)})
+    return out
+
+
+class ShardsComplete(unittest.TestCase):
+    def test_expected_labels_add_the_zero_dimension_rerun(self):
+        self.assertEqual(g.expected_labels(["a.sql", g.ZERO_DIM_FIXTURES[0]]),
+                         ["a.sql", g.ZERO_DIM_FIXTURES[0], g.ZERO_DIM_FIXTURES[0] + " [dimensions: []]"])
+
+    def test_every_shard_reporting_every_fixture_is_complete(self):
+        for n in (1, 2, 3):
+            self.assertEqual(g.check_shards(_reports(n), NAMES), [], n)
+
+    def test_a_missing_shard_fails(self):
+        problems = g.check_shards(_reports(3)[:2], NAMES)
+        self.assertTrue(any("shard 3/3" in p for p in problems), problems)
+        self.assertTrue(any("never ran" in p for p in problems), problems)
+
+    def test_no_report_at_all_fails(self):
+        self.assertTrue(g.check_shards([], NAMES))
+
+    def test_a_dropped_fixture_fails_by_name(self):
+        reps = _reports(3)
+        reps[0]["labels"] = reps[0]["labels"][1:]
+        problems = g.check_shards(reps, NAMES)
+        self.assertTrue(any("a.sql" in p for p in problems), problems)
+
+    def test_a_fixture_run_twice_fails(self):
+        reps = _reports(3)
+        reps[1]["labels"].append("a.sql")
+        self.assertTrue(any("more than once" in p for p in g.check_shards(reps, NAMES)))
+
+    def test_an_unknown_fixture_fails(self):
+        reps = _reports(3)
+        reps[2]["labels"].append("ghost.sql")
+        self.assertTrue(any("ghost.sql" in p for p in g.check_shards(reps, NAMES)))
+
+    def test_shards_disagreeing_on_n_fail(self):
+        reps = _reports(3)
+        reps[0]["shard"] = [1, 4]
+        self.assertTrue(g.check_shards(reps, NAMES))
+
+    def test_the_report_round_trips_through_the_log_dir(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for i, r in enumerate(_reports(3), 1):
+                sub = os.path.join(d, "fixture-gate-logs-%d" % i, "fixtures-%d" % i)
+                os.makedirs(sub)
+                g.write_report(sub, tuple(r["shard"]), r["labels"])
+            self.assertEqual(g.check_shards(g.read_reports(d), NAMES), [])
+
+
 if __name__ == "__main__":
     unittest.main()
