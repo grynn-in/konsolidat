@@ -11,8 +11,9 @@
 -- scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this
 -- test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a
 -- join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case.
--- Until S6, assert_forecast_one_approved_round_until_s6 is the forecast side: it holds a forecast to one
--- approved round (interim rule on konsol#348, 15 Nov 2026), because the readers still sum rounds.
+-- Since S6 (konsol#348 S6-Q1 b, Deepak Pai, 17 Nov 2026) a forecast's approved rounds sit side by side
+-- and every reader takes the declared current round (gold_forecast_current_round); the interim
+-- one-approved-round test left with konsol's refusal.
 -- Error severity: the budget fact would be wrong.
 {{ config(severity='error') }}
 

@@ -10,6 +10,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_consolidation_core_thread_cap.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -24,6 +25,8 @@ on:
       - 'tests/test_group_exchange_rates_ddl.py'
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
+      - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
@@ -48,6 +51,7 @@ on:
       - 'clickhouse/init-db.sql'
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
+      - 'tests/test_consolidation_core_thread_cap.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -62,6 +66,8 @@ on:
       - 'tests/test_group_exchange_rates_ddl.py'
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
+      - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
@@ -150,6 +156,35 @@ jobs:
       # model or source; the budget enters through konsol's two tables only.
       - name: budget and variance models read no ERP
         run: python -m unittest -v tests.test_budget_models_read_no_erp
+      # konsol#348 S4 (W7): the budget stays outside the close. The close
+      # fingerprint's one relation reaches no budget model or source, the budget
+      # models reach no actuals consolidation, and both are documented "before
+      # eliminations" (konsol#427, #425).
+      - name: budget outside the close
+        run: python -m unittest -v tests.test_budget_outside_close
+      # konsol#348 S5 (W1): the columns, literals and adjustment types konsol's
+      # Consolidated Statement reads from the two budget models are pinned, and
+      # both yml descriptions say konsol reads them.
+      - name: budget warehouse contract for konsol's readers
+        run: python -m unittest -v tests.test_fully_consolidated_budget_contract
+      # konsol#348 S6 (WB1; S6-Q4 a, konsolidat#214): variance favourability is
+      # three states in one String column, never a summable Bool; the model, the
+      # test, its fixtures and the yml all name the new column and none the old.
+      - name: variance favourability is three states
+        run: python -m unittest -v tests.test_variance_favourability
+      # konsolidat#369: the budget's ownership resolution is materialised once
+      # (gold_budget_entity_ownership); no budget reader re-plans it inline.
+      - name: budget ownership materialised once
+        run: python -m unittest -v tests.test_budget_ownership_materialised
+      # konsol#348 S4b live test: a seed statement ClickHouse refuses fails its
+      # fixture with a reason instead of crashing the gate.
+      # konsolidat#369: the core keeps ClickHouse's thread cap on an all-empty
+      # warehouse (system.one in entity_tb) and the budget's partner is a column,
+      # not a constant, so its window chain has the actuals' shape.
+      - name: consolidation core keeps the thread cap on an empty warehouse
+        run: python -m unittest -v tests.test_consolidation_core_thread_cap
+      - name: fixture gate fails a refused seed per fixture
+        run: python -m unittest -v tests.test_fixture_gate_seed_errors
       # konsolidat#199: the TB submission control table's DDL is konsol's,
       # including amount_basis, and the CI fixture claims its batch by name.
       - name: raw submission control DDL and CI claim
@@ -196,6 +231,14 @@ jobs:
       # with its declared Rate Set.
       - name: budget cycles DDL carries the Rate Set
         run: python -m unittest -v tests.test_budget_cycles_ddl
+      # konsol#348 S6-Q1 (b): a forecast scenario's declared current round
+      # reaches the warehouse; init-db.sql carries konsol's DDL verbatim.
+      - name: current forecasts DDL is konsol's declaration
+        run: python -m unittest -v tests.test_current_forecasts_ddl
+      # konsol#348 S6: the interim one-approved-round rule left with konsol's
+      # refusal; every forecast reader takes the declared current round.
+      - name: the interim forecast rule is gone
+        run: python -m unittest -v tests.test_no_interim_forecast_rule
       # konsol#348 S4 (W2): every reader of a governed or historical rate names
       # the Rate Set it reads; the model, the guard and the deploy precheck take
       # the one flagged Is Actuals.

@@ -29,12 +29,25 @@ MODELS = os.path.join(PROJECT_ROOT, "dbt_project", "models")
 
 START = (
     "gold_spread_budget",
+    "gold_budget_entity_ownership",
+    "gold_consolidated_budget_tb",
+    "gold_fully_consolidated_budget",
     "gold_scenario_trial_balance",
     "gold_variance_analysis",
     "gold_variance_ytd",
     "gold_variance_quarterly",
     "gold_budget_at_hierarchy_node",
     "gold_variance_at_hierarchy_node",
+    # konsol#348 S6 pair A: the declared current round and its readers
+    "gold_forecast_current_round",
+    "gold_forecast_current",
+    "gold_forecast_current_at_hierarchy_node",
+    "gold_latest_estimate",
+    "gold_latest_estimate_current",
+    # konsol#348 S6 pair C: the group budget fact and forecast accuracy
+    "gold_consolidated_budget_fact",
+    "gold_forecast_accuracy",
+    "gold_forecast_accuracy_group",
 )
 ALLOWED_BRONZE = {"bronze_trial_balance_submissions"}
 FORBIDDEN_MODELS = {"silver_budget_entries"}

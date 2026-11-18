@@ -16,16 +16,16 @@ INSERT INTO epm_staging.cost_allocation_runs (name, receiver_account_mode, alloc
 ('ZZRB','Sender''s Own Accounts','','Follow Latest Data'),
 ('ZZRC','Sender''s Own Accounts','','Follow Latest Data'),
 ('ZZRE','Declared Allocation Account','ZZ6999','Follow Latest Data');
-INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, origin_member, step, sender_member, receiver_member, member, origin_amount, amount) VALUES
-('ZZRA','ZZ6000','sent','ZZIT',1,'ZZIT','ZZHR','ZZIT',1000,-200),
-('ZZRA','ZZ6999','received','ZZIT',1,'ZZIT','ZZHR','ZZHR',1000,200),
-('ZZRA','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',1000,-800),
-('ZZRA','ZZ6999','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',1000,800),
-('ZZRA','ZZ6000','sent','ZZIT',2,'ZZHR','ZZP1','ZZHR',1000,-200),
-('ZZRA','ZZ6999','received','ZZIT',2,'ZZHR','ZZP1','ZZP1',1000,200),
-('ZZRB','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',10000000.1234,-1597176.39),
-('ZZRB','ZZ6000','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',10000000.1234,1597176.39),
-('ZZRC','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100),
-('ZZRC','ZZ6100','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100),
-('ZZRE','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',500,-500),
-('ZZRE','ZZ6999','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',500,500);
+INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, hop_kind, origin_member, step, sender_member, receiver_member, member, origin_amount, amount) VALUES
+('ZZRA','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZHR','ZZIT',1000,-200),
+('ZZRA','ZZ6999','received','own','ZZIT',1,'ZZIT','ZZHR','ZZHR',1000,200),
+('ZZRA','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',1000,-800),
+('ZZRA','ZZ6999','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',1000,800),
+('ZZRA','ZZ6000','sent','pass','ZZIT',2,'ZZHR','ZZP1','ZZHR',1000,-200),
+('ZZRA','ZZ6999','received','pass','ZZIT',2,'ZZHR','ZZP1','ZZP1',1000,200),
+('ZZRB','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',10000000.1234,-1597176.39),
+('ZZRB','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',10000000.1234,1597176.39),
+('ZZRC','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100),
+('ZZRC','ZZ6100','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100),
+('ZZRE','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',500,-500),
+('ZZRE','ZZ6999','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',500,500);
