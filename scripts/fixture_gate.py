@@ -473,6 +473,59 @@ def select_shard(paths, k, n):
     return [p for i, p in enumerate(sorted(paths)) if i % n == k - 1]
 
 
+#: Each run writes this file into its --log-dir; --check-shards reads them back.
+REPORT = "fixture-gate-ran.json"
+ZERO_DIM_SUFFIX = " [dimensions: []]"
+
+
+def expected_labels(names):
+    """The run labels for these fixture file names, as passes() makes them."""
+    return list(names) + [n + ZERO_DIM_SUFFIX for n in names if n in ZERO_DIM_FIXTURES]
+
+
+def write_report(log_dir, shard, labels):
+    with open(os.path.join(log_dir, REPORT), "w", encoding="utf-8") as f:
+        json.dump({"shard": list(shard), "labels": list(labels)}, f, indent=1)
+
+
+def read_reports(root):
+    found = []
+    for dirpath, _dirs, files in os.walk(root):
+        if REPORT in files:
+            with open(os.path.join(dirpath, REPORT), encoding="utf-8") as f:
+                found.append(json.load(f))
+    return found
+
+
+def check_shards(reports, names):
+    """konsolidat#370 B (Deepak Pai, 18 Nov 2026): the shards together ran every
+    fixture exactly once. Returns the problems; empty means complete."""
+    if not reports:
+        return ["no shard wrote a report: no fixture is known to have run"]
+    problems = []
+    ns = {r["shard"][1] for r in reports}
+    if len(ns) != 1:
+        return [f"the shards disagree on N: {sorted(ns)}"]
+    n = ns.pop()
+    seen = sorted(r["shard"][0] for r in reports)
+    for k in range(1, n + 1):
+        if seen.count(k) != 1:
+            problems.append(f"shard {k}/{n} reported {seen.count(k)} times, want once")
+    counts = {}
+    for r in reports:
+        for label in r["labels"]:
+            counts[label] = counts.get(label, 0) + 1
+    want = expected_labels(sorted(names))
+    for label in want:
+        if label not in counts:
+            problems.append(f"{label}: never ran")
+        elif counts[label] > 1:
+            problems.append(f"{label}: ran more than once ({counts[label]})")
+    for label in sorted(set(counts) - set(want)):
+        problems.append(f"{label}: ran, but is not a fixture file")
+    return problems
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("fixtures", nargs="*", help="fixture files (default with --all: every one)")
@@ -485,7 +538,22 @@ def main():
     ap.add_argument("--log-dir", default=None, help="where to write the dbt logs")
     ap.add_argument("--shard", default=None, metavar="K/N",
                     help="run only shard K of N (1-based) of the selected fixtures, split by sorted path")
+    ap.add_argument("--check-shards", default=None, metavar="DIR",
+                    help="run nothing: fail unless the reports under DIR cover every fixture exactly once")
     a = ap.parse_args()
+
+    if a.check_shards:
+        names = sorted(f for f in os.listdir(FIXTURES) if f.endswith(".sql"))
+        reports = read_reports(a.check_shards)
+        problems = check_shards(reports, names)
+        print(f"== shards: {len(reports)} report(s), {len(names)} fixture files, "
+              f"{len(expected_labels(names))} runs expected")
+        for p in problems:
+            print(f"    PROBLEM: {p}")
+        if problems:
+            sys.exit(f"FAILED: the shards did not run every fixture exactly once ({len(problems)} problem(s))")
+        print("every fixture ran exactly once")
+        return
 
     paths = sorted(os.path.join(FIXTURES, f) for f in os.listdir(FIXTURES) if f.endswith(".sql")) \
         if a.all else [os.path.abspath(p) for p in a.fixtures]
@@ -549,6 +617,7 @@ def main():
         reset_scratch(client, create=False)
         shutil.rmtree(work, ignore_errors=True)
 
+    write_report(log_dir, (k, n) if a.shard else (1, 1), [v[0] for v in verdicts])
     print("\n== fixtures")
     for name, verdict, problems in verdicts:
         print(f"    {verdict.upper():8} {name}" + (f"  — {problems[0]}" if problems else ""))

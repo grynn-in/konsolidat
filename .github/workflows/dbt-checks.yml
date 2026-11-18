@@ -387,7 +387,7 @@ jobs:
           python-version: '3.11'
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       - name: every fixture, against the DDL of a fresh build
-        run: python scripts/fixture_gate.py --all --prepare-ci --shard ${{ matrix.shard }}/3 --log-dir ci-logs/fixtures-${{ matrix.shard }}
+        run: python scripts/fixture_gate.py --all --prepare-ci --shard ${{ matrix.shard }}/${{ strategy.job-total }} --log-dir ci-logs/fixtures-${{ matrix.shard }}
       - name: upload logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -395,6 +395,34 @@ jobs:
           name: fixture-gate-logs-${{ matrix.shard }}
           path: ci-logs/
           if-no-files-found: ignore
+
+  # konsolidat#370 B (Deepak Pai, 18 Nov 2026): the shards together must have run
+  # every fixture exactly once. Each shard writes fixture-gate-ran.json into its
+  # logs. This job fails if a shard failed, never started, or skipped or
+  # repeated a fixture, so a missing shard cannot leave the workflow green.
+  # N is the length of the matrix above; nothing here repeats it.
+  fixture-gate-complete:
+    name: test fixtures, every shard ran every fixture
+    runs-on: ubuntu-latest
+    needs: fixture-gate
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fixture-gate-logs-*
+          path: shards
+      - name: every fixture ran exactly once
+        run: python scripts/fixture_gate.py --check-shards shards
+      - name: every shard passed
+        if: needs.fixture-gate.result != 'success'
+        run: |
+          echo "fixture gate shards: ${{ needs.fixture-gate.result }}"
+          exit 1
 
   tb-only-first-build:
     name: first build on a fresh TB-only site
