@@ -17,7 +17,7 @@
    columns, so a model that gates on normal balance, marks a zero variance 'not_applicable', or mislabels a
    balance-sheet account as P&L, is named. One row per variance row whose state differs; error severity.
    Fixtures: dbt_project/test_fixtures/variance_favourability_signed.sql (build, pass),
-   assert_variance_favourability_follows_sign.sql (pass), .must_flag.sql (flag 5). #}
+   assert_variance_favourability_follows_sign.sql (pass), .must_flag.sql (flag 6). #}
 {{ config(severity='error') }}
 
 with judged as (

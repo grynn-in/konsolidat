@@ -5,7 +5,7 @@
     )
 }}
 
-{# PRD-7: Variance analysis — actual vs budget with a three-state favourability.
+{# PRD-7: Variance analysis — actual vs budget with a four-state favourability.
 
    konsolidat#206: which scenario is the actual and which are budgets is what
    each site declares on konsol's Scenario doctype (epm_gold.scenario_definitions

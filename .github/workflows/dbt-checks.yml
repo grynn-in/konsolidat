@@ -168,7 +168,7 @@ jobs:
       - name: budget warehouse contract for konsol's readers
         run: python -m unittest -v tests.test_fully_consolidated_budget_contract
       # konsol#348 S6 (WB1; S6-Q4 a, konsolidat#214): variance favourability is
-      # three states in one String column, never a summable Bool; the model, the
+      # four states in one String column, never a summable Bool; the model, the
       # test, its fixtures and the yml all name the new column and none the old.
       - name: variance favourability is four states
         run: python -m unittest -v tests.test_variance_favourability
