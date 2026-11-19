@@ -1,18 +1,19 @@
--- gate: build +gold_variance_analysis assert_variance_favourability_follows_normal_balance
--- gate: expect assert_variance_favourability_follows_normal_balance pass
--- konsol#348 S6 WB1 (S6-Q4 a; BUD-7-a, konsolidat#214): favourability follows the account's normal balance on
--- signed amounts and is three states (favourable / unfavourable / not_applicable), never a summable flag.
+-- gate: build +gold_variance_analysis assert_variance_favourability_follows_sign
+-- gate: expect assert_variance_favourability_follows_sign pass
+-- konsol#562 E + ii (Deepak Pai, 18 Nov 2026; amends BUD-7-a's gate; konsol#348 S6 WB1, konsolidat#214):
+-- favourability follows the variance sign on signed amounts and is four states (favourable / unfavourable /
+-- on_budget / not_applicable), never a summable flag. ZZ8000 is a P&L account with a BLANK normal balance.
 -- Entity ZZE1 (USD), FY2026 P1. Chart: ZZ4000 revenue (Profit and Loss, normal balance Credit), ZZ5000 costs
 -- (Profit and Loss, normal balance Debit), ZZ6000 rent (Profit and Loss, Debit). Trial balance (period
--- movement): ZZ4000 Cr 1,200 | ZZ5000 Dr 1,200 | ZZ6000 Dr 700 | ZZ6100 Dr 30 | ZZ1000 cash Cr 730 (balance
+-- movement): ZZ4000 Cr 1,200 | ZZ5000 Dr 1,200 | ZZ6000 Dr 700 | ZZ6100 Dr 30 | ZZ8000 Dr 100 | ZZ1000 cash Cr 830 (balance
 -- sheet, so the batch balances for assert_tb_submission_batches_balance), so the actuals are ZZ4000 -1,200, ZZ5000
--- +1,200 and ZZ6000 +700. Budget scenario ZZ_PLAN_2026, base layer, Period movement, USD: ZZ4000 Cr 1,000
--- (-1,000) | ZZ5000 Dr 1,000 (+1,000) | ZZ6000 Dr 700 (+700).
+-- +1,200, ZZ6000 +700 and ZZ8000 +100. Budget scenario ZZ_PLAN_2026, base layer, Period movement, USD: ZZ4000 Cr 1,000
+-- (-1,000) | ZZ5000 Dr 1,000 (+1,000) | ZZ6000 Dr 700 (+700) | ZZ8000 Dr 200 (+200).
 -- Hand-computed: revenue 1,200 actual against 1,000 budget is MORE revenue, 'favourable'; expense 1,200 against
--- 1,000 is MORE cost, 'unfavourable'; rent 700 against 700 is a zero variance, 'not_applicable' (the statement
--- shows it as "On budget"). ZZ6100 unbudgeted costs Dr 30 with no Budget Entry: budget zero ("Unbudgeted is
+-- 1,000 is MORE cost, 'unfavourable'; rent 700 against 700 is a zero variance, 'on_budget'; ZZ8000 100 against 200
+-- is below budget, 'favourable' though its normal balance is blank; cash stays 'not_applicable'. ZZ6100 unbudgeted costs Dr 30 with no Budget Entry: budget zero ("Unbudgeted is
 -- unfavourable", Deepak Pai, 22 Sep 2026), so 30 against 0 is 'unfavourable', never 'not_applicable'.
--- `+gold_variance_analysis assert_variance_favourability_follows_normal_balance` must
+-- `+gold_variance_analysis assert_variance_favourability_follows_sign` must
 -- BUILD and PASS.
 --
 -- Red on the S5 model: the column is the S3 Bool (favourable yes/no), so the test does not compile (no
@@ -42,6 +43,7 @@ VALUES
   ('ZZ5000', 'ZZ costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
   ('ZZ6000', 'ZZ rent', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
   ('ZZ6100', 'ZZ unbudgeted costs', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', 'Debit', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
+  ('ZZ8000', 'ZZ undeclared', 'ZZCOA', '', 0, 'Expense', 'Profit and Loss', 'Operating Expenses', '', 'Period', 'average', 1, 0, 0, '', '', 0, 'EXPENSE', 'Published', 0),
   ('ZZ1000', 'ZZ cash', 'ZZCOA', '', 0, 'Asset', 'Balance Sheet', 'Current Assets', 'Debit', 'Balance', 'closing', 1, 0, 0, '', '', 1, 'ASSET', 'Published', 0);
 INSERT INTO epm_staging.fiscal_periods
   (fiscal_year, fiscal_period, period_code, period_label, period_type, start_date, end_date, quarter, status)
@@ -55,11 +57,12 @@ VALUES
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ5000', 1200, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
   ('ZZB1', 'ZZE1', 2026, 1, 'ZZ6100', 30, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
-  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ1000', 0, 730, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ8000', 100, 0, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', ''),
+  ('ZZB1', 'ZZE1', 2026, 1, 'ZZ1000', 0, 830, '', 'ZZ-TBS-1', '2026-02-05 09:00:00', '');
 INSERT INTO epm_raw.trial_balance_submission_control
   (batch_id, submission_name, data_area_id, fiscal_year, fiscal_period, row_count, claimed_at, amount_basis)
 VALUES
-  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 5, '2026-02-05 09:00:00', 'Period movement');
+  ('ZZB1', 'ZZ-TBS-1', 'ZZE1', 2026, 1, 6, '2026-02-05 09:00:00', 'Period movement');
 INSERT INTO epm_gold.scenario_definitions
   (scenario_id, scenario_name, scenario_type, is_active)
 VALUES
@@ -70,4 +73,5 @@ INSERT INTO epm_raw.budget_entries
 VALUES
   ('ZZ-BE-1', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ4000', 0, 1000, 'USD', 'Period movement', '', ''),
   ('ZZ-BE-2', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ5000', 1000, 0, 'USD', 'Period movement', '', ''),
-  ('ZZ-BE-3', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, 'USD', 'Period movement', '', '');
+  ('ZZ-BE-3', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ6000', 700, 0, 'USD', 'Period movement', '', ''),
+  ('ZZ-BE-4', 'ZZ-CY-2026', 'ZZ_PLAN_2026', 'base', 'ZZE1', 2026, 1, 'ZZ8000', 200, 0, 'USD', 'Period movement', '', '');

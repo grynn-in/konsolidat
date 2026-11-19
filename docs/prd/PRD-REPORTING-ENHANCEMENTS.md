@@ -7,7 +7,7 @@
 
 ## Problem
 
-- `gold_variance_analysis` reports `variance_abs` / `variance_pct` / `variance_favourability` (three states: `favourable`, `unfavourable`, `not_applicable`) at the account/period grain (see variance-analysis.md), but says *nothing about why* a variance occurred. Its own Out of Scope section explicitly defers waterfall (price/volume/mix), trend, and commentary. This PRD closes those three gaps.
+- `gold_variance_analysis` reports `variance_abs` / `variance_pct` / `variance_favourability` (four states: `favourable`, `unfavourable`, `on_budget`, `not_applicable`) at the account/period grain (see variance-analysis.md), but says *nothing about why* a variance occurred. Its own Out of Scope section explicitly defers waterfall (price/volume/mix), trend, and commentary. This PRD closes those three gaps.
 - There is no **bridge/waterfall** decomposition. A revenue variance of 5,000 cannot be split into the part driven by price vs. volume vs. mix, so analysts rebuild bridges by hand in Excel.
 - There is no **trend** model. The catalog has point-in-time aggregations (`gold_ytd_trial_balance`, `gold_pnl_quarterly`) and `gold_prior_year_comparison` (YoY only), but no sequential period-over-period (PoP) delta or rolling-average smoothing for spotting momentum.
 - There is **no place to store narrative**. Variance numbers are recomputed on every `dbt build`, so commentary cannot live in dbt; it must be a Frappe doctype keyed to a variance cell, and surfaced back through `api.py` / Cube.js alongside the number.

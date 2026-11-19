@@ -1,5 +1,8 @@
-"""konsolidat#214, konsol#348 S6 (WB1; S6-Q4 a, BUD-7-a): variance
-favourability is three states, a row attribute, never a summable flag.
+"""konsolidat#214, konsol#348 S6 (WB1; S6-Q4 a, BUD-7-a), konsol#562 E + ii
+(Deepak Pai, 18 Nov 2026): variance favourability is four states, a row
+attribute, never a summable flag. The variance sign alone decides it for
+every P&L account; normal_balance no longer gates it (amends BUD-7-a), and
+an exact zero variance is ``on_budget``.
 
 ``gold_variance_analysis.variance_favorable`` was a Bool: false meant
 "unfavourable" AND "no direction" (no budget, a balance-sheet account, an
@@ -9,10 +12,8 @@ which added flags together. S6-Q4 (a) replaces it with
 
 - ``favourable``: the signed actual is below the signed budget;
 - ``unfavourable``: above it;
-- ``not_applicable``: a balance-sheet account, an undeclared normal
-  balance, or a zero variance (the statement shows "On budget" for that
-  last case; the warehouse column does not distinguish it, as the yml
-  declares).
+- ``on_budget``: a P&L account whose actual equals its budget;
+- ``not_applicable``: a balance-sheet account, or one not in the chart.
 
 No budget line is a budget of zero ("Unbudgeted is unfavourable", Deepak
 Pai, 22 Sep 2026), never "no direction": the model and the test compare
@@ -20,11 +21,11 @@ against ``coalesce(budget_amount, 0)``, as ``variance_abs`` does.
 
 Static pins, no ClickHouse:
 
-- the model declares the three literals and never the old column;
+- the model declares the four literals and never the old column;
 - no singular test or fixture names the old column (the fixtures seed the
   model's table by column name, so a stale one would seed a column that no
   longer exists);
-- ``assert_variance_favourability_follows_normal_balance`` exists at error
+- ``assert_variance_favourability_follows_sign`` exists at error
   severity, derives the expectation from the chart and the amounts (not the
   model's own flag), and has its PASS and must_flag fixtures;
 - the yml describes the column and names the test;
@@ -44,11 +45,11 @@ TESTS = os.path.join(ROOT, "dbt_project", "tests")
 FIXTURES = os.path.join(ROOT, "dbt_project", "test_fixtures")
 WORKFLOW = os.path.join(ROOT, ".github", "workflows", "dbt-checks.yml")
 
-TEST = "assert_variance_favourability_follows_normal_balance"
+TEST = "assert_variance_favourability_follows_sign"
 OLD_TEST = "assert_variance_favorable_follows_normal_balance"
 COLUMN = "variance_favourability"
 OLD_COLUMN = "variance_favorable"
-LITERALS = ("favourable", "unfavourable", "not_applicable")
+LITERALS = ("favourable", "unfavourable", "on_budget", "not_applicable")
 
 
 def _read(path):
@@ -60,7 +61,7 @@ def _files(folder):
     return sorted(name for name in os.listdir(folder) if name.endswith(".sql"))
 
 
-class ModelDeclaresThreeStates(unittest.TestCase):
+class ModelDeclaresFourStates(unittest.TestCase):
     def test_model_has_the_string_column_with_the_three_literals(self):
         sql = _read(MODEL)
         self.assertIn(f"as {COLUMN}", sql)
@@ -74,6 +75,15 @@ class ModelDeclaresThreeStates(unittest.TestCase):
             self.assertNotRegex(sql, r"budget_amount\s+is\s+null\s*,\s*'not_applicable'", path)
             self.assertRegex(sql, r"actual_amount\s*<\s*coalesce\(\s*\w+\.budget_amount\s*,\s*0\s*\)", path)
         self.assertIn("budget zero", _read(YML))
+
+    def test_normal_balance_does_not_gate_favourability(self):
+        """konsol#562 E: the sign alone decides, in the model and the test."""
+        for path in (MODEL, os.path.join(TESTS, TEST + ".sql")):
+            sql = _read(path)
+            start = sql.index("multiIf(")
+            block = sql[start:sql.index(") as ", start)]
+            self.assertNotIn("normal_balance", block, path)
+            self.assertIn("'on_budget'", block, path)
 
     def test_model_no_longer_has_the_boolean(self):
         self.assertNotIn(OLD_COLUMN, _read(MODEL))
@@ -110,7 +120,7 @@ class TheTestAndItsFixtures(unittest.TestCase):
             path = os.path.join(FIXTURES, name)
             self.assertTrue(os.path.exists(path), path)
         must_flag = _read(os.path.join(FIXTURES, TEST + ".must_flag.sql"))
-        self.assertRegex(must_flag, rf"-- gate: expect {TEST} flag [1-9]\d*")
+        self.assertRegex(must_flag, rf"-- gate: expect {TEST} flag 6")
         signed = _read(os.path.join(FIXTURES, "variance_favourability_signed.sql"))
         self.assertIn(f"-- gate: expect {TEST} pass", signed)
 
