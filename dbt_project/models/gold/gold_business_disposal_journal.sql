@@ -471,7 +471,7 @@ derecognised_lines as (
         d.disposal_date as disposal_date,
         d.journal_id as journal_id,
         toUInt16(0) as line_no,
-        'derecognised' as account_role
+        'derecognised' as account_role{{ dim_empty_strings(leading=true) }}
     from carried_balances as cb
     inner join disposals as d
         on d.deal = cb.deal
@@ -605,7 +605,7 @@ fixed_lines as (
         l.disposal_date as disposal_date,
         l.journal_id as journal_id,
         l.line_no as line_no,
-        l.account_role as account_role
+        l.account_role as account_role{{ dim_empty_strings(leading=true) }}
     from fixed_and_proceeds_raw as l
     left join chart as ch
         on ch.main_account_id = l.line_account
@@ -615,7 +615,15 @@ fixed_lines as (
    operating accounts under 'Pro-rate by days' (see the header). The P&L
    accounts are the entity's rows in gold_consolidated_trial_balance for the
    disposal period (is_pnl = 1, group_amount); a fraction of 0 (disposal on
-   the period's last day) posts nothing. #}
+   the period's last day) posts nothing.
+   konsolidat#245 Q2 A (Deepak Pai, 21 Nov 2026): one line per account AND
+   dimension slice, so each slice gives up its own post-disposal P&L, the same
+   derivation and the same inheritance as pnl_proration
+   (gold_acquisition_adjustments). The materiality floor applies per slice, as
+   it does there. Every other line of the journal is blank: the documents carry
+   no dimension. Rejected: B, line 105 blank, which left the post-disposal P&L
+   in each segment and offset it only on the blank slice.
+   assert_post_disposal_pnl_carries_its_slices pins it. #}
 post_disposal_pnl_lines as (
     select
         d.deal as deal,
@@ -629,7 +637,7 @@ post_disposal_pnl_lines as (
         d.disposal_date as disposal_date,
         d.journal_id as journal_id,
         toUInt16(105) as line_no,
-        'post_disposal_pnl' as account_role
+        'post_disposal_pnl' as account_role{{ dim_select(prefix='p.', leading=true) }}
     from disposals as d
     inner join (
         select
@@ -639,10 +647,12 @@ post_disposal_pnl_lines as (
             toUInt16(fiscal_period) as fiscal_period,
             main_account,
             any(account_name) as account_name,
+            {{ dim_select(trailing=true) }}
             sum(coalesce(group_amount, 0.0)) as group_amount
         from {{ ref('gold_consolidated_trial_balance') }}
         where is_pnl = 1
         group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account
+                 {{ dim_group_by(leading=true) }}
     ) as p
         on p.consolidation_group = d.consolidation_group
         and p.data_area_id = d.data_area_id
@@ -684,7 +694,7 @@ gain_loss_lines as (
         d.disposal_date as disposal_date,
         d.journal_id as journal_id,
         toUInt16(199) as line_no,
-        'gain_loss' as account_role
+        'gain_loss' as account_role{{ dim_empty_strings(leading=true) }}
     from balancing as b
     inner join disposals as d
         on d.deal = b.deal
@@ -712,5 +722,5 @@ select
     journal_id,
     line_no,
     account_role,
-    deal
+    deal{{ dim_select(leading=true) }}
 from journal

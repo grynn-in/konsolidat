@@ -14,7 +14,7 @@ INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fis
 ('ZZSC','ZZE1',2026,1,'ZZ6000','ZZIT',800),
 ('ZZSC','ZZE2',2026,1,'ZZ6000','ZZIT',600),
 ('ZZSC','ZZE3',2026,1,'ZZ6000','ZZIT',900);
-INSERT INTO epm_gold.gold_cost_allocation (run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension, member, line_type, origin_member, sender_member, receiver_member, driver, fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at) VALUES
-('ZZRL','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,500,-500,NULL),
-('ZZRX','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,600,-600,'2026-11-01 10:00:00'),
-('ZZRY','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZIT','sent','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,900,-900,NULL);
+INSERT INTO epm_gold.gold_cost_allocation (run, rule_set, method, scenario_id, data_area_id, main_account, allocation_dimension, member, line_type, hop_kind, origin_member, sender_member, receiver_member, driver, fiscal_year, fiscal_period, step, coefficient, origin_amount, amount, frozen_at) VALUES
+('ZZRL','ZZRS1','Direct','ZZSC','ZZE1','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,500,-500,NULL),
+('ZZRX','ZZRS1','Direct','ZZSC','ZZE2','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,600,-600,'2026-11-01 10:00:00'),
+('ZZRY','ZZRS1','Direct','ZZSC','ZZE3','ZZ6000','dim_cost_center','ZZIT','sent','own','ZZIT','ZZIT','ZZP1','ZZHC',2026,1,1,1,900,-900,NULL);

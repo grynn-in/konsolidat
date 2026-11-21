@@ -7,11 +7,11 @@
 INSERT INTO epm_staging.cost_allocation_runs (name, amounts_after_approval) VALUES
 ('ZZRD','Freeze at Approval'),
 ('ZZRS','Follow Latest Data');
-INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, origin_member, step, sender_member, receiver_member, member, origin_amount, amount, frozen_at) VALUES
-('ZZRD','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
-('ZZRD','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
-('ZZRD','ZZ6000','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00'),
-('ZZRG','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
-('ZZRG','ZZ6000','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00'),
-('ZZRS','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
-('ZZRS','ZZ6000','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00');
+INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, hop_kind, origin_member, step, sender_member, receiver_member, member, origin_amount, amount, frozen_at) VALUES
+('ZZRD','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
+('ZZRD','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
+('ZZRD','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00'),
+('ZZRG','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
+('ZZRG','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00'),
+('ZZRS','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',100,-100,'2026-11-01 10:00:00'),
+('ZZRS','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',100,100,'2026-11-01 10:00:00');

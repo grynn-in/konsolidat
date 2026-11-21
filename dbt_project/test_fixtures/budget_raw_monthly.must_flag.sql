@@ -1,4 +1,4 @@
--- gate: build gold_spread_budget gold_scenario_trial_balance assert_scenario_rows_declared
+-- gate: build gold_spread_budget gold_forecast_current_round gold_scenario_trial_balance assert_scenario_rows_declared
 -- gate: expect assert_scenario_rows_declared flag 1
 -- konsol#348 S2 (R2): rows in epm_raw.budget_entries reach the budget fact and the scenario trial
 -- balance. Scenario ZZ_B1 has 'Period movement' lines and is declared nowhere, so
@@ -10,7 +10,10 @@
 -- The lineage reads these tables too, empty here, so they are named to exist (empty):
 -- epm_gold.budget_annual_input, epm_gold.spread_profiles,
 -- epm_gold.gold_trial_balance, epm_gold.scenario_definitions, and (konsol#348 S3 B6, the GL branch's
--- currency join; not built here, the selector names the two gold models only) epm_silver.silver_entity_currencies.
+-- currency join; not built here, the selector names the gold models only) epm_silver.silver_entity_currencies.
+-- konsol#348 S6 WA4: gold_scenario_trial_balance reads gold_forecast_current_round (the declared current
+-- round of each forecast pair), so the selector builds it, empty here (no Current Forecast declared);
+-- without it the model errors on the missing table and the test is SKIPPED.
 --
 -- epm_raw.budget_entries is konsol's (I3), declared in clickhouse/init-db.sql: fixture_gate.py creates it
 -- (as zzg_raw) when the stack lacks it and adds the fixture budget dimension columns.

@@ -6,14 +6,14 @@
 --   against a pool_coefficient of .9, but the origin's own step must have pool 1 (L1).
 -- Origin ZZIT step 1 closes and is not flagged.
 -- tables epm_staging.cost_allocation_coefficients
-CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
-INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, pool_coefficient, coefficient) VALUES
-('ZZR1','ZZIT',1,'ZZIT','ZZHR','ZZ Headcount',1,0.2),
-('ZZR1','ZZIT',1,'ZZIT','ZZP1','ZZ Headcount',1,0.5),
-('ZZR1','ZZIT',1,'ZZIT','ZZP2','ZZ Headcount',1,0.3),
-('ZZR1','ZZIT',2,'ZZHR','ZZP1','ZZ Headcount',0.2,0.1),
-('ZZR1','ZZIT',2,'ZZHR','ZZP2','ZZ Headcount',0.2,0.09),
-('ZZR1','ZZHR',2,'ZZHR','ZZP1','ZZ Headcount',1,0.625),
-('ZZR1','ZZHR',2,'ZZHR','ZZP2','ZZ Headcount',1,0.375000000001),
-('ZZR1','ZZP9',1,'ZZP9','ZZP1','ZZ Headcount',0.9,0.5),
-('ZZR1','ZZP9',1,'ZZP9','ZZP2','ZZ Headcount',0.9,0.4);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, hop_kind String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
+INSERT INTO epm_staging.cost_allocation_coefficients (run, origin_member, step, sender_member, receiver_member, driver, hop_kind, pool_coefficient, coefficient) VALUES
+('ZZR1','ZZIT',1,'ZZIT','ZZHR','ZZ Headcount','own',1,0.2),
+('ZZR1','ZZIT',1,'ZZIT','ZZP1','ZZ Headcount','own',1,0.5),
+('ZZR1','ZZIT',1,'ZZIT','ZZP2','ZZ Headcount','own',1,0.3),
+('ZZR1','ZZIT',2,'ZZHR','ZZP1','ZZ Headcount','pass',0.2,0.1),
+('ZZR1','ZZIT',2,'ZZHR','ZZP2','ZZ Headcount','pass',0.2,0.09),
+('ZZR1','ZZHR',2,'ZZHR','ZZP1','ZZ Headcount','own',1,0.625),
+('ZZR1','ZZHR',2,'ZZHR','ZZP2','ZZ Headcount','own',1,0.375000000001),
+('ZZR1','ZZP9',1,'ZZP9','ZZP1','ZZ Headcount','own',0.9,0.5),
+('ZZR1','ZZP9',1,'ZZP9','ZZP2','ZZ Headcount','own',0.9,0.4);

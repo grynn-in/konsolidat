@@ -19,7 +19,7 @@
 
    One journal per (group, entity, FY, period), journal_id
    'NCI-{group}-{entity}-{FY}-P{period}', adjustment_type 'nci_attribution',
-   data_area_id the subsidiary, dimensions blank, for every row of
+   data_area_id the subsidiary, for every row of
    gold_entity_ownership with consolidation_method 'full', effective ownership
    below 100% and a complete chain, that has rows in the consolidated TB for the
    period:
@@ -34,6 +34,18 @@
      the group's nci_account    result_share + cta_share
    Sums to zero by construction. A zero line is omitted; a journal whose two
    shares are both 0 is omitted.
+
+   Dimensions (konsolidat#245 option D, Deepak Pai, 3 Oct 2026: a consolidation
+   entry carries the dimension values of whatever knows them; inherit where
+   derivable). The result share is derivable per slice: it is the minority's
+   share of P&L rows that carry dimension values. So the retained-earnings line
+   and the result part of the NCI line are posted per slice of the entity's
+   P&L, and each slice nets to zero. The CTA share is not: it is a share of the
+   entity's one CTA plug, which has no slice by arithmetic (gold_fx_revaluation;
+   assert_sliceless_layers_carry_no_dimension), so the 'CTA' line and the CTA
+   part of the NCI line sit in the blank slice. Lines are summed to (account,
+   slice), so with no dimensions declared the journal is the three lines above.
+   assert_nci_attribution_carries_the_result_slices checks the spread.
 
    Year-end close. The close silver_tb_movements synthesizes in a Closing period
    (konsolidat#259) moves the year's P&L into retained earnings. Summed as the
@@ -88,17 +100,31 @@ close_keys as (
     where is_year_end_close = 1
 ),
 
+{# The result share per dimension slice of the entity's P&L. #}
+result_slices as (
+    select
+        consolidation_group,
+        data_area_id,
+        fiscal_year,
+        fiscal_period,
+        {{ dim_select(trailing=true) }}
+        sum(toFloat64(nci_amount)) as slice_share
+    from {{ ref('gold_consolidated_trial_balance') }}
+    where is_pnl = 1
+      and (data_area_id, fiscal_year, fiscal_period, main_account)
+          not in (select data_area_id, fiscal_year, fiscal_period, main_account from close_keys)
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period{{ dim_group_by(leading=true) }}
+),
+
 result as (
     select
         consolidation_group,
         data_area_id,
         fiscal_year,
         fiscal_period,
-        sum(toFloat64(nci_amount)) as result_share
-    from {{ ref('gold_consolidated_trial_balance') }}
-    where is_pnl = 1
-      and (data_area_id, fiscal_year, fiscal_period, main_account)
-          not in (select data_area_id, fiscal_year, fiscal_period, main_account from close_keys)
+        sum(slice_share) as result_share,
+        max(abs(slice_share)) as max_slice_share
+    from result_slices
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period
 ),
 
@@ -139,7 +165,10 @@ shares as (
         and c.data_area_id = s.data_area_id
         and c.fiscal_year = s.fiscal_year
         and c.fiscal_period = s.fiscal_period
-    where abs(r.result_share) > 0.000001 or abs((1.0 - s.ownership_pct) * c.cta_amount) > 0.000001
+    {# F6 (PR #260 review): the result filter reads the largest SLICE share, not
+       the entity total. A result netting to 0 across slices (+50 / -50) is
+       still two slices to attribute. #}
+    where r.max_slice_share > 0.000001 or abs((1.0 - s.ownership_pct) * c.cta_amount) > 0.000001
 ),
 
 group_nci as (
@@ -191,44 +220,78 @@ journal as (
     left join {{ source('epm_gold', 'consolidation_groups') }} as grp
         on grp.consolidation_group = sh.consolidation_group
         and grp.data_area_id = ''
+),
+
+{# One line per role and slice before summing: the result legs per P&L slice,
+   the CTA legs in the blank slice. #}
+journal_lines as (
+    select
+        j.consolidation_group as consolidation_group, j.data_area_id as data_area_id,
+        j.fiscal_year as fiscal_year, j.fiscal_period as fiscal_period,
+        {{ dim_select(prefix='rs.', trailing=true) }}
+        j.re_account as main_account,
+        j.re_name as account_name,
+        j.reporting_currency as reporting_currency,
+        -rs.slice_share as line_amount,
+        j.journal_id as journal_id,
+        'retained_earnings' as account_role
+    from journal as j
+    inner join result_slices as rs
+        on rs.consolidation_group = j.consolidation_group
+        and rs.data_area_id = j.data_area_id
+        and rs.fiscal_year = j.fiscal_year
+        and rs.fiscal_period = j.fiscal_period
+
+    union all
+
+    select
+        j.consolidation_group, j.data_area_id, j.fiscal_year, j.fiscal_period,
+        {{ dim_select(prefix='rs.', trailing=true) }}
+        j.nci_account, j.nci_name, j.reporting_currency,
+        rs.slice_share,
+        j.journal_id,
+        'nci'
+    from journal as j
+    inner join result_slices as rs
+        on rs.consolidation_group = j.consolidation_group
+        and rs.data_area_id = j.data_area_id
+        and rs.fiscal_year = j.fiscal_year
+        and rs.fiscal_period = j.fiscal_period
+
+    union all
+
+    select
+        j.consolidation_group, j.data_area_id, j.fiscal_year, j.fiscal_period,
+        {{ dim_empty_strings(trailing=true) }}
+        'CTA', 'CTA', j.reporting_currency,
+        -j.cta_share,
+        j.journal_id,
+        'cta'
+    from journal as j
+
+    union all
+
+    select
+        j.consolidation_group, j.data_area_id, j.fiscal_year, j.fiscal_period,
+        {{ dim_empty_strings(trailing=true) }}
+        j.nci_account, j.nci_name, j.reporting_currency,
+        j.cta_share,
+        j.journal_id,
+        'nci'
+    from journal as j
 )
 
 select
     consolidation_group, data_area_id, fiscal_year, fiscal_period,
-    re_account as main_account,
-    re_name as account_name,
+    main_account,
+    account_name,
+    {{ dim_select(trailing=true) }}
     reporting_currency,
-    -result_share as amount,
+    sum(line_amount) as amount,
     'nci_attribution' as adjustment_type,
     journal_id,
-    'retained_earnings' as account_role
-from journal
-where abs(result_share) > 0.000001
-
-union all
-
-select
-    consolidation_group, data_area_id, fiscal_year, fiscal_period,
-    'CTA' as main_account,
-    'CTA' as account_name,
-    reporting_currency,
-    -cta_share as amount,
-    'nci_attribution' as adjustment_type,
-    journal_id,
-    'cta' as account_role
-from journal
-where abs(cta_share) > 0.000001
-
-union all
-
-select
-    consolidation_group, data_area_id, fiscal_year, fiscal_period,
-    nci_account as main_account,
-    nci_name as account_name,
-    reporting_currency,
-    result_share + cta_share as amount,
-    'nci_attribution' as adjustment_type,
-    journal_id,
-    'nci' as account_role
-from journal
-where abs(result_share + cta_share) > 0.000001
+    account_role
+from journal_lines
+group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
+         account_name, reporting_currency, journal_id, account_role{{ dim_group_by(leading=true) }}
+having abs(sum(line_amount)) > 0.000001
