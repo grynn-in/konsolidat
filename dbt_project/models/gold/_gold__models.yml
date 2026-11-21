@@ -728,6 +728,10 @@ models:
       nci_account (their sum). Year-end close rows are excluded from the result.
       A chart without a retained-earnings account, or a group without nci_account,
       gets no journal. Layer 'nci_attribution' of gold_fully_consolidated_tb.
+      Dimensions (konsolidat#245 option D): the retained-earnings line and the
+      result part of the NCI line carry the slices of the entity's P&L; the CTA
+      line and the CTA part of the NCI line are blank. One row per account,
+      role and slice.
     columns:
       - name: consolidation_group
         tests:
@@ -936,6 +940,10 @@ models:
       the build on a duplicate (row J10). Replaced
       gold_disposal_adjustments (deleted in row J6b). Every journal
       sums to zero (assert_disposal_journal_balances).
+      Dimensions (konsolidat#245 Q2 A, Deepak Pai, 21 Nov 2026): line 105
+      (post_disposal_pnl) carries the slices of the P&L it removes, one row per
+      account and slice, as pnl_proration does; every other line is blank
+      (assert_sliceless_layers_carry_no_dimension, by account_role).
     columns:
       - name: consolidation_group
         tests:
