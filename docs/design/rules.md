@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **197** |
-| carrying their reasoning | 174 |
-| citing the issue that caused them | 170 |
-| severity `warn` (reports, does not stop a build) | 25 |
-| severity `error` (stops the build, and its children) | 172 |
+| assertions | **225** |
+| carrying their reasoning | 202 |
+| citing the issue that caused them | 198 |
+| severity `warn` (reports, does not stop a build) | 28 |
+| severity `error` (stops the build, and its children) | 197 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,17 +26,17 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 20
 - [Currency and translation](#currency-and-translation) — 36
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
-- [Acquisitions and disposals](#acquisitions-and-disposals) — 15
-- [Intercompany](#intercompany) — 13
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
+- [Acquisitions and disposals](#acquisitions-and-disposals) — 16
+- [Intercompany](#intercompany) — 19
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
-- [Reporting hierarchies](#reporting-hierarchies) — 9
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 32
+- [Reporting hierarchies](#reporting-hierarchies) — 10
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 37
 - [The chart of accounts](#the-chart-of-accounts) — 8
 - [Calendar and periods](#calendar-and-periods) — 7
-- [Platform and data integrity](#platform-and-data-integrity) — 16
-- [Other](#other) — 8
+- [Platform and data integrity](#platform-and-data-integrity) — 26
+- [Other](#other) — 12
 
 ---
 
@@ -560,6 +560,14 @@ Each pair's two sides are recomputed from gold_consolidated_trial_balance at 100
 
 <sub>`error` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
 
+### `nci_attribution_carries_the_result_slices`
+
+**konsolidat#245 option D (Deepak Pai, 3 Oct 2026: a consolidation entry carries the dimension values of whatever knows them;**
+
+inherit where derivable). The NCI attribution (layer 'nci_attribution', gold_nci_attribution_journal) is the minority's share of the subsidiary's own P&L, and that P&L carries dimension values, so its result legs are derivable per slice: in every slice the retained-earnings line is minus (1 - ownership) x that slice's translated P&L (year-end close rows excluded), and the NCI line is its opposite. The CTA leg is a share of the entity's one CTA plug, which has no slice by arithmetic (assert_sliceless_layers_carry_no_dimension), so it and the NCI line's CTA part sit in the blank slice. Read from the layer as gold_fully_consolidated_tb carries it, which is where a dimension slice is reported. Two checks, one row per failing (group, entity, period, slice): 1. the retained-earnings line of the slice equals the expected share; 2. the journal nets to zero within the slice (the NCI line follows the result legs into their slices, not only the total). assert_nci_attribution_equals_minority_result checks the entity-period totals; this test checks how they are spread. Before this change every line was blank, so a sliced P&L failed check 1. Fixture: test_fixtures/assert_nci_attribution_carries_the_result_slices.sql.
+
+<sub>`error (default)` · `tests/assert_nci_attribution_carries_the_result_slices.sql` · konsolidat#245</sub>
+
 ### `nci_attribution_equals_minority_result`
 
 **konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): each line of the NCI attribution journal posted for a partly owned full-method subsidiary equals the minority's share of its result and CTA.**
@@ -752,6 +760,14 @@ Before, this test judged fiscal period P at the first of calendar month P, the s
 
 <sub>`error (default)` · `tests/assert_post_disposal_excluded.sql` · konsolidat#171 konsolidat#252</sub>
 
+### `post_disposal_pnl_carries_its_slices`
+
+**konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026: disposal line 105 (post_disposal_pnl, the entity's P&L after the disposal date) INHERITS the dimension slices of the P&L it removes, the same as pnl_proration.**
+
+It extends the 3 Oct 2026 rule "inherit where derivable": line 105 is the entity's P&L by account times the removed fraction, the derivation pnl_proration already slices. Rejected: B, keep it blank under the deal-journal rule, which leaves the post-disposal P&L in each segment and offsets it only on the blank slice, so segment P&L is overstated by exactly that amount. Judged on gold_fully_consolidated_tb, where segment P&L is read, per (group, entity, year, period, P&L account, slice): expected = -group_amount of that slice in gold_consolidated_trial_balance x removed_fraction modelled = the 'disposal' layer on that account and slice, less the journal's gain_loss line (199), which is blank and is the only other disposal line a P&L account can carry removed_fraction is re-derived from the sources exactly as assert_partial_period_pnl_matches_treatment derives it (days after the disposal date to the period end, over the period's days; the deal period is the lowest Regular tuple whose span holds the date), so the model and this test cannot share a mistake. Only groups whose root declares 'Pro-rate by days' and full disposals the journal posted are judged; that sibling test judges the account totals and every other treatment. On the base, a revenue of -3,000 on two cost centres (-1,800 / -1,200), disposed on the 20th of a 30-day period, posted +1,000 on the blank slice: each cost centre kept its whole P&L. A difference of more than 0.01 on any slice is one row. Error severity: a segment carrying P&L the group did not hold is a wrong consolidated number that every account total accepts.
+
+<sub>`error (default)` · `tests/assert_post_disposal_pnl_carries_its_slices.sql` · konsolidat#245</sub>
+
 ---
 
 ## Intercompany
@@ -792,6 +808,14 @@ An account paired with two counterparts would have one side matched twice, which
 
 <sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsol#305 konsolidat#175</sub>
 
+### `ic_difference_on_the_blank_slice`
+
+**konsolidat#245 Q1 A, decided by Deepak Pai on 21 Nov 2026: the intercompany DIFFERENCE entry (the unmatched residual) is posted on the blank slice, on BOTH of its legs, the IC-account leg included.**
+
+Only the matched part of a pair carries each side's slices (option C, 6 Oct 2026). Rejected: B, keep the IC-account leg sliced, which splits the unmatched part by the matched part's mix and gives a segment a difference it did not produce. Layer 2 of gold_fully_consolidated_tb carries no elimination_kind, and the matched and difference entries of a pair share one journal_id (the rule_id 'IC:<account_a>/<account_b>'), so the check is a bound: on each account of each pair rule, what layer 2 posts on NON-BLANK slices can be at most the matched part. The allowance is the sum, over the pair's sides on that account, of the absolute matched elimination; a side whose slices do not cover its leg posts it on the blank slice, which only lowers the sliced figure, so a correct layer never exceeds the allowance. A difference leg on the IC account has the sign of the matched leg on that account (both reduce the side's balance), so a sliced difference always pushes the sliced figure past the allowance by the difference itself. The basis is the pair's. A balance pair is eliminated to date (gold_ic_eliminations decision 14), so both figures are taken to date at every period layer 2 posted a sliced row; a movement pair is compared period by period. On the base, a receivable of 100 split 60 / 40 over two cost centres against a payable of 90 put the residual 10 on the cost centres (-6 / -4) beside the matched -54 / -36: sliced 100 against an allowance of 90. Error severity: a sliced difference is a segment balance the segment did not book.
+
+<sub>`error (default)` · `tests/assert_ic_difference_on_the_blank_slice.sql` · konsolidat#245</sub>
+
 ### `ic_eliminated_in_full`
 
 **konsol#117 pair 2 K3 (konsolidat#204 option (a);**
@@ -807,6 +831,22 @@ Deepak Pai, 8 Nov 2026): intercompany eliminations are posted IN FULL. IFRS 10.B
 Every elimination row carries both legs, so "debit + credit = 0" per row is true by construction and proves little on its own. The checks that can fail: 1. entry: each row's two legs net to zero (kept: it is what the layer relies on); 2. layer: the ic_elimination layer of gold_fully_consolidated_tb nets to zero per group and period, so both legs of every entry reached it; 3. pair: on the pair's basis (decision 14: to date for a balance-sheet pair, the period for a P&L pair), what the two sides hold (in full, translated: konsol#117 pair 2 K3, eliminations are posted at 100%) plus the eliminations nets to zero when the group has an intercompany-difference account, and to exactly the residuals when it has none (only the matched amount is eliminated then).
 
 <sub>`error (default)` · `tests/assert_ic_elimination_nets_zero.sql` · konsol#117 konsolidat#148</sub>
+
+### `ic_elimination_share_is_bounded`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than its own leg. THE BOUND IS 1, which is what the code guarantees: layer 2 weights by abs(slice)/gross, so shares lie in [0,1] and sum to 1. The previous version of this test asserted 100x while the code of the day guaranteed 50.5x, so it was slack by a factor of two and could not fail on any input — the exact tautology it was written to replace (re-review round 3, F2). A test whose threshold trails the code does not pin the code. KEYED ON THE PAIR, not the account (re-review round 3, F3). Keyed on account alone, a small leg exploded on an account that also carries a large leg was invisible to max(): one measured fixture hid a 100,000x violation on an account whose other leg was 5,000,000. Real intercompany control accounts carry many legs of very different sizes, so account-level max() is the wrong grain. Movement-basis pairs only (PR #260 F1): a balance pair's slice posts the change in its TO-DATE share, which a reclass between slices makes larger than the period's leg (the leg can be 0). assert_ic_slice_to_date_eliminated checks balance pairs instead. Error severity: a slice moved further than its leg is a wrong consolidated number, and every total-based check passes while it happens.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_share_is_bounded.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_elimination_slices_sum_to_the_leg`
+
+**konsolidat#245 option C.**
+
+PR #260 review finding F4: nothing tested what layer 2 actually does. The old test asserted sum(slice_mov) = side_mov per side, which the window function produces and so cannot fail arithmetically. The two things that CAN go wrong were untested, and both were real: F1  a side whose slices summed to zero took factor 1.0 on EVERY slice, so the leg was emitted N times at full amount; F2  the apportionment denominator omitted the partner, so a leg was split over balances owed to other partners — totals right, slices wrong. Totals and "nets to zero" cannot see F2 at all. This asserts the thing that can: for each elimination leg, layer 2's per-slice amounts must sum to the leg amount gold_ic_eliminations published, within materiality. WHAT THIS TEST IS AND IS NOT, corrected after the re-review said so. It CANNOT FAIL on the current code. Shares are normalised in all three branches (apportionable sums to 1, flat is one row at 1.0, a join miss is one row at 1.0), so sum(emitted) = leg for every possible input. It is a REGRESSION GUARD — it would have caught the original defect, where a side whose slices cancelled emitted the leg N times at full amount — and it is NOT evidence that layer 2 is right today. It is also BLIND TO MISATTRIBUTION. An earlier version of this header claimed it was "paired with the per-pair grain below"; there is no pair grain below. legs_by_account groups on (group, year, period, account) only: entity is dropped and partner was never carried, so a leg split across the wrong partner's slices reconciles here perfectly. That defect is prevented by the join carrying partner, not detected here. And legs_by_account's netting hides one case by construction: when counterpart_account is blank both legs of a pair land on one account, so a symmetric error on both sides nets to zero on both sides of the comparison. assert_ic_elimination_share_is_bounded is the REGRESSION GUARD for the magnification defects. Round 4 is explicit that it, too, cannot fail on correct code: shares are in [0,1] and sum to 1, so no slice can exceed its leg. It goes red on the round-2 and round-3 code (and on its committed .must_flag fixture), which is what it is for. No test in this layer proves today's attribution is RIGHT; they prove it has not regressed. Error severity: a leg that does not reconcile is a wrong consolidated number. One row per offending leg.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_slices_sum_to_the_leg.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `ic_elimination_within_balance`
 
@@ -847,6 +887,30 @@ A P&L pair matches on the period's movement. 1. basis: a pair on a balance-sheet
 Every elimination posted while both sides were in the group has been reversed. Membership is resolved here from the ownership data itself, not from gold_entity_ownership or the model's spine: an entity line-consolidates into a group at a date when EVERY link of its chain to that group (consolidation_ancestry) has an ownership period covering the date with method full or proportional. So a partner that was disposed of, a sub-group sold while its own entity's ownership stays open, and a stake moved to equity all count as having left, per group. For every balance-sheet pair, and every period the warehouse holds from the pair's first reconciliation row to the group's latest period, in which either side is not a member: the pair's eliminations to date, per account and entity, are 0. That covers the periods before a pair joins (nothing posted yet) and every period after it left (all reversed).
 
 <sub>`error (default)` · `tests/assert_ic_pair_left_is_reversed.sql` · konsolidat#171 konsolidat#175 konsolidat#252</sub>
+
+### `ic_side_slices_sum_to_the_side`
+
+**konsolidat#245 option D / layer 2 option C (Deepak Pai, 6 Oct 2026).**
+
+gold_ic_side_slices must be gold_ic_reconciliation's `sides` CTE split by the declared dimensions and NOTHING ELSE: same source, same filters, same join. Every slice of a side must therefore sum to exactly that side's movement. Round 4, F7: this identity is NOT what makes the split exact — layer 2 weights by magnitude, which is an allocation, and is bounded regardless. What the identity buys is that the apportionment base is the same movement gold_ic_reconciliation reconciles, so the two cannot drift apart. If it breaks — a different filter, a join that fans out, a dimension column that is NULL rather than '' — the split silently redistributes an elimination across slices whose amounts no longer add up to what was eliminated, and every row still balances. This test is the guard against that, so it is error severity, not warn. One row per side whose slices do not reconcile, with both figures. Compared with materiality_floor(), not exact equality: both sides are Float64 sums and a slice split changes the summation order.
+
+<sub>`error (default)` · `tests/assert_ic_side_slices_sum_to_the_side.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_not_moved_past_its_own`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than it moved itself. THE ASSERTION NO TEST IN THIS LAYER MAKES, and the reason five rounds of guards all passed while the numbers were wrong. Every existing assertion here is satisfied by construction: shares lie in [0,1] and sum to 1, so "the slices sum to the leg" and "no slice exceeds the leg" cannot fail. The quantity that CAN be wrong is the one none of them compares — a slice's share of the leg against that slice's OWN movement. amount_i = |leg| x aligned_i / aligned_gross, so amount_i <= aligned_i holds exactly when aligned_gross >= |leg|. At leg_coverage() = 0.5 the gate allowed |leg| <= 2 x aligned_gross, so a slice could take twice what it booked: measured through the real chain, a cost centre that ever booked +100 ended at -100, on an intercompany receivable, with the account total exactly right. That is what this test exists to catch. Only the SLICED rows are checked. A whole-leg row is blank-dimensioned by design and carries the entire leg, which is the declared answer when the side cannot account for it. Movement-basis (P&L) pairs only: a balance pair is checked to date by assert_ic_slice_to_date_eliminated (PR #260 F1). Error severity: a slice moved past its own movement is a wrong consolidated number that every total-based check accepts. Two passes, because ClickHouse refuses a window function inside an aggregate (ILLEGAL_AGGREGATION) — the same limit the model hit.
+
+<sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_to_date_eliminated`
+
+**konsolidat#245 option C, PR #260 review F1.**
+
+A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
+
+<sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `unrealized_profit_at_operator_share`
 
@@ -931,6 +995,14 @@ A1 (#119) asserted that under an orchestrator scope close every row in the WHOLE
 ---
 
 ## Reporting hierarchies
+
+### `forecast_current_at_node_ties_to_rollup`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026): gold_forecast_current_at_hierarchy_node is gold_budget_at_hierarchy_node narrowed to each forecast pair's DECLARED current round, and nothing else.**
+
+konsol's hierarchy forecast read (the Excel K.EPM read at a reporting-hierarchy node) reads it and binds scenario_id and layer, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the rollup's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every hierarchy forecast read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_forecast_current_at_node_ties_to_rollup.sql (R1 100 and R2 110 at two nodes, R2 declared: pass), assert_forecast_current_at_node_ties_to_rollup.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_forecast_current_at_node_ties_to_rollup.sql` · konsol#348 konsolidat#361</sub>
 
 ### `hierarchy_all_entities_resolved`
 
@@ -1098,7 +1170,7 @@ A forecast scenario holds one approved Cycle per round, and several rounds share
 
 **konsol#348 S2 (Q16-c, one writer per grain;**
 
-decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Until S6, assert_forecast_one_approved_round_until_s6 is the forecast side: it holds a forecast to one approved round (interim rule on konsol#348, 15 Nov 2026), because the readers still sum rounds. Error severity: the budget fact would be wrong.
+decided 13 Nov 2026 under Deepak Pai's standing rule). A budget-type scenario has one Cycle per (scenario, fiscal year): konsol's intake keeps it so, and this is the warehouse backstop, one row per (scenario, fiscal year) that epm_raw.budget_entries holds under more than one cycle. Since S3 B4 the fact carries the cycle and keeps two cycles apart, so a second cycle no longer doubles the budget; it is still a policy breach, and still named here. The annual side (epm_gold.budget_annual_input, with `cycle` since B3w) is not read here. konsol#348 S3 B5 (QB8 a): only a forecast scenario has rounds, and each round is its own approved Cycle (Q23 a), so a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions is expected to hold several cycles per year and is not checked here. Every other scenario is: a budget scenario, and one declared nowhere (assert_scenario_rows_declared names the undeclared one; this test still holds it to one cycle rather than waving it through). The exclusion is a NOT IN, not a join: join_use_nulls=0 fills an unmatched join with '' and would hide the undeclared case. Since S6 (konsol#348 S6-Q1 b, Deepak Pai, 17 Nov 2026) a forecast's approved rounds sit side by side and every reader takes the declared current round (gold_forecast_current_round); the interim one-approved-round test left with konsol's refusal. Error severity: the budget fact would be wrong.
 
 <sub>`error` · `tests/assert_budget_one_cycle_per_scenario_year.sql` · konsol#348</sub>
 
@@ -1134,11 +1206,19 @@ Q21-a was chosen under the standing rule (#348 comment 6875869375). konsol refus
 
 <sub>`error` · `tests/assert_budget_ytd_periods_contiguous.sql` · konsol#348</sub>
 
+### `consolidated_budget_fact_hand_table`
+
+**konsol#348 S6 WC1 (S6-Q7 a): gold_consolidated_budget_fact equals a table worked out by hand.**
+
+The view is gold_fully_consolidated_budget rolled to the group (consolidation_group in the entity slot, data_area_id) per (fiscal_year, fiscal_period, main_account, scenario_id, cycle, layer), every adjustment type summed into consolidated_amount, the shape of gold_consolidated_fact plus the three budget grain columns. A budget-type scenario keeps its Cycle; a forecast-type scenario keeps its DECLARED current round only (gold_forecast_current_round), so a second approved round is never added. The fixture (test_fixtures/assert_consolidated_budget_fact_hand_table.sql) seeds two groups and two layers of budget ZZ_PLAN_CBF and two rounds of forecast ZZ_FC_CBF (R2 declared); the expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places. Vacuous where the fixture's scenarios are absent (every real site, and the full CI build): no expected row is built and only ZZ_PLAN_CBF / ZZ_FC_CBF produced rows are read. They are present when a Budget Cycle names one (the build-mode fixture, so a view that drops a whole scenario still fails) or when the view holds one (the test-mode must_flag, which seeds the view's scratch table directly). Not a `fixture_only_tests` test: that var is ON in ci_full_build.py's full builds (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_consolidated_budget_fact_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
 ### `cost_allocation_amounts`
 
 **The amounts of a published cost allocation follow the run's policy (konsol#269, W5b).**
 
-A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. The stamp check can fire on a real build only if a model's stamp expression changes. The `stale` check compares the model with the macro's pools, so within one full build it cannot fire; it fires when gold_scenario_trial_balance is rebuilt without rebuilding this model (a partial build) or on a seeded table. Pools come from the origin's own sent lines (sender = origin), not the declared-mode pass-through lines on the allocation account. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
+A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals the current trial balance pool. A 'Freeze at Approval' run carries frozen_at on every line; its amount is judged against the trial balance by assert_cost_allocation_frozen_drift (warn), not here, because a frozen run is meant to differ from later data. The stamp check can fire on a real build only if a model's stamp expression changes. The `stale` check compares the model with the macro's pools, so within one full build it cannot fire; it fires when gold_scenario_trial_balance is rebuilt without rebuilding this model (a partial build) or on a seeded table. Pools come from the origin's own sent lines (hop_kind = 'own'), not the declared-mode pass-through lines on the allocation account. Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_amounts.sql` · konsol#269</sub>
 
@@ -1146,7 +1226,7 @@ A 'Follow Latest Data' run is live: frozen_at is NULL and its origin pool equals
 
 **Cost allocation balances per account (konsol#269, WF1).**
 
-T1 sums an origin's lines across accounts, so a line booked on the wrong account passes it. Per run this test checks each account and member (worked example: the header of macros/cost_allocation.sql). Rows returned are violations: 1. origin relief: per account, the lines at the origin member itself sum to minus its pool on that account. An overflowed hop amount fails here. So does a line at the origin on an account that holds no pool of it. 2. pass-through: a member that sends on an origin's cost it received nets to zero for that origin on every account. 3. declared placement: in 'Declared Allocation Account' mode every line that is not at the origin itself is on the run's allocation account. 4. account balance: per run x account, the net is minus the pools held on the account plus the pools it receives. The receiving account is the pool's own account in "Sender's Own Accounts" mode (so each account nets to zero) and the allocation account in declared mode. So the pool account is relieved by exactly the origin pools, and the allocation account carries all of them. A pool is read from the origin's own sent lines (sender = origin), which sit on the pool account: one value per run x origin x account. UNION ALL + GROUP BY and inner joins only: join_use_nulls=0 would fill a missing side with 0.
+T1 sums an origin's lines across accounts, so a line booked on the wrong account passes it. Per run this test checks each account and member (worked example: the header of macros/cost_allocation.sql). Rows returned are violations: 1. origin relief: per account, the lines at the origin member itself sum to minus its pool on that account. An overflowed hop amount fails here. So does a line at the origin on an account that holds no pool of it. 2. pass-through: a member that sends on an origin's cost it received nets to zero for that origin on every account. 3. declared placement: in 'Declared Allocation Account' mode every line except the origin's own relief (a sent line of an `own` hop) is on the run's allocation account. 4. account balance: per run x account, the net is minus the pools held on the account plus the pools it receives. The receiving account is the pool's own account in "Sender's Own Accounts" mode (so each account nets to zero) and the allocation account in declared mode. So the pool account is relieved by exactly the origin pools, and the allocation account carries all of them. A pool is read from the origin's own sent lines (hop_kind = 'own'), which sit on the pool account: one value per run x origin x account. UNION ALL + GROUP BY and inner joins only: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_balanced_per_account.sql` · konsol#269</sub>
 
@@ -1154,7 +1234,7 @@ T1 sums an origin's lines across accounts, so a line booked on the wrong account
 
 **Allocation coefficients close (konsol#269, T5).**
 
-Per run, origin member, step and sender, the receivers' coefficients sum to the hop's pool_coefficient exactly (konsol rounds to 12 places by largest remainder so they do). A hop whose rows disagree about pool_coefficient is flagged too, and so is the origin's own step (sender_member = origin_member) unless its pool_coefficient is exactly 1: the origin sends its whole pool there, and a hop that closes against another pool would still lose or invent money.
+Per run, origin member, step, sender and hop kind, the receivers' coefficients sum to the hop's pool_coefficient exactly (konsol rounds to 12 places by largest remainder so they do). A hop whose rows disagree about pool_coefficient is flagged too. The origin's own relief is the `own` hops (hop_kind = 'own'): per run and origin their pool_coefficients sum to exactly 1, because the origin sends its whole pool there, and a hop that closes against another pool would still lose or invent money. A `pass` hop may have the origin as its sender (Reciprocal); it is not own relief and its pool_coefficient is not 1.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_coefficients_close.sql` · konsol#269</sub>
 
@@ -1162,7 +1242,7 @@ Per run, origin member, step and sender, the receivers' coefficients sum to the 
 
 **Cost allocation conserves money (konsol#269, T1).**
 
-Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry the same hop_amount, so each hop sums to zero); it stays as the tripwire for a macro change that rounds or filters one side, and fires on a seeded table. Part 2 can fire on a real build: a coefficient chain that parks money at a sender, or receives at a member that does not close. The pool is read from the origin's own `sent` lines (sender = origin): in Declared Allocation Account mode a pass-through `sent` line sits on the allocation account, and its origin_amount is the same pool again. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
+Per run x origin member: 1. every line sums to zero (what is sent is received, to the last digit); 2. the lines received at members that never send in the run sum to the origin's pool, so nothing is parked at an intermediate sender. Part 1 cannot fire on a build of the shipped macro (both lines of a hop carry the same hop_amount, so each hop sums to zero); it stays as the tripwire for a macro change that rounds or filters one side, and fires on a seeded table. Part 2 can fire on a real build: a coefficient chain that parks money at a sender, or receives at a member that does not close. The pool is read from the origin's own `sent` lines (hop_kind = 'own'): in Declared Allocation Account mode a pass-through `sent` line sits on the allocation account, and its origin_amount is the same pool again. The pool is read from the `sent` lines, one value per (run, origin, account); origin_amount repeats on every line of that origin, so it is taken once per account and summed across accounts. Exact comparison, no tolerance: the model carries Decimal(38,16) amounts and the hop coefficients are rounded to close. UNION ALL + GROUP BY, not a LEFT JOIN: join_use_nulls=0 would fill a missing side with 0 and hide an origin that has received lines but no pool.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_conserved.sql` · konsol#269</sub>
 
@@ -1174,11 +1254,19 @@ A run's allocation_dimension must be one of the site's In Budget dimensions, com
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_dimension_declared.sql` · konsol#269</sub>
 
+### `cost_allocation_expected_values`
+
+**The worked example's values are asserted (konsol#269, RF5, review finding 5).**
+
+Conservation and per-account balance hold for any correct-looking set of coefficients, Step-Down's included; only the numbers tell Reciprocal apart. The expected values below belong to the fixture runs ZZEV (RC6 reciprocal coefficients, pools IT 1,000 and HR 400, Declared Allocation Account) and ZZEW (Step-Down coefficients, must flag). The names are fixture data, so the test is enabled only under the fixture gate (var fixture_only_tests, which scripts/fixture_gate.py passes to a fixture that names the test); on a real site it does not exist, so a run named ZZEV there cannot fail it. Rows returned are violations: net:<member>      the member's net on the run's allocation account gross:<s>><r>:<k> received lines from sender s at receiver r of hop kind k Expected: Sales 885, Ops 515, IT 0, HR 0; IT -> HR 725 = own 500 + pass 225. Expected and actual are summed per run and key side by side: a missing or a wrong number differs. UNION ALL + GROUP BY, no join (join_use_nulls=0 would fill a missing side with 0).
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_expected_values.sql` · konsol#269</sub>
+
 ### `cost_allocation_frozen_consistent`
 
 **Cost allocation lines agree with their run (konsol#269, W5).**
 
-Three ways the published lines can disagree with epm_staging.cost_allocation_runs: 1. duplicate line: the same hop of the same pool appears twice (a frozen run frozen again). pool_account is in the key: in declared mode the received lines of two pools share the allocation account (review M1); 2. run not in staging: lines of a cancelled run were not removed; 3. freeze stamp does not match the policy: a 'Freeze at Approval' run with a NULL frozen_at, or a 'Follow Latest Data' run with one. Inner joins and IN only: join_use_nulls=0 would fill an unmatched side.
+Three ways the published lines can disagree with epm_staging.cost_allocation_runs: 1. duplicate line: the same hop of the same pool appears twice (a frozen run frozen again). pool_account is in the key: in declared mode the received lines of two pools share the allocation account (review M1). hop_kind is in the key too (konsol#269 RC6): under Reciprocal one sender sends to one receiver at one step twice, once as `own` and once as `pass` (origin IT's own unit and the cost HR returned to IT, both to HR at step 1), and those are two lines, not a duplicate; 2. run not in staging: lines of a cancelled run were not removed; 3. freeze stamp does not match the policy: a 'Freeze at Approval' run with a NULL frozen_at, or a 'Follow Latest Data' run with one. Inner joins and IN only: join_use_nulls=0 would fill an unmatched side.
 
 <sub>`error` · `tests/cost_allocation/assert_cost_allocation_frozen_consistent.sql` · konsol#269</sub>
 
@@ -1186,15 +1274,31 @@ Three ways the published lines can disagree with epm_staging.cost_allocation_run
 
 **Frozen cost allocations whose origin pool no longer matches the trial balance (konsol#269, T6, W6).**
 
-A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (sender = origin): a declared-mode pass-through sent line sits on the allocation account. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
+A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account. Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
+
+### `cost_allocation_frozen_no_idle_backfill`
+
+**The hop_kind backfill is a mutation, and a mutation rewrites parts: it must run only when a blank hop_kind exists (konsol#269, RF8).**
+
+Rows returned are violations: a backfill UPDATE recorded against the frozen table when the table held no blank hop_kind before the build. Only the fixture gate can know that, so the test is enabled only under it; on a real site the table's history legitimately holds one (the upgrade), and the test would fail for no fault. It judges only the fixture run ZZRK, whose frozen table is seeded in the new shape; the old-shape fixture's build legitimately runs the backfill and must not trip it.
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_frozen_no_idle_backfill.sql` · konsol#269</sub>
+
+### `cost_allocation_hop_kind_valid`
+
+**hop_kind is `own` or `pass` (konsol#269, RF5, review finding 6).**
+
+The allocation macro books an `own` hop on the pool account and a `pass` hop on the account the sender received the cost on; any other value, a blank included, is neither, and used to be treated as `pass` without a word. Rows returned are violations: a coefficient row or an allocation line whose hop_kind is not in ('own', 'pass').
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_hop_kind_valid.sql` · konsol#269</sub>
 
 ### `cost_allocation_sender_relieved_once`
 
 **Sender relieved once (konsol#269, T4).**
 
-An origin member's pool in an account is relieved by one run only, per scenario, entity, year and period. The relief is the 'sent' line at the origin itself (sender_member = origin_member); later hops pass the amount on and do not relieve the origin again.
+An origin member's pool in an account is relieved by one run only, per scenario, entity, year and period. The relief is the 'sent' line of the origin's own hop (hop_kind = 'own'); later hops pass the amount on and do not relieve the origin again.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_sender_relieved_once.sql` · konsol#269</sub>
 
@@ -1213,6 +1317,14 @@ Every weight row of a run must equal a value of the named statistic at value_per
 This test checks declaration, activeness and branch type: every scenario_id with rows is an ACTIVE scenario in epm_gold.scenario_definitions whose scenario_type suits its branch, and the site declares at most one active actual scenario (the GL branch is stamped with it; with several it keeps the fallback 'ACTUAL'). Branch (data_source) -> accepted scenario_type: gl       -> actual budget   -> budget or forecast (The ERP branch 'd365_budget' is gone, konsol#348 S3 B1.) Forecasts are legitimate rows of the scenario trial balance, so the budget branch accepts them here. The variance models read only 'budget'-type scenarios, so forecast rows never reach variance; that is by design, not a problem this test names. Problems: undeclared     - one row per (scenario_id, data_source) with rows: no scenario_definitions row for the id; inactive       - declared, but no row with is_active = 1; wrong_type     - active, but no active row has the branch's type; several_actual - one row whenever more than one active 'actual' scenario is declared, whatever the rows say: scenario_id lists the active actual ids (sorted, comma-separated), data_source ''.
 
 <sub>`error (default)` · `tests/assert_scenario_rows_declared.sql` · konsol#348 konsolidat#206 konsolidat#211</sub>
+
+### `scenario_tb_forecast_is_current_round`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast scenario's rows in gold_scenario_trial_balance are the DECLARED current round's and no other's.**
+
+Rounds never sum. The scenario TB's budget branch groups without `cycle`, so before S6 WA4 it added every approved round of a forecast (scenario, year) together (R1 100 + R2 110 = 210, and konsol refused the second Approve to keep that from happening). Now the branch keeps, for a forecast-type scenario, only the rows of gold_forecast_current_round's cycle; a pair with no declaration has no rows at all. This ties the two: per (scenario, entity, year, period, account, currency) of every forecast scenario, the TB's amount must equal the fact's period_amount summed over layers (and budget dimensions) for the declared cycle; a key on one side only, or an amount off by more than the materiality floor, is one row here. A key present in the TB with no declared round is therefore named (the TB holds rows the declaration does not back), and so is a declared round whose rows the TB dropped. Budget-type scenarios pass through the branch unchanged and are not read here. Error severity: every reader of the scenario TB (the variance models, the cost-allocation pool) would report a doubled or an empty forecast. join_use_nulls=0: an unmatched FULL OUTER JOIN side reads '' (never NULL), so the "missing" test is coalesce(..., '') = '' on the key's scenario_id, as assert_budget_node_per_cycle_and_currency does; output aliases differ from the joined columns' names so no alias shadows a stripped qualifier. Fixtures: assert_scenario_tb_forecast_is_current_round.sql (R1 100, R2 110, R2 declared: the TB shows 110, pass), assert_scenario_tb_forecast_is_current_round.must_flag.sql (the TB seeded with the summed 210 against the same declaration: 1 result, the shape of the pre-WA4 model).
+
+<sub>`error` · `tests/assert_scenario_tb_forecast_is_current_round.sql` · konsol#348</sub>
 
 ### `spread_covers_declared_periods`
 
@@ -1252,13 +1364,13 @@ A model that does not yet carry budget_scenario_id covers no scenario, so the te
 
 <sub>`error (default)` · `tests/assert_variance_covers_budget_scenarios.sql` · konsolidat#206 konsolidat#211</sub>
 
-### `variance_favorable_follows_normal_balance`
+### `variance_favourability_follows_sign`
 
-**konsol#348 S3 B13 (QB7 a, BUD-7-a;**
+**konsolidat#214;**
 
-decided 14 Nov 2026 under Deepak Pai's standing rule): a variance is favourable by the account's normal balance, read from the chart (silver_main_accounts.normal_balance, konsol's Main Account), on amounts signed debit - credit (QB6 a). A credit-normal account (revenue) is favourable when the actual is more credit than the budget: its signed actual is below its signed budget (-1,200 against -1,000). A debit-normal account (expense) is favourable when the actual is less debit than the budget: again below it (900 against 1,000; 1,200 against 1,000 is not). Under debit-positive signs both read "actual below budget"; they are spelled out so the rule reads in accounting terms. No favourable direction, so never favourable: a row with no budget, a balance-sheet account, and an account whose normal balance is not declared or not in the chart. The retired assert_favorable_revenue restated the model's own rule ("Revenue and actual > budget") against the model's own columns, so it passed while the model marked less revenue as favourable (the sign was the wrong way round). This test derives the expectation from the chart and the amounts, not from the model's account_type_name or flag, and its fixtures hold hand-computed rows: revenue 1,200 actual against 1,000 budget is favourable; expense 1,200 against 1,000 is not. One row per variance row whose flag differs; error severity. Fixtures: dbt_project/test_fixtures/variance_favorable_signed.sql (build, pass), assert_variance_favorable_follows_normal_balance.sql (pass), .must_flag.sql (flag).
+konsol#562 E + ii (Deepak Pai, 18 Nov 2026; amends the gate half of BUD-7-a, 7 Nov 2026): favourability comes from the variance SIGN only, on amounts signed debit - credit (QB6 a). The account's normal_balance no longer gates it. Four states in one String column, never a summable flag: - 'favourable': a P&L account whose signed actual is below its signed budget. Below budget is good for revenue (more credit) and for cost (less debit) alike. - 'unfavourable': a P&L account whose signed actual is above its signed budget. - 'on_budget': a P&L account whose actual equals its budget exactly. - 'not_applicable': a balance-sheet account, or an account not in the chart (join_use_nulls=0 reads is_pnl 0). Only is_pnl decides this. No budget line is a budget of ZERO ("Unbudgeted is unfavourable", Deepak Pai, 22 Sep 2026: budget 0, actual 10 is an unfavourable variance of 10). A P&L account with a blank normal balance is judged by its sign like any other. This test derives the expected state from the chart (is_pnl) and the amounts, never from the model's own columns, so a model that gates on normal balance, marks a zero variance 'not_applicable', or mislabels a balance-sheet account as P&L, is named. One row per variance row whose state differs; error severity. Fixtures: dbt_project/test_fixtures/variance_favourability_signed.sql (build, pass), assert_variance_favourability_follows_sign.sql (pass), .must_flag.sql (flag 6).
 
-<sub>`error` · `tests/assert_variance_favorable_follows_normal_balance.sql` · konsol#348</sub>
+<sub>`error` · `tests/assert_variance_favourability_follows_sign.sql` · konsol#562 konsolidat#214</sub>
 
 ---
 
@@ -1414,13 +1526,77 @@ Silver derives debit/credit from the SIGN of the amount (konsolidat#112), so the
 
 <sub>`error (default)` · `tests/assert_d365_gl_vouchers_balance.sql` · konsolidat#112 konsolidat#118 konsolidat#155</sub>
 
-### `forecast_one_approved_round_until_s6`
+### `forecast_accuracy_grain_unique`
 
-**INTERIM RULE, REMOVED IN S6 (konsol#348, review of grynn-in/konsol#540 / konsolidat#362, 15 Nov 2026).**
+**konsol#348 S6 WC2: gold_forecast_accuracy has one row per (scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, budget dimensions, currency).**
 
-A forecast (scenario, fiscal year) holds at most ONE approved round for now. Four readers still sum a forecast's rounds across the cycle: gold_scenario_trial_balance (its GROUP BY leaves `cycle` out), the cost-allocation pool (konsol cost_allocation_run.py), the forecast_input Dataset (konsol defaults/dataset.json) and hierarchy_query. Two approved rounds in one year would therefore add two forecasts together silently. konsol refuses the second Approve by name (Budget Cycle.before_submit, under the pair lock); this is the warehouse backstop, one row per forecast (scenario, fiscal year) that gold_spread_budget holds under more than one distinct cycle. The fact carries only approved Cycles (konsol syncs docstatus 1), so a second cycle here IS a second approved round. Forecasts only, by the declared type in epm_gold.scenario_definitions, as assert_budget_one_cycle_per_ scenario_year (B5) does for the budget side: that test leaves forecasts out, this one is the forecast guard. IN, not a join: join_use_nulls=0 would fill an unmatched join with ''. An undeclared scenario is B5's and assert_scenario_rows_declared's business, not read here. Goes in S6 with konsol's refusal, when the latest-estimate read picks the round (FC-2-1) and approved rounds sit side by side (FC-4). Error severity: every reader above would report a doubled forecast. Fixtures: assert_forecast_one_approved_round_until_s6.must_flag.sql (two cycles: 1 result), assert_forecast_one_approved_round_until_s6.one_round.sql (one cycle, and a two-cycle budget: pass).
+A second row on a key means the forecast and the actual of one key did not meet (each side on a row of its own, so the error is wrong on both) or a grain the model's group by missed; a K.EPM read or the Forecast Accuracy report would add them. Error severity. Fixtures: assert_forecast_accuracy_hand_table.sql (pass, build mode), assert_forecast_accuracy_grain_unique.must_flag.sql (the two sides of one key on two rows: 1).
 
-<sub>`error` · `tests/assert_forecast_one_approved_round_until_s6.sql` · konsol#348 konsol#540 konsolidat#362</sub>
+<sub>`error` · `tests/assert_forecast_accuracy_grain_unique.sql` · konsol#348</sub>
+
+### `forecast_accuracy_group_hand_table`
+
+**konsol#348 S6 WC3 (FC-4-2, S6-Q8 a): gold_forecast_accuracy_group equals a table worked out by hand.**
+
+The group-currency twin of gold_forecast_accuracy: per consolidation group, the round's translated budget (gold_consolidated_budget_tb.group_amount, at the Cycle's Rate Set, layers summed) against the consolidated actuals (gold_consolidated_trial_balance.group_amount, at the actuals' rates), summed to the budget dimensions, in closed Regular periods after the round's as-of within its horizon, for the entities the round forecasts in that group. The rates differ, so an entity outside the group's currency carries the FX movement in its error; that is the point of a group-currency view. The fixture (test_fixtures/assert_forecast_accuracy_group_hand_table.sql) and its expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, konsolidat#361) names every row that differs. Amounts rounded to 4 places; the percentage compared as text ('NULL' for NULL). Vacuous where the fixture's scenario ZZ_FC_ACG is absent (every real site, and the full CI build), as assert_forecast_accuracy_hand_table. Not a `fixture_only_tests` test.
+
+<sub>`error` · `tests/assert_forecast_accuracy_group_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `forecast_accuracy_hand_table`
+
+**konsol#348 S6 WC2 (FC-4-2, S6-Q8 a): gold_forecast_accuracy equals a table worked out by hand.**
+
+Per approved forecast round, per CLOSED Regular period after its as-of period within its horizon (epm_staging.fiscal_periods.status Closed or Locked, the effective status konsol publishes), per entity the round forecasts, account, budget dimensions and currency: the forecast (layers summed), the actual, error = forecast - actual, |error|, error % = error / |actual| x 100 (NULL when the actual is 0) and the lag in declared Regular periods from the as-of period. The fixture (test_fixtures/assert_forecast_accuracy_hand_table.sql) has round R1 as of P3 (horizon 9) and R2 as of P5 (horizon 2), P1-P6 closed and P7 onwards open; the expected rows are below. A multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places; the percentage is compared as text so a NULL is a value of its own ('NULL'). Vacuous where the fixture's scenario ZZ_FC_ACC is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_ACC's produced rows are read. ZZ_FC_ACC is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_forecast_accuracy holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_forecast_accuracy_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `forecast_accuracy_horizon_hand_table`
+
+**konsol#348 S6 WC2 review (m1, m2): gold_forecast_accuracy measures a round to the ROUND's horizon, and counts the lag across a year end, worked out by hand.**
+
+A round is (scenario_id, as_of_date): every approved Cycle sharing the as-of (Q24 a, one Cycle per fiscal year). Its horizon is the LONGEST horizon_periods among those Cycles, as konsol's horizon_coverage_model counts the round's coverage; a Cycle's own shorter horizon does not cut the round short. The lag is in declared Regular periods from the as-of period, so the first period of the next year is lag 1 for an as-of in the last period of the year before. The fixture (test_fixtures/assert_forecast_accuracy_horizon_hand_table.sql) has round A as of 2026-09-30 (FY2026 P9: FY2026 Cycle horizon 12, FY2027 Cycle horizon 3) and round B as of 2026-12-31 (FY2026 P12: FY2027 Cycle horizon 2); FY2026 and FY2027 P1-P3 closed, FY2027 P4 onwards open. The multiset diff, rounding and NULL text are assert_forecast_accuracy_hand_table's. Vacuous where the fixture's scenario ZZ_FC_HZN is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_HZN's produced rows are read. ZZ_FC_HZN is present when a Budget Cycle names it (the build-mode fixture) or when gold_forecast_accuracy holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_forecast_accuracy_horizon_hand_table.sql` · konsol#348</sub>
+
+### `forecast_accuracy_pct_null_on_zero_actual`
+
+**konsol#348 S6 WC2: the error percentage of gold_forecast_accuracy is NULL exactly when the actual is 0, and otherwise is forecast_error / |actual_amount| x 100 (the sign of the error, the scale of the actual;**
+
+variance_pct's convention). A percentage of a zero actual has no value: 0 would read as a perfect forecast and an infinity would break every average, so it is NULL and the report shows "n/a". One row per breach: a non-NULL percentage on a zero actual, a NULL on a non-zero one, or a value off the formula by more than 0.0001 percentage points. Error severity. Fixtures: assert_forecast_accuracy_hand_table.sql (pass, build mode, one zero actual), assert_forecast_accuracy_pct_null_on_zero_actual.must_flag.sql (a 0 on a zero actual and a NULL on a non-zero one: 2).
+
+<sub>`error` · `tests/assert_forecast_accuracy_pct_null_on_zero_actual.sql` · konsol#348</sub>
+
+### `forecast_as_of_in_declared_period`
+
+**konsol#348 S6 WA3 (BUD-10-1: horizons and lags are counted in DECLARED periods).**
+
+A forecast round's as-of date must fall inside a declared Regular period of the fiscal calendar (epm_staging.fiscal_periods, through declared_periods()): that period is where "actual up to the as-of" ends and the horizon starts (forecast_round_as_of(), macros/forecast_rounds.sql). A round whose as-of date is in no Regular period (a year not yet declared, a gap between periods, a date on an Opening/Closing day with no Regular period around it) cannot be counted: the latest estimate and the accuracy model have no row for it, silently, and this names it instead. Every approved round of a forecast scenario is checked, not only the declared current one: the accuracy model (pair C) reads every round. Error severity: a reader that drops a round is wrong, and the fix is to declare the period in EPM Fiscal Year. NOT IN, not a LEFT JOIN null test (join_use_nulls=0). Fixtures: assert_forecast_as_of_in_declared_period.must_flag.sql (as-of in an undeclared year: 1 result), assert_forecast_as_of_in_declared_period.sql (as-of inside a declared period: pass).
+
+<sub>`error` · `tests/assert_forecast_as_of_in_declared_period.sql` · konsol#348</sub>
+
+### `forecast_current_round_unique`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast (scenario, fiscal year) has at most ONE current round.**
+
+gold_forecast_current_round is the one selection every forecast reader joins (gold_scenario_trial_balance, gold_forecast_current, gold_forecast_current_at_hierarchy_node, gold_latest_estimate_current); two rows for one pair would make those readers sum two rounds again, which is what the declaration exists to prevent. konsol holds one live Current Forecast per pair (FOR UPDATE on its live index) and the write-through replaces the whole table, so a second row here is sync drift or a hand-written row, and the build must stop rather than double a forecast. Error severity. Fixtures: assert_forecast_current_round_unique.must_flag.sql (two declarations for one pair: 1 result), gold_forecast_current_round.two_rounds.sql (two approved rounds, one declared: pass).
+
+<sub>`error` · `tests/assert_forecast_current_round_unique.sql` · konsol#348</sub>
+
+### `forecast_current_ties_to_fact`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): gold_forecast_current is gold_spread_budget narrowed to each forecast pair's DECLARED current round, and nothing else.**
+
+It is what konsol's `forecast_input` Dataset (the Excel K.EPM forecast read) reads instead of the fact, so a read of a forecast scenario sums one round, never two. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN would leave it empty while the fact holds the round) or be re-widened by a later edit (the "plain copy" that summed rounds); this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the fact's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every Excel forecast read would be doubled or empty. join_use_nulls=0: the missing side reads '' (coalesce(..., '') = '' covers both settings); output aliases differ from the joined columns' names. Fixtures: assert_forecast_current_ties_to_fact.sql (R1 100, R2 110, R2 declared: the view holds R2's row alone, pass), assert_forecast_current_ties_to_fact.must_flag.sql (the view seeded with both rounds, the pre-S6 shape: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_forecast_current_ties_to_fact.sql` · konsol#348</sub>
+
+### `forecast_year_has_current_round`
+
+**konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment 6953756459): a forecast (scenario, fiscal year) with approved rounds and NO Current Forecast declaration has no forecast rows anywhere.**
+
+gold_forecast_current_round holds only declared pairs, and every forecast reader joins it, so an undeclared year reads EMPTY (never the sum of its rounds, never the latest round: FC-3-1 rejected "latest wins"). Empty is correct and deliberate, but it is a reporting gap the user must see, so this names every such pair with its approved rounds: declare one in konsol (Planning > Current Forecasts). Approved rounds are the budget_cycles rows (konsol syncs submitted Cycles only) of a scenario declared scenario_type 'forecast' in epm_gold.scenario_definitions; a budget scenario has no rounds and is not read here (Approved Budget is its declaration, assert_budget_one_cycle_per_scenario_year its rule). A declaration whose Cycle is cancelled or belongs to another pair leaves the pair without a row in gold_forecast_current_round and is named here too (the model joins budget_cycles on the pair as well as on the name). IN / NOT IN, not joins: join_use_nulls=0 would fill an unmatched join with ''. WARN, not error: the actuals and the budget still build; the gap is a declaration the user owes. Fixtures: assert_forecast_year_has_current_round.must_flag.sql (two approved rounds, no declaration: 1 result), gold_forecast_current_round.two_rounds.sql (declared: pass).
+
+<sub>`warn` · `tests/assert_forecast_year_has_current_round.sql` · konsol#348</sub>
 
 ### `incremental_slice_preserved`
 
@@ -1445,6 +1621,22 @@ Since konsolidat#112 silver derives debit/credit purely from the SIGN of the (al
 konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — it passed gold_consolidation_adjustments lines through unsummed, so two topside lines on one account, entity and period (or an auto_reversal line next to its original, konsol#305-D2-11) gave two running totals instead of one. Layer 4 now SUMs to this grain like layer 6, so this check also covers 'topside', 'reclassification' and 'auto_reversal'. Fixture: dbt_project/test_fixtures/assert_journal_grain_unique.topside.sql. The journals themselves post several lines to one account in one period when the roles differ: the acquisition journal's line (0) opening_balance and its equity_eliminated line on the same equity account (history fixture ZZ3100: -687.5 and +687.5), the disposal journal's derecognised and proceeds lines on the same cash account. gold_consolidated_ytd runs a `rows between unbounded preceding and current row` window ordered by fiscal_period, so two rows in one period give two running totals (-687.5, then 0) instead of one (0). Layer 6 SUMs each journal branch to this grain, like the proration branch and layer 1 already do; a row here means a branch passes journal lines through unsummed. Row J13: journal_id is NOT part of the key. The YTD window does not partition by it, so two journals of one entity posting to one account in one period (a second deal, or an amortisation instalment next to a disposal in the same period) would again be two rows under one running total; layer 6 therefore groups without journal_id (emitting any(journal_id)) and this test keys on exactly the window's partition columns plus fiscal_period. The journals seen so far are reported as journal_ids for the reader. Fixtures: dbt_project/test_fixtures/business_combination_history.sql and business_disposal.sql (`+gold_fully_consolidated_tb assert_journal_grain_unique assert_acquisition_journal_balances`).
 
 <sub>`error (default)` · `tests/assert_journal_grain_unique.sql` · konsol#305 konsolidat#198 konsolidat#203</sub>
+
+### `latest_estimate_forecast_beyond_horizon`
+
+**konsol#348 S6 pair A review M1 (FC-2-1): a round's forecast after its horizon is reported, never dropped silently.**
+
+gold_latest_estimate keeps a round's own gold_spread_budget rows in the Regular periods after its as-of period up to `horizon_periods` of them (1 <= lag <= horizon); a row at or before the as-of is replaced by the actual (the declared rule, not reported here). A row AFTER the horizon has nowhere to go: the estimate leaves it out and the year reads short of what was entered. This names each (scenario, round, entity, account, year, period) of an approved round's fact rows whose period is beyond the horizon, with the amount left out. A key summing to exactly zero drops nothing and is not named. WARN: the horizon may simply be declared shorter than the sheet entered, and the estimate is right for the horizon declared; extend the horizon or remove the rows. Periods come from forecast_round_periods() (declared calendar, BUD-10-1), the round's own fiscal year (a horizon crossing the year end is one Cycle per year, Q24 a). The round columns are renamed (b_*) so no alias matches a column the joined fact carries. Fixtures: assert_latest_estimate_forecast_beyond_horizon.must_flag.sql (the hand table's R1 P7 -41: 1) and assert_latest_estimate_forecast_beyond_horizon.sql (nothing beyond, a zero row: pass).
+
+<sub>`warn` · `tests/assert_latest_estimate_forecast_beyond_horizon.sql` · konsol#348</sub>
+
+### `latest_estimate_grain_unique`
+
+**konsol#348 S6 WA7: gold_latest_estimate has one row per (scenario_id, cycle, data_area_id, fiscal_year, fiscal_period, main_account, budget dimensions, currency).**
+
+A second row on a key is an actual and a forecast for the same period of one round (the as-of split failed) or a grain the model's group by missed; either way a K.EPM read of the latest estimate would add them. Error severity. Fixtures: assert_latest_estimate_hand_table.sql (pass, build mode), assert_latest_estimate_grain_unique.must_flag.sql (an actual and a forecast row on one key: 1).
+
+<sub>`error` · `tests/assert_latest_estimate_grain_unique.sql` · konsol#348</sub>
 
 ### `partner_grain_not_fanned_out`
 
@@ -1532,6 +1724,30 @@ A joint operation reached through a partly owned FULL link is carried at the wro
 
 <sub>`error (default)` · `tests/assert_joint_operation_path_has_no_partial_full_link.sql` · konsol#117 konsolidat#331</sub>
 
+### `latest_estimate_actuals_present`
+
+**konsol#348 S6 WA8 (FC-2-1: a missing actual is reported, never filled): every entity a forecast round forecasts has an actual in each Regular period of the round's year up to and including its as-of period.**
+
+gold_latest_estimate takes the actual side from the GL rows; where an entity has none for such a period, the estimate simply has no actual there (it never substitutes the forecast or a zero), so the round's year-to-date reads short. This names each (scenario, round, entity, period) with forecast rows in the round and no actual row in the estimate. One row per missing period; WARN: the TB may simply not be uploaded yet, and the estimate is still right for what is there. Periods come from forecast_round_periods() (declared calendar, BUD-10-1). NOT IN, not a LEFT JOIN (join_use_nulls=0). Fixtures: assert_latest_estimate_actuals_present.must_flag.sql (ZZE2 has no P2 actual: 1); assert_latest_estimate_actuals_present.sql (the estimate built, every actual present: pass).
+
+<sub>`warn` · `tests/assert_latest_estimate_actuals_present.sql` · konsol#348</sub>
+
+### `latest_estimate_current_ties_to_estimate`
+
+**konsol#348 S6 pair A review M2 (S6-Q1 b, decided by Deepak Pai, 17 Nov 2026;**
+
+S6-Q2 a): gold_latest_estimate_current is gold_latest_estimate narrowed to each forecast pair's DECLARED current round, and nothing else. konsol's `latest_estimate` Dataset (the Excel K.EPM latest-estimate read) reads it and binds scenario_id, never cycle, so a second round in the view would be added to the first. A view cannot drift from its own filter, but it can match nothing (a type mismatch in the tuple IN) or be re-widened by a later edit; this ties it per (scenario, fiscal year, cycle): the view's row count and period_amount sum must equal the estimate's for the declared cycle, and the view must hold no cycle the declaration does not name. One row per mismatched key. Error severity: every Excel latest-estimate read would be doubled or empty. The two sides are a UNION ALL summed by key (never EXCEPT, konsolidat#361; never a join, whose unmatched side reads '' under join_use_nulls=0). Output aliases differ from every column read. Fixtures: assert_latest_estimate_current_ties_to_estimate.sql (R1 and R2 in the estimate, R2 declared: pass), assert_latest_estimate_current_ties_to_estimate.must_flag.sql (both rounds in the view: 1 result, the undeclared R1 key).
+
+<sub>`error` · `tests/assert_latest_estimate_current_ties_to_estimate.sql` · konsol#348 konsolidat#361</sub>
+
+### `latest_estimate_hand_table`
+
+**konsol#348 S6 WA7 (FC-2-1, S6-Q2 a): gold_latest_estimate equals a table worked out by hand.**
+
+The fixture (test_fixtures/assert_latest_estimate_hand_table.sql) declares FY2026 P1-P12 and two approved rounds of forecast scenario ZZ_FC_LE: ZZ-LE-R1 as of 2026-03-31 (P3), horizon 3, and ZZ-LE-R2 as of 2026-06-30 (P6), horizon 6. Each round's estimate is its year's actuals up to and including the as-of period plus its own forecast after the as-of within the horizon, layers summed; an entity the round does not forecast is absent, and a forecast row at or before the as-of is not in the estimate (the actual replaces it). The expected rows are below; a multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places. The expected table is the fixture's, so, like every hand table (assert_budget_ytd_hand_table, assert_budget_consolidated_hand_table), it is vacuous where the fixture's scenario ZZ_FC_LE is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_LE's produced rows are read. ZZ_FC_LE is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_latest_estimate holds it (the test-mode must_flag, which seeds the table directly). It is not a `fixture_only_tests` test: that var is ON in ci_full_build.py's full builds (it marks a costly test, not fixture-shaped expectations), which ran this test there on data without ZZ_FC_LE: 6 expected rows missing.
+
+<sub>`error` · `tests/assert_latest_estimate_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
 ### `method_declared_for_multi_path`
 
 **konsol#117 (design section 2): when a group reaches an entity along several paths and the links do not settle the method — their weakest-link methods disagree, or no path is all-`full` and the paths sum past DECLARATION_TRIGGER_PCT (50%, the IFRS 10.B35 presumption of control) — the group must DECLARE the method (Consolidation Method Declaration on the group node, synced to epm_staging.consolidation_method_declarations).**
@@ -1547,6 +1763,14 @@ The macro resolves such a row as method_source = 'undeclared' and consolidation_
 Design: konsol .claude/memory/active/tasks-p1-round2.md, T8. Severity ERROR (the dbt default): a re-entered entity carried at 150% is a wrong consolidated balance sheet. Fixture: test_fixtures/assert_reentry_carries_full_balance.gap_no_double_count.sql (the joint_operation_gap shape: 50% proportional to 2025-12-31, a gap, then a 100% Business Combination from 2026-04-01). An independent oracle: it never reads gold_ownership_exit_journal or repeats its rules. For every exit event (G, E, P) of ownership_exits() (X1) and every later period Q in which gold_entity_ownership holds E in G as a full subsidiary with a complete chain, each of E's non-equity balance-sheet accounts translated at the closing rate (fx_method 'closing' or undeclared, the accounts #257 retranslates) must satisfy sum over every layer of gold_fully_consolidated_tb for E, periods <= Q = E's cumulative local balance to Q (gold_trial_balance_by_partner, every partner and dimension) x the governed Closing rate of Q (rate_period_map(); 1.0 for a same-currency entity) within materiality_floor(). Taken out of the FCTB sum, as assert_exit_derecognises_carried does: the acquisition journal's investment, proceeds, costs and bargain_gain lines (the parent's investment and the deal's settlement, not E's balances) and topside (gold_consolidation_adjustments). Full only: a proportional re-entry carries translated x the share of each period, not one share of the cumulative balance, so this formula does not hold for it after a share step. a re-entry is live again at or after the exit's first period out (out_fiscal_*): between the exit period and it the entity can still be consolidated (a year-end boundary period, ownership_exits())
 
 <sub>`error (default)` · `tests/assert_reentry_carries_full_balance.sql` · konsol#348 konsolidat#257 konsolidat#335</sub>
+
+### `sliceless_layers_carry_no_dimension`
+
+**konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a consolidation entry carries the dimension values of whatever knows them.**
+
+The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none, with one exception: disposal line 105 (account_role 'post_disposal_pnl'), see below. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. The NCI attribution ('nci_attribution', gold_nci_attribution_journal) is half covered. Its result legs inherit the slices of the entity's P&L (option D: derivable, so inherited; assert_nci_attribution_carries_the_result_slices). Its 'CTA' line is a share of the same entity-level CTA plug as the 'cta' layer, so it is blank by the same arithmetic and is asserted here by account. The CTA part of its NCI line is blank too, but shares the NCI account with the sliced result part, so it cannot be told apart here; the slice test's every-slice-nets-to-zero check covers it. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. Disposal line 105 (post_disposal_pnl) is exempt: konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026, extends "inherit where derivable" to it. It is the entity's P&L by account times the removed fraction, the derivation pnl_proration slices, so it carries the slices of the P&L it removes (assert_post_disposal_pnl_carries_its_slices). Rejected: B, keep it blank, which overstated segment P&L by the post-disposal P&L. Because gold_fully_consolidated_tb sums the journal's lines to the account grain and drops account_role, the disposal layer is judged here on gold_business_disposal_journal itself, by role: every line except 'post_disposal_pnl' must stay blank. Equity method stays blank and asserted: konsolidat#245 Q3 A, decided by Deepak Pai on 21 Nov 2026 (it had been settled by Claude on 6 Oct 2026 under his instruction). IAS 28 presents the result as one line, and the associate's dimensions are not the group's. Rejected: B, inherit the associate's slices. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
+
+<sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#335 konsolidat#345</sub>
 
 ### `translation_rates_are_the_actuals_sets`
 

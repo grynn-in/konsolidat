@@ -217,15 +217,17 @@ models:
         +tags: ['gold', 'domain:consolidation']
       gold_fully_consolidated_tb:
         +tags: ['gold', 'domain:consolidation']
-      gold_nci_attribution_journal:
-        +tags: ['gold', 'domain:consolidation']
       gold_goodwill_amortisation_journal:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_eliminations:
         +tags: ['gold', 'domain:consolidation']
+      gold_ic_side_slices:
+        +tags: ['gold', 'domain:consolidation']
       gold_ic_reconciliation:
         +tags: ['gold', 'domain:consolidation']
       gold_ic_unmatched:
+        +tags: ['gold', 'domain:consolidation']
+      gold_nci_attribution_journal:
         +tags: ['gold', 'domain:consolidation']
       gold_nci_movement_schedule:
         +tags: ['gold', 'domain:consolidation']
@@ -247,9 +249,25 @@ models:
       # --- Domain: scenarios ---
       gold_budget_entity_ownership:
         +tags: ['gold', 'domain:scenarios']
+      gold_consolidated_budget_fact:
+        +tags: ['gold', 'domain:scenarios']
       gold_consolidated_budget_tb:
         +tags: ['gold', 'domain:scenarios']
+      gold_forecast_accuracy:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_accuracy_group:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_current:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_current_at_hierarchy_node:
+        +tags: ['gold', 'domain:scenarios']
+      gold_forecast_current_round:
+        +tags: ['gold', 'domain:scenarios']
       gold_fully_consolidated_budget:
+        +tags: ['gold', 'domain:scenarios']
+      gold_latest_estimate:
+        +tags: ['gold', 'domain:scenarios']
+      gold_latest_estimate_current:
         +tags: ['gold', 'domain:scenarios']
       gold_scenario_trial_balance:
         +tags: ['gold', 'domain:scenarios']

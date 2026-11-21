@@ -57,8 +57,10 @@
      assert_consolidation_core_grain_extra_is_a_partition proves the threading in general.
    - Scope: none (scoped=false, no period_filter): the budget is small and this is a table, rebuilt
      whole (S4-Q4 a). A refused build leaves the previous table as it was.
-   - rate_set is carried on every row (last), so a reader can see which set translated it
-     without a join.
+   - fx_method and rate_set are carried on every row (last, in that order), so a reader can see
+     which method and which set translated it without a join. konsol#348 S5 (G1): the Statement
+     Drill's "rate used" shows the method the warehouse APPLIED to the row, which is the chart's
+     declaration at build time; the chart's method of today may differ, so konsol reads it here.
 
    Fully-consolidated budget layers (CTA, NCI attribution) are W6's model; nothing here reads or is
    read by the close (gold_fully_consolidated_tb, the close fingerprint). #}
@@ -131,12 +133,14 @@ with_set as (
 )
 
 {# gold_consolidated_trial_balance's final shape, in its order (partner_data_area_id,
-   uses_historical_rate, retranslation_amount last), then rate_set. A table, so nothing here is
+   uses_historical_rate, retranslation_amount last), then fx_method and rate_set (S5 G1: the
+   actuals' table drops fx_method; the budget keeps it for the drill). A table, so nothing here is
    positional; the order is kept for S5's readers. #}
 select * except (partner_data_area_id, uses_historical_rate, translation_adjustment, fx_method,
                  is_retained_earnings, is_year_end_close, is_filler, rate_set),
        partner_data_area_id,
        uses_historical_rate,
        translation_adjustment as retranslation_amount,
+       fx_method,
        rate_set
 from with_set

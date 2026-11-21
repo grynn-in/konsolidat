@@ -7,9 +7,10 @@ a fresh ClickHouse volume gets: clickhouse/init-db.sql and
 clickhouse/raw-schema.sql, every table empty. This script builds that shape
 under a scratch prefix and runs
 
-    dbt build --select @silver_main_accounts
+    dbt build --select @silver_main_accounts @gold_spread_budget
 
-(the chart model, everything downstream of it, and all their ancestors), then
+(the chart model, everything downstream of it, and all their ancestors; and the
+same for the budget fact, see SELECTION), then
 requires ERROR=0 and the literal `OK created` for silver_main_accounts and
 gold_consolidated_trial_balance.
 
@@ -52,6 +53,17 @@ ERP_QUOTE_TESTS = ("assert_exchange_rate_currencies_are_iso", "assert_exchange_r
 # but show() never names a passing test, so the log can't show it ran. Run it
 # by name as a must-pass check, so a regression fails the job under its own name.
 CAST_TEST = "assert_cast_to_decimal128_is_exact"
+
+#: What the build selects. @silver_main_accounts already builds gold_spread_budget
+#: (an ancestor of gold_scenario_trial_balance) but not the forecast read views
+#: downstream of it (konsol#348 S6: gold_forecast_current and
+#: gold_forecast_current_at_hierarchy_node), which no chart descendant reads. dbt's
+#: eager indirect selection still picks the tests that tie those views to the fact
+#: (one parent selected is enough), and on a fresh site they ERRORed on the missing
+#: view. @gold_spread_budget builds the views, so the tests run against them; it adds
+#: those two models and nothing else. A site's first build is a full build
+#: (scripts/dbt-init.sh), which builds them anyway.
+SELECTION = ("@silver_main_accounts", "@gold_spread_budget")
 
 
 #: konsol#287: the budget input tables name no dimension in init-db.sql; konsol
@@ -299,7 +311,7 @@ def show(out):
 
 
 def build_selection(dbt, project, prefix, log_dir, label, extra=()):
-    code, out = run_dbt(dbt, project, ["build", "--select", "@silver_main_accounts", *extra],
+    code, out = run_dbt(dbt, project, ["build", "--select", *SELECTION, *extra],
                         os.path.join(log_dir, f"{label}.log"))
     show(out)
     problems = []
@@ -358,7 +370,7 @@ def main():
         copy_project(a.prefix, project)
         print(f"fresh TB-only shape created under {a.prefix}*; project copy at {project}")
 
-        print("\n== empty site: dbt build --select @silver_main_accounts")
+        print("\n== empty site: dbt build --select " + " ".join(SELECTION))
         problems += build_selection(a.dbt, project, a.prefix, work, "empty")
 
         print(f"\n== {CAST_TEST}: must pass (a pure-literal test, needs no fixture)")
@@ -374,7 +386,7 @@ def main():
         if a.fixture:
             for stmt in fixture_sql(a.prefix):
                 client.command(stmt)
-            print("\n== ZZ fixture: dbt build --select @silver_main_accounts --full-refresh")
+            print("\n== ZZ fixture: dbt build --select " + " ".join(SELECTION) + " --full-refresh")
             problems += build_selection(a.dbt, project, a.prefix, work, "fixture", ["--full-refresh"])
             counts = {
                 t: client.command(f"select count() from {a.prefix}_{t} where data_area_id = 'ZZOP'" if t != "silver.silver_main_accounts"

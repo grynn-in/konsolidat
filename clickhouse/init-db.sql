@@ -226,6 +226,21 @@ ORDER BY (scenario_id, data_area_id, fiscal_year, fiscal_period, layer, main_acc
 -- (tests/test_budget_cycles_ddl.py pins both).
 CREATE TABLE IF NOT EXISTS epm_staging.budget_cycles (name String, scenario_id String, fiscal_year UInt16, rate_set String, as_of_date Date32 DEFAULT '1900-01-01', horizon_periods UInt16) ENGINE = MergeTree ORDER BY name;
 
+-- konsol#348 S6-Q1 (b), decided by Deepak Pai, 17 Nov 2026 (#348 comment
+-- 6953756459): a forecast scenario's DECLARED current round per fiscal year,
+-- one row per submitted Current Forecast, written through from konsol (S6
+-- KA2). A forecast (scenario, year) holds several approved rounds side by
+-- side and they never sum; gold_forecast_current_round joins this to
+-- budget_cycles on `cycle`, and every forecast reader (the scenario trial
+-- balance, the Excel forecast reads, the latest estimate) takes that round
+-- alone. A year with approved rounds and no row here has no forecast rows
+-- anywhere, and assert_forecast_year_has_current_round WARNs naming it.
+-- The round's as_of_date, horizon and Rate Set are read from budget_cycles
+-- by `cycle`, never copied here (one source; S6 pair A review m4). Keep
+-- identical to konsol's _REFERENCE_TABLE_DDL
+-- (tests/test_current_forecasts_ddl.py pins both).
+CREATE TABLE IF NOT EXISTS epm_staging.current_forecasts (scenario_id String, fiscal_year UInt16, cycle String) ENGINE = MergeTree ORDER BY (scenario_id, fiscal_year);
+
 -- F3: governed reference data written through from konsol (Dimension Mapping,
 -- Cash Flow Category, Reporting Hierarchy) — these were CSV seeds regenerated
 -- into the dbt repo on every save and migrate. One metadata path now: Frappe
@@ -456,6 +471,6 @@ CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_runs (name String, rule_set String, method String, allocation_dimension String, receiver_account_mode String, allocation_account String, amounts_after_approval String, data_area_id String, scenario_id String, fiscal_year UInt16, fiscal_period UInt8, computed_at DateTime) ENGINE = MergeTree ORDER BY name;
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_accounts (parent String, idx UInt32, main_account String, declared_account String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_weights (parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, driver String, statistic String, value_period UInt8, carried_forward UInt8, driver_value Decimal(38,9)) ENGINE = MergeTree ORDER BY (parent, idx);
-CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, hop_kind String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistics (name String, driver String, dimension String, data_area_id String, scenario_id String, fiscal_year UInt16) ENGINE = MergeTree ORDER BY name;
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistic_values (parent String, idx UInt32, fiscal_period UInt8, member String, value Decimal(38,9)) ENGINE = MergeTree ORDER BY (parent, idx);

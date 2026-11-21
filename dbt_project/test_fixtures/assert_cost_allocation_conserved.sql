@@ -4,18 +4,18 @@
 -- pool 400: ZZP1 250, ZZP2 150. Every origin sums to 0 and lands its pool at
 -- ZZP1/ZZP2, the members that never send.
 -- tables epm_gold.gold_cost_allocation
-INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, origin_member, step, sender_member, receiver_member, member, origin_amount, amount) VALUES
-('ZZR1','ZZ6000','sent','ZZIT',1,'ZZIT','ZZHR','ZZIT',1000,-200),
-('ZZR1','ZZ6000','received','ZZIT',1,'ZZIT','ZZHR','ZZHR',1000,200),
-('ZZR1','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP1','ZZIT',1000,-500),
-('ZZR1','ZZ6000','received','ZZIT',1,'ZZIT','ZZP1','ZZP1',1000,500),
-('ZZR1','ZZ6000','sent','ZZIT',1,'ZZIT','ZZP2','ZZIT',1000,-300),
-('ZZR1','ZZ6000','received','ZZIT',1,'ZZIT','ZZP2','ZZP2',1000,300),
-('ZZR1','ZZ6000','sent','ZZIT',2,'ZZHR','ZZP1','ZZHR',1000,-100),
-('ZZR1','ZZ6000','received','ZZIT',2,'ZZHR','ZZP1','ZZP1',1000,100),
-('ZZR1','ZZ6000','sent','ZZIT',2,'ZZHR','ZZP2','ZZHR',1000,-100),
-('ZZR1','ZZ6000','received','ZZIT',2,'ZZHR','ZZP2','ZZP2',1000,100),
-('ZZR1','ZZ6000','sent','ZZHR',2,'ZZHR','ZZP1','ZZHR',400,-250),
-('ZZR1','ZZ6000','received','ZZHR',2,'ZZHR','ZZP1','ZZP1',400,250),
-('ZZR1','ZZ6000','sent','ZZHR',2,'ZZHR','ZZP2','ZZHR',400,-150),
-('ZZR1','ZZ6000','received','ZZHR',2,'ZZHR','ZZP2','ZZP2',400,150);
+INSERT INTO epm_gold.gold_cost_allocation (run, main_account, line_type, hop_kind, origin_member, step, sender_member, receiver_member, member, origin_amount, amount) VALUES
+('ZZR1','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZHR','ZZIT',1000,-200),
+('ZZR1','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZHR','ZZHR',1000,200),
+('ZZR1','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP1','ZZIT',1000,-500),
+('ZZR1','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP1','ZZP1',1000,500),
+('ZZR1','ZZ6000','sent','own','ZZIT',1,'ZZIT','ZZP2','ZZIT',1000,-300),
+('ZZR1','ZZ6000','received','own','ZZIT',1,'ZZIT','ZZP2','ZZP2',1000,300),
+('ZZR1','ZZ6000','sent','pass','ZZIT',2,'ZZHR','ZZP1','ZZHR',1000,-100),
+('ZZR1','ZZ6000','received','pass','ZZIT',2,'ZZHR','ZZP1','ZZP1',1000,100),
+('ZZR1','ZZ6000','sent','pass','ZZIT',2,'ZZHR','ZZP2','ZZHR',1000,-100),
+('ZZR1','ZZ6000','received','pass','ZZIT',2,'ZZHR','ZZP2','ZZP2',1000,100),
+('ZZR1','ZZ6000','sent','own','ZZHR',2,'ZZHR','ZZP1','ZZHR',400,-250),
+('ZZR1','ZZ6000','received','own','ZZHR',2,'ZZHR','ZZP1','ZZP1',400,250),
+('ZZR1','ZZ6000','sent','own','ZZHR',2,'ZZHR','ZZP2','ZZHR',400,-150),
+('ZZR1','ZZ6000','received','own','ZZHR',2,'ZZHR','ZZP2','ZZP2',400,150);
