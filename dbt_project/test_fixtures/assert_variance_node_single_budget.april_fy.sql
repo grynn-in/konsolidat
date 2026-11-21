@@ -26,11 +26,11 @@ VALUES
   (2026, 1, 'FY2026-P01', 'Apr 2025', 'Regular', '2025-04-01', '2025-04-30', 'Q1', 'Open');
 INSERT INTO epm_gold.gold_variance_analysis
   (data_area_id, fiscal_year, fiscal_period, main_account, account_name, account_type_name, is_pnl,
-   dim_cost_center, dim_department, actual_amount, budget_amount, variance_abs, variance_pct, variance_favorable,
+   dim_cost_center, dim_department, actual_amount, budget_amount, variance_abs, variance_pct, variance_favourability,
    budget_scenario_id)
 VALUES
-  ('ZZE1', 2026, 1, 'ZZ4000', 'revenue', 'Revenue', 1, 'ZZ_EX', '', 100, 90, 10, NULL, NULL, 'BUDGET'),
-  ('ZZE1', 2026, 2, 'ZZ4000', 'revenue', 'Revenue', 1, 'ZZ_EX', '', 50, 40, 10, NULL, NULL, 'BUDGET');
+  ('ZZE1', 2026, 1, 'ZZ4000', 'revenue', 'Revenue', 1, 'ZZ_EX', '', 100, 90, 10, NULL, 'unfavourable', 'BUDGET'),
+  ('ZZE1', 2026, 2, 'ZZ4000', 'revenue', 'Revenue', 1, 'ZZ_EX', '', 50, 40, 10, NULL, 'unfavourable', 'BUDGET');
 INSERT INTO epm_gold.gold_spread_budget
   (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, dim_cost_center, dim_department, layer, period_amount, annual_amount)
 VALUES
