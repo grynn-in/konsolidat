@@ -32,10 +32,14 @@ through `frappectl`.
 5. Apply the published configuration to the warehouse and build: `konsol schema apply --run-dbt` (konsol-cli), or
    submit a Pipeline Run in Desk. Consolidation then runs on the loaded trial balances.
 
-Each sheet is also importable on its own with **Frappe Desk → Data Import** (pick the doctype, upload the sheet):
-the header row is the doctype's fieldnames. The loader-only columns (`parent_group`, `parent_member_code`, `journal_ref`, `deal_ref`)
-and the child-table sheets the loader nests into their parent (`Fiscal_Periods` into its year; `CJ_Lines` into its journal; `BC_*`
-and `BD_Proceeds` into their deal) need the script or a hand edit.
+Two sheets can also be loaded on their own with **Frappe Desk → Data Import** (pick the doctype, upload the sheet; the
+header row is the doctype's fieldnames): `Entities` (Entity) and `Dimensions` (Dimension). konsol syncs the warehouse once
+when the import finishes, and requests one build if the import changed what consolidation reads. A `Published`
+dimension needs the EPM Admin role. `Main_Accounts` uses
+**Upload chart** on the Main Account list instead, because a chart loads as a whole (parents first) and is validated as one.
+Every other sheet uses the loader: konsol does not allow Data Import for those doctypes. The loader also handles the
+loader-only columns (`parent_group`, `parent_member_code`, `journal_ref`, `deal_ref`) and the child-table sheets it nests
+into their parent (`Fiscal_Periods` into its year; `CJ_Lines` into its journal; `BC_*` and `BD_Proceeds` into their deal).
 
 Consolidation Journals, Business Combinations and Business Disposals carry a Frappe Workflow in konsol, so the loader does not
 `submit` them: it sends each for approval (`frappe.model.workflow.apply_workflow`) and approves it
