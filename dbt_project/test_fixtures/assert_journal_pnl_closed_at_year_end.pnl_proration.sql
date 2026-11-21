@@ -22,7 +22,7 @@
 -- Calendar year. ZZG (Pro-rate by days) acquires ZZS on 2026-03-11: P3 is 31 days, the group did not hold 10 of them (10/31).
 -- Expected: ZZ4000 +1,000, ZZ5000 -500, balancing ZZ3100 -500; the entity-period sums to 0.
 -- ownership_periods.acquisition_date is set as konsol sets it, so the OLD one-sided month-arithmetic model fires on this fixture.
--- Source tables named so the gate creates them (empty): epm_raw.trial_balance_submissions, epm_raw.trial_balance_submission_control, epm_raw.general_journal_account_entry_bi_entities, epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates, epm_staging.dimension_mappings, epm_staging.consolidation_adjustments, epm_staging.ic_balances, epm_staging.ic_elimination_rules, epm_staging.intercompany_accounts.
+-- Source tables named so the gate creates them (empty): epm_raw.trial_balance_submissions, epm_raw.trial_balance_submission_control, epm_raw.general_journal_account_entry_bi_entities, epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates, epm_staging.dimension_mappings, epm_staging.consolidation_adjustments, epm_staging.ic_balances, epm_staging.ic_elimination_rules, epm_staging.intercompany_accounts.
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS dim_business_unit String DEFAULT '';
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS dim_cost_center String DEFAULT '';
