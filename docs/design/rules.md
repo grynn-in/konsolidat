@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **216** |
-| carrying their reasoning | 194 |
-| citing the issue that caused them | 189 |
+| assertions | **218** |
+| carrying their reasoning | 196 |
+| citing the issue that caused them | 191 |
 | severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 189 |
+| severity `error` (stops the build, and its children) | 191 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -27,8 +27,8 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Trial balance intake](#trial-balance-intake) — 20
 - [Currency and translation](#currency-and-translation) — 36
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
-- [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 17
+- [Acquisitions and disposals](#acquisitions-and-disposals) — 15
+- [Intercompany](#intercompany) — 18
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
@@ -744,6 +744,14 @@ Before, this test judged fiscal period P at the first of calendar month P, the s
 
 <sub>`error (default)` · `tests/assert_post_disposal_excluded.sql` · konsolidat#171 konsolidat#252</sub>
 
+### `post_disposal_pnl_carries_its_slices`
+
+**konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026: disposal line 105 (post_disposal_pnl, the entity's P&L after the disposal date) INHERITS the dimension slices of the P&L it removes, the same as pnl_proration.**
+
+It extends the 3 Oct 2026 rule "inherit where derivable": line 105 is the entity's P&L by account times the removed fraction, the derivation pnl_proration already slices. Rejected: B, keep it blank under the deal-journal rule, which leaves the post-disposal P&L in each segment and offsets it only on the blank slice, so segment P&L is overstated by exactly that amount. Judged on gold_fully_consolidated_tb, where segment P&L is read, per (group, entity, year, period, P&L account, slice): expected = -group_amount of that slice in gold_consolidated_trial_balance x removed_fraction modelled = the 'disposal' layer on that account and slice, less the journal's gain_loss line (199), which is blank and is the only other disposal line a P&L account can carry removed_fraction is re-derived from the sources exactly as assert_partial_period_pnl_matches_treatment derives it (days after the disposal date to the period end, over the period's days; the deal period is the lowest Regular tuple whose span holds the date), so the model and this test cannot share a mistake. Only groups whose root declares 'Pro-rate by days' and full disposals the journal posted are judged; that sibling test judges the account totals and every other treatment. On the base, a revenue of -3,000 on two cost centres (-1,800 / -1,200), disposed on the 20th of a 30-day period, posted +1,000 on the blank slice: each cost centre kept its whole P&L. A difference of more than 0.01 on any slice is one row. Error severity: a segment carrying P&L the group did not hold is a wrong consolidated number that every account total accepts.
+
+<sub>`error (default)` · `tests/assert_post_disposal_pnl_carries_its_slices.sql` · konsolidat#245</sub>
+
 ---
 
 ## Intercompany
@@ -775,6 +783,14 @@ An account paired with two counterparts would have one side matched twice, which
 1. currency: each side's currency is its entity's functional currency (silver_entity_currencies), the input the rule reads. 2. cause: difference_cause follows the rule (see gold_ic_reconciliation): none below materiality_floor(); fx across currencies; booking in one currency when the local amounts do not net to zero; fx in one currency when they do (translation only). The local amounts are recomputed from gold_consolidated_trial_balance (ic_expected_pair_values), not taken from the model's own columns (#175 re-review L4). 3. status: a booking difference is within_tolerance or over_tolerance against the group's tolerance. An fx difference on a balance-sheet pair across currencies is judged the same way, since both sides are at the closing rate (konsol#305-W3-5). Any other fx difference (a movement pair across currencies, or translation only in one currency) is 'fx_difference' and does not count against the tolerance. 4. label: each 'difference' elimination row carries its pair's cause, so splitting the difference account in two later needs no data change.
 
 <sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsol#305 konsolidat#175</sub>
+
+### `ic_difference_on_the_blank_slice`
+
+**konsolidat#245 Q1 A, decided by Deepak Pai on 21 Nov 2026: the intercompany DIFFERENCE entry (the unmatched residual) is posted on the blank slice, on BOTH of its legs, the IC-account leg included.**
+
+Only the matched part of a pair carries each side's slices (option C, 6 Oct 2026). Rejected: B, keep the IC-account leg sliced, which splits the unmatched part by the matched part's mix and gives a segment a difference it did not produce. Layer 2 of gold_fully_consolidated_tb carries no elimination_kind, and the matched and difference entries of a pair share one journal_id (the rule_id 'IC:<account_a>/<account_b>'), so the check is a bound: on each account of each pair rule, what layer 2 posts on NON-BLANK slices can be at most the matched part. The allowance is the sum, over the pair's sides on that account, of the absolute matched elimination; a side whose slices do not cover its leg posts it on the blank slice, which only lowers the sliced figure, so a correct layer never exceeds the allowance. A difference leg on the IC account has the sign of the matched leg on that account (both reduce the side's balance), so a sliced difference always pushes the sliced figure past the allowance by the difference itself. The basis is the pair's. A balance pair is eliminated to date (gold_ic_eliminations decision 14), so both figures are taken to date at every period layer 2 posted a sliced row; a movement pair is compared period by period. On the base, a receivable of 100 split 60 / 40 over two cost centres against a payable of 90 put the residual 10 on the cost centres (-6 / -4) beside the matched -54 / -36: sliced 100 against an allowance of 90. Error severity: a sliced difference is a segment balance the segment did not book.
+
+<sub>`error (default)` · `tests/assert_ic_difference_on_the_blank_slice.sql` · konsolidat#245</sub>
 
 ### `ic_eliminated_in_full`
 
