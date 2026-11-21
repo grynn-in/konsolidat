@@ -144,7 +144,7 @@ VALUES
 INSERT INTO epm_staging.business_combinations
   (name, consolidation_group, acquired_entity, acquisition_date, share_acquired_pct, consideration_currency, total_consideration, net_assets_acquired, fair_value_adjustments, goodwill, bargain_purchase_gain, nci_at_acquisition, ownership_period, nci_measurement)
 VALUES
-  ('BC-ZZG-ZZS-2026-03-11', 'ZZG', 'ZZS', '2026-03-11', 100, 'EUR', 2000, 1300, 200, 500, 0, 0, 'ZZ-OP-ZZS-1', 'partial');
+  ('BC-ZZG-ZZS-2026-03-11', 'ZZG', 'ZZS', '2026-03-11', 100, 'EUR', 2000, 1430, 220, 550, 0, 0, 'ZZ-OP-ZZS-1', 'partial');
 INSERT INTO epm_staging.business_combination_consideration
   (parent, idx, component, amount, currency, settlement_date, description)
 VALUES
