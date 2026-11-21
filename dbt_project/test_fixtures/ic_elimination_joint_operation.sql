@@ -15,7 +15,7 @@
 -- and basis columns: add them first. The lineage of gold_consolidated_trial_balance reads these tables too, empty
 -- here, so they are named to exist (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
--- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
+-- epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates,
 -- epm_staging.dimension_mappings, epm_staging.group_exchange_rates, epm_staging.ic_balances,
 -- epm_staging.ic_elimination_rules.
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS partner_data_area_id String DEFAULT '';

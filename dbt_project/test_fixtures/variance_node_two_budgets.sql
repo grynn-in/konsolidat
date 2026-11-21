@@ -23,7 +23,7 @@
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
 -- (empty): epm_raw.fiscal_calendar_years,
--- epm_gold.budget_annual_input, epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles,
+-- epm_gold.budget_annual_input, epm_gold.spread_profiles,
 -- epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns: add them first.

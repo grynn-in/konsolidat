@@ -13,7 +13,7 @@
 -- green once both branches carry it in the same position of the positional UNION.
 --
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles, epm_staging.dimension_mappings.
+-- (empty): epm_gold.spread_profiles, epm_staging.dimension_mappings.
 --
 -- The live submission tables and chart may predate their partner, basis and retained-earnings columns, and
 -- the live annual table may predate `cycle` (B3w): add them to the scratch clones first.

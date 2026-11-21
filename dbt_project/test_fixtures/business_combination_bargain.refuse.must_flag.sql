@@ -20,7 +20,7 @@
 -- trial-balance-only site with no upload, so they are named here to exist (empty): epm_raw.trial_balance_submissions,
 -- epm_raw.trial_balance_submission_control, epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
--- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
+-- epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates,
 -- epm_staging.dimension_mappings.
 ALTER TABLE epm_raw.trial_balance_submission_control ADD COLUMN IF NOT EXISTS amount_basis String DEFAULT '';
 ALTER TABLE epm_staging.main_accounts ADD COLUMN IF NOT EXISTS is_retained_earnings UInt8 DEFAULT 0;

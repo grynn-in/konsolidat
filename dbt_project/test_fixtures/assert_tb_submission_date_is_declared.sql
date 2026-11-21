@@ -2,7 +2,7 @@
 -- gate: expect assert_tb_submission_date_is_declared pass
 -- konsolidat#189 PR3 (konsol#348, A10): must PASS once a trial-balance submission row is dated at its declared
 -- period's start_date. An April-March site: FY2026 P1 is 2025-04-01 .. 2025-04-30 in epm_staging.fiscal_periods,
--- and the entity has NO row in epm_gold.entity_fiscal_calendars. Before A11 silver_gl_entries fell back to a
+-- and no per-entity calendar exists (konsol#577 removed that mapping). Before A11 silver_gl_entries fell back to a
 -- calendar-month macro, which dated P1 at 2026-01-01, so the test flagged the row.
 --
 -- silver_tb_movements is seeded (it is not in the selector).
