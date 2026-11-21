@@ -25,9 +25,11 @@
 -- shares the account, and compared with the cumulative ic_elimination rows of
 -- gold_fully_consolidated_tb on that account and slice.
 --
--- Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. The
--- difference leg's slicing is an open decision (HMD Q1 on #260), so it is not
--- asserted here. Movement-basis (P&L) pairs are period-valued and are covered
+-- Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its
+-- blank-slice difference would mix into the cumulative amounts compared here.
+-- Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits
+-- on the blank slice on both legs; assert_ic_difference_on_the_blank_slice
+-- asserts that. Movement-basis (P&L) pairs are period-valued and are covered
 -- by assert_ic_slice_not_moved_past_its_own.
 --
 -- Error severity: a slice left with an elimination it no longer holds is a

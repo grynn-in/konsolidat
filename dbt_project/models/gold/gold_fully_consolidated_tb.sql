@@ -195,8 +195,9 @@ side_slice_shares as (
    did not change. assert_ic_slice_to_date_eliminated pins it.
 
    Movement-basis (P&L) pairs are period-valued and keep the period split. The
-   DIFFERENCE legs keep the period split too: how a residual is sliced is the
-   open HMD Q1 on #260, not this change.
+   DIFFERENCE legs are not split at all: konsolidat#245 Q1 A (Deepak Pai,
+   21 Nov 2026) puts the whole difference entry, both legs, on the blank
+   slice (see ic_elims).
 
    #262: every window here runs over the small per-side grid built from
    gold_ic_side_slices and gold_ic_eliminations, never over the CTB. #}
@@ -398,7 +399,10 @@ bal_posted as (
 ic_elims as (
 
 {# konsolidat#245 layer 2, option C (Deepak Pai, 6 Oct 2026): each leg carries
-   ITS OWN side's slice. The leg's amount is split across that side's dimension
+   ITS OWN side's slice, for the MATCHED part only: the difference entry (the
+   unmatched residual) stays on the blank slice on both legs (Q1 A, 21 Nov 2026;
+   rejected: B, slicing its IC-account leg by the matched part's mix). The
+   matched leg's amount is split across that side's dimension
    values in proportion to what the side booked (gold_ic_side_slices), so the
    per-slice amounts sum to exactly the leg's elimination — Sum(slice_mov)/side_mov
    is 1 by construction, and assert_ic_side_slices_sum_to_the_side guards that
@@ -457,6 +461,10 @@ ic_elims as (
              and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
+        {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
+           legs, is never split: a join miss, so it lands whole on the blank slice.
+           assert_ic_difference_on_the_blank_slice pins it. #}
+        and e.elimination_kind != 'difference'
     {# a balance pair's MATCHED leg is split to date, in bal_posted above #}
     where not (e.basis = 'balance' and e.elimination_kind = 'matched')
 
@@ -491,6 +499,10 @@ ic_elims as (
              and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
              or sl.is_flat = 1
              and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
+        {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
+           legs, is never split: a join miss, so it lands whole on the blank slice.
+           assert_ic_difference_on_the_blank_slice pins it. #}
+        and e.elimination_kind != 'difference'
     {# a balance pair's MATCHED leg is split to date, in bal_posted above #}
     where not (e.basis = 'balance' and e.elimination_kind = 'matched')
 
@@ -576,8 +588,9 @@ equity_method as (
         main_account,
         account_name,
         {# konsolidat#245 option D: BLANK BY DECISION. Settled by Claude on
-           6 Oct 2026 under Deepak Pai's instruction to settle it — NOT a
-           decision he made, and open to reversal on his word.
+           6 Oct 2026 under Deepak Pai's instruction to settle it, and decided
+           by Deepak Pai on 21 Nov 2026 (Q3 A; rejected: B, inherit the
+           associate's slices at the ownership share).
 
            It COULD inherit: gold_equity_method_associates sums the associate's
            P&L out of gold_trial_balance, which carries real dimension values,
@@ -717,14 +730,17 @@ acquisition_disposal as (
         fiscal_period,
         main_account,
         any(account_name) as account_name,
-        {{ dim_empty_strings(trailing=true) }}
+        {# konsolidat#245 Q2 A (Deepak Pai, 21 Nov 2026): line 105 (post_disposal_pnl)
+           carries the slices of the P&L it removes, as pnl_proration does; every
+           other disposal line is blank in the journal. #}
+        {{ dim_select(trailing=true) }}
         '' as reporting_currency,
         sum(adjustment_amount) as amount,
         adjustment_type,
         any(journal_id) as journal_id
     from {{ ref('gold_business_disposal_journal') }}
     group by consolidation_group, data_area_id, fiscal_year, fiscal_period, main_account,
-             adjustment_type
+             adjustment_type{{ dim_group_by(leading=true) }}
 ),
 
 {# Union all layers #}

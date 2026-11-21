@@ -1,7 +1,8 @@
 -- konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a
 -- consolidation entry carries the dimension values of whatever knows them. The
 -- deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition,
--- business combination, goodwill amortisation and disposal — know none. Their
+-- business combination, goodwill amortisation and disposal — know none, with one exception: disposal line
+-- 105 (account_role 'post_disposal_pnl'), see below. Their
 -- inputs are the Business Combination and Business Disposal documents, which
 -- carry no dimension fields and have no slice to inherit from. The CTA is
 -- blank for a different and stronger reason: it is ONE PLUG per entity and
@@ -34,6 +35,18 @@
 -- reason column on the layer, which is not in this change.
 -- assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead.
 --
+-- Disposal line 105 (post_disposal_pnl) is exempt: konsolidat#245 Q2 A, decided by Deepak Pai on
+-- 21 Nov 2026, extends "inherit where derivable" to it. It is the entity's P&L by account times the removed
+-- fraction, the derivation pnl_proration slices, so it carries the slices of the P&L it removes
+-- (assert_post_disposal_pnl_carries_its_slices). Rejected: B, keep it blank, which overstated segment P&L by
+-- the post-disposal P&L. Because gold_fully_consolidated_tb sums the journal's lines to the account grain and
+-- drops account_role, the disposal layer is judged here on gold_business_disposal_journal itself, by role:
+-- every line except 'post_disposal_pnl' must stay blank.
+--
+-- Equity method stays blank and asserted: konsolidat#245 Q3 A, decided by Deepak Pai on 21 Nov 2026 (it
+-- had been settled by Claude on 6 Oct 2026 under his instruction). IAS 28 presents the result as one line,
+-- and the associate's dimensions are not the group's. Rejected: B, inherit the associate's slices.
+--
 -- One row per offending layer and dimension. Error severity: a value here is
 -- not a data-quality warning, it is a layer claiming knowledge it does not have.
 {% set dims = var('dimensions') %}
@@ -49,14 +62,14 @@ from {{ ref('gold_fully_consolidated_tb') }}
 -- 'pnl_proration' (gold_acquisition_adjustments) is NOT here: konsolidat#345
 -- made that layer real, it carries the dimension slice of the P&L it prorates.
 -- gold_business_combination_journal 'acquisition', gold_goodwill_amortisation_journal 'goodwill_amortisation',
--- gold_business_disposal_journal 'disposal'.
+-- 'disposal' (gold_business_disposal_journal) is judged by account_role in the second branch below.
 where (adjustment_type in (
-        'acquisition', 'goodwill_amortisation', 'disposal',
+        'acquisition', 'goodwill_amortisation',
         -- the CTA, blank by arithmetic: an entity-level residual has no slice
         'cta',
-        -- and equity method, blank by decision (Claude, 6 Oct 2026, under
-        -- Deepak Pai's instruction to settle it): the investor's one-line
-        -- pickup does not carry the associate's management dimensions
+        -- and equity method, blank by decision (konsolidat#245 Q3 A, Deepak
+        -- Pai, 21 Nov 2026): the investor's one-line pickup does not carry
+        -- the associate's management dimensions
         'equity_method')
        -- the NCI attribution's CTA leg, blank by the same arithmetic as 'cta'
        or (adjustment_type = 'nci_attribution' and main_account = 'CTA'))
@@ -66,4 +79,20 @@ where (adjustment_type in (
     {%- endfor %}
   )
 group by adjustment_type
+
+union all
+
+-- the disposal journal, every line but line 105 (Q2 A)
+select
+    concat(adjustment_type, ' (', account_role, ')') as adjustment_type,
+    '{{ dims | map(attribute="name") | join(", ") }}' as checked_dimensions,
+    count() as rows_carrying_a_value
+from {{ ref('gold_business_disposal_journal') }}
+where account_role != 'post_disposal_pnl'
+  and (
+    {%- for d in dims %}
+    {{ d.name }} != ''{{ ' or' if not loop.last }}
+    {%- endfor %}
+  )
+group by adjustment_type, account_role
 {% endif %}
