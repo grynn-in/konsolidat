@@ -25,11 +25,14 @@ on:
       - 'tests/test_group_exchange_rates_ddl.py'
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
+      - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
+      - 'tests/test_fixture_gate_shard.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -63,11 +66,14 @@ on:
       - 'tests/test_group_exchange_rates_ddl.py'
       - 'tests/test_rate_sets_ddl.py'
       - 'tests/test_budget_cycles_ddl.py'
+      - 'tests/test_current_forecasts_ddl.py'
+      - 'tests/test_no_interim_forecast_rule.py'
       - 'tests/test_rate_set_filter.py'
       - 'deploy.sh'
       - 'tests/test_ownership_graph_ddl.py'
       - 'tests/test_cost_allocation_ddl.py'
       - 'tests/test_fixture_only_tests.py'
+      - 'tests/test_fixture_gate_shard.py'
       - 'clickhouse/raw-schema.sql'
       - 'scripts/tb_only_first_build.py'
       - 'scripts/ci_full_build.py'
@@ -156,6 +162,16 @@ jobs:
       # eliminations" (konsol#427, #425).
       - name: budget outside the close
         run: python -m unittest -v tests.test_budget_outside_close
+      # konsol#348 S5 (W1): the columns, literals and adjustment types konsol's
+      # Consolidated Statement reads from the two budget models are pinned, and
+      # both yml descriptions say konsol reads them.
+      - name: budget warehouse contract for konsol's readers
+        run: python -m unittest -v tests.test_fully_consolidated_budget_contract
+      # konsol#348 S6 (WB1; S6-Q4 a, konsolidat#214): variance favourability is
+      # four states in one String column, never a summable Bool; the model, the
+      # test, its fixtures and the yml all name the new column and none the old.
+      - name: variance favourability is four states
+        run: python -m unittest -v tests.test_variance_favourability
       # konsolidat#369: the budget's ownership resolution is materialised once
       # (gold_budget_entity_ownership); no budget reader re-plans it inline.
       - name: budget ownership materialised once
@@ -215,6 +231,14 @@ jobs:
       # with its declared Rate Set.
       - name: budget cycles DDL carries the Rate Set
         run: python -m unittest -v tests.test_budget_cycles_ddl
+      # konsol#348 S6-Q1 (b): a forecast scenario's declared current round
+      # reaches the warehouse; init-db.sql carries konsol's DDL verbatim.
+      - name: current forecasts DDL is konsol's declaration
+        run: python -m unittest -v tests.test_current_forecasts_ddl
+      # konsol#348 S6: the interim one-approved-round rule left with konsol's
+      # refusal; every forecast reader takes the declared current round.
+      - name: the interim forecast rule is gone
+        run: python -m unittest -v tests.test_no_interim_forecast_rule
       # konsol#348 S4 (W2): every reader of a governed or historical rate names
       # the Rate Set it reads; the model, the guard and the deploy precheck take
       # the one flagged Is Actuals.
@@ -235,6 +259,8 @@ jobs:
       # workflow's --vars payloads, and its header does not swallow its query.
       - name: fixture-only tests stay out of site builds
         run: python -m unittest -v tests.test_fixture_only_tests
+      - name: fixture gate shards partition the fixture list
+        run: python -m unittest -v tests.test_fixture_gate_shard
       # konsolidat#181: the full-build job builds everything, guards the
       # zero-dimension case (konsolidat#220) and fails on a skipped test.
       - name: full-build job builds everything and fails on a skip
@@ -307,10 +333,20 @@ jobs:
   fixture-gate:
     name: test fixtures make their tests pass or flag
     runs-on: ubuntu-latest
-    # 75, raised from 45 on 11 Nov 2026: #345 took the fixtures from 153 to 186
-    # and the job from ~26 min to 35-45 min; on main it was cancelled at 45 min
-    # after 175 of 186 fixtures, twice. The fixtures run one by one (~14 s each).
-    timeout-minutes: 75
+    # Sharded 3 ways on 17 Nov 2026 (CI-1), timeout back to 45 min. Why: #358
+    # had 293 fixtures and the serial job ran 73.5 min against a 75 min limit
+    # and was cancelled. Each shard prepares its own throwaway ClickHouse
+    # (service container per matrix job) and runs every third fixture by sorted
+    # path (scripts/fixture_gate.py --shard K/N). Matrix jobs are named
+    # "test fixtures make their tests pass or flag (1)" .. "(3)".
+    # History: 45 min until 11 Nov 2026; 75 min then, because #345 took the
+    # fixtures from 153 to 186 and main was cancelled at 45 min twice (~14 s
+    # each, run one by one); 3 x 45 min from 17 Nov 2026.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     # konsolidat#266 (Deepak Pai, 11 Oct 2026, option G-1). Every fixture in
     # dbt_project/test_fixtures runs: a `.must_flag.` fixture must make its
     # test FAIL or WARN, any other must make it PASS. A test that cannot fail
@@ -351,14 +387,42 @@ jobs:
           python-version: '3.11'
       - run: pip install "dbt-core==1.12.3" "dbt-clickhouse==1.9.3"
       - name: every fixture, against the DDL of a fresh build
-        run: python scripts/fixture_gate.py --all --prepare-ci --log-dir ci-logs/fixtures
+        run: python scripts/fixture_gate.py --all --prepare-ci --shard ${{ matrix.shard }}/${{ strategy.job-total }} --log-dir ci-logs/fixtures-${{ matrix.shard }}
       - name: upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fixture-gate-logs
+          name: fixture-gate-logs-${{ matrix.shard }}
           path: ci-logs/
           if-no-files-found: ignore
+
+  # konsolidat#370 B (Deepak Pai, 18 Nov 2026): the shards together must have run
+  # every fixture exactly once. Each shard writes fixture-gate-ran.json into its
+  # logs. This job fails if a shard failed, never started, or skipped or
+  # repeated a fixture, so a missing shard cannot leave the workflow green.
+  # N is the length of the matrix above; nothing here repeats it.
+  fixture-gate-complete:
+    name: test fixtures, every shard ran every fixture
+    runs-on: ubuntu-latest
+    needs: fixture-gate
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fixture-gate-logs-*
+          path: shards
+      - name: every fixture ran exactly once
+        run: python scripts/fixture_gate.py --check-shards shards
+      - name: every shard passed
+        if: needs.fixture-gate.result != 'success'
+        run: |
+          echo "fixture gate shards: ${{ needs.fixture-gate.result }}"
+          exit 1
 
   tb-only-first-build:
     name: first build on a fresh TB-only site

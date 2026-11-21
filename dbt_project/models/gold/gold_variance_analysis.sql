@@ -5,7 +5,7 @@
     )
 }}
 
-{# PRD-7: Variance analysis — actual vs budget with favorable/unfavorable logic.
+{# PRD-7: Variance analysis — actual vs budget with a four-state favourability.
 
    konsolidat#206: which scenario is the actual and which are budgets is what
    each site declares on konsol's Scenario doctype (epm_gold.scenario_definitions
@@ -184,28 +184,29 @@ combined as (
             then (g.actual_amount - g.budget_amount) / abs(g.budget_amount) * 100
             else null
         end as variance_pct,
-        {# Favourable by the account's normal balance (konsol#348 S3 B13, QB7 a,
-           BUD-7-a), read from the chart: silver_main_accounts.normal_balance,
-           konsol's Main Account. Amounts are signed debit - credit (QB6 a), so
-           a credit-normal account (revenue) is favourable when the actual is
-           more credit than the budget, i.e. its signed actual is below its
-           signed budget, and a debit-normal account (expense) when the actual
-           is less debit, again below the budget. Both branches read "actual
-           below budget" under debit-positive signs; they are spelled out so the
-           rule reads in accounting terms. Until B13 the rule read "Revenue:
-           actual > budget", which on signed amounts marked less revenue as
-           favourable. No favourable direction, so false: no budget, a
-           balance-sheet account, and an account whose normal balance is not
-           declared or that is not in the chart (join_use_nulls=0 reads '').
-           assert_variance_favorable_follows_normal_balance checks it from the
-           chart and the amounts. #}
-        case
-            when g.budget_amount is null then false
-            when coalesce(am.is_pnl, 0) = 0 then false
-            when am.normal_balance = 'Credit' then g.actual_amount < g.budget_amount
-            when am.normal_balance = 'Debit' then g.actual_amount < g.budget_amount
-            else false
-        end as variance_favorable,
+        {# Favourability from the variance SIGN only (konsol#562 E, Deepak Pai,
+           18 Nov 2026; amends the gate half of BUD-7-a, 7 Nov 2026, which let
+           the chart's normal_balance gate it). Four states in one String,
+           never a summable flag:
+             'favourable'     a P&L account whose signed actual is below its
+                              signed budget;
+             'unfavourable'   above it;
+             'on_budget'      actual equals budget exactly (konsol#562 ii);
+             'not_applicable' a balance-sheet account, or one not in the
+                              chart (join_use_nulls=0 reads is_pnl 0).
+           Amounts are signed debit - credit (QB6 a), so "below budget" is
+           good for revenue (more credit) and for cost (less debit) alike.
+           A P&L account with a blank normal balance is judged by its sign.
+           No budget line is a budget of zero ("Unbudgeted is unfavourable",
+           Deepak Pai, 22 Sep 2026: budget 0, actual 10 is unfavourable 10).
+           assert_variance_favourability_follows_sign checks it from the chart
+           (is_pnl) and the amounts. #}
+        multiIf(
+            coalesce(am.is_pnl, 0) = 0, 'not_applicable',
+            g.actual_amount < coalesce(g.budget_amount, 0), 'favourable',
+            g.actual_amount > coalesce(g.budget_amount, 0), 'unfavourable',
+            'on_budget'
+        ) as variance_favourability,
         g.budget_scenario_id as budget_scenario_id
     from grouped as g
     left join account_meta as am
