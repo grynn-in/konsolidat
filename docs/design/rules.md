@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **209** |
-| carrying their reasoning | 187 |
-| citing the issue that caused them | 182 |
+| assertions | **218** |
+| carrying their reasoning | 196 |
+| citing the issue that caused them | 191 |
 | severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 182 |
+| severity `error` (stops the build, and its children) | 191 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,9 +26,9 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 20
 - [Currency and translation](#currency-and-translation) — 36
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 24
-- [Acquisitions and disposals](#acquisitions-and-disposals) — 14
-- [Intercompany](#intercompany) — 12
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
+- [Acquisitions and disposals](#acquisitions-and-disposals) — 15
+- [Intercompany](#intercompany) — 18
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
@@ -36,7 +36,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [The chart of accounts](#the-chart-of-accounts) — 7
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 26
-- [Other](#other) — 8
+- [Other](#other) — 9
 
 ---
 
@@ -560,6 +560,14 @@ Each pair's two sides are recomputed from gold_consolidated_trial_balance at 100
 
 <sub>`error` · `tests/assert_nci_account_declared_for_partial_subs.sql` · konsol#117 konsolidat#204 konsolidat#208</sub>
 
+### `nci_attribution_carries_the_result_slices`
+
+**konsolidat#245 option D (Deepak Pai, 3 Oct 2026: a consolidation entry carries the dimension values of whatever knows them;**
+
+inherit where derivable). The NCI attribution (layer 'nci_attribution', gold_nci_attribution_journal) is the minority's share of the subsidiary's own P&L, and that P&L carries dimension values, so its result legs are derivable per slice: in every slice the retained-earnings line is minus (1 - ownership) x that slice's translated P&L (year-end close rows excluded), and the NCI line is its opposite. The CTA leg is a share of the entity's one CTA plug, which has no slice by arithmetic (assert_sliceless_layers_carry_no_dimension), so it and the NCI line's CTA part sit in the blank slice. Read from the layer as gold_fully_consolidated_tb carries it, which is where a dimension slice is reported. Two checks, one row per failing (group, entity, period, slice): 1. the retained-earnings line of the slice equals the expected share; 2. the journal nets to zero within the slice (the NCI line follows the result legs into their slices, not only the total). assert_nci_attribution_equals_minority_result checks the entity-period totals; this test checks how they are spread. Before this change every line was blank, so a sliced P&L failed check 1. Fixture: test_fixtures/assert_nci_attribution_carries_the_result_slices.sql.
+
+<sub>`error (default)` · `tests/assert_nci_attribution_carries_the_result_slices.sql` · konsolidat#245</sub>
+
 ### `nci_attribution_equals_minority_result`
 
 **konsol#117 pair 2 K2 (konsolidat#204 option (a), IFRS 10.B94): each line of the NCI attribution journal posted for a partly owned full-method subsidiary equals the minority's share of its result and CTA.**
@@ -736,6 +744,14 @@ Before, this test judged fiscal period P at the first of calendar month P, the s
 
 <sub>`error (default)` · `tests/assert_post_disposal_excluded.sql` · konsolidat#171 konsolidat#252</sub>
 
+### `post_disposal_pnl_carries_its_slices`
+
+**konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026: disposal line 105 (post_disposal_pnl, the entity's P&L after the disposal date) INHERITS the dimension slices of the P&L it removes, the same as pnl_proration.**
+
+It extends the 3 Oct 2026 rule "inherit where derivable": line 105 is the entity's P&L by account times the removed fraction, the derivation pnl_proration already slices. Rejected: B, keep it blank under the deal-journal rule, which leaves the post-disposal P&L in each segment and offsets it only on the blank slice, so segment P&L is overstated by exactly that amount. Judged on gold_fully_consolidated_tb, where segment P&L is read, per (group, entity, year, period, P&L account, slice): expected = -group_amount of that slice in gold_consolidated_trial_balance x removed_fraction modelled = the 'disposal' layer on that account and slice, less the journal's gain_loss line (199), which is blank and is the only other disposal line a P&L account can carry removed_fraction is re-derived from the sources exactly as assert_partial_period_pnl_matches_treatment derives it (days after the disposal date to the period end, over the period's days; the deal period is the lowest Regular tuple whose span holds the date), so the model and this test cannot share a mistake. Only groups whose root declares 'Pro-rate by days' and full disposals the journal posted are judged; that sibling test judges the account totals and every other treatment. On the base, a revenue of -3,000 on two cost centres (-1,800 / -1,200), disposed on the 20th of a 30-day period, posted +1,000 on the blank slice: each cost centre kept its whole P&L. A difference of more than 0.01 on any slice is one row. Error severity: a segment carrying P&L the group did not hold is a wrong consolidated number that every account total accepts.
+
+<sub>`error (default)` · `tests/assert_post_disposal_pnl_carries_its_slices.sql` · konsolidat#245</sub>
+
 ---
 
 ## Intercompany
@@ -768,6 +784,14 @@ An account paired with two counterparts would have one side matched twice, which
 
 <sub>`error (default)` · `tests/assert_ic_difference_cause.sql` · konsol#305 konsolidat#175</sub>
 
+### `ic_difference_on_the_blank_slice`
+
+**konsolidat#245 Q1 A, decided by Deepak Pai on 21 Nov 2026: the intercompany DIFFERENCE entry (the unmatched residual) is posted on the blank slice, on BOTH of its legs, the IC-account leg included.**
+
+Only the matched part of a pair carries each side's slices (option C, 6 Oct 2026). Rejected: B, keep the IC-account leg sliced, which splits the unmatched part by the matched part's mix and gives a segment a difference it did not produce. Layer 2 of gold_fully_consolidated_tb carries no elimination_kind, and the matched and difference entries of a pair share one journal_id (the rule_id 'IC:<account_a>/<account_b>'), so the check is a bound: on each account of each pair rule, what layer 2 posts on NON-BLANK slices can be at most the matched part. The allowance is the sum, over the pair's sides on that account, of the absolute matched elimination; a side whose slices do not cover its leg posts it on the blank slice, which only lowers the sliced figure, so a correct layer never exceeds the allowance. A difference leg on the IC account has the sign of the matched leg on that account (both reduce the side's balance), so a sliced difference always pushes the sliced figure past the allowance by the difference itself. The basis is the pair's. A balance pair is eliminated to date (gold_ic_eliminations decision 14), so both figures are taken to date at every period layer 2 posted a sliced row; a movement pair is compared period by period. On the base, a receivable of 100 split 60 / 40 over two cost centres against a payable of 90 put the residual 10 on the cost centres (-6 / -4) beside the matched -54 / -36: sliced 100 against an allowance of 90. Error severity: a sliced difference is a segment balance the segment did not book.
+
+<sub>`error (default)` · `tests/assert_ic_difference_on_the_blank_slice.sql` · konsolidat#245</sub>
+
 ### `ic_eliminated_in_full`
 
 **konsol#117 pair 2 K3 (konsolidat#204 option (a);**
@@ -783,6 +807,22 @@ Deepak Pai, 8 Nov 2026): intercompany eliminations are posted IN FULL. IFRS 10.B
 Every elimination row carries both legs, so "debit + credit = 0" per row is true by construction and proves little on its own. The checks that can fail: 1. entry: each row's two legs net to zero (kept: it is what the layer relies on); 2. layer: the ic_elimination layer of gold_fully_consolidated_tb nets to zero per group and period, so both legs of every entry reached it; 3. pair: on the pair's basis (decision 14: to date for a balance-sheet pair, the period for a P&L pair), what the two sides hold (in full, translated: konsol#117 pair 2 K3, eliminations are posted at 100%) plus the eliminations nets to zero when the group has an intercompany-difference account, and to exactly the residuals when it has none (only the matched amount is eliminated then).
 
 <sub>`error (default)` · `tests/assert_ic_elimination_nets_zero.sql` · konsol#117 konsolidat#148</sub>
+
+### `ic_elimination_share_is_bounded`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than its own leg. THE BOUND IS 1, which is what the code guarantees: layer 2 weights by abs(slice)/gross, so shares lie in [0,1] and sum to 1. The previous version of this test asserted 100x while the code of the day guaranteed 50.5x, so it was slack by a factor of two and could not fail on any input — the exact tautology it was written to replace (re-review round 3, F2). A test whose threshold trails the code does not pin the code. KEYED ON THE PAIR, not the account (re-review round 3, F3). Keyed on account alone, a small leg exploded on an account that also carries a large leg was invisible to max(): one measured fixture hid a 100,000x violation on an account whose other leg was 5,000,000. Real intercompany control accounts carry many legs of very different sizes, so account-level max() is the wrong grain. Movement-basis pairs only (PR #260 F1): a balance pair's slice posts the change in its TO-DATE share, which a reclass between slices makes larger than the period's leg (the leg can be 0). assert_ic_slice_to_date_eliminated checks balance pairs instead. Error severity: a slice moved further than its leg is a wrong consolidated number, and every total-based check passes while it happens.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_share_is_bounded.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_elimination_slices_sum_to_the_leg`
+
+**konsolidat#245 option C.**
+
+PR #260 review finding F4: nothing tested what layer 2 actually does. The old test asserted sum(slice_mov) = side_mov per side, which the window function produces and so cannot fail arithmetically. The two things that CAN go wrong were untested, and both were real: F1  a side whose slices summed to zero took factor 1.0 on EVERY slice, so the leg was emitted N times at full amount; F2  the apportionment denominator omitted the partner, so a leg was split over balances owed to other partners — totals right, slices wrong. Totals and "nets to zero" cannot see F2 at all. This asserts the thing that can: for each elimination leg, layer 2's per-slice amounts must sum to the leg amount gold_ic_eliminations published, within materiality. WHAT THIS TEST IS AND IS NOT, corrected after the re-review said so. It CANNOT FAIL on the current code. Shares are normalised in all three branches (apportionable sums to 1, flat is one row at 1.0, a join miss is one row at 1.0), so sum(emitted) = leg for every possible input. It is a REGRESSION GUARD — it would have caught the original defect, where a side whose slices cancelled emitted the leg N times at full amount — and it is NOT evidence that layer 2 is right today. It is also BLIND TO MISATTRIBUTION. An earlier version of this header claimed it was "paired with the per-pair grain below"; there is no pair grain below. legs_by_account groups on (group, year, period, account) only: entity is dropped and partner was never carried, so a leg split across the wrong partner's slices reconciles here perfectly. That defect is prevented by the join carrying partner, not detected here. And legs_by_account's netting hides one case by construction: when counterpart_account is blank both legs of a pair land on one account, so a symmetric error on both sides nets to zero on both sides of the comparison. assert_ic_elimination_share_is_bounded is the REGRESSION GUARD for the magnification defects. Round 4 is explicit that it, too, cannot fail on correct code: shares are in [0,1] and sum to 1, so no slice can exceed its leg. It goes red on the round-2 and round-3 code (and on its committed .must_flag fixture), which is what it is for. No test in this layer proves today's attribution is RIGHT; they prove it has not regressed. Error severity: a leg that does not reconcile is a wrong consolidated number. One row per offending leg.
+
+<sub>`error (default)` · `tests/assert_ic_elimination_slices_sum_to_the_leg.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `ic_elimination_within_balance`
 
@@ -823,6 +863,30 @@ A P&L pair matches on the period's movement. 1. basis: a pair on a balance-sheet
 Every elimination posted while both sides were in the group has been reversed. Membership is resolved here from the ownership data itself, not from gold_entity_ownership or the model's spine: an entity line-consolidates into a group at a date when EVERY link of its chain to that group (consolidation_ancestry) has an ownership period covering the date with method full or proportional. So a partner that was disposed of, a sub-group sold while its own entity's ownership stays open, and a stake moved to equity all count as having left, per group. For every balance-sheet pair, and every period the warehouse holds from the pair's first reconciliation row to the group's latest period, in which either side is not a member: the pair's eliminations to date, per account and entity, are 0. That covers the periods before a pair joins (nothing posted yet) and every period after it left (all reversed).
 
 <sub>`error (default)` · `tests/assert_ic_pair_left_is_reversed.sql` · konsolidat#171 konsolidat#175 konsolidat#252</sub>
+
+### `ic_side_slices_sum_to_the_side`
+
+**konsolidat#245 option D / layer 2 option C (Deepak Pai, 6 Oct 2026).**
+
+gold_ic_side_slices must be gold_ic_reconciliation's `sides` CTE split by the declared dimensions and NOTHING ELSE: same source, same filters, same join. Every slice of a side must therefore sum to exactly that side's movement. Round 4, F7: this identity is NOT what makes the split exact — layer 2 weights by magnitude, which is an allocation, and is bounded regardless. What the identity buys is that the apportionment base is the same movement gold_ic_reconciliation reconciles, so the two cannot drift apart. If it breaks — a different filter, a join that fans out, a dimension column that is NULL rather than '' — the split silently redistributes an elimination across slices whose amounts no longer add up to what was eliminated, and every row still balances. This test is the guard against that, so it is error severity, not warn. One row per side whose slices do not reconcile, with both figures. Compared with materiality_floor(), not exact equality: both sides are Float64 sums and a slice split changes the summation order.
+
+<sub>`error (default)` · `tests/assert_ic_side_slices_sum_to_the_side.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_not_moved_past_its_own`
+
+**konsolidat#245.**
+
+No elimination slice may be moved further than it moved itself. THE ASSERTION NO TEST IN THIS LAYER MAKES, and the reason five rounds of guards all passed while the numbers were wrong. Every existing assertion here is satisfied by construction: shares lie in [0,1] and sum to 1, so "the slices sum to the leg" and "no slice exceeds the leg" cannot fail. The quantity that CAN be wrong is the one none of them compares — a slice's share of the leg against that slice's OWN movement. amount_i = |leg| x aligned_i / aligned_gross, so amount_i <= aligned_i holds exactly when aligned_gross >= |leg|. At leg_coverage() = 0.5 the gate allowed |leg| <= 2 x aligned_gross, so a slice could take twice what it booked: measured through the real chain, a cost centre that ever booked +100 ended at -100, on an intercompany receivable, with the account total exactly right. That is what this test exists to catch. Only the SLICED rows are checked. A whole-leg row is blank-dimensioned by design and carries the entire leg, which is the declared answer when the side cannot account for it. Movement-basis (P&L) pairs only: a balance pair is checked to date by assert_ic_slice_to_date_eliminated (PR #260 F1). Error severity: a slice moved past its own movement is a wrong consolidated number that every total-based check accepts. Two passes, because ClickHouse refuses a window function inside an aggregate (ILLEGAL_AGGREGATION) — the same limit the model hit.
+
+<sub>`error (default)` · `tests/assert_ic_slice_not_moved_past_its_own.sql` · konsolidat#245 konsolidat#260</sub>
+
+### `ic_slice_to_date_eliminated`
+
+**konsolidat#245 option C, PR #260 review F1.**
+
+A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
+
+<sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260</sub>
 
 ### `unrealized_profit_at_operator_share`
 
@@ -1647,6 +1711,14 @@ The fixture (test_fixtures/assert_latest_estimate_hand_table.sql) declares FY202
 The macro resolves such a row as method_source = 'undeclared' and consolidation_method 'none', so nothing consolidates for (group, entity); this test fails the build naming the group, the entity, the period, the sum and the paths. The percentage decides nothing here: 60% held as two 30% equity stakes may be joint control (IFRS 11) or control (IFRS 10); only the group can say. Fixtures: assert_method_declared_for_multi_path.undeclared.must_flag.sql (flags 1), .declared_full.sql and .declared_equity.sql (pass).
 
 <sub>`error (default)` · `tests/assert_method_declared_for_multi_path.sql` · konsol#117</sub>
+
+### `sliceless_layers_carry_no_dimension`
+
+**konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a consolidation entry carries the dimension values of whatever knows them.**
+
+The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none, with one exception: disposal line 105 (account_role 'post_disposal_pnl'), see below. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. The NCI attribution ('nci_attribution', gold_nci_attribution_journal) is half covered. Its result legs inherit the slices of the entity's P&L (option D: derivable, so inherited; assert_nci_attribution_carries_the_result_slices). Its 'CTA' line is a share of the same entity-level CTA plug as the 'cta' layer, so it is blank by the same arithmetic and is asserted here by account. The CTA part of its NCI line is blank too, but shares the NCI account with the sliced result part, so it cannot be told apart here; the slice test's every-slice-nets-to-zero check covers it. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. Disposal line 105 (post_disposal_pnl) is exempt: konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026, extends "inherit where derivable" to it. It is the entity's P&L by account times the removed fraction, the derivation pnl_proration slices, so it carries the slices of the P&L it removes (assert_post_disposal_pnl_carries_its_slices). Rejected: B, keep it blank, which overstated segment P&L by the post-disposal P&L. Because gold_fully_consolidated_tb sums the journal's lines to the account grain and drops account_role, the disposal layer is judged here on gold_business_disposal_journal itself, by role: every line except 'post_disposal_pnl' must stay blank. Equity method stays blank and asserted: konsolidat#245 Q3 A, decided by Deepak Pai on 21 Nov 2026 (it had been settled by Claude on 6 Oct 2026 under his instruction). IAS 28 presents the result as one line, and the associate's dimensions are not the group's. Rejected: B, inherit the associate's slices. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
+
+<sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#345</sub>
 
 ### `translation_rates_are_the_actuals_sets`
 
