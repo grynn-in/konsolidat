@@ -194,7 +194,7 @@ Said plainly, because a client who knows IFRS 10 will ask.
 - **The equity method** entry is shown as it must be (share of result at the average rate, debit investment /
   credit income), for the associate ABPT and the joint venture ABJV. The warehouse model posted both legs with one
   sign and untranslated when this was written; the fix is on branch `fix-equity-method-journal`.
-- **"Yearly rates"** are not a rate type: Group Exchange Rate has Closing and Average per period. The only
+- **"Yearly rates"** are not a rate type: a Rate Sheet has Closing and Average per period. The only
   year-wide rate here is the 2023 annual average on FY2023 P12, because the whole FY2023 result sits in that period.
 
 ## Verification
