@@ -300,7 +300,7 @@ def fx(period, from_cur, rate_type, quote, per="1", year=2025, to="EUR", reason=
 
 FX_ROWS = [fx(1, "USD", "Closing", 0.92), fx(1, "USD", "Average", 0.91),
            fx(1, "INR", "Closing", 0.955, "100"), fx(1, "INR", "Average", 0.95, "100"),
-           fx(2, "USD", "Closing", 0.93), fx(2, "USD", "Average", 0.925)]
+           fx(2, "USD", "Closing", 0.93, reason="Feb"), fx(2, "USD", "Average", 0.925)]
 
 
 def sheet_creates(site):
@@ -330,7 +330,7 @@ class FxRatesLoadRateSheets(unittest.TestCase):
         site = FakeSite()
         run_loader(site, {"FX_Rates": [dict(r) for r in FX_ROWS]})
         for w in sheet_creates(site):
-            for banned in ("source_note", "copied_from", "supersedes", "amended_from", "status", "change_reason"):
+            for banned in ("source_note", "copied_from", "supersedes", "amended_from", "status"):
                 self.assertNotIn(banned, w[3])
             for r in w[3]["rates"]:
                 for banned in ("source", "erp_average_quote", "erp_closing_quote", "legacy_documents", "rate"):
@@ -374,12 +374,35 @@ class FxRatesLoadRateSheets(unittest.TestCase):
         self.assertIn("USD", out)
         self.assertEqual(sheet_creates(site), [])
 
-    def test_a_reason_in_the_sheet_is_reported_not_silently_dropped(self):
+    def test_the_sheets_reasons_are_sent_joined(self):
         site = FakeSite()
-        code, out = run_loader(site, {"FX_Rates": [fx(1, "USD", "Closing", 0.92, reason="treasury"),
-                                                   fx(1, "USD", "Average", 0.91)]})
+        rows = [fx(1, "USD", "Closing", 0.92, reason="ECB 2025-01-31"), fx(1, "USD", "Average", 0.91, reason="ECB 2025-01-31"),
+                fx(1, "INR", "Closing", 0.955, "100", reason="Treasury memo"), fx(1, "INR", "Average", 0.95, "100"),
+                fx(2, "USD", "Closing", 0.93, reason="Feb ECB"), fx(2, "USD", "Average", 0.925)]
+        code, out = run_loader(site, {"FX_Rates": rows})
         self.assertEqual(code, 0, out)
+        by_period = {w[3]["fiscal_period"]: w[3] for w in sheet_creates(site)}
+        self.assertEqual(by_period[1]["change_reason"], "ECB 2025-01-31; Treasury memo")
+        self.assertEqual(by_period[2]["change_reason"], "Feb ECB")
+
+    def test_a_moved_pair_without_a_reason_is_refused_by_sheet_and_pair(self):
+        site = FakeSite()
+        rows = [fx(1, "USD", "Closing", 0.92), fx(1, "USD", "Average", 0.91),
+                fx(2, "USD", "Closing", 0.93), fx(2, "USD", "Average", 0.925)]
+        code, out = run_loader(site, {"FX_Rates": rows})
+        self.assertEqual(code, 1)
+        self.assertIn("FY2025 P2", out)
+        self.assertIn("USD->EUR", out)
         self.assertIn("change_reason", out)
+        self.assertEqual(sheet_creates(site), [])
+
+    def test_an_unmoved_pair_needs_no_reason(self):
+        site = FakeSite()
+        rows = [fx(1, "USD", "Closing", 0.92), fx(1, "USD", "Average", 0.91),
+                fx(2, "USD", "Closing", 0.92), fx(2, "USD", "Average", 0.91)]
+        code, out = run_loader(site, {"FX_Rates": rows})
+        self.assertEqual(code, 0, out)
+        self.assertEqual([w[3].get("change_reason") for w in sheet_creates(site)], [None, None])
 
 
 if __name__ == "__main__":
