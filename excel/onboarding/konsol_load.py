@@ -269,7 +269,7 @@ class Loader:
             self.fail(sheet.name, label, e)
             return None
 
-    def submit_once(self, sheet, filters, doc, label):
+    def submit_once(self, sheet, filters, doc, label, hint=None):
         """Create and approve unless a live (draft or submitted) document already has the key.
 
         Approval is a plain submit, or for a workflow doctype (sheet.workflow) the two
@@ -294,6 +294,8 @@ class Loader:
                 self.approve(sheet, nm)
             self.note(sheet.name, what)
         except Failed as e:
+            if hint and "reason" in str(e).lower():
+                e = "%s (%s)" % (e, hint)
             self.fail(sheet.name, label, e)
 
     def approve(self, sheet, name):
@@ -397,8 +399,24 @@ class Loader:
                 problems.append("%s: two different %s quotes (%s and %s)" % (label, r.get("rate_type"), row[kind], r.get("quote")))
             else:
                 row[kind] = r.get("quote")
-        if any(r.get("change_reason") for r in rows):
-            print("    note: change_reason is not loaded (a Rate Sheet's reason is for a correction); the cells are ignored")
+        reasons = OrderedDict()   # (year, period) -> distinct non-empty change_reason cells
+        for r in rows:
+            cell = str(r.get("change_reason") or "").strip()
+            if cell and cell not in reasons.setdefault((r.get("fiscal_year"), r.get("fiscal_period")), []):
+                reasons[(r.get("fiscal_year"), r.get("fiscal_period"))].append(cell)
+        # The server wants a Reason for Change on any move while the Rate Move threshold is undeclared (a fresh
+        # site, which the loader cannot set), so refuse a move against the previous period of this load before sending.
+        last = {}
+        for (year, period) in sorted(sheets, key=lambda k: (str(k[0]), str(k[1]))):
+            moved = []
+            for pair, row in sheets[(year, period)].items():
+                now = (row.get("closing_quote"), row.get("average_quote"), row["quoted_per"])
+                if pair in last and last[pair] != now:
+                    moved.append("%s->%s" % pair)
+                last[pair] = now
+            if moved and not reasons.get((year, period)):
+                problems.append("FY%s P%s: %s moved from the previous period and the sheet has no reason; fill the "
+                                "change_reason column on a row of this period" % (year, period, ", ".join(moved)))
         if problems:
             for p in problems:
                 self.fail(sheet.name, p.split(":")[0], p)
@@ -407,7 +425,11 @@ class Loader:
             label = "FY%s P%s" % (year, period)
             key = {"rate_basis": "Statutory", "fiscal_year": year, "fiscal_period": period}
             doc = dict(key, rates=list(pairs.values()))
-            self.submit_once(sheet, key, doc, label)
+            if reasons.get((year, period)):
+                doc["change_reason"] = "; ".join(reasons[(year, period)])
+            self.submit_once(sheet, key, doc, label,
+                             hint="pairs: %s. If the server asked for a Reason for Change, fill the change_reason column "
+                                  "on a row of this period in the FX_Rates sheet" % ", ".join("%s->%s" % p for p in pairs))
 
     def load_hierarchies(self, sheet, rows):
         # a Published header needs at least one member, so a NEW hierarchy is created Draft and published by

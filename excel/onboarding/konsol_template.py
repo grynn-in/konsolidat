@@ -335,7 +335,7 @@ SHEETS: tuple[Sheet, ...] = (
             Col("rate_type", "Closing or Average.", True, "select", ("Closing", "Average"), width=10),
             Col("quote", "Units of to_currency per quoted_per units of from_currency, e.g. 0.955 (EUR per 100 INR).", True, "float", width=12),
             Col("quoted_per", "1, 10, 100, 1000 or 10000 units of from_currency.", True, "select", ("1", "10", "100", "1000", "10000"), width=10),
-            Col("change_reason", "Optional note (source of the rate). Not loaded: a Rate Sheet's Reason for Change is for a correction, so the loader reports a filled cell and sends nothing.", False, width=30),
+            Col("change_reason", "Reason for Change. Needed when a rate moves from the previous period (the first row of a period may carry it for the whole sheet). The distinct cells of a period are joined and sent as that Rate Sheet's reason.", False, width=30),
         ),
         key=("to_currency", "from_currency", "fiscal_year", "fiscal_period", "rate_type"), submit=True, workflow=True,
         notes=("A currency equal to the group currency needs no row (translates at 1).",
