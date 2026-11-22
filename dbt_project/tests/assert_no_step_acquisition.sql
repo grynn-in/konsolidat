@@ -16,7 +16,9 @@
     warehouse, loaded before that refusal or from outside konsol, so the build fails by name.
 
     One row per deal. The earlier holding is an Ownership Period of the same group and entity that is
-    effective before the deal date. The deal's own period is not earlier, whatever its effective date
+    effective before the deal date and still held the day before it (end_date on or after that day; an
+    open period carries 9999-12-31). An entity fully divested earlier and bought again is a fresh
+    acquisition with no previously held interest, so it is not named. The deal's own period is not earlier, whatever its effective date
     (a migrated deal's period may be dated before the deal): konsol stamps the period it creates or
     links with the deal's acquisition_date, so a period carrying THIS deal's date is its own. Only
     submitted rows reach the warehouse, so drafts and cancelled periods do not count.
@@ -42,4 +44,5 @@ inner join {{ source('epm_staging', 'ownership_periods') }} as op
     and op.data_area_id = bc.acquired_entity
 where op.effective_date < bc.acquisition_date
   and op.acquisition_date != bc.acquisition_date
+  and op.end_date >= subtractDays(bc.acquisition_date, 1)
 group by bc.name, bc.consolidation_group, bc.acquired_entity, bc.acquisition_date
