@@ -1,4 +1,4 @@
--- gate: build gold_consolidated_trial_balance assert_translation_rates_are_the_actuals_sets
+-- gate: build gold_ownership_exits gold_consolidated_trial_balance assert_translation_rates_are_the_actuals_sets
 -- gate: expect gold_consolidated_trial_balance built
 -- gate: expect assert_translation_rates_are_the_actuals_sets pass
 -- governed_rate_guard is unaffected by the budget (konsol#348 S4 W5): the ACTUALS build goes through

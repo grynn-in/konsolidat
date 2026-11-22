@@ -1,4 +1,4 @@
--- gate: build gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
+-- gate: build gold_ownership_exits gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
 -- assert_equity_historical_rate_is_asof, Opening period (konsolidat#171 step 2d, review F2/F3): must PASS when the
 -- historical rate is read as-of the ownership WINDOW date, not the period's end_date.
 --

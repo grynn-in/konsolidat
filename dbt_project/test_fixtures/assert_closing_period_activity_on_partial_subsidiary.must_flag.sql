@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance assert_closing_period_activity_on_partial_subsidiary
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance assert_closing_period_activity_on_partial_subsidiary
 -- gate: expect assert_closing_period_activity_on_partial_subsidiary flag 1
 -- MUST FLAG (konsol#117 pair 2 review, finding 4): nci_attribution_journal.sql with the FY2026 P13 close posted by the
 -- ERP, so its rows carry no is_year_end_close marker. ZZC is held at 70% (full): the P13 P&L would read as activity and

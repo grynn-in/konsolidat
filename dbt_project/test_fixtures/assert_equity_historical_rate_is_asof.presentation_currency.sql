@@ -1,4 +1,4 @@
--- gate: build gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
+-- gate: build gold_ownership_exits gold_trial_balance_by_partner gold_consolidated_trial_balance assert_equity_historical_rate_is_asof
 -- assert_equity_historical_rate_is_asof (konsol#374, option b; Deepak Pai, 7 Nov 2026): must PASS once a
 -- Historical Equity Rate is matched on the consolidating group's reporting currency.
 --

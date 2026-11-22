@@ -64,13 +64,25 @@
                        macros/budget_rates.sql). With it none, nothing below
                        changes: the three `if rate_set_column` blocks render
                        nothing.
+   exits_relation      konsolidat#335 (#358 review F1, F2): the relation holding
+                       the exit events, gold_ownership_exits' columns, or none.
+                       Actuals: ref('gold_ownership_exits'); the re-entry stint
+                       reset (spine_stints below) then applies, which is right
+                       because gold_ownership_exit_journal derecognises the
+                       pre-exit balance and the acquisition journal's line (0)
+                       brings it back in. Budget: none (the default). A budget
+                       posts no exit journal, so no reset: stint is 0 on every
+                       row, as before #358, and the core renders no join to the
+                       exits and no ref, so a tag:domain:scenarios build never
+                       reads a model it does not build. What a budget does at
+                       an exit is open (follow-up).
 
    Nothing here may add a column before partner_data_area_id of
    {p}consolidated: the actuals model appends by position (see its notes), and
    its final select orders partner_data_area_id, uses_historical_rate,
    retranslation_amount last. grain_extra columns sit after the dims, so a
    caller that passes any must place them in its own final select. #}
-{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='', rate_set_column=none) %}
+{% macro consolidation_core(source_cte, dims, rate_set_predicate, ownership_cte=none, grain_extra=[], scoped=true, p='', rate_set_column=none, exits_relation=none) %}
 {%- if ownership_cte is none %}{{ exceptions.raise_compiler_error('consolidation_core: ownership_cte is required: a CTE or relation with gold_entity_ownership\'s columns, resolved on the caller\'s period spine') }}{% endif -%}
 {%- if rate_set_predicate is none or (rate_set_predicate | trim) == '' or (rate_set_predicate | trim) == '1 = 1' %}{{ exceptions.raise_compiler_error('consolidation_core: rate_set_predicate is required: actuals_rate_set_predicate() for the actuals, the Cycle\'s set for a budget; a predicate that selects every set reads two rates for one key') }}{% endif -%}
 {%- set extra = [] -%}
@@ -600,24 +612,143 @@
     from {{ p }}fillers
 ),
 
+{# konsolidat#335 (task X7, X25): a key's retranslation restarts at a
+   re-entry. An exit (ownership_exits(): a bare link end) derecognises
+   everything the group carried for the entity up to it
+   (gold_ownership_exit_journal), and a later acquisition brings the balance
+   back in at the acquisition period's closing rate (the acquisition journal's
+   line (0)). Without a boundary the windows below would reach back across the
+   gap at the re-entry row and add cum_local(pre-exit) x (C(re-entry) -
+   C(last pre-exit period)) on top of line (0). After the re-entry row the
+   balance line (0) brought in is retranslated as usual (stint_marks). stint
+   counts the exits of (group, entity) whose first period out (out_fiscal_*,
+   the period after the last one the entity was consolidated in) is at or
+   before the row's period, so the rows of the exit period itself, which the
+   exit journal reverses, close the old stint. 0 for an entity that never
+   exited, so nothing else changes. A re-entry after a full Business Disposal
+   is not an exit (ownership_exits()) and keeps one stint. An exit belongs to
+   (group, entity), not to a grain_extra value, so every value of the extra
+   grain counts the same exits; the spine carries `extra` as entity_spine
+   does, and the join below keeps each value on its own spine rows. The
+   events are read from gold_ownership_exits (the macro materialised once,
+   task X22), not from the macro: one more copy of the ownership graph inside
+   the core's pipeline is what that model takes out of every build. The
+   caller passes them as exits_relation; with it none (the budget) neither
+   CTE below joins anything and stint is 0 on every row (see the header). #}
+{%- if exits_relation is not none %}
+{{ p }}spine_stints as (
+    select consolidation_group, data_area_id, fiscal_year, fiscal_period,
+        {{ dim_select(dims=extra, trailing=true) }}
+        sum(n) as stint
+    from (
+        select consolidation_group, data_area_id, fiscal_year, fiscal_period,
+            {{ dim_select(dims=extra, trailing=true) }}
+            toUInt32(0) as n
+        from {{ p }}entity_spine
+
+        union all
+
+        select s.consolidation_group, s.data_area_id, s.fiscal_year, s.fiscal_period,
+            {{ dim_select(dims=extra, prefix='s.', trailing=true) }}
+            toUInt32(1)
+        from {{ p }}entity_spine as s
+        inner join {{ exits_relation }} as x
+            on x.consolidation_group = s.consolidation_group
+            and x.data_area_id = s.data_area_id
+        where (toUInt16(x.out_fiscal_year), toUInt16(x.out_fiscal_period))
+            <= (toUInt16(s.fiscal_year), toUInt16(s.fiscal_period))
+    )
+    group by consolidation_group, data_area_id, fiscal_year, fiscal_period{{ dim_group_by(dims=extra, leading=true) }}
+),
+
+{# Every row's period is on its entity's spine (fillers are spine periods), so
+   the inner join drops nothing. #}
+{{ p }}densified_stints as (
+    select d.*, ss.stint as stint
+    from {{ p }}densified as d
+    inner join {{ p }}spine_stints as ss
+        on ss.consolidation_group = d.consolidation_group
+        and ss.data_area_id = d.data_area_id
+        and ss.fiscal_year = d.fiscal_year
+        and ss.fiscal_period = d.fiscal_period
+        {{ dim_join_on('ss', 'd', dims=extra) }}
+),
+{%- else %}
+{{ p }}densified_stints as (
+    select d.*, toUInt32(0) as stint
+    from {{ p }}densified as d
+),
+{%- endif %}
+
 {# The windows run over every row of every period (period_filter is applied
-   only in the final select), so a scoped build sees the key's history. #}
-{{ p }}retranslated as (
+   only in the final select), so a scoped build sees the key's history.
+
+   konsolidat#335 (task X16): the windows partition by the KEY only, never by
+   stint, so retranslated and close_pnl share one sort, as before X7. With
+   stint in the partition, close_pnl (partition key, fiscal_year) needed a
+   sort of its own; every window sort scatters its input by partition into
+   max_threads x streams outputs, and the extra one grew the pipeline past
+   the server's memory while building it, on an empty site (ClickHouse 24.8:
+   the first TB-only build and the fixture gate's --prepare-ci both failed
+   there). The stint boundary is applied by arithmetic instead.
+
+   konsolidat#335 (task X25): what restarts at a stint's first row is the
+   rate the balance was last carried at, not the balance. The out-of-group
+   periods have no row here (rated keeps in-group rows only), so a stint's
+   first row is its re-entry row: the first spine period at or after the
+   exit's first period out, and for a key with earlier rows always a row
+   (a filler when the key did not move). The acquisition journal's line (0)
+   brings the balance at the last pre-acquisition period-end in at that
+   period's closing rate, so the re-entry row retranslates nothing (0,
+   whatever the rate before the gap: X7's cum_local(pre-exit) x
+   (C(re-entry) - C(last pre-exit)) double count). Every later row is the
+   normal formula on the key's whole cumulative local balance,
+   cum_local_before x (C(t) - C(t-1)): the balance line (0) brought in is
+   retranslated like any other from then on. X7's subtraction of the
+   cumulative at the stint's first row left exactly that balance at the
+   re-entry rate for good (two_exits: FY2026 P10 short by
+   cum_local(P9) x (C(P10) - C(P9))). An entity that never exited has one
+   stint starting at its first row, where cum_local_before is 0 and the
+   previous rate is its own, so the figures are unchanged. The key here is
+   the threaded grain (dims + grain_extra), as in every other window of the
+   core. stint is dropped after use: the core's output columns are
+   unchanged.
+
+   The whole cumulative is the core's in-group local movements before the
+   row. It equals line (0)'s base plus the stint's movements when the entity
+   did not move while out of the group and had no history before its first
+   entry; a movement outside every stint is in line (0) but not here, so it
+   stays at the re-entry rate (follow-up, reported with X25). #}
+{{ p }}stint_marks as (
     select
         *,
-        if(
-            is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
-            toFloat64(sum(local_amount) over key_before)
-                * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
-            0
-        ) as retranslation_amount
-    from {{ p }}densified
+        sum(local_amount) over key_before as cum_local_before,
+        toUInt8(stint != lagInFrame(stint, 1, toUInt32(4294967295)) over key_all) as is_stint_start
+    from {{ p }}densified_stints
     window
         key_before as (
             partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(dims=grain, leading=true) }}
             order by fiscal_year, fiscal_period
             rows between unbounded preceding and 1 preceding
         ),
+        key_all as (
+            partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(dims=grain, leading=true) }}
+            order by fiscal_year, fiscal_period
+            rows between unbounded preceding and unbounded following
+        )
+),
+
+{{ p }}retranslated as (
+    select
+        * except (cum_local_before, is_stint_start, stint),
+        if(
+            is_balance_sheet = 1 and is_equity = 0 and fx_method not in ('average', 'historical'),
+            if(is_stint_start = 1, toFloat64(0), toFloat64(ifNull(cum_local_before, 0)))
+                * (closing_rate - lagInFrame(closing_rate, 1, closing_rate) over key_all),
+            0
+        ) as retranslation_amount
+    from {{ p }}stint_marks
+    window
         key_all as (
             partition by consolidation_group, data_area_id, main_account, partner_data_area_id{{ dim_partition_by(dims=grain, leading=true) }}
             order by fiscal_year, fiscal_period

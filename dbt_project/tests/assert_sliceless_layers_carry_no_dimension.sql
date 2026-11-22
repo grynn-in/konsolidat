@@ -62,9 +62,14 @@ from {{ ref('gold_fully_consolidated_tb') }}
 -- 'pnl_proration' (gold_acquisition_adjustments) is NOT here: konsolidat#345
 -- made that layer real, it carries the dimension slice of the P&L it prorates.
 -- gold_business_combination_journal 'acquisition', gold_goodwill_amortisation_journal 'goodwill_amortisation',
+-- gold_ownership_exit_journal 'ownership_exit';
 -- 'disposal' (gold_business_disposal_journal) is judged by account_role in the second branch below.
 where (adjustment_type in (
         'acquisition', 'goodwill_amortisation',
+        -- the ownership exit journal (gold_ownership_exit_journal, konsolidat#335 option A, decided by
+        -- Deepak Pai on 14 Nov 2026): a deal journal, blank by the 3 Oct 2026 rule; it reverses the
+        -- carried balance per account and carries no dimension columns
+        'ownership_exit',
         -- the CTA, blank by arithmetic: an entity-level residual has no slice
         'cta',
         -- and equity method, blank by decision (konsolidat#245 Q3 A, Deepak

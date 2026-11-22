@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **222** |
-| carrying their reasoning | 199 |
-| citing the issue that caused them | 196 |
-| severity `warn` (reports, does not stop a build) | 27 |
-| severity `error` (stops the build, and its children) | 195 |
+| assertions | **229** |
+| carrying their reasoning | 205 |
+| citing the issue that caused them | 203 |
+| severity `warn` (reports, does not stop a build) | 28 |
+| severity `error` (stops the build, and its children) | 201 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -26,17 +26,17 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 
 - [Trial balance intake](#trial-balance-intake) — 20
 - [Currency and translation](#currency-and-translation) — 36
-- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 25
-- [Acquisitions and disposals](#acquisitions-and-disposals) — 15
-- [Intercompany](#intercompany) — 18
+- [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
+- [Acquisitions and disposals](#acquisitions-and-disposals) — 16
+- [Intercompany](#intercompany) — 19
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
 - [Budget, forecast and variance](#budget-forecast-and-variance) — 37
-- [The chart of accounts](#the-chart-of-accounts) — 8
+- [The chart of accounts](#the-chart-of-accounts) — 9
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 27
-- [Other](#other) — 11
+- [Other](#other) — 14
 
 ---
 
@@ -206,9 +206,9 @@ silver_tb_movements synthesises a post-close period for a 'Period-end balance' e
 
 **konsolidat#257: a balance-sheet balance is translated at the CLOSING rate of the reporting date (IAS 21.39(a)), not as the sum of each period's movement at that period's own closing rate.**
 
-gold_consolidated_trial_balance keeps the movement grain: one row per (group, entity, period, account, partner, dimensions) carrying that period's translated movement. Every reader sums those movements to get a balance. So for every key of a balance sheet account that is translated at the closing rate, the translated movements summed to period p must equal the local movements summed to p times p's closing rate: | sum(translated_amount to p) - sum(local_amount to p) x closing(p) | <= 0.01 Which keys: a balance sheet account (is_balance_sheet = 1) that is not equity (is_equity = 0; equity is never revalued, decided on #257 Q2, 6 Oct 2026) and whose chart declares fx_method = 'closing' or declares nothing (an undeclared account translates at the closing rate). An account declared 'average' or 'historical' is out of scope. The declaration comes from the chart (silver_main_accounts), not from the rate the row happens to carry. Which periods: EVERY period in which the entity has any row for the group (the entity's spine), from the key's first row on - not only the periods the key itself moved in. A balance that did not move in a period still has to be retranslated there; checking only the key's own rows would miss exactly that case. The closing rate of a spine period is read from the entity's rows in that period (one currency pair per entity and group, so one closing rate). Same-currency entities translate at 1.0 and are skipped.
+gold_consolidated_trial_balance keeps the movement grain: one row per (group, entity, period, account, partner, dimensions) carrying that period's translated movement. Every reader sums those movements to get a balance. So for every key of a balance sheet account that is translated at the closing rate, the translated movements summed to period p must equal the local movements summed to p times p's closing rate: | sum(translated_amount to p) - sum(local_amount to p) x closing(p) | <= 0.01 Which keys: a balance sheet account (is_balance_sheet = 1) that is not equity (is_equity = 0; equity is never revalued, decided on #257 Q2, 6 Oct 2026) and whose chart declares fx_method = 'closing' or declares nothing (an undeclared account translates at the closing rate). An account declared 'average' or 'historical' is out of scope. The declaration comes from the chart (silver_main_accounts), not from the rate the row happens to carry. Which periods: EVERY period in which the entity has any row for the group (the entity's spine), from the key's first row on - not only the periods the key itself moved in. A balance that did not move in a period still has to be retranslated there; checking only the key's own rows would miss exactly that case. The closing rate of a spine period is read from the entity's rows in that period (one currency pair per entity and group, so one closing rate). Same-currency entities translate at 1.0 and are skipped. konsolidat#335 (task X7): the balance restarts at a re-entry. An exit (ownership_exits(), a bare link end) derecognises what the group carried (gold_ownership_exit_journal) through its exit period, so from the exit's first period out (out_fiscal_*) on a key's balance counts only the rows at or after the latest such period up to p; the model's windows reset the same way (its spine_stints). konsolidat#335 (task X25): the acquisition journal's line (0) brings the balance at the re-entry at the re-entry period R's closing rate (the first spine period at or after that first period out), and the model retranslates it from then on. So the model's own rows from R to p carry sum(local_amount from R to p) x closing(p) + sum(local_amount before R) x (closing(p) - closing(R)) the second term being the balance line (0) holds, retranslated from its rate to p's. With no exit, nothing is before R and the rule is the one above.
 
-<sub>`error (default)` · `tests/assert_bs_translated_at_closing_rate.sql` · konsolidat#257</sub>
+<sub>`error (default)` · `tests/assert_bs_translated_at_closing_rate.sql` · konsolidat#257 konsolidat#335</sub>
 
 ### `budget_blank_layer_currency`
 
@@ -610,6 +610,14 @@ Ownership Period is the only grain now, so a node with no period covering the da
 
 <sub>`error (default)` · `tests/assert_ownership_chain_complete.sql`</sub>
 
+### `ownership_exit_events`
+
+**konsolidat#335, option A (Deepak Pai, 14 Nov 2026), task X1: the exit events of macros/ownership_exits().**
+
+An exit event: E is live in G (complete chain, method full, proportional or equity) in the previous declared period, is not live in a period F, and was not ended by a full Business Disposal. A successor period or an owner-to-owner transfer keeps E live, so it is not an exit (konsol#305-Q1-1). The event's period P (#358 review F1) is the Regular period whose declared span holds the end date that caused it (lowest tuple), as a full disposal's period holds its disposal_date: E is derecognised by the end of the period the group last held it in (IFRS 10.25). With no such end date, or none a Regular period before F holds, P = F. The macro's F (out_fiscal_*) and previous period are checked too. One check, one row per failure. ORACLE: for every entity whose chain is a single direct link (no sub-group above it) the exit events are recomputed here from epm_staging.ownership_periods, business_disposals and the fiscal calendar directly, never through ownership_resolution or declared_periods(): the window dates (Regular, Closing = its year's last Regular, Opening/Adjustment = between two Regulars), the held-at-end then not-ended-before-the-start reading, and the previous declared period. An event the macro has and the oracle has not, or the other way, is a row. Oracle limit: it reads one link per entity, so a chain with an owner above is outside it.
+
+<sub>`error (default)` · `tests/assert_ownership_exit_events.sql` · konsol#305 konsolidat#335 konsolidat#358</sub>
+
 ### `ownership_paths_acyclic`
 
 **konsol#117 (design section 3): a path from a group to an entity never visits a node twice.**
@@ -720,6 +728,14 @@ A row here is a model bug, not a data problem. One test per journal model (row J
 
 <sub>`error (default)` · `tests/assert_goodwill_amortisation_journal_balances.sql` · konsolidat#198</sub>
 
+### `goodwill_amortised_after_reacquisition`
+
+**konsolidat#335 review F5: under goodwill_treatment 'Amortise' every deal that booked goodwill posts its first instalment, whatever exit or disposal the entity had BEFORE the deal.**
+
+An exit or disposal stops only the schedules of deals acquired before it (a re-acquisition starts a new schedule). A row here is a deal of an Amortise group with goodwill and no amortisation journal. Fixture: test_fixtures/assert_exit_derecognises_carried.amortise_reacquired.sql.
+
+<sub>`error (default)` · `tests/assert_goodwill_amortised_after_reacquisition.sql` · konsolidat#335</sub>
+
 ### `goodwill_calculated`
 
 **every submitted acquisition with a price must have had its goodwill calculated.**
@@ -763,6 +779,14 @@ It extends the 3 Oct 2026 rule "inherit where derivable": line 105 is the entity
 Keyed on the ENTITY, not just the group. The previous cut joined on (consolidation_group, fiscal_year, fiscal_period) alone, because gold_ic_eliminations threw its entities away — so a correct elimination between two fully-consolidated entities failed the build as soon as ANY node in that group was equity-method in that period. Harmless while every seeded row said 'full'; a live false positive now that the method is real data and F2 propagates 'equity' to every descendant of an equity-held sub-group. One exception (#175 third review M1): the period a balance-sheet pair leaves the group because a side moved to equity, the pair's 'left' row reverses everything eliminated while that side was fully consolidated. Those entries touch the equity-method entity in its first equity period, and only undo earlier ones: the row's values are 0, so nothing new is eliminated. assert_ic_pair_left_is_reversed checks they are complete.
 
 <sub>`error (default)` · `tests/assert_equity_method_no_ic_elim.sql` · konsolidat#175</sub>
+
+### `exit_matches_ic_left`
+
+**konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X6: an ownership exit and the intercompany 'left' row agree.**
+
+Design: .claude/memory/active/tasks-p1-round2.md, T8 (konsol repo). Severity ERROR: an exit that is not paired with the IC reconciliation either leaves an intercompany balance eliminated against an entity that is no longer in the group, or reverses it twice. Fixtures: test_fixtures/assert_exit_matches_ic_left.receivable.sql, .after_last_tb.sql. The periods (#358 review F1, F2). An exit (G, E, P) of ownership_exits() posts in P, the Regular period holding the end date, and E is first out of G in F (out_fiscal_*). gold_ic_reconciliation's 'left' row is the first period of its spine in which the pair is no longer live: the first spine period at or after F. Its spine is the declared periods present in gold_trial_balance, up to the group's latest gold_consolidated_trial_balance period, so the expected 'left' period L is the first such period at or after F. An exit with no such period yet (F is after the group's last trial-balance period, or every period from F on is empty) is not judged: its 'left' row is pending until a trial balance for a period at or after F arrives, and judging it then would fail the build for the close of P, the month the link ended. The 'left' row lands after P, as it does after a full disposal's period: at the end of P the exit journal has reversed E's IC balance while the elimination still stands, and the 'left' row reverses the elimination in L (classification only for the periods between; follow-up). For every judged exit and every intercompany pair that had E on one side and was live before F (gold_ic_reconciliation rows for the pair in an earlier period that are not themselves 'left' rows): left_missing          the reconciliation has no 'left' row for the pair at or after F; left_in_other_period  it has one, but not in L; double_reversal       to L, over every FCTB layer, E's IC account is not 0 (the exit journal reverses E's layer-1 balance once, and the layer-2 elimination is reversed by the 'left' row, so E's own rows net to 0), or the pair's elimination legs do not net to 0 on either account to L (the counterparty is then not left carrying its full, now external, balance). The exit journal never reads layer 2 (design), so a non-zero E total means it reversed the IC layer too. exit_year / exit_period in the output are L, the period judged.
+
+<sub>`error (default)` · `tests/assert_exit_matches_ic_left.sql` · konsolidat#335 konsolidat#358</sub>
 
 ### `ic_account_in_one_pair`
 
@@ -1364,6 +1388,14 @@ appear
 
 <sub>`warn` · `tests/assert_every_account_is_pnl_or_balance_sheet.sql` · konsol#182</sub>
 
+### `exit_accounts_declared`
+
+**konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X2: an ownership exit whose group root has not declared the accounts the exit journal (gold_ownership_exit_journal, tasks X3-X5) will post to.**
+
+dbt never assumes an account code (design §1), so an undeclared account would post to main_account '' or be dropped; this test stops the build and names it. One row per exit event and field: group, entity, exit period, field, the value found, and why it is not acceptable. It mirrors assert_disposal_accounts_declared, whose rule it reuses. Fixtures: test_fixtures/assert_exit_accounts_declared.must_flag.sql (4 rows), .declared.sql (passes), .zero_balance.sql (passes), .flagged_without_disposal.must_flag.sql (1 row). Exit events come from macros/ownership_exits() (X1): E live in G the previous declared period, not live in P, not ended by its own full Business Disposal. Read from gold_ownership_exits, the macro materialised once (task X22): this test referenced the macro four times, each a copy of the ownership graph. The accounts are required only for an exit whose journal posts something (konsolidat#335 review F3): an exit with carried lines in gold_ownership_exit_journal (joined on group, entity, exit period; ref()d so dbt orders it). An exit with no carried balances (e.g. a legacy link ended years ago with no trial balance rows) posts nothing and needs no account. The journal posts NOTHING while the root's exit_gain_loss_account is undeclared (its `!= ''` filter), so its lines cannot be the only evidence: an undeclared account would hide the very exit that needs it. The second evidence is the carried balance itself, read where the journal reads it: gold_consolidated_trial_balance, non-equity balance sheet accounts of (group, entity) summed over the periods before the exit period, any account above the materiality floor, from the period after the previous exit (or full Business Disposal) of the entity in the group up to AND INCLUDING the exit period P: the span the journal reverses (its from_ord bound, #358 re-review F2). Balances that first appear in P count; the evidence read strictly before P let an entity bought and lost with its first balances in P pass with no account declared. (Goodwill, FVA and NCI come from other layers; they exist only with an acquisition, whose balance sheet accounts show here too.) What is required: root_row                  the group's root row in epm_gold.consolidation_groups (data_area_id = ''), read with any() per column as gold_business_disposal_journal reads it; every exit exit_gain_loss_account    when the exit carries balances (journal lines, or CTB balances): the balancing line. May equal the disposal account; never falls back to it nci_account               when the exit journal carries an NCI line (account_role 'nci') is_disposal               always: a link ending on this exit's end date with is_disposal = 1 but no submitted full Business Disposal (retained interest 0) is not a Business Disposal in the warehouse (ownership_resolution ended_by_disposal needs both), so its end posts as an exit. Reason 'is_disposal_without_business_disposal': fix the data (submit the disposal, or clear is_disposal) A declared account must be a Published posting leaf of the chart: the same rule as assert_disposal_accounts_declared, membership in silver_main_accounts (status 'Published', is_group = 0, main_account_id != '').
+
+<sub>`error (default)` · `tests/assert_exit_accounts_declared.sql` · konsolidat#335 konsolidat#358</sub>
+
 ### `governed_chart_declarations_usable`
 
 <sub>`warn` · `tests/assert_governed_chart_declarations_usable.sql` · konsol#182</sub>
@@ -1490,9 +1522,9 @@ toDecimal128(Float64, scale) truncates toward zero on the binary double, which i
 
 **konsol#348 S4 (W3): consolidation_core()'s grain_extra columns are a pure partition.**
 
-The consolidation core (macros/consolidation_core.sql) takes `grain_extra`, the key columns a caller adds to the consolidation grain beyond (group, entity, period, account, partner, dimensions): the budget model passes scenario_id, cycle and layer; the actuals model passes none. Each value of such a column must be a consolidation of its own: the same rows run under two layers must give, per layer, exactly the rows they give alone. If any one select, group by, join or window partition inside the core lacks the extra grain, two layers of one key telescope into each other without an error: the retranslation window sums both layers' balances, a filler for one layer hides the other's row, the year-end close credits retained earnings with both layers' results. The plan for S4 lists the windows at risk (key_before, key_all, key_year_before, close_period) and the retranslated_keys group by. This test runs the core twice on the partner trial balance: once as the actuals model does (no extra grain), once on the same rows duplicated under zz_layer 'ZZA' and 'ZZB' with grain_extra=['zz_layer']. The second must equal the first under each layer: a multiset diff (UNION ALL + GROUP BY with +1/-1 signs; never count() over EXCEPT, konsolidat#361) names any row that differs. Float columns are rounded to 6 places: `sum() over close_period` adds its rows in pipeline order, so the last binary digit may differ between two runs; a telescoped layer differs by the size of a balance. A rounded zero is then made +0: round() keeps the sign of a tiny negative (-1e-12 -> -0.0), GROUP BY keys on the bits, and a year-end close row whose residue came out -1e-12 on one side and +1e-12 on the other was 6 false pairs on real data (W3 review). Fixture-only (W3 review): this test re-runs the core twice over the whole partner trial balance, about twice the cost of the model it guards, and an error in it would skip gold_consolidated_trial_balance's children in a site build. It is disabled unless the run passes `fixture_only_tests: true` in --vars, which the fixture gate and CI's full build do (scripts/tb_only_first_build.py: fixture_dimension_vars / zero_dimension_vars; tests/test_fixture_only_tests.py pins it). The test calls the macro directly, so it needs no model of its own and the fixture (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's inputs only: a retranslated balance, a year-end close and a historical tranche. Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or -1 (produced, not expected).
+The consolidation core (macros/consolidation_core.sql) takes `grain_extra`, the key columns a caller adds to the consolidation grain beyond (group, entity, period, account, partner, dimensions): the budget model passes scenario_id, cycle and layer; the actuals model passes none. Each value of such a column must be a consolidation of its own: the same rows run under two layers must give, per layer, exactly the rows they give alone. If any one select, group by, join or window partition inside the core lacks the extra grain, two layers of one key telescope into each other without an error: the retranslation window sums both layers' balances, a filler for one layer hides the other's row, the year-end close credits retained earnings with both layers' results. The plan for S4 lists the windows at risk (key_before, key_all, key_year_before, close_period) and the retranslated_keys group by. This test runs the core twice on the partner trial balance: once as the actuals model does (no extra grain), once on the same rows duplicated under zz_layer 'ZZA' and 'ZZB' with grain_extra=['zz_layer']. The second must equal the first under each layer: a multiset diff (UNION ALL + GROUP BY with +1/-1 signs; never count() over EXCEPT, konsolidat#361) names any row that differs. Float columns are rounded to 6 places: `sum() over close_period` adds its rows in pipeline order, so the last binary digit may differ between two runs; a telescoped layer differs by the size of a balance. A rounded zero is then made +0: round() keeps the sign of a tiny negative (-1e-12 -> -0.0), GROUP BY keys on the bits, and a year-end close row whose residue came out -1e-12 on one side and +1e-12 on the other was 6 false pairs on real data (W3 review). Fixture-only (W3 review): this test re-runs the core twice over the whole partner trial balance, about twice the cost of the model it guards, and an error in it would skip gold_consolidated_trial_balance's children in a site build. It is disabled unless the run passes `fixture_only_tests: true` in --vars, which the fixture gate and CI's full build do (scripts/tb_only_first_build.py: fixture_dimension_vars / zero_dimension_vars; tests/test_fixture_only_tests.py pins it). The test calls the macro directly, so it needs no model of its own and the fixture (test_fixtures/assert_consolidation_core_grain_extra_is_a_partition.sql) seeds the core's inputs only: a retranslated balance, a year-end close and a historical tranche. Both calls pass exits_relation=ref('gold_ownership_exits'), as the actuals model does, so the re-entry stint reset (spine_stints / densified_stints) is threaded too (#358 review F4 a; the .with_exit fixture seeds an exit and a re-entry that cross a stint boundary under each layer). Flagged rows: the key, the layer, and net = +1 (expected under the layer, not produced) or -1 (produced, not expected).
 
-<sub>`error (default)` · `tests/assert_consolidation_core_grain_extra_is_a_partition.sql` · konsol#348 konsolidat#361</sub>
+<sub>`error (default)` · `tests/assert_consolidation_core_grain_extra_is_a_partition.sql` · konsol#348 konsolidat#358 konsolidat#361</sub>
 
 ### `d365_gl_vouchers_balance`
 
@@ -1684,6 +1716,18 @@ An equity account's translated movement is its local movement at the rate the ro
 
 <sub>`error (default)` · `tests/assert_equity_never_revalued.sql` · konsolidat#257 konsolidat#259</sub>
 
+### `exit_derecognises_carried`
+
+**konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X3: an ownership exit derecognises what the group carried for the entity.**
+
+Design: .claude/memory/active/tasks-p1-round2.md, T8 (konsol repo). Severity ERROR (the dbt default): a bare link end that leaves the entity's balances in the group balance sheet is a wrong consolidated figure, not a warning. Fixture: test_fixtures/assert_exit_derecognises_carried.full_70pct.sql (a 70% full subsidiary with a business combination and CTA, then a bare end). For every exit event (G, E, P) of ownership_exits() (X1), and for every check period Q = A and each later period gold_fully_consolidated_tb has for G, the cumulative amount to Q, summed over every layer of the fully consolidated TB for data_area_id E, must be 0 (within materiality_floor()) on each of E's carried accounts: - every non-equity balance-sheet account of E's layer 1 (gold_consolidated_trial_balance, is_balance_sheet = 1) and of the acquisition journal's opening_balance lines; equity is the chart's silver_main_accounts.is_equity, the classification gold_business_disposal_journal line (0) uses; - 'CTA', and the root's goodwill_account, fair_value_adjustment_account and nci_account; - for an equity-method exit (task X5), EQ_INVEST: a pseudo-account outside the chart, so no list above holds it. Two parts of the FCTB are not E's carried balances and are taken out of the sum, read from their own models: - the acquisition journal's investment, proceeds, costs and bargain_gain lines: the parent's investment and the deal's settlement, which the disposal journal does not derecognise either (its header, "Not here"); - topside (gold_consolidation_adjustments): the design does not reverse it on exit; a WARN names it (task X8). A, the anchor (#358 review F1), is read here from the fiscal calendar, not from the macro: the Regular period whose declared span holds the exit's end_date (lowest tuple), the period the group last held E in and so the period by whose end control was lost (IFRS 10.25), as a full disposal's period holds its disposal_date. With no end_date (a method change) or no Regular period holding it, A is the macro's exit period P. Check periods stop at a re-entry (task X7): from the first later period in which E is live in G again, the group carries E anew; assert_reentry_carries_full_balance checks that it carries 100%, not 100% plus the pre-exit share. Second check: every ownership_exit journal in the FCTB sums to 0 per (group, entity, period). Every exit method is checked, not only 'full': a proportional or equity-method exit that leaves its balances is flagged here (fixtures .proportional_step, .equity). Layer 2 (IC, data_area_id '') is outside E's rows.
+
+<sub>`error (default)` · `tests/assert_exit_derecognises_carried.sql` · konsolidat#335 konsolidat#358</sub>
+
+### `exit_out_of_scope_named`
+
+<sub>`warn` · `tests/assert_exit_out_of_scope_named.sql` · konsol#310 konsolidat#154 konsolidat#335</sub>
+
 ### `joint_operation_path_has_no_partial_full_link`
 
 **IFRS 11.20 / IFRS 10, konsol#117 pair 3 review finding A (refused by name, not computed).**
@@ -1740,13 +1784,21 @@ The macro resolves such a row as method_source = 'undeclared' and consolidation_
 
 <sub>`error (default)` · `tests/assert_method_declared_for_multi_path.sql` · konsol#117</sub>
 
+### `reentry_carries_full_balance`
+
+**konsolidat#335, option A (decided 14 Nov 2026 by Deepak Pai), task X7: an entity that left a group by a bare link end and re-enters it as a full subsidiary is carried at 100% of its balance, never at 100% plus what the group carried before the exit.**
+
+Design: konsol .claude/memory/active/tasks-p1-round2.md, T8. Severity ERROR (the dbt default): a re-entered entity carried at 150% is a wrong consolidated balance sheet. Fixture: test_fixtures/assert_reentry_carries_full_balance.gap_no_double_count.sql (the joint_operation_gap shape: 50% proportional to 2025-12-31, a gap, then a 100% Business Combination from 2026-04-01). An independent oracle: it never reads gold_ownership_exit_journal or repeats its rules. For every exit event (G, E, P) of ownership_exits() (X1) and every later period Q in which gold_entity_ownership holds E in G as a full subsidiary with a complete chain, each of E's non-equity balance-sheet accounts translated at the closing rate (fx_method 'closing' or undeclared, the accounts #257 retranslates) must satisfy sum over every layer of gold_fully_consolidated_tb for E, periods <= Q = E's cumulative local balance to Q (gold_trial_balance_by_partner, every partner and dimension) x the governed Closing rate of Q (rate_period_map(); 1.0 for a same-currency entity) within materiality_floor(). Taken out of the FCTB sum, as assert_exit_derecognises_carried does: the acquisition journal's investment, proceeds, costs and bargain_gain lines (the parent's investment and the deal's settlement, not E's balances) and topside (gold_consolidation_adjustments). Full only: a proportional re-entry carries translated x the share of each period, not one share of the cumulative balance, so this formula does not hold for it after a share step. a re-entry is live again at or after the exit's first period out (out_fiscal_*): between the exit period and it the entity can still be consolidated (a year-end boundary period, ownership_exits())
+
+<sub>`error (default)` · `tests/assert_reentry_carries_full_balance.sql` · konsol#348 konsolidat#257 konsolidat#335</sub>
+
 ### `sliceless_layers_carry_no_dimension`
 
 **konsolidat#245 option D, decided by Deepak Pai on 3 October 2026: a consolidation entry carries the dimension values of whatever knows them.**
 
 The deal-journal layers of gold_fully_consolidated_tb (pnl_proration excepted, see below) — acquisition, business combination, goodwill amortisation and disposal — know none, with one exception: disposal line 105 (account_role 'post_disposal_pnl'), see below. Their inputs are the Business Combination and Business Disposal documents, which carry no dimension fields and have no slice to inherit from. The CTA is blank for a different and stronger reason: it is ONE PLUG per entity and period (-sum(group_amount) across every account), the residual that makes the entity's translated balance sheet balance, so a per-dimension CTA would be an arbitrary allocation rather than a translation difference. All five are blank BY DECISION and nothing should be invented for them. "Blank by decision" is worth asserting, because it is indistinguishable in the data from "blank because somebody forgot" — which is what the other eight layers were before this issue. If a deal layer ever starts carrying a value, either someone gave those documents a dimension (then this test is the place to record the new decision) or a layer is reading a slice it cannot know. The NCI attribution ('nci_attribution', gold_nci_attribution_journal) is half covered. Its result legs inherit the slices of the entity's P&L (option D: derivable, so inherited; assert_nci_attribution_carries_the_result_slices). Its 'CTA' line is a share of the same entity-level CTA plug as the 'cta' layer, so it is blank by the same arithmetic and is asserted here by account. The CTA part of its NCI line is blank too, but shares the NCI account with the sliced result part, so it cannot be told apart here; the slice test's every-slice-nets-to-zero check covers it. NOT COVERED HERE, deliberately: 'ic_elimination' and 'ic_elimination_nci'. Layer 2 legs posted to a non-IC account (the NCI line, a group's IC-difference account) never match a slice row and correctly land on a blank slice, so blankness is legal there and this test would be wrong to forbid it. PR #260 review F5 is right that such a row is then indistinguishable from one blank because the side booked no value; distinguishing them needs a reason column on the layer, which is not in this change. assert_ic_elimination_slices_sum_to_the_leg is what guards layer 2 instead. Disposal line 105 (post_disposal_pnl) is exempt: konsolidat#245 Q2 A, decided by Deepak Pai on 21 Nov 2026, extends "inherit where derivable" to it. It is the entity's P&L by account times the removed fraction, the derivation pnl_proration slices, so it carries the slices of the P&L it removes (assert_post_disposal_pnl_carries_its_slices). Rejected: B, keep it blank, which overstated segment P&L by the post-disposal P&L. Because gold_fully_consolidated_tb sums the journal's lines to the account grain and drops account_role, the disposal layer is judged here on gold_business_disposal_journal itself, by role: every line except 'post_disposal_pnl' must stay blank. Equity method stays blank and asserted: konsolidat#245 Q3 A, decided by Deepak Pai on 21 Nov 2026 (it had been settled by Claude on 6 Oct 2026 under his instruction). IAS 28 presents the result as one line, and the associate's dimensions are not the group's. Rejected: B, inherit the associate's slices. One row per offending layer and dimension. Error severity: a value here is not a data-quality warning, it is a layer claiming knowledge it does not have.
 
-<sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#345</sub>
+<sub>`error (default)` · `tests/assert_sliceless_layers_carry_no_dimension.sql` · konsolidat#245 konsolidat#260 konsolidat#335 konsolidat#345</sub>
 
 ### `translation_rates_are_the_actuals_sets`
 

@@ -1,4 +1,4 @@
--- gate: build gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ic_side_slices gold_fully_consolidated_tb assert_group_equals_translated_for_full assert_nci_equals_translated_times_minority assert_nci_zero_for_full_ownership assert_end_to_end_bs_balances
+-- gate: build gold_ownership_exits gold_entity_ownership gold_consolidated_trial_balance gold_acquisition_adjustments gold_business_combination_journal gold_business_disposal_journal gold_consolidation_adjustments gold_equity_method_associates gold_fx_revaluation gold_goodwill_amortisation_journal gold_ic_reconciliation gold_ic_eliminations gold_nci_attribution_journal gold_ownership_exit_journal gold_ic_side_slices gold_fully_consolidated_tb assert_group_equals_translated_for_full assert_nci_equals_translated_times_minority assert_nci_zero_for_full_ownership assert_end_to_end_bs_balances
 -- gate: expect assert_group_equals_translated_for_full pass
 -- gate: expect assert_nci_equals_translated_times_minority pass
 -- gate: expect assert_nci_zero_for_full_ownership pass
@@ -14,6 +14,8 @@
 --
 -- The live tables may predate konsol#117's graph columns and the declarations table: bring the
 -- scratch clones to the shape the macro reads.
+-- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
+ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';
 ALTER TABLE epm_staging.consolidation_ancestry ADD COLUMN IF NOT EXISTS path_id String, ADD COLUMN IF NOT EXISTS link_owner_group String, ADD COLUMN IF NOT EXISTS link_owner_data_area_id String;
 -- The owner joins the sorting key (konsol#117): two owners of one node from one date are two rows, not one
 -- ReplacingMergeTree duplicate. This is the live upgrade statement; it is a no-op on an upgraded table.

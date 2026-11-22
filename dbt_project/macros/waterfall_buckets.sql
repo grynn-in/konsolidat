@@ -13,6 +13,8 @@
 {# nci_attribution (konsolidat#316 7h2): gold_nci_attribution_journal moves the minority's share of
    result and CTA from the group's equity lines to the NCI line, so it is neither an elimination nor
    a topside entry: its own bucket, nets to 0 per journal. #}
+{# acq_disposal also holds 'ownership_exit' (konsolidat#335): gold_ownership_exit_journal, the deemed
+   disposal when an Ownership Period ends with no Business Disposal. It nets to 0 per exit. #}
 {% macro waterfall_buckets() %}
   {{ return({
       'entity': ['entity'],
@@ -20,7 +22,7 @@
       'cta': ['cta'],
       'topside': ['topside', 'reclassification', 'auto_reversal'],
       'equity_method': ['equity_method'],
-      'acq_disposal': ['pnl_proration', 'acquisition', 'goodwill_amortisation', 'disposal',
+      'acq_disposal': ['pnl_proration', 'ownership_exit', 'acquisition', 'goodwill_amortisation', 'disposal',
                        'goodwill', 'fair_value_adjustment', 'disposal_gain_loss', 'cta_recycling'],
       'nci_attribution': ['nci_attribution'],
       'journal_close': ['journal_close']

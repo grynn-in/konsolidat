@@ -286,6 +286,7 @@ SHEETS: tuple[Sheet, ...] = (
             Col("disposal_proceeds_account", "Root only.", False, width=10),
             Col("goodwill_amortisation_expense_account", "Root only.", False, width=10),
             Col("acquisition_costs_account", "Root only.", False, width=10),
+            Col("exit_gain_loss_account", "Root only: P&L account. Posts the gain or loss when an Ownership Period ends without a Business Disposal (konsolidat#335). Blank posts nothing, and a build that needs it is flagged.", False, width=10),
         ),
         key=("consolidation_group", "data_area_id"), tree="parent_group",
         notes=("An entity belongs to exactly one node. Ownership percentages are NOT here: they are dated, on Ownership_Periods.",

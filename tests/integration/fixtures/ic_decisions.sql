@@ -9,6 +9,8 @@
 --   ZZE 100% USD from 2095-03-01 (acquired in P3); ZZH 100% USD to 2095-02-28 (disposed);
 --   ZZQ 100% full to 2095-02-28, then 40% equity;
 --   sub-group ZZSUB, owned 100% by ZZGRP to 2095-02-28 (sold), holding ZZS 100% (open).
+--   ZZH and ZZSUB end with no Business Disposal: ownership exits (konsolidat#335), posted to
+--   the root's exit_gain_loss_account ZZ4900.
 --   P1  ZZA ZZ1100 +1000 (ZZB) / ZZB ZZ2010 -1000       12 (superseded: eliminated in full): an 80%-owned side
 --       ZZA ZZ1100 +500 (ZZC) / ZZC ZZ2010 -500 in P2   14: a balance-sheet timing pair
 --       ZZA ZZ1100 +200 (ZZE) / ZZE ZZ2010 -200         before ZZE joins
@@ -27,7 +29,7 @@
 -- Loaded and removed by tests/integration/test_dbt_build.py; the expected
 -- entries are in tests/integration/ic_decisions_expectations.py.
 
--- epm_staging.main_accounts: 8 rows. konsolidat#227: this fixture used to name
+-- epm_staging.main_accounts: 9 rows. konsolidat#227: this fixture used to name
 -- accounts it never declared. '3010' was transcribed from the live chart on
 -- konsolidat.local, where it is Additional paid-in capital; it exists in no chart
 -- this repo loads, so the nine historical rates above it raised nine flags from
@@ -39,11 +41,15 @@
 -- gold_nci_attribution_journal posts the minority's share of ZZB's and ZZ7's result
 -- there; without it the journal posts nothing and
 -- assert_nci_attribution_equals_minority_result names the group).
--- is_retained_earnings stays 0 on all eight: ZZCOA already has exactly
+-- ZZ4900 is the group root's exit_gain_loss_account (konsolidat#335, option A, Deepak Pai,
+-- 14 Nov 2026): ZZH and the sub-group ZZSUB end with no Business Disposal and no successor,
+-- with balances carried, so gold_ownership_exit_journal derecognises them and posts its
+-- balancing line there; without it assert_exit_accounts_declared names the group (ERROR).
+-- is_retained_earnings stays 0 on all nine: ZZCOA already has exactly
 -- one year-end close account (ZZ3100), and konsolidat#199 allows one per chart.
 -- is_equity is account_type = 'Equity' (silver_main_accounts.sql:61), which is
 -- what makes ZZ3010 a legal home for a historical rate.
-INSERT INTO epm_staging.main_accounts (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings) VALUES ('ZZ1010','ZZ IC cash','ZZCOA','ZZ',0,'Asset','Balance Sheet','Current Assets','Debit','Balance','closing',1,0,0,'','',1,'CASH','Published',0),('ZZ1100','ZZ IC receivable','ZZCOA','ZZ',0,'Asset','Balance Sheet','Current Assets','Debit','Balance','closing',1,0,1,'','',0,'RECEIVABLE','Published',0),('ZZ2010','ZZ IC payable','ZZCOA','ZZ',0,'Liability','Balance Sheet','Current Liabilities','Credit','Balance','closing',1,0,1,'','',0,'PAYABLE','Published',0),('ZZ2100','ZZ IC difference','ZZCOA','ZZ',0,'Liability','Balance Sheet','Current Liabilities','Credit','Balance','closing',1,0,0,'','',0,'PAYABLE','Published',0),('ZZ3010','ZZ additional paid-in capital','ZZCOA','ZZ',0,'Equity','Balance Sheet','Equity','Credit','Balance','historical',1,0,0,'','',0,'EQUITY','Published',0),('ZZ4030','ZZ IC revenue','ZZCOA','ZZ',0,'Revenue','Profit and Loss','Revenue','Credit','Period','average',1,0,1,'','',0,'REVENUE','Published',0),('ZZ5030','ZZ IC cost of sales','ZZCOA','ZZ',0,'Expense','Profit and Loss','Cost of Sales','Debit','Period','average',1,0,1,'','',0,'EXPENSE','Published',0),('ZZ3400','ZZ non-controlling interests','ZZCOA','ZZ',0,'Equity','Balance Sheet','Equity','Credit','Balance','closing',1,0,0,'','',0,'EQUITY','Published',0);
+INSERT INTO epm_staging.main_accounts (main_account, account_name, chart_of_accounts, parent_account, is_group, account_type, statement_section, sub_section, normal_balance, time_balance, fx_method, is_posting, is_suspended, allow_ic, cf_category, cf_line_item, is_cash, main_account_category, status, is_retained_earnings) VALUES ('ZZ1010','ZZ IC cash','ZZCOA','ZZ',0,'Asset','Balance Sheet','Current Assets','Debit','Balance','closing',1,0,0,'','',1,'CASH','Published',0),('ZZ1100','ZZ IC receivable','ZZCOA','ZZ',0,'Asset','Balance Sheet','Current Assets','Debit','Balance','closing',1,0,1,'','',0,'RECEIVABLE','Published',0),('ZZ2010','ZZ IC payable','ZZCOA','ZZ',0,'Liability','Balance Sheet','Current Liabilities','Credit','Balance','closing',1,0,1,'','',0,'PAYABLE','Published',0),('ZZ2100','ZZ IC difference','ZZCOA','ZZ',0,'Liability','Balance Sheet','Current Liabilities','Credit','Balance','closing',1,0,0,'','',0,'PAYABLE','Published',0),('ZZ3010','ZZ additional paid-in capital','ZZCOA','ZZ',0,'Equity','Balance Sheet','Equity','Credit','Balance','historical',1,0,0,'','',0,'EQUITY','Published',0),('ZZ4030','ZZ IC revenue','ZZCOA','ZZ',0,'Revenue','Profit and Loss','Revenue','Credit','Period','average',1,0,1,'','',0,'REVENUE','Published',0),('ZZ5030','ZZ IC cost of sales','ZZCOA','ZZ',0,'Expense','Profit and Loss','Cost of Sales','Debit','Period','average',1,0,1,'','',0,'EXPENSE','Published',0),('ZZ3400','ZZ non-controlling interests','ZZCOA','ZZ',0,'Equity','Balance Sheet','Equity','Credit','Balance','closing',1,0,0,'','',0,'EQUITY','Published',0),('ZZ4900','ZZ gain or loss on ownership exit','ZZCOA','ZZ',0,'Expense','Profit and Loss','Other Income / Expense','Debit','Period','average',1,0,0,'','',0,'EXPENSE','Published',0);
 
 -- epm_staging.cash_flow_categories: 6 rows, one per balance-sheet account
 -- declared above (the relationships test on gold_bs_movement.main_account).
@@ -62,7 +68,7 @@ INSERT INTO epm_staging.fiscal_periods (fiscal_year, fiscal_period, period_code,
 INSERT INTO epm_staging.entities (data_area_id, entity_name, parent_entity, is_group, status, accounting_currency, country, erp_source) VALUES ('ZZ7','ZZ7 test','',0,'Active','USD','',''),('ZZA','ZZA test','',0,'Active','USD','',''),('ZZB','ZZB test','',0,'Active','USD','',''),('ZZC','ZZC test','',0,'Active','USD','',''),('ZZD','ZZD test','',0,'Active','EUR','',''),('ZZE','ZZE test','',0,'Active','USD','',''),('ZZH','ZZH test','',0,'Active','USD','',''),('ZZQ','ZZQ test','',0,'Active','USD','',''),('ZZS','ZZS test','',0,'Active','USD','','');
 
 -- epm_gold.consolidation_groups: 11 rows
-INSERT INTO epm_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency, ic_difference_account, ic_difference_tolerance, nci_account) VALUES ('ZZSUB','ZZS','ZZS','USD','',0,''),('ZZGRP','ZZQ','ZZQ','USD','',0,''),('ZZGRP','ZZH','ZZH','USD','',0,''),('ZZGRP','ZZE','ZZE','USD','',0,''),('ZZGRP','ZZ7','ZZ7','USD','',0,''),('ZZGRP','ZZD','ZZD','USD','',0,''),('ZZGRP','ZZC','ZZC','USD','',0,''),('ZZGRP','ZZB','ZZB','USD','',0,''),('ZZGRP','ZZA','ZZA','USD','',0,''),('ZZSUB','','ZZ sub-group','USD','',0,''),('ZZGRP','','ZZ group','USD','ZZ2100',5,'ZZ3400');
+INSERT INTO epm_gold.consolidation_groups (consolidation_group, data_area_id, entity_name, reporting_currency, ic_difference_account, ic_difference_tolerance, nci_account, exit_gain_loss_account) VALUES ('ZZSUB','ZZS','ZZS','USD','',0,'',''),('ZZGRP','ZZQ','ZZQ','USD','',0,'',''),('ZZGRP','ZZH','ZZH','USD','',0,'',''),('ZZGRP','ZZE','ZZE','USD','',0,'',''),('ZZGRP','ZZ7','ZZ7','USD','',0,'',''),('ZZGRP','ZZD','ZZD','USD','',0,'',''),('ZZGRP','ZZC','ZZC','USD','',0,'',''),('ZZGRP','ZZB','ZZB','USD','',0,'',''),('ZZGRP','ZZA','ZZA','USD','',0,'',''),('ZZSUB','','ZZ sub-group','USD','',0,'',''),('ZZGRP','','ZZ group','USD','ZZ2100',5,'ZZ3400','ZZ4900');
 
 -- epm_staging.consolidation_ancestry: 11 rows. konsol#117 pair 1 columns: path_id names the
 -- path (an entity directly under ZZGRP has one link, owned by the root node ('ZZGRP', ''));

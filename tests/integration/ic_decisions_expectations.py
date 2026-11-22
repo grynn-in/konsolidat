@@ -12,7 +12,9 @@ part of the elimination. What this proves:
     and 14 (timing, reversal on leave);
   - every elimination entry is group view, kind matched/difference, at the FULL
     amount of each pair (a share anywhere would change a figure below);
-  - the group view alone (entity + ic_elimination) is the 100% consolidation.
+  - the group view alone (entity + ic_elimination) is the 100% consolidation;
+  - the two bare ends (ZZH, sub-group ZZSUB taking ZZS) post exactly the
+    ownership exit journal lines of exit_journal() (konsolidat#335).
 
 check(ch) returns a list of mismatches; [] means the fixture produced exactly
 these reconciliation rows and elimination entries. ch(sql) returns the query's
@@ -33,7 +35,7 @@ G = "consolidation_group = 'ZZGRP' AND fiscal_year = 2095"
 # below must stay explicit for the same reason: ZZCOA also holds ZZ1000,
 # ZZ3000, ZZ3100 and ZZ4000, which are not ours to remove.
 FIXTURE_ENTITIES = ("ZZ7", "ZZA", "ZZB", "ZZC", "ZZD", "ZZE", "ZZH", "ZZQ", "ZZS")
-FIXTURE_ACCOUNTS = ("ZZ1010", "ZZ1100", "ZZ2010", "ZZ2100", "ZZ3010", "ZZ3400", "ZZ4030", "ZZ5030")
+FIXTURE_ACCOUNTS = ("ZZ1010", "ZZ1100", "ZZ2010", "ZZ2100", "ZZ3010", "ZZ3400", "ZZ4030", "ZZ5030", "ZZ4900")
 
 _ENTITY_LIST = ", ".join(f"'{e}'" for e in FIXTURE_ENTITIES)
 _ACCOUNT_LIST = ", ".join(f"'{a}'" for a in FIXTURE_ACCOUNTS)
@@ -134,15 +136,38 @@ def eliminations(r):
     }
 
 
+# konsolidat#335 (#358 review F5): the ownership exit journal. ZZH (to 2095-02-28) and the
+# sub-group ZZSUB (to 2095-02-28, taking ZZS out of ZZGRP) end with no Business Disposal and no
+# successor: an exit each. P is the Regular period holding the end date, P2 (an end on a period's
+# last day is held through it; ownership_exits()), and F, the first period out, is P3 (where the
+# 'left' reconciliation rows above sit). Line (0) reverses, in P, every non-equity balance-sheet
+# account layer 1 carried for the entity through P (group_amount, 100% for full): ZZH ZZ1010
+# 400 (P1) + 1 (P2) and ZZ2010 -400; ZZS ZZ1010 300 and ZZ2010 -300 (its P3 rows are after F,
+# outside ZZGRP). ZZ3010 is equity and stays (IFRS 10.B98). All USD and 100%: no CTA, goodwill,
+# FVA or NCI line. Line (199) on the root's exit_gain_loss_account ZZ4900 is -(sum of the
+# others): ZZH -(-401 + 400) = +1; ZZS's is 0 and, below materiality_floor(), posts no row.
+# (period, entity, account) -> amount, adjustment_type 'ownership_exit' of gold_fully_consolidated_tb
+def exit_journal():
+    return {
+        (2, "ZZH", "ZZ1010"): -401,
+        (2, "ZZH", "ZZ2010"): 400,
+        (2, "ZZH", "ZZ4900"): 1,
+        (2, "ZZS", "ZZ1010"): -300,
+        (2, "ZZS", "ZZ2010"): 300,
+    }
+
+
 # The group view alone (entity + ic_elimination rows of gold_fully_consolidated_tb)
 # is the 100% consolidation, to date at P4: no nci_amount and no NCI-view legs are
 # added back. Layer 1 holds ZZB and ZZ7 at 100% and the eliminations take the
 # whole of each pair, so the P&L pairs and the NCI account are clear (an
 # elimination posted at a share would leave a remainder on ZZ1100/ZZ2010/ZZ5030
 # and fail here);
-# ZZ1100/ZZ2010 hold the balances with ZZH, ZZQ and ZZS after they left (ZZA's now
-# external receivables, and their own history, which the disposal gap leaves
-# in the warehouse).
+# ZZ1100/ZZ2010 hold the balances with ZZH, ZZQ and ZZS after they left: ZZA's now
+# external receivables, and the leavers' own history in layer 1. For ZZH and ZZS
+# that history is derecognised by the exit journal (adjustment_type
+# 'ownership_exit', exit_journal() above), which this view leaves out; ZZQ is
+# equity-accounted from P3, not an exit, so its P1 payable stays.
 def full_view_to_date(r):
     return {"ZZ1100": 850, "ZZ2010": -850, "ZZ4030": 0, "ZZ5030": 0, "NCI": 0, "ZZ2100": 212 - (1000 - _fx(r))}
 
@@ -186,6 +211,17 @@ def check(ch):
     for key in sorted(set(got_e) | set(want_e)):
         if key not in got_e or key not in want_e or not _close(got_e[key], want_e[key]):
             problems.append(f"elimination {key}: got {got_e.get(key)}, want {want_e.get(key)}")
+
+    got_x = {}
+    for p, entity, account, amount in _rows(
+            ch, "SELECT fiscal_period, data_area_id, main_account, sum(amount) "
+                f"FROM epm_gold.gold_fully_consolidated_tb WHERE {G} AND adjustment_type = 'ownership_exit' "
+                "GROUP BY fiscal_period, data_area_id, main_account"):
+        got_x[(int(p), entity, account)] = float(amount)
+    want_x = exit_journal()
+    for key in sorted(set(got_x) | set(want_x)):
+        if key not in got_x or key not in want_x or not _close(got_x[key], want_x[key]):
+            problems.append(f"ownership exit {key}: got {got_x.get(key)}, want {want_x.get(key)}")
 
     full = dict(_rows(
         ch, "SELECT main_account, sum(amount) FROM ("

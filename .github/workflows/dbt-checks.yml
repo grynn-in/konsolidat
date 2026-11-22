@@ -11,6 +11,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_consolidation_core_thread_cap.py'
+      - 'tests/test_consolidation_core_exits_relation.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -52,6 +53,7 @@ on:
       - 'tests/test_governed_chart_ddl.py'
       - 'tests/test_tb_only_first_build.py'
       - 'tests/test_consolidation_core_thread_cap.py'
+      - 'tests/test_consolidation_core_exits_relation.py'
       - 'tests/test_no_shipped_dimensions.py'
       - 'tests/test_no_month_period_macro.py'
       - 'tests/test_budget_models_read_no_erp.py'
@@ -127,6 +129,12 @@ jobs:
         run: >
           dbt parse --no-partial-parse
           --profiles-dir dbt_project --project-dir dbt_project
+      # konsolidat#335 (#358 review F1, F2): the core resets stints only when
+      # given the exits; the budget model's parents exclude gold_ownership_exits
+      # (dbt ls, no connection), so a tag:domain:scenarios build reads no
+      # model it does not build.
+      - name: budget consolidation reads no exit events
+        run: python -m unittest -v tests.test_consolidation_core_exits_relation
 
   contract-tests:
     name: warehouse contract tests
@@ -250,6 +258,10 @@ jobs:
       # widened tables names its columns.
       - name: ownership graph DDL, sources and column-named inserts
         run: python -m unittest -v tests.test_ownership_graph_ddl
+      # konsolidat#335 (X22): the integration fixture that ends links with no
+      # Business Disposal declares the exit journal's gain or loss account.
+      - name: integration fixture declares its exit account
+        run: python -m unittest -v tests.test_ic_decisions_exit_account
       # konsol#269 (W1): the six cost allocation staging tables are konsol's DDL,
       # verbatim, and declared dbt sources.
       - name: cost allocation staging DDL and sources
@@ -341,8 +353,11 @@ jobs:
     # "test fixtures make their tests pass or flag (1)" .. "(3)".
     # History: 45 min until 11 Nov 2026; 75 min then, because #345 took the
     # fixtures from 153 to 186 and main was cancelled at 45 min twice (~14 s
-    # each, run one by one); 3 x 45 min from 17 Nov 2026.
-    timeout-minutes: 45
+    # each, run one by one); 3 x 45 min from 17 Nov 2026; 3 x 60 min from
+    # 22 Nov 2026: with #357's journal close and #358's exits, 382 fixtures, a
+    # consolidated-TB fixture takes ~90 s and shard 1 ran 128/128 OK in 44.6 min,
+    # cancelled at 45. A 4th shard is the lasting fix.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
