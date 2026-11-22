@@ -11,7 +11,7 @@
 -- Budget scenario ZZ_PLAN_2026 (one Cycle, 100) passes through the branch unchanged and is not checked.
 -- assert_scenario_tb_currency_declared runs too: the branch still carries the fact's currency.
 -- The lineage of gold_scenario_trial_balance reads these tables too, empty here, so they are named to exist
--- (empty): epm_gold.entity_fiscal_calendars, epm_gold.spread_profiles, epm_staging.dimension_mappings,
+-- (empty): epm_gold.spread_profiles, epm_staging.dimension_mappings,
 -- epm_staging.main_accounts, epm_raw.trial_balance_submissions, epm_raw.trial_balance_submission_control.
 -- epm_staging.fiscal_periods (FY2026 Regular P1-P12) and epm_staging.entities (ZZE1, USD) are NOT empty:
 -- the build selects +gold_scenario_trial_balance, so the error-severity tests on its lineage run first.

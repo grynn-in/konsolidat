@@ -24,7 +24,7 @@
 -- ZZ1200 ZZ-CC1 and ZZ-CC2).
 -- Tables named so the gate creates them (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
--- epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars, epm_staging.historical_equity_rates,
+-- epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates,
 -- epm_staging.dimension_mappings, epm_staging.group_exchange_rates, epm_staging.ic_balances,
 -- epm_staging.ic_elimination_rules, epm_staging.consolidation_adjustments.
 ALTER TABLE epm_raw.trial_balance_submissions ADD COLUMN IF NOT EXISTS dim_business_unit String DEFAULT '';

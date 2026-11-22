@@ -34,7 +34,7 @@ The actual/forecast boundary is data-driven, not hardcoded. A rolling forecast a
 
 | Artifact | Definition |
 |---|---|
-| `seeds/period_close_status.csv` | Grain: `data_area_id, fiscal_year, fiscal_period, period_status` where `period_status ∈ {open, closed}`. Joined per entity (entities already keyed in `entity_fiscal_calendars.csv`). |
+| `seeds/period_close_status.csv` | Grain: `data_area_id, fiscal_year, fiscal_period, period_status` where `period_status ∈ {open, closed}`. Joined per entity. |
 | dbt macro `latest_closed_period()` | Returns `(fiscal_year, fiscal_period)` of the max closed period per `data_area_id`. Single source of truth for the splice boundary. |
 
 ### 3. `gold_rolling_forecast` dbt model
@@ -88,7 +88,7 @@ Splice rule: for each `(entity, year, period)` in the forward window, take `gl` 
 
 ## Open Questions
 
-- Anchor granularity: one global `latest_closed_period()` vs per-entity anchors when entities close on different calendars (`entity_fiscal_calendars.csv` already allows divergent calendars). Default assumption above is **per-entity**.
+- Anchor granularity: one global `latest_closed_period()` vs per-entity anchors. Each site declares one fiscal calendar (konsol's EPM Fiscal Year; the per-entity calendar mapping was removed by konsol#577), but entities may still close periods at different times. Default assumption above is **per-entity**.
 - Should `window_length` be fixed at 12 or support 18/24-month rolling views? Modelled as configurable; default 12.
 - Where the rolling window crosses a fiscal-year boundary, does forecast for the next year come from a separate `forecast` scenario for that year, or is the window capped at the current `source_forecast_scenario`'s horizon?
 - Should closing a period in Frappe auto-trigger a `dbt build` (re-anchor), or is re-anchor tied to the existing scheduled pipeline run?

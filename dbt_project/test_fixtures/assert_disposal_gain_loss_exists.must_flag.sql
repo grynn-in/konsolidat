@@ -26,7 +26,7 @@
 -- FY2026-FY2027, the six deal tables CREATEd with konsol's exact DDL (clickhouse/init-db.sql, pinned by
 -- tests/test_deal_tables_ddl.py), the policy/flag/basis columns ALTERed in first, and the empty TB-lineage tables
 -- named to exist: epm_raw.general_journal_account_entry_bi_entities, epm_raw.general_journal_entry_bi_entities,
--- epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years, epm_gold.entity_fiscal_calendars,
+-- epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years,
 -- epm_staging.historical_equity_rates, epm_staging.dimension_mappings.
 -- konsolidat#335: the live consolidation_groups may predate exit_gain_loss_account (gold_ownership_exit_journal, assert_exit_accounts_declared read it).
 ALTER TABLE epm_gold.consolidation_groups ADD COLUMN IF NOT EXISTS exit_gain_loss_account String DEFAULT '';

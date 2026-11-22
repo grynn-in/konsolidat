@@ -16,7 +16,7 @@
 -- trial-balance-only site, so they are named here to exist (empty):
 -- epm_raw.general_journal_account_entry_bi_entities, epm_raw.general_journal_entry_bi_entities,
 -- epm_raw.ledgers, epm_raw.legal_entities, epm_raw.fiscal_calendar_years,
--- epm_gold.entity_fiscal_calendars, epm_staging.dimension_mappings.
+-- epm_staging.dimension_mappings.
 --
 -- The live tables may predate these three columns: add them to the scratch clones first.
 ALTER TABLE epm_staging.historical_equity_rates ADD COLUMN IF NOT EXISTS to_currency LowCardinality(String);
