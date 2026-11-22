@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **229** |
+| assertions | **230** |
 | carrying their reasoning | 205 |
-| citing the issue that caused them | 203 |
+| citing the issue that caused them | 204 |
 | severity `warn` (reports, does not stop a build) | 28 |
-| severity `error` (stops the build, and its children) | 201 |
+| severity `error` (stops the build, and its children) | 202 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -27,7 +27,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Trial balance intake](#trial-balance-intake) — 20
 - [Currency and translation](#currency-and-translation) — 36
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
-- [Acquisitions and disposals](#acquisitions-and-disposals) — 16
+- [Acquisitions and disposals](#acquisitions-and-disposals) — 17
 - [Intercompany](#intercompany) — 19
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
@@ -743,6 +743,10 @@ An exit or disposal stops only the schedules of deals acquired before it (a re-a
 l calculated. konsolidat#198 (row J2b): rewritten to read epm_staging.business_combinations instead of ownership_periods, and gold_business_combination_journal instead of gold_acquisition_adjustments. Why: since konsolidat#198 the deal lives on the submitted Business Combination document (submit = approval), and gold_business_combination_journal posts the balanced acquisition journal from it; gold_acquisition_adjustments no longer posts goodwill rows. The Ownership Period only carries the effective share and the consolidation window, so a priced Ownership Period is no longer a deal the warehouse must account for (the stack's deals are still Drafts there: nothing submitted, nothing owed). Coupling this test to ownership_periods would fail every acquisition period for no reason. Flags a submitted deal with total_consideration > 0 whose journal has neither a `goodwill` nor a `bargain_gain` line (from row J4 a bargain purchase books the gain instead of goodwill). The usual cause: no measurement basis (empty acquired-balances table and net_assets_acquired = 0), so the journal posted nothing for the deal. A deal whose consideration equals fair-value net assets to the cent has neither line either and is named here too; that coincidence is worth a look.
 
 <sub>`error (default)` · `tests/assert_goodwill_calculated.sql` · konsolidat#198</sub>
+
+### `no_step_acquisition`
+
+<sub>`error` · `tests/assert_no_step_acquisition.sql` · konsolidat#348</sub>
 
 ### `pnl_proration_inherits_grain`
 
