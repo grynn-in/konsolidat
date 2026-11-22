@@ -433,12 +433,14 @@ CREATE TABLE IF NOT EXISTS epm_gold.scenario_definitions (
 -- konsol's _REFERENCE_TABLE_DDL; keep them identical.
 CREATE TABLE IF NOT EXISTS epm_gold.currencies (currency_code String, currency_name String, symbol String, minor_unit UInt8, usd_log10 Float64 DEFAULT nan) ENGINE = MergeTree ORDER BY currency_code;
 
--- konsolidat#146: which fiscal calendar each ERP legal entity posts against,
--- from konsol's Entity Fiscal Calendar doctype. It was
--- seeds/entity_fiscal_calendars.csv.
-CREATE TABLE IF NOT EXISTS epm_gold.entity_fiscal_calendars (
-    data_area_id String, fiscal_calendar_id String
-) ENGINE = MergeTree ORDER BY data_area_id;
+-- konsol#577 (Deepak Pai, 21 Nov 2026): the table below is retired with
+-- konsol's Entity Fiscal Calendar doctype. Nothing read it since
+-- konsolidat#221; the site's one declared calendar (epm_staging.fiscal_periods)
+-- dates every submission. This file runs only on a fresh volume, so the DROP is
+-- a no-op there; an existing stack loses the table at konsol's migrate (patch
+-- retire_entity_fiscal_calendar, and _RETIRED_TABLES, which also deletes its
+-- sync_watermark row).
+DROP TABLE IF EXISTS epm_gold.entity_fiscal_calendars;
 
 -- konsolidat#146: budget_annual_input was seeds/budget_annual_input.csv, a
 -- top-down annual figure that gold_spread_budget spreads into months by profile.

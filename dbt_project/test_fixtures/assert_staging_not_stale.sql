@@ -1,7 +1,7 @@
 -- assert_staging_not_stale: must PASS (konsolidat#246, option #246-1). The measured false positive:
--- a full reconcile stamps all 27 write-through tables with one run id, then one Reporting Hierarchy
+-- a full reconcile stamps all 26 write-through tables (27 then) with one run id, then one Reporting Hierarchy
 -- publish (a write-through, run id '') stamps reporting_hierarchies 89h later. The old rule
--- (lag behind the newest stamp > 24h) flagged the 26 untouched tables; every table is in the
+-- (lag behind the newest stamp > 24h) flagged the 25 untouched tables (26 then); every table is in the
 -- latest run, so nothing is LAGGING.
 -- gate: expect assert_staging_not_stale pass
 -- A stack where konsol has not added the column yet (README: a fixture may add one).
@@ -26,7 +26,6 @@ VALUES
   ('epm_gold.budget_annual_input', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
   ('epm_staging.business_combination_acquired_balances', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
   ('epm_staging.ic_elimination_rules', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
-  ('epm_gold.entity_fiscal_calendars', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
   ('epm_staging.business_disposals', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
   ('epm_staging.business_combination_costs', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
   ('epm_staging.cash_flow_categories', '2026-10-04 09:24:13', 0, '1970-01-01 00:00:00', '20261004T092413Z-0000aaaa'),
