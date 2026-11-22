@@ -58,7 +58,7 @@ STATUS = ("Draft", "Published", "Inactive")
 #: konsol.close.close_policy_model.APPROVAL_DOCTYPES: submit = approval, judged by the self-approval policy, so the
 #: loader approves these through konsol.close.approval_api.approve (with a reason), never a bare submit.
 APPROVAL_DOCTYPES = ("Consolidation Journal", "Business Combination", "Business Disposal", "Group Exchange Rate",
-                     "Ownership Period", "Historical Equity Rate", "IC Balance")
+                     "Rate Sheet", "Ownership Period", "Historical Equity Rate", "IC Balance")
 CLOSE_SETTINGS_KEYS = ("self_approval",)
 
 SHEETS: tuple[Sheet, ...] = (
@@ -325,8 +325,8 @@ SHEETS: tuple[Sheet, ...] = (
                "Rows are merged into the group node's method_declarations table by (data_area_id, effective_date): the loader adds missing rows, leaves matching ones, never deletes."),
     ),
     Sheet(
-        "FX_Rates", "Group Exchange Rate",
-        "Governed translation rates: one Closing and one Average rate per period from each entity currency INTO each group reporting currency. Submitted (approved) on load.",
+        "FX_Rates", "Rate Sheet",
+        "Governed translation rates: one Closing and one Average rate per period from each entity currency INTO each group reporting currency. One row per rate here; the loader builds one Statutory Rate Sheet per fiscal period from them, with a row per currency pair, and approves it.",
         (
             Col("to_currency", "Group reporting currency.", True, width=10),
             Col("from_currency", "Entity currency.", True, width=10),
@@ -335,10 +335,11 @@ SHEETS: tuple[Sheet, ...] = (
             Col("rate_type", "Closing or Average.", True, "select", ("Closing", "Average"), width=10),
             Col("quote", "Units of to_currency per quoted_per units of from_currency, e.g. 0.955 (EUR per 100 INR).", True, "float", width=12),
             Col("quoted_per", "1, 10, 100, 1000 or 10000 units of from_currency.", True, "select", ("1", "10", "100", "1000", "10000"), width=10),
-            Col("change_reason", "Optional note (source of the rate).", False, width=30),
+            Col("change_reason", "Reason for Change. Needed when a rate moves from the previous period (the first row of a period may carry it for the whole sheet). The distinct cells of a period are joined and sent as that Rate Sheet's reason.", False, width=30),
         ),
-        key=("to_currency", "from_currency", "fiscal_year", "fiscal_period", "rate_type"), submit=True,
+        key=("to_currency", "from_currency", "fiscal_year", "fiscal_period", "rate_type"), submit=True, workflow=True,
         notes=("A currency equal to the group currency needs no row (translates at 1).",
+               "Both the Closing and the Average row of a pair are quoted per the same unit (quoted_per), because a Rate Sheet row holds one unit for both.",
                "A missing rate stops the build by name; there is no fallback."),
     ),
     Sheet(

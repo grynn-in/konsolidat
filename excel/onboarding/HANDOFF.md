@@ -141,7 +141,7 @@ Python ≥ 3.10 and `openpyxl` (PEP 723 header: `uv run <script>` works). No Lib
 - Creating Main Accounts with `status: Published` directly needs EPM Admin and publishes parents first (loader orders parents first);
   if konsol insists on Draft-then-publish, create Draft and call the `publish` doctype method instead.
 - Dimension Mapping rows for US01 are `Draft` (connector-only; the example is upload-only) — fine, just noise.
-- Group Exchange Rate create then submit: submit is the approval; period must be declared (fiscal years load first) and open.
+- Rate Sheet (konsol#592 pair 1): one Statutory sheet per period, created by a plain insert (Source stays Manual, the ERP quotes empty), then Send for Approval and `approval_api.approve`; period must be declared (fiscal years load first) and open. Replaces Group Exchange Rate create then submit.
 - Equity-method associate (ES03, 40 %) and the 50 % proportional joint operation (DE04) upload full trial balances. Since
   konsol#117 pair 3 (8 Nov 2026) the warehouse computes both: `equity` as a one-line share of result
   (gold_equity_method_associates), `proportional` as the operator's share of each line with no NCI (IFRS 11.20).

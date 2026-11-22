@@ -17,7 +17,7 @@ with -s. konsol-cli is not used: it moves the semantic model (dimensions, measur
 connectors) as a GitOps bundle and has no commands for entities, charts, groups or trial balances.
 
 The loader is idempotent in the way a person would be: a row whose natural key already exists on
-the site is updated (never recreated); a submittable row (ownership, FX rate, historical rate,
+the site is updated (never recreated); a submittable row (ownership, Rate Sheet, historical rate,
 consolidation journal, business combination, business disposal) that already has a live document is
 left alone; a trial-balance entity-period that is already submitted is reported by konsol and skipped.
 Sheets load in dependency order (konsol_template.LOAD_ORDER); within a tree sheet, parents load before
@@ -25,7 +25,7 @@ children. A child-table sheet (Fiscal_Periods, CJ_Lines, BC_*, BD_Proceeds) is n
 its rows are nested into the parent document (konsol_template.CHILD_SHEETS).
 
 Approval: a doctype konsol installs a Workflow on (Sheet.workflow: Consolidation Journal, Business
-Combination, Business Disposal) refuses a plain `doc submit` while Draft, so the loader walks the
+Combination, Business Disposal, Rate Sheet) refuses a plain `doc submit` while Draft, so the loader walks the
 workflow: `frappe.model.workflow.apply_workflow` (Send for Approval), then
 `konsol.close.approval_api.approve` with a reason (the self-approval rule). The others are submitted.
 """
@@ -269,7 +269,7 @@ class Loader:
             self.fail(sheet.name, label, e)
             return None
 
-    def submit_once(self, sheet, filters, doc, label):
+    def submit_once(self, sheet, filters, doc, label, hint=None):
         """Create and approve unless a live (draft or submitted) document already has the key.
 
         Approval is a plain submit, or for a workflow doctype (sheet.workflow) the two
@@ -294,6 +294,8 @@ class Loader:
                 self.approve(sheet, nm)
             self.note(sheet.name, what)
         except Failed as e:
+            if hint and "reason" in str(e).lower():
+                e = "%s (%s)" % (e, hint)
             self.fail(sheet.name, label, e)
 
     def approve(self, sheet, name):
@@ -372,6 +374,62 @@ class Loader:
                 self.submit_once(sheet, key, doc, label)
             else:
                 self.upsert(sheet, r, key, doc, label)
+
+    def load_fx_rates(self, sheet, rows):
+        """FX_Rates -> Rate Sheets (konsol#592 pair 1): one Statutory sheet per (fiscal year, period), a row per
+        (from, to) pair carrying its Average and Closing quote. A plain insert: Source and the ERP quotes are
+        flag-only on the server, so none is sent, and the rows come in as Manual. Approval is submit_once's."""
+        sheets = OrderedDict()   # (year, period) -> {(from, to): row}
+        problems = []
+        for r in rows:
+            year, period = r.get("fiscal_year"), r.get("fiscal_period")
+            pair = (r.get("from_currency"), r.get("to_currency"))
+            label = "%s->%s FY%s P%s" % (pair[0], pair[1], year, period)
+            kind = {"Closing": "closing_quote", "Average": "average_quote"}.get(r.get("rate_type"))
+            if kind is None:
+                problems.append("%s: rate_type must be Closing or Average, not %r" % (label, r.get("rate_type")))
+                continue
+            per = str(r.get("quoted_per") or "1")
+            row = sheets.setdefault((year, period), OrderedDict()).setdefault(
+                pair, {"from_currency": pair[0], "to_currency": pair[1], "quoted_per": per})
+            if row["quoted_per"] != per:
+                problems.append("%s: the Closing and Average quotes are per %s and per %s units; a Rate Sheet row holds one "
+                                "unit, so quote both the same way" % (label, row["quoted_per"], per))
+            elif kind in row and row[kind] != r.get("quote"):
+                problems.append("%s: two different %s quotes (%s and %s)" % (label, r.get("rate_type"), row[kind], r.get("quote")))
+            else:
+                row[kind] = r.get("quote")
+        reasons = OrderedDict()   # (year, period) -> distinct non-empty change_reason cells
+        for r in rows:
+            cell = str(r.get("change_reason") or "").strip()
+            if cell and cell not in reasons.setdefault((r.get("fiscal_year"), r.get("fiscal_period")), []):
+                reasons[(r.get("fiscal_year"), r.get("fiscal_period"))].append(cell)
+        # The server wants a Reason for Change on any move while the Rate Move threshold is undeclared (a fresh
+        # site, which the loader cannot set), so refuse a move against the previous period of this load before sending.
+        last = {}
+        for (year, period) in sorted(sheets, key=lambda k: (str(k[0]), str(k[1]))):
+            moved = []
+            for pair, row in sheets[(year, period)].items():
+                now = (row.get("closing_quote"), row.get("average_quote"), row["quoted_per"])
+                if pair in last and last[pair] != now:
+                    moved.append("%s->%s" % pair)
+                last[pair] = now
+            if moved and not reasons.get((year, period)):
+                problems.append("FY%s P%s: %s moved from the previous period and the sheet has no reason; fill the "
+                                "change_reason column on a row of this period" % (year, period, ", ".join(moved)))
+        if problems:
+            for p in problems:
+                self.fail(sheet.name, p.split(":")[0], p)
+            return
+        for (year, period), pairs in sheets.items():
+            label = "FY%s P%s" % (year, period)
+            key = {"rate_basis": "Statutory", "fiscal_year": year, "fiscal_period": period}
+            doc = dict(key, rates=list(pairs.values()))
+            if reasons.get((year, period)):
+                doc["change_reason"] = "; ".join(reasons[(year, period)])
+            self.submit_once(sheet, key, doc, label,
+                             hint="pairs: %s. If the server asked for a Reason for Change, fill the change_reason column "
+                                  "on a row of this period in the FX_Rates sheet" % ", ".join("%s->%s" % p for p in pairs))
 
     def load_hierarchies(self, sheet, rows):
         # a Published header needs at least one member, so a NEW hierarchy is created Draft and published by
@@ -727,6 +785,8 @@ def main():
             ld.load_ownership(sheet, data[name])
         elif name == "Method_Declarations":
             ld.load_declarations(sheet, data[name])
+        elif name == "FX_Rates":
+            ld.load_fx_rates(sheet, data[name])
         elif sheet.parent_sheet:
             continue  # nested into its parent sheet's documents
         elif name in CHILD_SHEETS:
