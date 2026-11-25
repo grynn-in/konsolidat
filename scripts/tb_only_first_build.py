@@ -84,8 +84,7 @@ FIXTURE_DIMENSIONS = [
     {"name": "dim_business_unit", "source_column": "dim_business_unit",
      "label": "Business Unit", "cube_type": "string", "in_budget": False},
     {"name": "dim_cost_center", "source_column": "dim_cost_center",
-     "label": "Cost Center", "cube_type": "string", "in_budget": True,
-     "allocation_role": "cost_center"},
+     "label": "Cost Center", "cube_type": "string", "in_budget": True},
     {"name": "dim_department", "source_column": "dim_department",
      "label": "Department", "cube_type": "string", "in_budget": True},
 ]
