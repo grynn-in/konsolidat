@@ -1,5 +1,5 @@
 {#
-    A quarter end is read, not closed: check (c) of the period-close family (konsolidat#<this issue>).
+    A quarter end is read, not closed: check (c) of the period-close family (konsolidat#397).
     Proposed on that issue; no decision is recorded yet.
 
     Nothing stores a quarter close. A quarter's P&L is the sum of its Regular periods' movements and

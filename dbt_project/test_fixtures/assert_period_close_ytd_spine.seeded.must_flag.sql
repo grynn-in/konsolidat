@@ -1,5 +1,5 @@
 -- gate: expect assert_period_close_ytd_spine flag 2
--- Period-close family (konsolidat#<this issue>), check (b): the standing must_flag fixture for the YTD spine. It seeds
+-- Period-close family (konsolidat#397), check (b): the standing must_flag fixture for the YTD spine. It seeds
 -- the claimed batches (bronze_trial_balance_submissions) and silver_tb_movements' OUTPUT directly and runs the test alone,
 -- so the model's own spine is not involved: the rows are what a broken spine would emit.
 -- ZZE1 files 'Year-to-date movement', FY2026:

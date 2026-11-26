@@ -2,7 +2,7 @@
 -- gate: expect assert_period_close_ytd_spine pass
 -- gate: expect assert_period_close_integrity pass
 -- gate: expect assert_period_close_quarter_snapshot pass
--- Period-close family (konsolidat#<this issue>), checks (a), (b) and (c) on a 'Year-to-date movement' entity: all three
+-- Period-close family (konsolidat#397), checks (a), (b) and (c) on a 'Year-to-date movement' entity: all three
 -- tests must PASS on the model as built.
 -- One ZZ entity (ZZOP), FY2026 P1-P3, all declared Regular in Q1; each batch a balanced set of YTD figures:
 --   ZZ1000 cash       150 Dr | 170 Dr | 230 Dr

@@ -1,6 +1,6 @@
 {#
     A period close is a boundary, not a posting: checks (a), (d) and (e) of the period-close family
-    (konsolidat#<this issue>). Proposed on that issue; no decision is recorded yet.
+    (konsolidat#397). Proposed on that issue; no decision is recorded yet.
 
     The year end has a stored close: silver_tb_movements (#259) synthesises the entity layer's
     P&L-to-retained-earnings entry in the year's Closing period, and the journal_close layer of

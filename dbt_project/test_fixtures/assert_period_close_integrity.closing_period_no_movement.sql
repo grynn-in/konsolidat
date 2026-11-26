@@ -1,7 +1,7 @@
 -- gate: build +assert_period_close_integrity +assert_period_close_quarter_snapshot
 -- gate: expect assert_period_close_integrity pass
 -- gate: expect assert_period_close_quarter_snapshot pass
--- Period-close family (konsolidat#<this issue>), checks (a), (c), (d), (e) across a year end with every boundary period
+-- Period-close family (konsolidat#397), checks (a), (c), (d), (e) across a year end with every boundary period
 -- declared: both tests must PASS on the model as built.
 -- Calendar: FY2025 P12 Regular (Q4), P13 Closing and P14 Adjustment (both on 2025-12-31, P12's last day), FY2026 P0
 -- Opening (2026-01-01, P1's first day) and P1 Regular (Q1). ZZ3100 is the one is_retained_earnings account.

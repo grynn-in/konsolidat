@@ -1,5 +1,5 @@
 -- gate: expect assert_period_close_integrity flag 1
--- Period-close family (konsolidat#<this issue>), check (a): a P&L balance carried wrongly over a boundary is named in the
+-- Period-close family (konsolidat#397), check (a): a P&L balance carried wrongly over a boundary is named in the
 -- period it lands in. It seeds the claimed batch (bronze_trial_balance_submissions), gold_ytd_trial_balance's OUTPUT,
 -- silver_main_accounts and the calendar directly and runs the test alone.
 -- (On the model as built this cannot be produced through the year end: the one path, a year with no Closing period

@@ -1,5 +1,5 @@
 -- gate: expect assert_period_close_quarter_snapshot flag 3
--- Period-close family (konsolidat#<this issue>), check (c): the standing must_flag fixture for quarter-end snapshots. It
+-- Period-close family (konsolidat#397), check (c): the standing must_flag fixture for quarter-end snapshots. It
 -- seeds gold_trial_balance, gold_pnl_quarterly, gold_ytd_trial_balance and the calendar directly and runs the test alone.
 -- Calendar FY2026: P0 Opening, P1-P3 Regular Q1, P10-P12 Regular Q4, P13 Closing (labelled Q4, as konsol labels it).
 -- ZZE1 revenue ZZ4000 (P&L) movements: P0 -20 (P&L in the Opening period), P1-P3 -10 each, P12 -100, P13 +130 (the close).

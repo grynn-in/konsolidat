@@ -1,6 +1,6 @@
 {#
     The YTD spine, checked against the file and not against itself: check (b) of the period-close
-    family (konsolidat#<this issue>). Proposed on that issue; no decision is recorded yet.
+    family (konsolidat#397). Proposed on that issue; no decision is recorded yet.
 
     movement_spine and ytd_movement (macros/period_movements.sql) are the ONE definition of the
     'Year-to-date movement' rule, shared by silver_tb_movements (actuals) and gold_spread_budget

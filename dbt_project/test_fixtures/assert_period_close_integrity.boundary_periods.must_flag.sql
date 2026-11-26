@@ -1,5 +1,5 @@
 -- gate: expect assert_period_close_integrity flag 5
--- Period-close family (konsolidat#<this issue>), checks (a), (d), (e): the standing must_flag fixture for the boundary
+-- Period-close family (konsolidat#397), checks (a), (d), (e): the standing must_flag fixture for the boundary
 -- rules. It seeds silver_tb_movements' OUTPUT, silver_main_accounts and the calendar directly and runs the test alone.
 -- Calendar: FY2025 P6 and P12 Regular, P13 Closing and P14 Adjustment on 2025-12-31; FY2026 P0 Opening and P1 Regular.
 -- ZZE1 files 'Period-end balance'.
