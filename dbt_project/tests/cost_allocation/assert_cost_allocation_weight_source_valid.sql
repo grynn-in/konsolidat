@@ -10,6 +10,9 @@
 --     holds at least one cost_allocation_run_driver_accounts row for the driver, each
 --     with value_sign 'As Booked' or 'Reversed' (the drift test negates on 'Reversed';
 --     any other sign would be read as 'As Booked', which this row forbids instead).
+--     A driver_accounts row is one expanded account (main_account) with the declared
+--     account it came from (declared_account; 2b-1 DA); this test keys on
+--     (parent, driver) and reads neither column, the drift test sums by main_account.
 -- Only Fixed Weights carries a window start: a statistic or Account Set row with one
 -- set is flagged too. One driver has one source inside a run: two sources for the
 -- same (run, driver) flag every row of that driver.

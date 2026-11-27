@@ -5,7 +5,11 @@
 -- driver's accounts, per receiver member, for the run's entity, scenario, year and
 -- period, negated when the driver's value_sign is 'Reversed'. konsol reads it at
 -- Compute and snapshots it on the run (driver_value) with the accounts it read
--- (cost_allocation_run_driver_accounts). This test recomputes that sum from
+-- (cost_allocation_run_driver_accounts: one row per EXPANDED account, main_account,
+-- with the declared account it came from, declared_account; 2b-1 DA). konsol walks
+-- the account tree at Compute, so a group account on the driver arrives here as its
+-- leaves and this test sums by main_account as stored, with no tree of its own
+-- (ClickHouse has no recursive hierarchy). This test recomputes that sum from
 -- gold_scenario_trial_balance as it stands now and names every weight row that
 -- differs by more than 0.0000001, or whose member has no trial balance row at all
 -- (konsol calls that member missing and would refuse the run; a 0 over rows is a
@@ -19,10 +23,8 @@
 -- "Driver %s is on dimension %s, not %s."), so the run's dimension IS the driver's.
 -- A site with no budget dimensions reads '' and every derived row warns; T3
 -- (assert_cost_allocation_dimension_declared) names the run.
--- LIMITATION: the accounts are read as stored. konsol expands a group account to its
--- descendants at Compute; this test does not (no account tree is read here), so a
--- driver whose Account Set names a group account warns on every receiver until the
--- warehouse expands descendants.
+-- declared_account is not read: the sum is over the expanded rows, and the sibling
+-- weight-source test keys its "no driver_accounts row" rule on (parent, driver) alone.
 -- LEFT JOIN on purpose: a member with no current rows must be reported. Both sides are
 -- coalesced so the verdict is the same under join_use_nulls 0 (defaults) and 1 (NULL).
 {{ config(severity='warn') }}

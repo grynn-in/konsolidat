@@ -541,12 +541,14 @@ sources:
           - name: effective_from
             description: "konsol#269 phase 2b-1: for Fixed Weights, the start of the window the value was read from. Unset otherwise, which this Date column holds as 1970-01-01."
       - name: cost_allocation_run_driver_accounts
-        description: "konsol#269 phase 2b-1: the accounts each Account Set driver of a submitted Cost Allocation Run read at Compute, snapshotted on the run (parent = the run's name)."
+        description: "konsol#269 phase 2b-1: the accounts each Account Set driver of a submitted Cost Allocation Run read at Compute, snapshotted on the run (parent = the run's name). One row per EXPANDED account (2b-1 DA): konsol walks the account tree at Compute, so the warehouse never has to."
         columns:
           - name: driver
             description: "The Cost Allocation Driver whose Account Set this row belongs to."
           - name: main_account
-            description: "A Main Account the driver reads; a group account includes its descendants."
+            description: "A Main Account the derived query read, expanded: a group account on the driver is stored as one row per descendant. Sum the trial balance by this column."
+          - name: declared_account
+            description: "The account as listed on the driver; main_account is it or one of its descendants. A leaf declared directly names itself."
           - name: value_sign
             description: "'As Booked' or 'Reversed', as the driver declared it when the run was computed."
       - name: cost_allocation_coefficients
