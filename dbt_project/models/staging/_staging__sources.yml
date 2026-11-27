@@ -535,6 +535,20 @@ sources:
         description: "konsol#269: the accounts a submitted Cost Allocation Run allocates, one row per line (parent = the run's name)."
       - name: cost_allocation_run_weights
         description: "konsol#269: the step-by-step allocation weights of a submitted Cost Allocation Run (parent = the run's name)."
+        columns:
+          - name: source
+            description: "konsol#269 phase 2b-1: where the driver value came from: 'Uploaded Statistic', 'Fixed Weights' or 'Account Set'. '' on a run computed before phase 2b."
+          - name: effective_from
+            description: "konsol#269 phase 2b-1: for Fixed Weights, the start of the window the value was read from. Unset otherwise, which this Date column holds as 1970-01-01."
+      - name: cost_allocation_run_driver_accounts
+        description: "konsol#269 phase 2b-1: the accounts each Account Set driver of a submitted Cost Allocation Run read at Compute, snapshotted on the run (parent = the run's name)."
+        columns:
+          - name: driver
+            description: "The Cost Allocation Driver whose Account Set this row belongs to."
+          - name: main_account
+            description: "A Main Account the driver reads; a group account includes its descendants."
+          - name: value_sign
+            description: "'As Booked' or 'Reversed', as the driver declared it when the run was computed."
       - name: cost_allocation_coefficients
         description: "konsol#269: the coefficients of every submitted run, recomputed from all submitted weights; resynced as one set (run = the run's name)."
       - name: cost_allocation_statistics
