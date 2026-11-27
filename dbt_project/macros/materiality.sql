@@ -44,28 +44,73 @@
    is the only assertion in this layer that is not satisfied by construction. #}
 {% macro leg_coverage() %}1.0{% endmacro %}
 
-{# konsolidat#395 (Deepak Pai, 27 Nov 2026): the 1B coverage comparison, at
-   journal precision. THE ONE DEFINITION: gold_fully_consolidated_tb (the
-   to-date split and both legs of the period split) and
-   assert_ic_slice_to_date_eliminated all write
-   {{ ic_leg_covered(aligned_gross, leg) }}, so the test and the model cannot
-   decide a side differently.
+{# konsolidat#209 (Deepak Pai, 18 Sep 2026: materiality follows the currency's
+   ISO minor unit; a flat default was rejected). THE ONE PATH from a group to
+   its currency's minor unit: the group's reporting currency on its root row
+   (data_area_id '') and the currencies row konsol writes from ISO
+   Currency.minor_unit. A relation, one row per group that HAS a minor unit.
+
+   An INNER JOIN on purpose. join_use_nulls=0 would fill a missing minor unit
+   with 0 (the JPY scale) and nobody could tell it from a declared 0, so a
+   caller that needs every group LEFT JOINs this relation and reads
+   has_minor_unit, which is 0 only on a join miss. A group not in it is
+   refused or reported by the caller's test, never judged at a default:
+   assert_topside_journal_balanced ('no currency') and
+   assert_ic_group_currency_has_minor_unit. #}
+{% macro group_minor_units() -%}
+(select
+     g.consolidation_group as consolidation_group,
+     any(g.reporting_currency) as currency,
+     toInt32(any(c.minor_unit)) as minor_unit,
+     toUInt8(1) as has_minor_unit
+ from {{ source('epm_gold', 'consolidation_groups') }} as g
+ inner join {{ source('epm_gold', 'currencies') }} as c
+     on c.currency_code = g.reporting_currency
+ where g.data_area_id = ''
+ group by g.consolidation_group)
+{%- endmacro %}
+
+{# konsolidat#395, decided 27 Nov 2026 by Deepak Pai: option B (rejected: A,
+   a fixed 4 places with its limit stated; C, summing these layers in
+   Decimal). The 1B coverage comparison, at the GROUP CURRENCY's ISO minor
+   unit. THE ONE DEFINITION: gold_fully_consolidated_tb (the to-date split and
+   both legs of the period split) and assert_ic_slice_to_date_eliminated all
+   write {{ ic_leg_covered(aligned_gross, leg, minor_unit, has_minor_unit) }},
+   so the test and the model cannot decide a side differently. minor_unit and
+   has_minor_unit come from group_minor_units(), LEFT JOINed on the group.
 
    Why rounded. IC is eliminated in full, so aligned_gross equals |leg| in
    exact arithmetic at every point, and the comparison sits on its edge. Both
    sides are Float64 sums, and ClickHouse adds in parallel in no fixed order,
-   so each lands up to ~5e-10 above or below the true value. Unrounded, a sum
-   that lands below gave "not covered" and moved the WHOLE leg to the blank
-   slice, and a rebuild could decide the other way. Two periods of 0.1 and
-   0.2 make a leg of 0.30000000000000004 against a slice of 0.3.
+   so each lands a little above or below the true value (~5e-10 measured on an
+   example). Unrounded, a sum that landed below gave "not covered" and moved
+   the WHOLE leg to the blank slice, and a rebuild could decide the other way.
+   Two periods of 0.1 and 0.2 make a leg of 0.30000000000000004 against a
+   slice of 0.3.
 
-   Both sides are rounded to amount_scale() places: journals are kept to 4
-   places (konsol#353) and TB amounts carry the same scale (#256), so a
-   difference below that is not an amount. Rejected (#395): a tolerance
-   (an eps whose size is a policy choice) and summing in Decimal in these
-   layers (a larger change). Residual: two sums whose true value falls
-   exactly on a rounding half-step can still round apart; amounts at 4 places
-   or fewer never do, because their sums are multiples of 0.0001. #}
-{% macro ic_leg_covered(aligned_gross, leg) -%}
-(round({{ aligned_gross }}, {{ amount_scale() }}) >= round({{ leg_coverage() }} * abs({{ leg }}), {{ amount_scale() }}))
+   Why the minor unit, not a fixed scale. This follows the 18 Sep 2026
+   decision that materiality follows the currency's minor unit (konsolidat#209).
+   Float64 error grows with the size of the sum, so a fixed 4 places absorbs
+   it only while it stays below 0.00005: a simulation of two summation orders
+   over 200 two-place amounts gave rounded results that differ from sums of
+   about 1e10, ordinary in JPY, KRW, IDR or VND. At the minor unit it gave 0
+   differences up to 1e13. Rounding is round(x * 10^minor_unit) on both sides,
+   not round(x, minor_unit), so the scale may be a column.
+
+   What it accepts (the trade-off decided with B):
+     * Both sides are rounded, so a side is split when its aligned gross is up
+       to ONE minor unit short of the leg, and its slices then take up to one
+       minor unit more, in total, than they moved. With amounts at the minor
+       unit the true sums are whole units and the shortfall is 0; it can be
+       non-zero only for amounts finer than the unit (translated amounts).
+     * The remaining limit is Float64 noise against one minor unit: past about
+       1e13 group-currency units, or on a true value that falls exactly on a
+       half unit, the two rounded sums can still differ.
+     * A group with no minor unit (no reporting currency, or one with no
+       currencies row) is never split: has_minor_unit = 0 makes the side "not
+       covered", so the whole leg goes on the blank slice, and
+       assert_ic_group_currency_has_minor_unit refuses the build, naming the
+       group and the currency. #}
+{% macro ic_leg_covered(aligned_gross, leg, minor_unit, has_minor_unit) -%}
+({{ has_minor_unit }} = 1 and round({{ aligned_gross }} * pow(10, {{ minor_unit }})) >= round({{ leg_coverage() }} * abs({{ leg }}) * pow(10, {{ minor_unit }})))
 {%- endmacro %}

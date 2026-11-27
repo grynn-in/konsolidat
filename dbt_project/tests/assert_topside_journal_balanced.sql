@@ -5,7 +5,7 @@
 -- floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat
 -- default was rejected). The journal's currency is its group's reporting
 -- currency (the root row, data_area_id ''), and its minor unit is the
--- currencies row konsol writes from ISO Currency.
+-- currencies row konsol writes from ISO Currency (group_minor_units()).
 --
 -- A journal whose group declares no reporting currency with a minor unit has
 -- nothing to be judged by, so it is reported (reason 'no currency'), never
@@ -22,16 +22,9 @@ with journals as (
     group by consolidation_group, journal_id
 ),
 
+{# the one group -> minor unit path (macros/materiality.sql) #}
 units as (
-    select
-        g.consolidation_group as consolidation_group,
-        any(g.reporting_currency) as currency,
-        any(c.minor_unit) as minor_unit
-    from {{ source('epm_gold', 'consolidation_groups') }} as g
-    inner join {{ source('epm_gold', 'currencies') }} as c
-        on c.currency_code = g.reporting_currency
-    where g.data_area_id = ''
-    group by g.consolidation_group
+    select consolidation_group, currency, minor_unit from {{ group_minor_units() }}
 )
 
 select
