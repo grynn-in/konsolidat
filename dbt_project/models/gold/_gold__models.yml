@@ -1148,7 +1148,7 @@ models:
       - name: as_of_date
         description: "The round's as-of date, from budget_cycles: the actuals cut-off the round forecasts from."
       - name: horizon_periods
-        description: "The round's horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1)."
+        description: "The declared Cycle's own horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1). Not the round's horizon: a round is cut at round_horizon_periods, the longest horizon among its approved Cycles (forecast_rounds(), konsolidat#376)."
       - name: rate_set
         description: "The Rate Set the round is translated at, from budget_cycles (BUD-3)."
 
@@ -1181,15 +1181,18 @@ models:
       (gold_scenario_trial_balance, data_source gl) of the entities the round
       forecasts in Regular periods at or before the as-of period, and the
       round's own forecast (gold_spread_budget, layers summed) in Regular
-      periods after it within the horizon, inside the round's fiscal year.
+      periods after it within the ROUND's horizon, inside the Cycle's fiscal
+      year. The round's horizon is the longest horizon_periods among the
+      approved Cycles sharing the (scenario_id, as_of_date), the same horizon
+      gold_forecast_accuracy measures to (forecast_rounds(), konsolidat#376).
       Periods are counted on the declared calendar (forecast_round_periods()).
       A forecast row at or before the as-of is not here; a missing actual is
       reported (assert_latest_estimate_actuals_present), never filled.
       A forecast row after the horizon is not here either, and is reported
       (assert_latest_estimate_forecast_beyond_horizon, WARN, naming scenario,
       cycle, entity, account and period; a key summing to zero drops nothing
-      and is not named): the horizon declared on the Cycle bounds the
-      estimate, and a sheet that entered more is told so.
+      and is not named): the round's horizon bounds the estimate, and a
+      sheet that entered more is told so.
       gold_latest_estimate_current narrows to the declared round.
     columns:
       - name: cycle

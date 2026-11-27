@@ -1,7 +1,12 @@
 {# konsol#348 S6 WA3 (BUD-10-1: horizons and lags are counted in DECLARED periods, never calendar months).
 
-   A forecast round is an approved Budget Cycle of a forecast scenario, keyed by its as-of date (Q23 a);
-   its horizon is `horizon_periods` Regular periods AFTER the as-of period. Three subquery macros put every
+   A forecast round is (scenario_id, as_of_date): every approved Budget Cycle of a forecast scenario that
+   shares the as-of date, one per fiscal year the horizon touches (Q23 a, Q24 a). The ROUND's horizon is
+   `round_horizon_periods` Regular periods AFTER the as-of period: the longest `horizon_periods` among
+   those Cycles, as konsol's horizon_coverage_model counts the round's coverage. It is defined here, in
+   forecast_rounds(), and nowhere else, so the latest estimate and forecast accuracy cut a round at the
+   same horizon (konsolidat#376: the estimate cut each Cycle at its own and dropped periods accuracy
+   measured). A Cycle's own shorter horizon never cuts the round short. Three subquery macros put every
    round on the declared calendar (declared_periods(), the one source of period dates), so the readers that
    split "actual up to the as-of" from "forecast after it" (gold_latest_estimate, WA7), count the lag of a
    forecast period from its as-of (gold_forecast_accuracy, pair C) or the horizon's coverage (konsol's
@@ -11,8 +16,10 @@
    accuracy model keep rounds side by side (FC-4). A reader that wants the current round joins
    ref('gold_forecast_current_round') on (scenario_id, fiscal_year, cycle) itself.
 
-     forecast_rounds()          one row per approved forecast round, from epm_staging.budget_cycles:
-                                cycle, scenario_id, cycle_fiscal_year, as_of_date, horizon_periods.
+     forecast_rounds()          one row per approved forecast Cycle, from epm_staging.budget_cycles:
+                                cycle, scenario_id, cycle_fiscal_year, as_of_date, horizon_periods (the
+                                Cycle's own declaration) and round_horizon_periods (the round's: the max
+                                over the Cycles sharing (scenario_id, as_of_date), a window function).
                                 Forecast scenarios by the declared type (IN, join_use_nulls=0); a Cycle
                                 with no round (as_of_date at the 1900-01-01 default) is not one.
      regular_period_ranks()     every declared Regular period with period_rank, its 1-based position in
@@ -27,7 +34,9 @@
      forecast_round_periods()   forecast_round_as_of() x regular_period_ranks(): every round against every
                                 declared Regular period with `lag` = period_rank - as_of_rank (0 the as-of
                                 period, 1.. after it, negative before). A reader keeps lag <= 0 for the
-                                actual side and 1 <= lag <= horizon_periods for the forecast side.
+                                actual side and 1 <= lag <= round_horizon_periods for the forecast side.
+                                It carries the round's horizon only, not the Cycle's, so no reader can
+                                cut at the Cycle's own.
 
    Why cross join + where, not an inequality JOIN ON: the stack's ClickHouse (24.8) takes range conditions
    in ON only behind an experimental setting; the budget tables are small (declared_periods' deal rule does
@@ -39,18 +48,27 @@
 {% macro forecast_rounds() %}
     (
         select
-            bc.name as cycle,
-            bc.scenario_id as scenario_id,
-            toUInt16(bc.fiscal_year) as cycle_fiscal_year,
-            bc.as_of_date as as_of_date,
-            toUInt16(bc.horizon_periods) as horizon_periods
-        from {{ source('epm_staging', 'budget_cycles') }} as bc
-        where bc.scenario_id in (
-            select scenario_id
-            from {{ source('epm_gold', 'scenario_definitions') }}
-            where scenario_type = 'forecast'
+            cycle,
+            scenario_id,
+            cycle_fiscal_year,
+            as_of_date,
+            horizon_periods,
+            max(horizon_periods) over (partition by scenario_id, as_of_date) as round_horizon_periods
+        from (
+            select
+                bc.name as cycle,
+                bc.scenario_id as scenario_id,
+                toUInt16(bc.fiscal_year) as cycle_fiscal_year,
+                bc.as_of_date as as_of_date,
+                toUInt16(bc.horizon_periods) as horizon_periods
+            from {{ source('epm_staging', 'budget_cycles') }} as bc
+            where bc.scenario_id in (
+                select scenario_id
+                from {{ source('epm_gold', 'scenario_definitions') }}
+                where scenario_type = 'forecast'
+            )
+              and bc.as_of_date != toDate32('1900-01-01')
         )
-          and bc.as_of_date != toDate32('1900-01-01')
     )
 {% endmacro %}
 
@@ -76,7 +94,7 @@
             scenario_id,
             cycle_fiscal_year,
             as_of_date,
-            horizon_periods,
+            round_horizon_periods,
             min(hold_rank) as as_of_rank,
             argMin(hold_fiscal_year, hold_rank) as as_of_fiscal_year,
             argMin(hold_fiscal_period, hold_rank) as as_of_fiscal_period
@@ -86,7 +104,7 @@
                 r.scenario_id as scenario_id,
                 r.cycle_fiscal_year as cycle_fiscal_year,
                 r.as_of_date as as_of_date,
-                r.horizon_periods as horizon_periods,
+                r.round_horizon_periods as round_horizon_periods,
                 rp.period_rank as hold_rank,
                 rp.fiscal_year as hold_fiscal_year,
                 rp.fiscal_period as hold_fiscal_period
@@ -95,7 +113,7 @@
             where rp.start_date <= r.as_of_date
               and r.as_of_date <= rp.end_date
         )
-        group by cycle, scenario_id, cycle_fiscal_year, as_of_date, horizon_periods
+        group by cycle, scenario_id, cycle_fiscal_year, as_of_date, round_horizon_periods
     )
 {% endmacro %}
 
@@ -107,7 +125,7 @@
             a.scenario_id as scenario_id,
             a.cycle_fiscal_year as cycle_fiscal_year,
             a.as_of_date as as_of_date,
-            a.horizon_periods as horizon_periods,
+            a.round_horizon_periods as round_horizon_periods,
             a.as_of_fiscal_year as as_of_fiscal_year,
             a.as_of_fiscal_period as as_of_fiscal_period,
             rp.fiscal_year as fiscal_year,
@@ -124,9 +142,8 @@
 {# konsol#348 S6 WC2/WC3 (FC-4-2, S6-Q8 a): the (round, period) pairs forecast accuracy measures, one
    definition for gold_forecast_accuracy (entity currency) and gold_forecast_accuracy_group (group
    currency). From forecast_round_periods(): the Cycle's own fiscal year (Q24 a), 1 <= lag <= the
-   ROUND's horizon, and only CLOSED periods. The round's horizon is the longest horizon_periods among the
-   approved Cycles sharing its (scenario_id, as_of_date), as konsol's horizon_coverage_model counts the
-   round's coverage: a FY2027 Cycle at horizon 3 in a round as of FY2026 P9 whose FY2026 Cycle declares
+   ROUND's horizon (round_horizon_periods, forecast_rounds()), and only CLOSED periods: a FY2027
+   Cycle at horizon 3 in a round as of FY2026 P9 whose FY2026 Cycle declares
    12 is measured to lag 12, not cut at 3 (konsol#348 S6 review m1,
    assert_forecast_accuracy_horizon_hand_table). Closed: epm_staging.fiscal_periods.status Closed or Locked, which konsol publishes as
    the EFFECTIVE status (the stricter of the Fiscal Year's and the row's; fiscal_calendar.fiscal_period_rows),
@@ -141,20 +158,10 @@
             toUInt16(fiscal_year) as rp_fiscal_year,
             toUInt16(fiscal_period) as rp_fiscal_period,
             lag as rp_lag
-        from {{ forecast_round_periods() }} as frp
-        inner join (
-            select
-                scenario_id as rh_scenario,
-                as_of_date as rh_as_of_date,
-                max(horizon_periods) as rh_horizon
-            from {{ forecast_rounds() }}
-            group by scenario_id, as_of_date
-        ) as rh
-            on rh.rh_scenario = frp.scenario_id
-            and rh.rh_as_of_date = frp.as_of_date
+        from {{ forecast_round_periods() }}
         where fiscal_year = cycle_fiscal_year
           and lag >= 1
-          and lag <= rh_horizon
+          and lag <= round_horizon_periods
           and (toUInt16(fiscal_year), toUInt16(fiscal_period)) in (
               select toUInt16(fiscal_year), toUInt16(fiscal_period)
               from {{ source('epm_staging', 'fiscal_periods') }}
