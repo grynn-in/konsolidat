@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **231** |
-| carrying their reasoning | 207 |
-| citing the issue that caused them | 205 |
-| severity `warn` (reports, does not stop a build) | 28 |
-| severity `error` (stops the build, and its children) | 203 |
+| assertions | **234** |
+| carrying their reasoning | 210 |
+| citing the issue that caused them | 208 |
+| severity `warn` (reports, does not stop a build) | 29 |
+| severity `error` (stops the build, and its children) | 205 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -28,11 +28,11 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Currency and translation](#currency-and-translation) — 36
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 17
-- [Intercompany](#intercompany) — 19
+- [Intercompany](#intercompany) — 20
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 37
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 39
 - [The chart of accounts](#the-chart-of-accounts) — 9
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 27
@@ -880,6 +880,14 @@ Its difference_cause stays 'fx'. A P&L (movement) pair compares the period at av
 
 <sub>`error (default)` · `tests/assert_ic_match_status_cases.sql` · konsol#305</sub>
 
+### `ic_matched_slice_nets_to_zero`
+
+**konsolidat#395 (PR #404 review): a fully matched balance-sheet intercompany side leaves nothing on any of its slices.**
+
+This test does not use ic_leg_covered() or any other part of the coverage decision. It reads what the model emitted and checks a consequence of eliminating in full (konsol#117 pair 2 K3, IFRS 10.B86(c)): when a side's matched elimination to date is exactly minus its balance to date, and no slice holds a balance opposite to the side's net, every slice is eliminated to exactly its own balance. Each slice gets L(t) x aligned_s / aligned_gross with aligned_gross = |side| = |L(t)|, so its consolidated intercompany balance to date (its own balance plus the ic_elimination rows on it) is 0. A side sent whole to the blank slice instead leaves its balance on its own slices and the opposite amount on the blank slice: two rows here. The model and assert_ic_slice_to_date_eliminated decide coverage through the same macro, so a defect in that shared decision is invisible to that test. This one compares the model's output with the input balances only. Checked per (group, account, period to date), on accounts where: * every elimination leg is a balance-basis MATCHED leg (no difference leg, which sits on the blank slice by konsolidat#245 Q1 A, and no movement-basis leg); * every side on the account is fully matched to date: |L(t) + side balance| <= the floor; * no slice of any side on the account opposes its side's net to date by more than the floor (decision 2B gives such a slice nothing, so it keeps its balance). The slice balance is gold_ic_side_slices (partner set), so a third-party balance on the same account does not enter. Error severity: a slice keeping an intercompany balance the group eliminated in full is a wrong consolidated number that the account total does not show.
+
+<sub>`error (default)` · `tests/assert_ic_matched_slice_nets_to_zero.sql` · konsol#117 konsolidat#245 konsolidat#395 konsolidat#404</sub>
+
 ### `ic_pair_basis`
 
 **Decision 14 (13 Sep 2026): a balance-sheet intercompany pair matches on its balance to date (from inception, as gold_balance_sheet carries it).**
@@ -1254,6 +1262,14 @@ Per run x origin member: 1. every line sums to zero (what is sent is received, t
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_conserved.sql` · konsol#269</sub>
 
+### `cost_allocation_derived_driver_drift`
+
+**Derived (Account Set) weights that no longer match the trial balance (konsol#269 phase 2b-1, W3;**
+
+decision Q3 A, 27 Nov 2026: snapshot at Compute, re-check at approval in konsol, warn on later drift here). An Account Set driver's value is the sum of the scenario trial balance over the driver's accounts, per receiver member, for the run's entity, scenario, year and period, negated when the driver's value_sign is 'Reversed'. konsol reads it at Compute and snapshots it on the run (driver_value) with the accounts it read (cost_allocation_run_driver_accounts: one row per EXPANDED account, main_account, with the declared account it came from, declared_account; 2b-1 DA). konsol walks the account tree at Compute, so a group account on the driver arrives here as its leaves and this test sums by main_account as stored, with no tree of its own (ClickHouse has no recursive hierarchy). This test recomputes that sum from gold_scenario_trial_balance as it stands now and names every weight row that differs by more than 0.0000001, or whose member has no trial balance row at all (konsol calls that member missing and would refuse the run; a 0 over rows is a real zero and only drifts if the weight is not 0). Warn, not error: an approved run keeps its weights by design; this tells the accountant that the data they were derived from has moved since. Dimension: the receiver member is read from the run's allocation_dimension through cost_allocation_member_expr (the pools macro does the same). No staging table carries a driver's dimension, and none is needed: konsol refuses a rule set whose driver is on another dimension than the rule set's (cost_allocation_model.py, "Driver %s is on dimension %s, not %s."), so the run's dimension IS the driver's. A site with no budget dimensions reads '' and every derived row warns; T3 (assert_cost_allocation_dimension_declared) names the run. declared_account is not read: the sum is over the expanded rows, and the sibling weight-source test keys its "no driver_accounts row" rule on (parent, driver) alone. LEFT JOIN on purpose: a member with no current rows must be reported. Both sides are coalesced so the verdict is the same under join_use_nulls 0 (defaults) and 1 (NULL).
+
+<sub>`warn` · `tests/cost_allocation/assert_cost_allocation_derived_driver_drift.sql` · konsol#269</sub>
+
 ### `cost_allocation_dimension_declared`
 
 **Allocation dimension is declared (konsol#269, T3).**
@@ -1310,11 +1326,19 @@ An origin member's pool in an account is relieved by one run only, per scenario,
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_sender_relieved_once.sql` · konsol#269</sub>
 
+### `cost_allocation_weight_source_valid`
+
+**Weight rows have the shape their source declares (konsol#269 phase 2b-1, W2b).**
+
+A driver's value comes from one of three sources (Deepak Pai, 27 Nov 2026): 'Uploaded Statistic': the row cites a statistic; its match is assert_cost_allocation_weights_have_driver_values. '' is the same thing on a run synced before phase 2b, so '' is read as 'Uploaded Statistic' throughout. 'Fixed Weights': blank statistic, not carried, value_period = the run's period, effective_from = the start of the window the value was read from (set). 'Account Set': blank statistic, not carried, value_period = the run's period, effective_from unset (this Date column holds unset as 1970-01-01), and the run holds at least one cost_allocation_run_driver_accounts row for the driver, each with value_sign 'As Booked' or 'Reversed' (the drift test negates on 'Reversed'; any other sign would be read as 'As Booked', which this row forbids instead). A driver_accounts row is one expanded account (main_account) with the declared account it came from (declared_account; 2b-1 DA); this test keys on (parent, driver) and reads neither column, the drift test sums by main_account. Only Fixed Weights carries a window start: a statistic or Account Set row with one set is flagged too. One driver has one source inside a run: two sources for the same (run, driver) flag every row of that driver. One row per offending weight, with every reason it offends in `problems`. Membership is tested with IN/NOT IN subqueries, not LEFT JOINs: join_use_nulls=0 would fill a missing side with '' and 0.
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weight_source_valid.sql` · konsol#269</sub>
+
 ### `cost_allocation_weights_have_driver_values`
 
-**Weights match submitted driver values (konsol#269, T2).**
+**Statistic weights match submitted driver values (konsol#269, T2;**
 
-Every weight row of a run must equal a value of the named statistic at value_period and receiver_member, and the statistic must belong to the run: same scenario, entity and fiscal year as the run, and the weight's own driver (decision Q3: a weight never borrows another scenario's, entity's or year's statistic). A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period.
+phase 2b-1 W2a). Every weight row whose value came from an Uploaded Statistic must equal a value of the named statistic at value_period and receiver_member, and the statistic must belong to the run: same scenario, entity and fiscal year as the run, and the weight's own driver (decision Q3: a weight never borrows another scenario's, entity's or year's statistic). A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period. Phase 2b-1 (Deepak Pai, 27 Nov 2026): a driver's value also comes from Fixed Weights or an Account Set, and those rows cite no statistic. Only rows with source = 'Uploaded Statistic' are judged here; '' is read the same way, because a run synced before phase 2b carries '' and every such row was a statistic row. The shape of the other sources is assert_cost_allocation_weight_source_valid; the drift of an Account Set value is assert_cost_allocation_derived_driver_drift.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weights_have_driver_values.sql` · konsol#269</sub>
 
