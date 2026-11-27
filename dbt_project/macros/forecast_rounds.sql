@@ -142,7 +142,8 @@
 {# konsol#348 S6 WC2/WC3 (FC-4-2, S6-Q8 a): the (round, period) pairs forecast accuracy measures, one
    definition for gold_forecast_accuracy (entity currency) and gold_forecast_accuracy_group (group
    currency). From forecast_round_periods(): the Cycle's own fiscal year (Q24 a), 1 <= lag <= the
-   ROUND's horizon (round_horizon_periods, forecast_rounds()), and only CLOSED periods: a FY2027 Cycle at horizon 3 in a round as of FY2026 P9 whose FY2026 Cycle declares
+   ROUND's horizon (round_horizon_periods, forecast_rounds()), and only CLOSED periods: a FY2027
+   Cycle at horizon 3 in a round as of FY2026 P9 whose FY2026 Cycle declares
    12 is measured to lag 12, not cut at 3 (konsol#348 S6 review m1,
    assert_forecast_accuracy_horizon_hand_table). Closed: epm_staging.fiscal_periods.status Closed or Locked, which konsol publishes as
    the EFFECTIVE status (the stricter of the Fiscal Year's and the row's; fiscal_calendar.fiscal_period_rows),

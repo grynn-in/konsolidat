@@ -1148,7 +1148,7 @@ models:
       - name: as_of_date
         description: "The round's as-of date, from budget_cycles: the actuals cut-off the round forecasts from."
       - name: horizon_periods
-        description: "The round's horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1)."
+        description: "The declared Cycle's own horizon in declared Regular periods after the as-of period, from budget_cycles (BUD-10-1). Not the round's horizon: a round is cut at round_horizon_periods, the longest horizon among its approved Cycles (forecast_rounds(), konsolidat#376)."
       - name: rate_set
         description: "The Rate Set the round is translated at, from budget_cycles (BUD-3)."
 
