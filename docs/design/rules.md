@@ -14,7 +14,7 @@ consolidation engine with every defect this one has already paid for.
 | | |
 |---|---|
 | assertions | **235** |
-| carrying their reasoning | 210 |
+| carrying their reasoning | 211 |
 | citing the issue that caused them | 209 |
 | severity `warn` (reports, does not stop a build) | 30 |
 | severity `error` (stops the build, and its children) | 205 |
@@ -478,7 +478,11 @@ gold_spread_budget converts every epm_raw.budget_entries line on 'Year-to-date m
 
 ### `cash_flow_excludes_nci_attribution`
 
-<sub>`error` · `tests/assert_cash_flow_excludes_nci_attribution.sql` · konsol#117</sub>
+**konsol#117 pair 2 review, finding 6.**
+
+The NCI attribution journal (adjustment_type 'nci_attribution', K2) moves the minority's share of result and CTA between equity lines (retained earnings / CTA / the NCI account) and sums to zero. It is a reclassification inside equity and no cash moves: it must not appear as a cash-flow line. This test names a cash-flow line that exists in gold_consolidated_cash_flow only because of that layer. Unit-style, no re-implementation of the classification: map every row of the fully consolidated TB to its seed line (published, non-cash), keep the lines of a group and period that the attribution layer reaches and no other layer does, and flag the cash-flow row for that group, period and line. The decision is made per LINE, the grain of gold_consolidated_cash_flow, not per account (konsolidat#351): decided per account, a line the NCI account shared with share capital and reserves was flagged as a whole, with an amount that was those accounts' entity layer and held nothing of the attribution. A line the attribution layer shares with other layers is not tested (their rows legitimately reach the same line); an unmapped account is not tested either (the model gives it a default line this test does not re-derive). Fixtures: dbt_project/test_fixtures/nci_attribution_journal.sql (the NCI account on a line of its own), assert_cash_flow_excludes_nci_attribution.shared_line.sql (the NCI account on a line it shares with an account that has entity rows: must pass) and assert_cash_flow_excludes_nci_attribution.must_flag.sql (the three tables seeded as a model that left the layer in would build them: the lone line flags, the shared line does not).
+
+<sub>`error` · `tests/assert_cash_flow_excludes_nci_attribution.sql` · konsol#117 konsolidat#351</sub>
 
 ### `consolidated_cf_reconciles`
 
