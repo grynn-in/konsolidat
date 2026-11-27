@@ -10,10 +10,10 @@
 -- tables epm_gold.gold_scenario_trial_balance
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
 ('ZZR1','ZZRS1','Step-Down','dim_cost_center','Sender''s Own Accounts','','Follow Latest Data','ZZE1','ZZSC',2026,3);
-INSERT INTO epm_staging.cost_allocation_run_driver_accounts (parent, idx, driver, main_account, value_sign) VALUES
-('ZZR1',1,'ZZ Revenue','ZZ4000','Reversed'),
-('ZZR1',2,'ZZ Units','ZZ7000','As Booked'),
-('ZZR1',3,'ZZ Units','ZZ7100','As Booked');
+INSERT INTO epm_staging.cost_allocation_run_driver_accounts (parent, idx, driver, main_account, declared_account, value_sign) VALUES
+('ZZR1',1,'ZZ Revenue','ZZ4000','ZZ4000','Reversed'),
+('ZZR1',2,'ZZ Units','ZZ7000','ZZ7000','As Booked'),
+('ZZR1',3,'ZZ Units','ZZ7100','ZZ7100','As Booked');
 INSERT INTO epm_gold.gold_scenario_trial_balance (scenario_id, data_area_id, fiscal_year, fiscal_period, main_account, dim_cost_center, amount) VALUES
 ('ZZSC','ZZE1',2026,3,'ZZ4000','ZZP1',-120),
 ('ZZSC','ZZE1',2026,3,'ZZ4000','ZZP2',-300),

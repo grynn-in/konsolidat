@@ -13,6 +13,11 @@ driver_value, and the Account Set driver's accounts are a seventh table,
 cost_allocation_run_driver_accounts. Both are documented column by column in
 the sources YAML, so a reader can see what an unset effective_from is.
 
+Phase 2b-1 (DA): a driver_accounts row is one EXPANDED account (main_account)
+with the declared account it came from (declared_account, after main_account),
+so the drift test sums by main_account without an account tree, which
+ClickHouse cannot walk. konsol's _REFERENCE_TABLE_DDL carries the same body.
+
 Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_cost_allocation_ddl`.
 """
@@ -47,7 +52,8 @@ TABLES = {
         "ENGINE = MergeTree ORDER BY (parent, idx)"
     ),
     "epm_staging.cost_allocation_run_driver_accounts": (
-        "(parent String, idx UInt32, driver String, main_account String, value_sign String) "
+        "(parent String, idx UInt32, driver String, main_account String, "
+        "declared_account String, value_sign String) "
         "ENGINE = MergeTree ORDER BY (parent, idx)"
     ),
     "epm_staging.cost_allocation_coefficients": (
@@ -73,7 +79,7 @@ SOURCE_TABLES = [name.split(".", 1)[1] for name in TABLES]
 # Phase 2b-1 (task C): the columns the sources YAML must document, per table.
 DOCUMENTED_COLUMNS = {
     "cost_allocation_run_weights": ["source", "effective_from"],
-    "cost_allocation_run_driver_accounts": ["driver", "main_account", "value_sign"],
+    "cost_allocation_run_driver_accounts": ["driver", "main_account", "declared_account", "value_sign"],
 }
 
 

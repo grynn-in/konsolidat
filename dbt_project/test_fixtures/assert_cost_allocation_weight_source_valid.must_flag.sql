@@ -16,10 +16,10 @@
 -- idx 14 flagged: an Account Set row (ZZ Signless) whose driver_accounts row has value_sign 'Absolute'.
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
 ('ZZR1','ZZRS1','Step-Down','dim_cost_center','Sender''s Own Accounts','','Follow Latest Data','ZZE1','ZZSC',2026,3);
-INSERT INTO epm_staging.cost_allocation_run_driver_accounts (parent, idx, driver, main_account, value_sign) VALUES
-('ZZR1',1,'ZZ Revenue','ZZ4000','Reversed'),
-('ZZR1',2,'ZZ Mixed','ZZ7000','As Booked'),
-('ZZR1',3,'ZZ Signless','ZZ7200','Absolute');
+INSERT INTO epm_staging.cost_allocation_run_driver_accounts (parent, idx, driver, main_account, declared_account, value_sign) VALUES
+('ZZR1',1,'ZZ Revenue','ZZ4000','ZZ4000','Reversed'),
+('ZZR1',2,'ZZ Mixed','ZZ7000','ZZ7000','As Booked'),
+('ZZR1',3,'ZZ Signless','ZZ7200','ZZ7200','Absolute');
 INSERT INTO epm_staging.cost_allocation_run_weights (parent, idx, step, sender_member, receiver_member, driver, statistic, value_period, carried_forward, driver_value, source, effective_from) VALUES
 ('ZZR1',1,1,'ZZIT','ZZP1','ZZ Headcount','ZZ Headcount',3,0,10,'Uploaded Statistic','1970-01-01'),
 ('ZZR1',2,1,'ZZIT','ZZP2','ZZ Headcount','ZZ Headcount',2,1,28,'','1970-01-01'),
