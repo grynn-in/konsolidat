@@ -1,4 +1,4 @@
--- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift
+-- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift gold_cost_allocation_absorption_frozen gold_cost_allocation_absorption assert_cost_allocation_absorption_identity assert_cost_allocation_absorption_frozen_drift
 -- gate: expect gold_cost_allocation built
 -- gate: expect assert_cost_allocation_expected_values pass
 -- gate: expect assert_cost_allocation_conserved pass
@@ -10,6 +10,9 @@
 -- gate: expect assert_cost_allocation_amounts pass
 -- gate: expect assert_cost_allocation_frozen_consistent pass
 -- gate: expect assert_cost_allocation_frozen_drift pass
+-- gate: expect gold_cost_allocation_absorption built
+-- gate: expect assert_cost_allocation_absorption_identity pass
+-- gate: expect assert_cost_allocation_absorption_frozen_drift pass
 -- konsol#269 2b-2 W5: Reciprocal with a Declared Rate sender, values asserted. Run ZZEQ, Reciprocal, Declared
 -- Allocation Account ZZ6999, pools on ZZ6000: ZZIT 1,000, ZZHR 400, ZZFM 300. ZZIT charges 50 per ticket
 -- (ZZHR 5, ZZSA 8, ZZOP 6); ZZHR (share) by headcount ZZFM 4, ZZSA 1; ZZFM (share) by area ZZHR 5, ZZIT 1,
@@ -22,6 +25,8 @@
 --   variance 255 = 1,000 + 205 - 950 stays on ZZ6000 for its own model. Totals: 940 + 505 + 255 = 1,700.
 -- The 27 coefficient rows are konsol's (cost_allocation_model.coefficient_rows, Reciprocal), not derived by
 -- hand; konsol's test_rate_reciprocal_worked_example_end_to_end_money pins the same money.
+-- W6: the build also runs the absorption models; the identity test on the built rows pins ZZIT's variance
+-- to 255 (1,445 at the final receivers + variance = 1,700 of pools).
 -- tables epm_gold.gold_scenario_trial_balance, epm_gold.gold_cost_allocation_frozen
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
 ('ZZEQ','ZZRS1','Reciprocal','dim_cost_center','Declared Allocation Account','ZZ6999','Follow Latest Data','ZZE1','ZZSC',2026,1);

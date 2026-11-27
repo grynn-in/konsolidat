@@ -1,4 +1,4 @@
--- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift
+-- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift gold_cost_allocation_absorption_frozen gold_cost_allocation_absorption assert_cost_allocation_absorption_identity assert_cost_allocation_absorption_frozen_drift
 -- gate: expect gold_cost_allocation built
 -- gate: expect assert_cost_allocation_expected_values pass
 -- gate: expect assert_cost_allocation_conserved pass
@@ -10,6 +10,9 @@
 -- gate: expect assert_cost_allocation_amounts pass
 -- gate: expect assert_cost_allocation_frozen_consistent pass
 -- gate: expect assert_cost_allocation_frozen_drift pass
+-- gate: expect gold_cost_allocation_absorption built
+-- gate: expect assert_cost_allocation_absorption_identity pass
+-- gate: expect assert_cost_allocation_absorption_frozen_drift pass
 -- konsol#269 2b-2 W5: the plan's declared-rate worked example (section 3) has its VALUES asserted. Run ZZER,
 -- Step-Down, Declared Allocation Account ZZ6999, ZZ6000 pools ZZIT 1,000 and ZZHR 400. ZZIT charges 50 per
 -- ticket (ZZHR 5, ZZSA 8, ZZOP 6: 950 in all); ZZHR holds 400 + 250 = 650 and splits it 5/8 : 3/8.
@@ -17,6 +20,8 @@
 -- ZZIT -> ZZHR own 250 and ZZHR -> ZZSA pass 156.25 (3.125 tickets x 50). ZZIT's absorption variance, 50,
 -- is pool 1,000 + received 0 - charged 950, left on ZZ6000 (konsol#269 Q5 A: reported by its own model).
 -- The coefficient rows are konsol's (cost_allocation_model.coefficient_rows), not derived by hand.
+-- W6: the build also runs the absorption models; the identity test on the built rows pins ZZIT's variance
+-- to 50 (1,350 at the final receivers + variance = 1,400 of pools).
 -- tables epm_gold.gold_scenario_trial_balance, epm_gold.gold_cost_allocation_frozen
 INSERT INTO epm_staging.cost_allocation_runs (name, rule_set, method, allocation_dimension, receiver_account_mode, allocation_account, amounts_after_approval, data_area_id, scenario_id, fiscal_year, fiscal_period) VALUES
 ('ZZER','ZZRS1','Step-Down','dim_cost_center','Declared Allocation Account','ZZ6999','Follow Latest Data','ZZE1','ZZSC',2026,1);
