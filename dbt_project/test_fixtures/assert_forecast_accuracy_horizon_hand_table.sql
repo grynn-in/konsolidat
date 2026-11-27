@@ -1,7 +1,10 @@
--- gate: build gold_forecast_accuracy assert_forecast_accuracy_horizon_hand_table assert_forecast_accuracy_grain_unique
+-- gate: build gold_forecast_accuracy gold_latest_estimate assert_forecast_accuracy_horizon_hand_table assert_forecast_accuracy_grain_unique assert_latest_estimate_horizon_hand_table assert_latest_estimate_grain_unique
 -- gate: expect gold_forecast_accuracy built
+-- gate: expect gold_latest_estimate built
 -- gate: expect assert_forecast_accuracy_horizon_hand_table pass
 -- gate: expect assert_forecast_accuracy_grain_unique pass
+-- gate: expect assert_latest_estimate_horizon_hand_table pass
+-- gate: expect assert_latest_estimate_grain_unique pass
 -- konsol#348 S6 WC2 review (m1, m2): a round's horizon is the longest of its Cycles', and the lag counts
 -- across a year end. FY2026 P1-P12 and FY2027 P1-P12 declared (Regular, monthly); FY2026 all Closed,
 -- FY2027 P1-P3 Closed, P4-P12 Open.
@@ -18,6 +21,10 @@
 -- P2 -20, P3 -24, P4 -50.
 -- Expected, in assert_forecast_accuracy_horizon_hand_table: A26 P10-P12 (lags 1-3), A27 FY2027 P1-P3
 -- (lags 4-6), B27 FY2027 P1-P2 (lags 1-2), with exact errors.
+-- konsolidat#376: the same fixture builds gold_latest_estimate, which cuts the round at the same horizon.
+-- Expected, in assert_latest_estimate_horizon_hand_table: A26 actual P9 and forecast P10-P12, A27
+-- forecast FY2027 P1-P4 (lags 4-7; the estimate does not read period status, so the Open P4 is in it), B27 forecast FY2027
+-- P1-P2. Red before the fix: each Cycle's own horizon left A27 with no rows.
 -- Budget dimensions at the fixture dims are dim_cost_center and dim_department; the live tables may have
 -- been built at other dims, so they are added by ALTER first.
 INSERT INTO epm_gold.scenario_definitions

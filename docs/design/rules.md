@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **235** |
-| carrying their reasoning | 211 |
-| citing the issue that caused them | 209 |
+| assertions | **236** |
+| carrying their reasoning | 212 |
+| citing the issue that caused them | 210 |
 | severity `warn` (reports, does not stop a build) | 30 |
-| severity `error` (stops the build, and its children) | 205 |
+| severity `error` (stops the build, and its children) | 206 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -36,7 +36,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [The chart of accounts](#the-chart-of-accounts) — 9
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 27
-- [Other](#other) — 14
+- [Other](#other) — 15
 
 ---
 
@@ -1682,9 +1682,9 @@ konsol#305 V03 (P6): layer 4 (topside adjustments) carries the same defect — i
 
 **konsol#348 S6 pair A review M1 (FC-2-1): a round's forecast after its horizon is reported, never dropped silently.**
 
-gold_latest_estimate keeps a round's own gold_spread_budget rows in the Regular periods after its as-of period up to `horizon_periods` of them (1 <= lag <= horizon); a row at or before the as-of is replaced by the actual (the declared rule, not reported here). A row AFTER the horizon has nowhere to go: the estimate leaves it out and the year reads short of what was entered. This names each (scenario, round, entity, account, year, period) of an approved round's fact rows whose period is beyond the horizon, with the amount left out. A key summing to exactly zero drops nothing and is not named. WARN: the horizon may simply be declared shorter than the sheet entered, and the estimate is right for the horizon declared; extend the horizon or remove the rows. Periods come from forecast_round_periods() (declared calendar, BUD-10-1), the round's own fiscal year (a horizon crossing the year end is one Cycle per year, Q24 a). The round columns are renamed (b_*) so no alias matches a column the joined fact carries. Fixtures: assert_latest_estimate_forecast_beyond_horizon.must_flag.sql (the hand table's R1 P7 -41: 1) and assert_latest_estimate_forecast_beyond_horizon.sql (nothing beyond, a zero row: pass).
+gold_latest_estimate keeps a round's own gold_spread_budget rows in the Regular periods after its as-of period up to the ROUND's horizon (1 <= lag <= round_horizon_periods, the longest horizon_periods among the Cycles sharing the as-of, forecast_rounds(); konsolidat#376: a Cycle's own shorter horizon is not the cut, so its rows inside the round's are not named); a row at or before the as-of is replaced by the actual (the declared rule, not reported here). A row AFTER the horizon has nowhere to go: the estimate leaves it out and the year reads short of what was entered. This names each (scenario, round, entity, account, year, period) of an approved round's fact rows whose period is beyond the horizon, with the amount left out. A key summing to exactly zero drops nothing and is not named. WARN: the horizon may simply be declared shorter than the sheet entered, and the estimate is right for the horizon declared; extend the horizon or remove the rows. Periods come from forecast_round_periods() (declared calendar, BUD-10-1), the round's own fiscal year (a horizon crossing the year end is one Cycle per year, Q24 a). The round columns are renamed (b_*) so no alias matches a column the joined fact carries. Fixtures: assert_latest_estimate_forecast_beyond_horizon.must_flag.sql (the hand table's R1 P7 -41: 1), assert_latest_estimate_forecast_beyond_horizon.round_horizon.must_flag.sql (two Cycles, horizons 12 and 3, in one round: only the other round's P3: 1) and assert_latest_estimate_forecast_beyond_horizon.sql (nothing beyond, a zero row: pass).
 
-<sub>`warn` · `tests/assert_latest_estimate_forecast_beyond_horizon.sql` · konsol#348</sub>
+<sub>`warn` · `tests/assert_latest_estimate_forecast_beyond_horizon.sql` · konsol#348 konsolidat#376</sub>
 
 ### `latest_estimate_grain_unique`
 
@@ -1823,6 +1823,14 @@ S6-Q2 a): gold_latest_estimate_current is gold_latest_estimate narrowed to each 
 The fixture (test_fixtures/assert_latest_estimate_hand_table.sql) declares FY2026 P1-P12 and two approved rounds of forecast scenario ZZ_FC_LE: ZZ-LE-R1 as of 2026-03-31 (P3), horizon 3, and ZZ-LE-R2 as of 2026-06-30 (P6), horizon 6. Each round's estimate is its year's actuals up to and including the as-of period plus its own forecast after the as-of within the horizon, layers summed; an entity the round does not forecast is absent, and a forecast row at or before the as-of is not in the estimate (the actual replaces it). The expected rows are below; a multiset diff (UNION ALL + GROUP BY with +1/-1, never count() over EXCEPT, konsolidat#361) names every row that differs: net +1 expected and missing, -1 produced and not expected. Amounts rounded to 4 places. The expected table is the fixture's, so, like every hand table (assert_budget_ytd_hand_table, assert_budget_consolidated_hand_table), it is vacuous where the fixture's scenario ZZ_FC_LE is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_LE's produced rows are read. ZZ_FC_LE is present when a Budget Cycle names it (the build-mode fixture, so a model that drops the whole scenario still fails) or when gold_latest_estimate holds it (the test-mode must_flag, which seeds the table directly). It is not a `fixture_only_tests` test: that var is ON in ci_full_build.py's full builds (it marks a costly test, not fixture-shaped expectations), which ran this test there on data without ZZ_FC_LE: 6 expected rows missing.
 
 <sub>`error` · `tests/assert_latest_estimate_hand_table.sql` · konsol#348 konsolidat#361</sub>
+
+### `latest_estimate_horizon_hand_table`
+
+**konsolidat#376 (konsol#348 Q24 a): gold_latest_estimate cuts a forecast round at the ROUND's horizon, the same horizon gold_forecast_accuracy measures it to.**
+
+A round is (scenario_id, as_of_date): every approved Cycle sharing the as-of, one per fiscal year the horizon touches (Q24 a). Its horizon is the LONGEST horizon_periods among those Cycles (forecast_rounds(), macros/forecast_rounds.sql, the one definition both models read); a Cycle's own shorter horizon does not cut the round short. Worked out by hand on the horizon fixture (test_fixtures/assert_forecast_accuracy_horizon_hand_table.sql): round A as of 2026-09-30 (FY2026 P9) has a FY2026 Cycle at horizon 12 and a FY2027 Cycle at horizon 3, so its FY2027 forecast P1-P4 (lags 4-7) is in the estimate; cut at the FY2027 Cycle's own 3 it was missing, while accuracy measured the same periods. Round B as of 2026-12-31 (FY2026 P12, horizon 2) keeps FY2027 P1-P2; P3 (lag 3) is beyond. Each Cycle's estimate stays in its own fiscal year, and a forecast row at or before the as-of is replaced by the actual. The multiset diff and rounding are assert_latest_estimate_hand_table's (UNION ALL + GROUP BY, never count() over EXCEPT, konsolidat#361). Vacuous where the fixture's scenario ZZ_FC_HZN is absent (every real site, and the full CI build): no expected row is built and only ZZ_FC_HZN's produced rows are read. ZZ_FC_HZN is present when a Budget Cycle names it (the build-mode fixture) or when gold_latest_estimate holds it (the test-mode must_flag). Not a `fixture_only_tests` test (see assert_latest_estimate_hand_table).
+
+<sub>`error` · `tests/assert_latest_estimate_horizon_hand_table.sql` · konsol#348 konsolidat#361 konsolidat#376</sub>
 
 ### `method_declared_for_multi_path`
 

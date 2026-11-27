@@ -13,7 +13,9 @@
                           for the entities the round forecasts (an entity with a gold_spread_budget row
                           under the Cycle). An entity with actuals and no forecast row is not in the round.
      source = 'forecast'  the round's own gold_spread_budget rows (by `cycle`) in Regular periods AFTER the
-                          as-of period and within the horizon (1 <= lag <= horizon_periods), in the round's
+                          as-of period and within the ROUND's horizon (1 <= lag <= round_horizon_periods:
+                          the longest horizon_periods among the Cycles sharing the as-of, forecast_rounds(),
+                          the horizon gold_forecast_accuracy measures to; konsolidat#376), in the Cycle's
                           fiscal year, layers summed (the actuals have no layer, so the estimate is the final
                           forecast). A forecast row at or before the as-of period is NOT in the estimate:
                           the actual replaces it. A forecast row AFTER the horizon is not in it either:
@@ -42,13 +44,12 @@ with round_periods as (
         cycle as rp_cycle,
         scenario_id as rp_scenario,
         as_of_date as rp_as_of_date,
-        horizon_periods as rp_horizon,
         fiscal_year as rp_fiscal_year,
         fiscal_period as rp_fiscal_period,
         lag as rp_lag
     from {{ forecast_round_periods() }}
     where fiscal_year = cycle_fiscal_year
-      and lag <= horizon_periods
+      and lag <= round_horizon_periods
 ),
 
 round_entities as (
