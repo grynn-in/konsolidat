@@ -393,6 +393,124 @@ models:
         data_type: Nullable(DateTime)
         description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"
 
+  - name: gold_cost_allocation_absorption
+    description: >
+      Absorption variance per Declared Rate sender (konsol#269 2b-2 W6; Q5 A): one row
+      per run x rate sender with pool, received, charged = rate x units and variance =
+      pool + received - charged. Live rows for runs that follow the latest data, union
+      the frozen rows of runs frozen at approval (gold_cost_allocation_absorption_frozen).
+      Domain allocation, an isolated scope.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: run
+        data_type: String
+        description: "Cost Allocation Run name"
+      - name: rule_set
+        data_type: String
+      - name: method
+        data_type: String
+      - name: scenario_id
+        data_type: String
+      - name: data_area_id
+        data_type: String
+      - name: fiscal_year
+        data_type: UInt16
+      - name: fiscal_period
+        data_type: UInt8
+      - name: allocation_dimension
+        data_type: String
+      - name: allocation_account
+        data_type: String
+        description: "The run's allocation account, where the sender's charge (rate x units) is relieved and its receivers are charged"
+      - name: sender_member
+        data_type: String
+        description: "The Declared Rate sender (its member on the run's allocation_dimension); one row per run and sender"
+      - name: step
+        data_type: UInt16
+        description: "The rate step of the run's rule set"
+      - name: rate
+        data_type: Decimal(38, 4)
+        description: "The rate per driver unit the run snapshotted (cost_allocation_run_weights.rate)"
+      - name: units
+        data_type: Decimal(38, 12)
+        description: "Sum of the step's driver units (cost_allocation_run_weights.driver_value), the coefficients' scale"
+      - name: pool
+        data_type: Decimal(38, 4)
+        description: "The sender's balance on the run's accounts in gold_scenario_trial_balance, summed over its accounts; stays on its own accounts, in no line"
+      - name: received
+        data_type: Decimal(38, 16)
+        description: "Sum of the received lines at the sender, of every origin; under Reciprocal its own returning units included (a rate sender is an exit of the solve)"
+      - name: charged
+        data_type: Decimal(38, 16)
+        description: "rate x units, exactly what the sender's own sent lines relieve on the allocation account"
+      - name: variance
+        data_type: Decimal(38, 16)
+        description: "pool + received - charged; positive = under-absorbed, negative = over-absorbed. Reported here per sender, never re-spread (konsol#269 Q5 A)"
+      - name: frozen_at
+        data_type: Nullable(DateTime)
+        description: "NULL for a live row; the freeze time for a row of a run frozen at approval (gold_cost_allocation_absorption_frozen)"
+
+  - name: gold_cost_allocation_absorption_frozen
+    description: >
+      Absorption variance of runs frozen at approval (konsol#269 2b-2 W7): computed once
+      when the run first appears in staging, from the frozen lines and the trial balance
+      of that build, stamped frozen_at, never recomputed; rows of runs no longer in
+      staging are removed. Same contract as gold_cost_allocation_absorption, which
+      unions this table. Domain allocation, an isolated scope.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: run
+        data_type: String
+        description: "Cost Allocation Run name"
+      - name: rule_set
+        data_type: String
+      - name: method
+        data_type: String
+      - name: scenario_id
+        data_type: String
+      - name: data_area_id
+        data_type: String
+      - name: fiscal_year
+        data_type: UInt16
+      - name: fiscal_period
+        data_type: UInt8
+      - name: allocation_dimension
+        data_type: String
+      - name: allocation_account
+        data_type: String
+        description: "The run's allocation account, where the sender's charge (rate x units) is relieved and its receivers are charged"
+      - name: sender_member
+        data_type: String
+        description: "The Declared Rate sender (its member on the run's allocation_dimension); one row per run and sender"
+      - name: step
+        data_type: UInt16
+        description: "The rate step of the run's rule set"
+      - name: rate
+        data_type: Decimal(38, 4)
+        description: "The rate per driver unit the run snapshotted (cost_allocation_run_weights.rate)"
+      - name: units
+        data_type: Decimal(38, 12)
+        description: "Sum of the step's driver units (cost_allocation_run_weights.driver_value), the coefficients' scale"
+      - name: pool
+        data_type: Decimal(38, 4)
+        description: "The sender's balance on the run's accounts in gold_scenario_trial_balance, summed over its accounts; stays on its own accounts, in no line"
+      - name: received
+        data_type: Decimal(38, 16)
+        description: "Sum of the received lines at the sender, of every origin; under Reciprocal its own returning units included (a rate sender is an exit of the solve)"
+      - name: charged
+        data_type: Decimal(38, 16)
+        description: "rate x units, exactly what the sender's own sent lines relieve on the allocation account"
+      - name: variance
+        data_type: Decimal(38, 16)
+        description: "pool + received - charged; positive = under-absorbed, negative = over-absorbed. Reported here per sender, never re-spread (konsol#269 Q5 A)"
+      - name: frozen_at
+        data_type: Nullable(DateTime)
+        description: "NULL for a live row; the freeze time for a row of a run frozen at approval (gold_cost_allocation_absorption_frozen)"
+
   - name: gold_scenario_trial_balance
     description: >
       Union of actual + budget + forecast across all scenarios. A forecast

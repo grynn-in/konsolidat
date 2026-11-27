@@ -10,7 +10,8 @@
 -- Declared Rate origins (2b-2 W4d) are left out on both sides: a rate origin's
 -- frozen origin_amount is its RATE, not a pool, and its trial balance pool never
 -- enters its lines (it feeds the absorption variance instead), so comparing the
--- two would report every rate origin. The frozen side drops lines with basis =
+-- two would report every rate origin; assert_cost_allocation_absorption_frozen_drift
+-- (W7) judges that pool on the frozen absorption rows. The frozen side drops lines with basis =
 -- 'Declared Rate'; the current side drops the run's rate senders
 -- (cost_allocation_rate_origins, the rule the lines use).
 -- Both directions are judged: a frozen key whose origin has

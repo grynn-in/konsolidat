@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **233** |
-| carrying their reasoning | 208 |
-| citing the issue that caused them | 207 |
-| severity `warn` (reports, does not stop a build) | 29 |
-| severity `error` (stops the build, and its children) | 204 |
+| assertions | **235** |
+| carrying their reasoning | 210 |
+| citing the issue that caused them | 209 |
+| severity `warn` (reports, does not stop a build) | 30 |
+| severity `error` (stops the build, and its children) | 205 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -32,7 +32,7 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 40
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 42
 - [The chart of accounts](#the-chart-of-accounts) — 9
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 27
@@ -1218,6 +1218,22 @@ The view is gold_fully_consolidated_budget rolled to the group (consolidation_gr
 
 <sub>`error` · `tests/assert_consolidated_budget_fact_hand_table.sql` · konsol#348 konsolidat#361</sub>
 
+### `cost_allocation_absorption_frozen_drift`
+
+**Frozen absorption rows whose pool no longer matches the trial balance (konsol#269 2b-2 W7).**
+
+A Freeze at Approval run keeps the variance it was approved at (gold_cost_allocation_absorption_frozen: pool at approval); if the rate sender's balance on the run's accounts has since changed in gold_scenario_trial_balance, the frozen variance differs from what the same run would show today by that change. One row per frozen run x rate sender. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. It is the absorption twin of assert_cost_allocation_frozen_drift, which judges share origins' lines and leaves rate origins out (their pool is in no line). The current pool is the macro's own (cost_allocation_pools, summed over the run's accounts), and the rate senders are the macro's own (cost_allocation_rate_origins), so the rule is not written twice. Both directions are judged: a frozen row whose sender has lost its trial balance (current 0), and a rate sender with a pool today and no frozen row. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
+
+<sub>`warn` · `tests/cost_allocation/assert_cost_allocation_absorption_frozen_drift.sql` · konsol#269</sub>
+
+### `cost_allocation_absorption_identity`
+
+**The absorption variance is an identity, not an estimate (konsol#269 2b-2 W6).**
+
+Q5 A (Deepak Pai, 27 Nov 2026): gold_cost_allocation_absorption reports, per run x Declared Rate sender, pool + received - charged. This test pins three things, exactly, in Decimal(38,16), with the frozen rows included on both sides: 1. `variance`: every row's variance = pool + received - charged; 2. `charged`: every row's charged = rate x units; 3. `run_balance`: per run with a rate sender, the money balances across the two tables:  sum(received lines at the FINAL receivers) + sum(variance) = sum(share senders' pools) + sum(rate senders' pools). Why 3 holds, given the lines' semantics. Every hop is a sent and a received line of the same amount, so a run's lines sum to zero. Group the members: a share sender's net is -pool (its own relief, and it passes on everything it receives: that is what assert_cost_allocation_conserved pins); a rate sender's net is received - charged (its relief is rate x units, it passes nothing on, and under Reciprocal it is an exit of the solve, so cost that reaches it stops there, its own returning units included); a final receiver's net is what it received. Zero total gives final received + sum(received - charged) = sum(share pools), and with variance = pool + received - charged that is the balance above. The share pools are read from the lines (max origin_amount per own sent line, per account), the rate pools from the absorption rows, so a frozen run balances against its own frozen numbers and a trial balance that moved since does not fire this test (that is assert_cost_allocation_absorption_frozen_drift's job). 1 and 2 cannot fire on a build of the shipped macro; they are the tripwire for a macro change and fire on a seeded table. 3 fires on a real build when the rows disagree with the lines: a rate sender the model dropped or counted twice, a charge that is not what its lines relieve (a coefficient set whose units differ from the weights'), received cost not read. Worked examples (plan section 3): ZZER 1,350 + 50 = 1,400; ZZEQ (Reciprocal) 1,445 + 255 = 1,700. Rows returned are violations, with the rule, what was got and what the identity wants. UNION ALL + GROUP BY, no join: join_use_nulls=0 would fill a side with 0.
+
+<sub>`error` · `tests/cost_allocation/assert_cost_allocation_absorption_identity.sql` · konsol#269</sub>
+
 ### `cost_allocation_amounts`
 
 **The amounts of a published cost allocation follow the run's policy (konsol#269, W5b).**
@@ -1294,7 +1310,7 @@ Three ways the published lines can disagree with epm_staging.cost_allocation_run
 
 **Frozen cost allocations whose origin pool no longer matches the trial balance (konsol#269, T6, W6).**
 
-A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account. Declared Rate origins (2b-2 W4d) are left out on both sides: a rate origin's frozen origin_amount is its RATE, not a pool, and its trial balance pool never enters its lines (it feeds the absorption variance instead), so comparing the two would report every rate origin. The frozen side drops lines with basis = 'Declared Rate'; the current side drops the run's rate senders (cost_allocation_rate_origins, the rule the lines use). Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
+A run frozen at approval keeps the amounts it was approved at (gold_cost_allocation_frozen); if gold_scenario_trial_balance has since changed, the frozen pool differs from the pool the same run would get today. One row per frozen run x account x origin member. Warn, not error: a frozen run is meant to differ from later data; this tells the accountant it has. The current pool is the macro's own (cost_allocation_pools), so the rule is not written twice. Pools are read from the origin's own sent lines (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account. Declared Rate origins (2b-2 W4d) are left out on both sides: a rate origin's frozen origin_amount is its RATE, not a pool, and its trial balance pool never enters its lines (it feeds the absorption variance instead), so comparing the two would report every rate origin; assert_cost_allocation_absorption_frozen_drift (W7) judges that pool on the frozen absorption rows. The frozen side drops lines with basis = 'Declared Rate'; the current side drops the run's rate senders (cost_allocation_rate_origins, the rule the lines use). Both directions are judged: a frozen key whose origin has lost its TB data, and an origin that got TB data after the freeze (no frozen lines, current pool != 0). The current side is limited to origins that have coefficients for the run, since an origin without them never gets lines. UNION ALL + GROUP BY, not a join: join_use_nulls=0 would fill a missing side with 0.
 
 <sub>`warn` · `tests/cost_allocation/assert_cost_allocation_frozen_drift.sql` · konsol#269</sub>
 

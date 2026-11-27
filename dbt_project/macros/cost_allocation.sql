@@ -258,3 +258,91 @@ from lines
         {%- endif -%}
     {%- endif -%}
 {% endmacro %}
+
+
+{# Absorption variance of a Declared Rate sender (konsol#269 2b-2 W6/W7; Q5 A, Deepak
+   Pai 27 Nov 2026: its own model per rate sender, never variance lines). One row per
+   run x rate sender, shared by gold_cost_allocation_absorption (Follow Latest Data
+   runs) and gold_cost_allocation_absorption_frozen (Freeze at Approval runs, appended
+   once): the caller says which runs (`runs_predicate`, a condition on alias `r`), which
+   lines table its received lines come from (`lines_relation`: the live union for the
+   live model, the frozen table for the frozen one, so a frozen row reads frozen lines)
+   and what to stamp in frozen_at.
+     rate, units  the rate step's rate and sum of driver units (cost_allocation_rate_origins);
+     pool         the sender's trial balance on the run's accounts (cost_allocation_pools,
+                  summed over its accounts), which its lines never carry;
+     received     the `received` lines at the sender, of every origin: under Reciprocal
+                  a rate sender is an exit of the solve, so cost that reaches it stops
+                  there, its own returning units included (ZZEQ: 50 of ZZIT's own, 80 of
+                  ZZHR's, 75 of ZZFM's = 205);
+     charged      rate x units, exactly what its own `sent` lines relieve;
+     variance     pool + received - charged: positive = under-absorbed, negative = over-.
+   UNION ALL + GROUP BY, not joins, so a sender with no trial balance rows or no
+   received line still gets its row with 0 there (join_use_nulls=0 would also give 0
+   across a LEFT JOIN, but silently). Decimal(38,16) throughout: pool is at the amount
+   scale (4), rate (4) x units (12) is exact at 16. #}
+{% macro cost_allocation_absorption(runs_predicate, lines_relation, frozen_at_expr) %}
+with runs as (
+    select *
+    from {{ source('epm_staging', 'cost_allocation_runs') }} as r
+    where {{ runs_predicate }}
+),
+
+rate_origins as (
+    {{ cost_allocation_rate_origins('runs') }}
+),
+
+pools as (
+    {{ cost_allocation_pools('runs') }}
+),
+
+parts as (
+    select run, origin_member as member, toDecimal128(0, {{ amount_scale() }}) as pool, toDecimal128(0, 16) as received
+    from rate_origins
+
+    union all
+
+    select p.run, p.origin_member, p.origin_amount, toDecimal128(0, 16)
+    from pools as p
+    where (p.run, p.origin_member) in (select run, origin_member from rate_origins)
+
+    union all
+
+    select l.run, l.receiver_member, toDecimal128(0, {{ amount_scale() }}), l.amount
+    from {{ lines_relation }} as l
+    where l.line_type = 'received'
+      and (l.run, l.receiver_member) in (select run, origin_member from rate_origins)
+),
+
+absorbed as (
+    select run, member, sum(pool) as pool, sum(received) as received
+    from parts
+    group by run, member
+)
+
+select
+    r.name as run,
+    r.rule_set as rule_set,
+    r.method as method,
+    r.scenario_id as scenario_id,
+    r.data_area_id as data_area_id,
+    r.fiscal_year as fiscal_year,
+    r.fiscal_period as fiscal_period,
+    r.allocation_dimension as allocation_dimension,
+    r.allocation_account as allocation_account,
+    ro.origin_member as sender_member,
+    ro.step as step,
+    ro.rate as rate,
+    ro.units as units,
+    toDecimal128(a.pool, {{ amount_scale() }}) as pool,
+    toDecimal128(a.received, 16) as received,
+    toDecimal128(ro.rate * ro.units, 16) as charged,
+    toDecimal128(toDecimal128(a.pool, 16) + a.received - ro.rate * ro.units, 16) as variance,
+    {{ frozen_at_expr }} as frozen_at
+from rate_origins as ro
+inner join runs as r
+    on r.name = ro.run
+inner join absorbed as a
+    on a.run = ro.run
+    and a.member = ro.origin_member
+{% endmacro %}
