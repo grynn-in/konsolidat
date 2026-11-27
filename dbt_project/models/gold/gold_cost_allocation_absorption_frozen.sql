@@ -22,6 +22,14 @@
 -- lines are read from gold_cost_allocation_frozen, which the same build appended, so
 -- the row and its lines agree; the two frozen_at stamps are seconds apart.
 --
+-- Known limit (2b-2 review L2): the pool is read when THIS model first sees the run.
+-- If a build appends a run's frozen lines but skips this model (e.g. an error test on
+-- gold_cost_allocation_frozen fails and dbt skips its children), the row is written at
+-- the next build with that build's trial balance. The lines stay frozen at approval;
+-- only the variance's pool can be later. assert_cost_allocation_absorption_frozen_drift
+-- then compares against that later pool, so it cannot show the gap; compare this
+-- row's frozen_at with the run's frozen lines' frozen_at to detect it.
+--
 -- Incremental strategy: `append` plus a pre_hook DELETE of the rows whose run left
 -- epm_staging.cost_allocation_runs (cancelled), and a SELECT restricted to Freeze runs
 -- with no row here yet, so an existing frozen run is left untouched (the reasoning is
