@@ -43,3 +43,29 @@
    assert_ic_slice_not_moved_past_its_own encodes the invariant directly, and
    is the only assertion in this layer that is not satisfied by construction. #}
 {% macro leg_coverage() %}1.0{% endmacro %}
+
+{# konsolidat#395 (Deepak Pai, 27 Nov 2026): the 1B coverage comparison, at
+   journal precision. THE ONE DEFINITION: gold_fully_consolidated_tb (the
+   to-date split and both legs of the period split) and
+   assert_ic_slice_to_date_eliminated all write
+   {{ ic_leg_covered(aligned_gross, leg) }}, so the test and the model cannot
+   decide a side differently.
+
+   Why rounded. IC is eliminated in full, so aligned_gross equals |leg| in
+   exact arithmetic at every point, and the comparison sits on its edge. Both
+   sides are Float64 sums, and ClickHouse adds in parallel in no fixed order,
+   so each lands up to ~5e-10 above or below the true value. Unrounded, a sum
+   that lands below gave "not covered" and moved the WHOLE leg to the blank
+   slice, and a rebuild could decide the other way. Two periods of 0.1 and
+   0.2 make a leg of 0.30000000000000004 against a slice of 0.3.
+
+   Both sides are rounded to amount_scale() places: journals are kept to 4
+   places (konsol#353) and TB amounts carry the same scale (#256), so a
+   difference below that is not an amount. Rejected (#395): a tolerance
+   (an eps whose size is a policy choice) and summing in Decimal in these
+   layers (a larger change). Residual: two sums whose true value falls
+   exactly on a rounding half-step can still round apart; amounts at 4 places
+   or fewer never do, because their sums are multiples of 0.0001. #}
+{% macro ic_leg_covered(aligned_gross, leg) -%}
+(round({{ aligned_gross }}, {{ amount_scale() }}) >= round({{ leg_coverage() }} * abs({{ leg }}), {{ amount_scale() }}))
+{%- endmacro %}

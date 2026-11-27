@@ -21,9 +21,11 @@
 -- it points the same way as the side's to-date net (decision 2B: an opposing
 -- slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does
 -- not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on
--- the blank slice instead. Expected amounts are summed over every side that
--- shares the account, and compared with the cumulative ic_elimination rows of
--- gold_fully_consolidated_tb on that account and slice.
+-- the blank slice instead. Coverage is decided at journal precision, through
+-- ic_leg_covered(), the macro the model uses (konsolidat#395). Expected amounts
+-- are summed over every side that shares the account, and compared with the
+-- cumulative ic_elimination rows of gold_fully_consolidated_tb on that account
+-- and slice.
 --
 -- Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its
 -- blank-slice difference would mix into the cumulative amounts compared here.
@@ -141,7 +143,7 @@ gross as (
 coverage as (
     select l.consolidation_group as consolidation_group, l.entity as entity, l.partner as partner,
            l.account as account, l.pk as pk, l.leg_td as leg_td, g.aligned_gross as aligned_gross,
-           toUInt8(g.aligned_gross > 0 and g.aligned_gross >= {{ leg_coverage() }} * abs(l.leg_td)) as split
+           toUInt8(g.aligned_gross > 0 and {{ ic_leg_covered('g.aligned_gross', 'l.leg_td') }}) as split
     from leg_to_date as l
     left join gross as g
         on g.consolidation_group = l.consolidation_group and g.entity = l.entity
