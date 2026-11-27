@@ -112,9 +112,17 @@ amount** (best-effort, not cached so it retries) rather than replacing the value
 
 `OpenEPM.bas` — **unchanged.** (The standalone `functions.html` was removed; the shared page hosts the functions.)
 
+> **Superseded for installation (konsol#605, konsol#618).** konsol no longer ships a static
+> `manifest.xml`. Each site serves its own manifest, built from the site's `host_name`: download it
+> from Desk, **Close Settings → Excel Add-in → Download Excel add-in**, or from
+> `/api/method/konsol.excel_addin.manifest` on the site. Every address in it is that site's. A user
+> who installed the add-in from an older static `manifest.xml` removes it and installs the
+> downloaded file instead; a manifest Version change (2.0.6.0 at konsol#618) also needs that
+> reinstall. A site without an https `host_name` refuses the download.
+
 ## Open items / verification
 - Not runtime-verified: needs a live konsol site + Office.js host (desktop Excel or web) to
-  sideload `manifest.xml` and smoke-test recalc, the shared-runtime cookie auth, and write-back.
+  sideload the site's manifest (see the note above) and smoke-test recalc, the shared-runtime cookie auth, and write-back.
 - Backend hardening follow-up (separate `konsol` PR): `epm_batch` does `int(req["year"])`
   **outside** its per-cell try/except, so a bad `year` 500s the whole batch. The client now
   guards this, but the server should also fail just the offending row.
