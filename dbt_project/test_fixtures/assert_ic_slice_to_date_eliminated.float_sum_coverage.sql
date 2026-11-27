@@ -1,15 +1,17 @@
--- gate: build +gold_fully_consolidated_tb assert_ic_slice_to_date_eliminated assert_ic_elimination_nets_zero assert_ic_elimination_slices_sum_to_the_leg assert_ic_elimination_share_is_bounded assert_ic_slice_not_moved_past_its_own assert_end_to_end_bs_balances
+-- gate: build +gold_fully_consolidated_tb assert_ic_slice_to_date_eliminated assert_ic_matched_slice_nets_to_zero assert_ic_group_currency_has_minor_unit assert_ic_elimination_nets_zero assert_ic_elimination_slices_sum_to_the_leg assert_ic_elimination_share_is_bounded assert_ic_slice_not_moved_past_its_own assert_end_to_end_bs_balances
 -- gate: expect assert_ic_slice_to_date_eliminated pass
+-- gate: expect assert_ic_matched_slice_nets_to_zero pass
+-- gate: expect assert_ic_group_currency_has_minor_unit pass
 -- gate: expect assert_ic_elimination_nets_zero pass
 -- gate: expect assert_ic_elimination_slices_sum_to_the_leg pass
 -- gate: expect assert_ic_elimination_share_is_bounded pass
 -- gate: expect assert_ic_slice_not_moved_past_its_own pass
 -- gate: expect assert_end_to_end_bs_balances pass
--- konsolidat#395 (Deepak Pai, 27 Nov 2026): the 1B coverage comparison is decided at journal
--- precision, through ic_leg_covered(). IC is eliminated in full, so a balance side's aligned slices
--- equal its to-date leg exactly, and an unrounded Float64 comparison sits on its edge: a leg summed
--- from two periods lands a few 1e-17 above a slice that holds the same amount in one row, the side
--- reads "not covered", and the WHOLE to-date leg goes to the blank slice.
+-- konsolidat#395 (option B, Deepak Pai, 27 Nov 2026): the 1B coverage comparison is decided at the
+-- group currency's ISO minor unit (EUR: 2), through ic_leg_covered(). IC is eliminated in full, so a
+-- balance side's aligned slices equal its to-date leg exactly, and an unrounded Float64 comparison
+-- sits on its edge: a leg summed from two periods lands a few 1e-17 above a slice that holds the same
+-- amount in one row, the side reads "not covered", and the WHOLE to-date leg goes to the blank slice.
 -- Group ZZG (EUR), ZZA 100% and ZZB 100% full, both EUR. No intercompany-difference account, so
 -- every ic_elimination row on these accounts is the MATCHED part. Two receivable (A) / payable (B)
 -- pairs, same shape, different amounts:
@@ -18,11 +20,13 @@
 --     leg is the P1 post plus the P2 post, -0.30000000000000004 in Float64.
 --   ZZ1200/ZZ2200: the same with 0.03 then 0.27.
 -- Expected: at P2 the -0.3 elimination to date sits on ZZ-CC1, where A's balance is.
--- Red on the model before #395: aligned_gross 0.3 < 0.30000000000000004, so the whole leg went to
--- the blank slice and ZZ-CC1 kept +0.3 uneliminated; assert_ic_slice_to_date_eliminated (which
--- decides coverage with ic_leg_covered) returned 2 rows, P2 ZZ-CC1 and the blank slice on one
--- account (CI, #404). Two pairs, because which Float64 sums land on the edge depends on how
--- gold_ic_eliminations and the window sums order the additions; one is enough to go red.
+-- Red on the model before #395 (CI, #404), from two tests:
+--   assert_ic_slice_to_date_eliminated (which decides coverage with ic_leg_covered) returned 2 rows,
+--     P2 ZZ-CC1 and the blank slice on one account;
+--   assert_ic_matched_slice_nets_to_zero, which does not use the macro, found the slice's
+--     consolidated IC balance to date left on ZZ-CC1 and the opposite amount on the blank slice.
+-- Two pairs, because which Float64 sums land on the edge depends on how gold_ic_eliminations and
+-- the window sums order the additions; one is enough to go red.
 -- Tables named so the gate creates them (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
 -- epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates,

@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **231** |
-| carrying their reasoning | 207 |
-| citing the issue that caused them | 205 |
-| severity `warn` (reports, does not stop a build) | 28 |
-| severity `error` (stops the build, and its children) | 203 |
+| assertions | **235** |
+| carrying their reasoning | 211 |
+| citing the issue that caused them | 209 |
+| severity `warn` (reports, does not stop a build) | 29 |
+| severity `error` (stops the build, and its children) | 206 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,14 +25,14 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 36
+- [Currency and translation](#currency-and-translation) — 37
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 17
-- [Intercompany](#intercompany) — 19
+- [Intercompany](#intercompany) — 20
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
-- [Budget, forecast and variance](#budget-forecast-and-variance) — 37
+- [Budget, forecast and variance](#budget-forecast-and-variance) — 39
 - [The chart of accounts](#the-chart-of-accounts) — 9
 - [Calendar and periods](#calendar-and-periods) — 7
 - [Platform and data integrity](#platform-and-data-integrity) — 27
@@ -154,7 +154,7 @@ Two claimed batches for the same entity-period flow ADDITIVELY into silver_gl_en
 
 **PRD-5 Test: Each top-side journal must be balanced (debits = credits).**
 
-konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency. A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
+konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency (group_minor_units()). A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
 
 <sub>`error (default)` · `tests/assert_topside_journal_balanced.sql` · konsol#353 konsolidat#209</sub>
 
@@ -387,6 +387,14 @@ A controlled subsidiary (full) is at 100% and has its own test, assert_group_equ
 konsol translates and does not remeasure. fx_method = 'historical' is therefore an Equity-only declaration: an Asset or Liability carried at the rate of the day it arrived would be remeasurement (IAS 21's non-monetary treatment), which this product does not do. konsol#239 refuses any such declaration at publish, so a chart governed today cannot carry one. A stack whose chart predates that guard still can, and that is what this test is for. The damage is not that the number is wrong in an obvious way: gold_consolidated_trial_balance applies a historical rate only where the chart declares one, so a Historical Equity Rate keyed to a non-equity account is simply never applied and the balance quietly falls back to the closing rate. Silent is the problem. This names the declaration instead. Error, not warn. assert_equity_rate_coverage warns because every row it returns is master data with a defined fallback (equity with no historical rate translates at closing, which is a decision, not a mistake). A historical declaration on a non-equity account has no such reading: it is a wrong declaration, and the fallback it lands on is not what the chart asked for. Nothing downstream can repair it, so the build should stop. GREEN requires every account declaring historical to be typed Equity — the konsolidat#213 invariant, uses_historical_rate = 1 implies is_equity = 1. is_equity is what the account IS (account_type = 'Equity'); uses_historical_rate is what the chart DECLARES (fx_method = 'historical'). Two kinds of offender, one row each, the assert_staging_not_stale shape: DECLARATION — the chart itself, an account typed non-equity that declares historical. One row per account. RATE — a Historical Equity Rate someone entered against an account that is not equity. The chart is where the damage is, but the rate is the row a user typed and expects to see honoured, and it can outlive the declaration that made it plausible (retype the account and the rate simply stops mattering, still sitting there). It is never applied either way, so name it too. One row per rate row, tranches included: each is a separately entered rate that does nothing.
 
 <sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsol#348 konsolidat#213 konsolidat#92</sub>
+
+### `ic_group_currency_has_minor_unit`
+
+**konsolidat#395, option B (Deepak Pai, 27 Nov 2026;**
+
+rejected: A, a fixed 4 places, and C, summing in Decimal). A group with intercompany eliminations must have a currency with an ISO minor unit. gold_fully_consolidated_tb decides whether a side's slices cover its elimination leg by rounding both to the group currency's minor unit (ic_leg_covered, macros/materiality.sql), following the 18 Sep 2026 decision that materiality follows the currency's minor unit (konsolidat#209). The minor unit comes from group_minor_units(): the group's reporting currency on its root row (data_area_id '') and the currencies row konsol writes from ISO Currency.minor_unit. A group with no minor unit has no scale to round to. The model never judges it at a default: join_use_nulls=0 would read a missing minor unit as 0, the JPY scale, so the model reads has_minor_unit instead, and with it 0 every leg of the group goes whole on the blank slice. That is a loss of detail, so this test refuses the build and names the group and the currency (blank when the root row declares none, or when the group has no root row). Error severity: without it the loss of slice detail would be silent.
+
+<sub>`error (default)` · `tests/assert_ic_group_currency_has_minor_unit.sql` · konsolidat#209 konsolidat#395</sub>
 
 ### `nci_equals_translated_times_minority`
 
@@ -880,6 +888,14 @@ Its difference_cause stays 'fx'. A P&L (movement) pair compares the period at av
 
 <sub>`error (default)` · `tests/assert_ic_match_status_cases.sql` · konsol#305</sub>
 
+### `ic_matched_slice_nets_to_zero`
+
+**konsolidat#395 (PR #404 review): a fully matched balance-sheet intercompany side leaves nothing on any of its slices.**
+
+This test does not use ic_leg_covered() or any other part of the coverage decision. It reads what the model emitted and checks a consequence of eliminating in full (konsol#117 pair 2 K3, IFRS 10.B86(c)): when a side's matched elimination to date is exactly minus its balance to date, and no slice holds a balance opposite to the side's net, every slice is eliminated to exactly its own balance. Each slice gets L(t) x aligned_s / aligned_gross with aligned_gross = |side| = |L(t)|, so its consolidated intercompany balance to date (its own balance plus the ic_elimination rows on it) is 0. A side sent whole to the blank slice instead leaves its balance on its own slices and the opposite amount on the blank slice: two rows here. The model and assert_ic_slice_to_date_eliminated decide coverage through the same macro, so a defect in that shared decision is invisible to that test. This one compares the model's output with the input balances only. Checked per (group, account, period to date), on accounts where: * every elimination leg is a balance-basis MATCHED leg (no difference leg, which sits on the blank slice by konsolidat#245 Q1 A, and no movement-basis leg); * every side on the account is fully matched to date: |L(t) + side balance| <= the floor; * no slice of any side on the account opposes its side's net to date by more than the floor (decision 2B gives such a slice nothing, so it keeps its balance). The slice balance is gold_ic_side_slices (partner set), so a third-party balance on the same account does not enter. Error severity: a slice keeping an intercompany balance the group eliminated in full is a wrong consolidated number that the account total does not show.
+
+<sub>`error (default)` · `tests/assert_ic_matched_slice_nets_to_zero.sql` · konsol#117 konsolidat#245 konsolidat#395 konsolidat#404</sub>
+
 ### `ic_pair_basis`
 
 **Decision 14 (13 Sep 2026): a balance-sheet intercompany pair matches on its balance to date (from inception, as gold_balance_sheet carries it).**
@@ -916,7 +932,7 @@ No elimination slice may be moved further than it moved itself. THE ASSERTION NO
 
 **konsolidat#245 option C, PR #260 review F1.**
 
-A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Coverage is decided at journal precision, through ic_leg_covered(), the macro the model uses (konsolidat#395). Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
+A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Coverage is decided at the group currency's ISO minor unit, through ic_leg_covered(), the macro the model uses (konsolidat#395, option B, Deepak Pai, 27 Nov 2026). Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
 
 <sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260 konsolidat#395</sub>
 
@@ -1254,6 +1270,14 @@ Per run x origin member: 1. every line sums to zero (what is sent is received, t
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_conserved.sql` · konsol#269</sub>
 
+### `cost_allocation_derived_driver_drift`
+
+**Derived (Account Set) weights that no longer match the trial balance (konsol#269 phase 2b-1, W3;**
+
+decision Q3 A, 27 Nov 2026: snapshot at Compute, re-check at approval in konsol, warn on later drift here). An Account Set driver's value is the sum of the scenario trial balance over the driver's accounts, per receiver member, for the run's entity, scenario, year and period, negated when the driver's value_sign is 'Reversed'. konsol reads it at Compute and snapshots it on the run (driver_value) with the accounts it read (cost_allocation_run_driver_accounts: one row per EXPANDED account, main_account, with the declared account it came from, declared_account; 2b-1 DA). konsol walks the account tree at Compute, so a group account on the driver arrives here as its leaves and this test sums by main_account as stored, with no tree of its own (ClickHouse has no recursive hierarchy). This test recomputes that sum from gold_scenario_trial_balance as it stands now and names every weight row that differs by more than 0.0000001, or whose member has no trial balance row at all (konsol calls that member missing and would refuse the run; a 0 over rows is a real zero and only drifts if the weight is not 0). Warn, not error: an approved run keeps its weights by design; this tells the accountant that the data they were derived from has moved since. Dimension: the receiver member is read from the run's allocation_dimension through cost_allocation_member_expr (the pools macro does the same). No staging table carries a driver's dimension, and none is needed: konsol refuses a rule set whose driver is on another dimension than the rule set's (cost_allocation_model.py, "Driver %s is on dimension %s, not %s."), so the run's dimension IS the driver's. A site with no budget dimensions reads '' and every derived row warns; T3 (assert_cost_allocation_dimension_declared) names the run. declared_account is not read: the sum is over the expanded rows, and the sibling weight-source test keys its "no driver_accounts row" rule on (parent, driver) alone. LEFT JOIN on purpose: a member with no current rows must be reported. Both sides are coalesced so the verdict is the same under join_use_nulls 0 (defaults) and 1 (NULL).
+
+<sub>`warn` · `tests/cost_allocation/assert_cost_allocation_derived_driver_drift.sql` · konsol#269</sub>
+
 ### `cost_allocation_dimension_declared`
 
 **Allocation dimension is declared (konsol#269, T3).**
@@ -1310,11 +1334,19 @@ An origin member's pool in an account is relieved by one run only, per scenario,
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_sender_relieved_once.sql` · konsol#269</sub>
 
+### `cost_allocation_weight_source_valid`
+
+**Weight rows have the shape their source declares (konsol#269 phase 2b-1, W2b).**
+
+A driver's value comes from one of three sources (Deepak Pai, 27 Nov 2026): 'Uploaded Statistic': the row cites a statistic; its match is assert_cost_allocation_weights_have_driver_values. '' is the same thing on a run synced before phase 2b, so '' is read as 'Uploaded Statistic' throughout. 'Fixed Weights': blank statistic, not carried, value_period = the run's period, effective_from = the start of the window the value was read from (set). 'Account Set': blank statistic, not carried, value_period = the run's period, effective_from unset (this Date column holds unset as 1970-01-01), and the run holds at least one cost_allocation_run_driver_accounts row for the driver, each with value_sign 'As Booked' or 'Reversed' (the drift test negates on 'Reversed'; any other sign would be read as 'As Booked', which this row forbids instead). A driver_accounts row is one expanded account (main_account) with the declared account it came from (declared_account; 2b-1 DA); this test keys on (parent, driver) and reads neither column, the drift test sums by main_account. Only Fixed Weights carries a window start: a statistic or Account Set row with one set is flagged too. One driver has one source inside a run: two sources for the same (run, driver) flag every row of that driver. One row per offending weight, with every reason it offends in `problems`. Membership is tested with IN/NOT IN subqueries, not LEFT JOINs: join_use_nulls=0 would fill a missing side with '' and 0.
+
+<sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weight_source_valid.sql` · konsol#269</sub>
+
 ### `cost_allocation_weights_have_driver_values`
 
-**Weights match submitted driver values (konsol#269, T2).**
+**Statistic weights match submitted driver values (konsol#269, T2;**
 
-Every weight row of a run must equal a value of the named statistic at value_period and receiver_member, and the statistic must belong to the run: same scenario, entity and fiscal year as the run, and the weight's own driver (decision Q3: a weight never borrows another scenario's, entity's or year's statistic). A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period.
+phase 2b-1 W2a). Every weight row whose value came from an Uploaded Statistic must equal a value of the named statistic at value_period and receiver_member, and the statistic must belong to the run: same scenario, entity and fiscal year as the run, and the weight's own driver (decision Q3: a weight never borrows another scenario's, entity's or year's statistic). A carried row (carried_forward = 1) reads an earlier period than the run's; a non-carried row reads the run's own period. Phase 2b-1 (Deepak Pai, 27 Nov 2026): a driver's value also comes from Fixed Weights or an Account Set, and those rows cite no statistic. Only rows with source = 'Uploaded Statistic' are judged here; '' is read the same way, because a run synced before phase 2b carries '' and every such row was a statistic row. The shape of the other sources is assert_cost_allocation_weight_source_valid; the drift of an Account Set value is assert_cost_allocation_derived_driver_drift.
 
 <sub>`error (default)` · `tests/cost_allocation/assert_cost_allocation_weights_have_driver_values.sql` · konsol#269</sub>
 
