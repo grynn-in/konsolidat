@@ -27,7 +27,7 @@ uv run konsol_load.py examples/mini/Mini_Master_Data.xlsx --tb-dir examples/mini
 
 The consolidation tree is flat: `MINI` (EUR) and the five entities directly under it. Ownership does not follow the tree. It runs through the links: `Ownership_Periods` names HOLD as the owner of DSP, SVC and PRT (`owner_entity`), HOLD's own row has a blank owner and so is held by `MINI`, and the two deals name HOLD as acquirer and seller (`acquirer_entity`, `disposer_entity`). The closure walks owner to owned, so MINI → HOLD → SVC is one path at 100%. There is no management tree and no reporting dimension. Every entity keeps its books in EUR, so there are no FX rates and no historical equity rates.
 
-Policy on the root, the same choices as Aquila Bike, on a 24-account chart (`MINI_GROUP`): IFRS, partial goodwill, impairment only, acquisition costs expensed. Journal accounts 1400 goodwill, 1410 fair value adjustment, 1300 investment, 3700 NCI (unused), 6730 disposal gain or loss, 1500 deal settlement, 6770 acquisition costs, 6750 intercompany differences (unused, tolerance 0). 3300 is the one retained-earnings account. 3100 share capital is `historical`.
+Policy on the root, the same choices as Aquila Bike, on a 24-account chart (`MINI_GROUP`): IFRS, partial goodwill, impairment only, acquisition costs expensed. Journal accounts 1400 goodwill, 1410 fair value adjustment, 1300 investment, 3700 NCI (unused), 6730 disposal gain or loss, 1500 deal settlement, 6770 acquisition costs, 6750 intercompany differences (unused, tolerance 0). Partial-period treatment is declared on the root as **Pro-rate by days**. 3300 is the one retained-earnings account. 3100 share capital is `historical`.
 
 ### What HOLD is
 
@@ -120,7 +120,9 @@ The parent's own books already show the cash out: debit investment 1,200,000, de
 
 ### The disposal (30 December)
 
-Proceeds 1,000,000 against DSP's net assets of 840,000. No goodwill, no fair value adjustment, no currency translation difference. **Gain on disposal 160,000** (6730). DSP's result of 90,000 for the year stays in the group result. The proceeds sit on 1500 in HOLD's books; the disposal journal clears that account. HOLD does not write its investment in DSP out of its own ledger — same convention as Aquila Bike, because no template removes a parent's own gain.
+Proceeds 1,000,000 against DSP's net assets of 840,000. No goodwill, no fair value adjustment, no currency translation difference. **Gain on disposal 160,000** (6730). DSP's result of 90,000 for the year stays in the group result.
+
+The sale falls inside the Activity period (1 February to 31 December, 334 days), so the declared treatment applies (IFRS 10.B88). Pro-rate by days removes the share of the period the group did not hold: the 31 December day after the sale, 1/334. That takes 269.46 off DSP's year result of 90,000 (revenue 1,197.60, cost of sales 538.92, operating expenses 209.58, depreciation 89.82, tax 89.82) and adds the same 269.46 to the gain, which the build shows as 160,269.46. The group result and the balance sheet do not change. The figures in this README are the whole-euro model before that adjustment; the warehouse adds the 269.46 split above. The proceeds sit on 1500 in HOLD's books; the disposal journal clears that account. HOLD does not write its investment in DSP out of its own ledger — same convention as Aquila Bike, because no template removes a parent's own gain.
 
 ### Close — 31 December
 
