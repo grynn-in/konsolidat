@@ -334,15 +334,16 @@ bal_gross as (
     group by consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
 ),
 
-{# 1B, to date: split only when the aligned slices cover the to-date leg. A side
-   with no slice row is a join miss, aligned_gross 0: not split. #}
+{# 1B, to date: split only when the aligned slices cover the to-date leg, at
+   journal precision (ic_leg_covered, konsolidat#395). A side with no slice row
+   is a join miss, aligned_gross 0: not split. #}
 bal_cover as (
     select
         l.consolidation_group as consolidation_group, l.fiscal_year as fiscal_year,
         l.fiscal_period as fiscal_period, l.rule_id as rule_id,
         l.entity as entity, l.partner as partner, l.account as account,
         l.leg_td as leg_td, g.aligned_gross as aligned_gross,
-        toUInt8(g.aligned_gross > 0 and g.aligned_gross >= {{ leg_coverage() }} * abs(l.leg_td)) as split
+        toUInt8(g.aligned_gross > 0 and {{ ic_leg_covered('g.aligned_gross', 'l.leg_td') }}) as split
     from bal_leg_to_date as l
     left join bal_gross as g
         on g.consolidation_group = l.consolidation_group and g.fiscal_year = l.fiscal_year
@@ -458,12 +459,13 @@ ic_elims as (
         and sl.account = e.debit_account
         {# ONE representation of the side per leg (1B): its own activity must
            cover the whole leg before its slices divide it, else the single
-           whole-leg row. In the ON, so a side matching neither arm is a join
-           miss and the leg is still emitted (fail-safe) rather than dropped. #}
-        and (sl.is_flat = 0
-             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
-             or sl.is_flat = 1
-             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
+           whole-leg row. Covered is decided at journal precision
+           (ic_leg_covered, konsolidat#395), and the two arms are one macro and
+           its negation, so exactly one matches. In the ON, so a side matching
+           neither arm is a join miss and the leg is still emitted (fail-safe)
+           rather than dropped. #}
+        and (sl.is_flat = 0 and {{ ic_leg_covered('sl.aligned_gross', 'e.debit_elimination') }}
+             or sl.is_flat = 1 and not {{ ic_leg_covered('sl.aligned_gross', 'e.debit_elimination') }})
         {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
            legs, is never split: a join miss, so it lands whole on the blank slice.
            assert_ic_difference_on_the_blank_slice pins it. #}
@@ -496,12 +498,13 @@ ic_elims as (
         and sl.account = e.credit_account
         {# ONE representation of the side per leg (1B): its own activity must
            cover the whole leg before its slices divide it, else the single
-           whole-leg row. In the ON, so a side matching neither arm is a join
-           miss and the leg is still emitted (fail-safe) rather than dropped. #}
-        and (sl.is_flat = 0
-             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
-             or sl.is_flat = 1
-             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
+           whole-leg row. Covered is decided at journal precision
+           (ic_leg_covered, konsolidat#395), and the two arms are one macro and
+           its negation, so exactly one matches. In the ON, so a side matching
+           neither arm is a join miss and the leg is still emitted (fail-safe)
+           rather than dropped. #}
+        and (sl.is_flat = 0 and {{ ic_leg_covered('sl.aligned_gross', 'e.credit_elimination') }}
+             or sl.is_flat = 1 and not {{ ic_leg_covered('sl.aligned_gross', 'e.credit_elimination') }})
         {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
            legs, is never split: a join miss, so it lands whole on the blank slice.
            assert_ic_difference_on_the_blank_slice pins it. #}

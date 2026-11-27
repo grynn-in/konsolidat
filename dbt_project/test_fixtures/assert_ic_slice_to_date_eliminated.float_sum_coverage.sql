@@ -20,7 +20,9 @@
 -- Expected: at P2 the -0.3 elimination to date sits on ZZ-CC1, where A's balance is.
 -- Red on the model before #395: aligned_gross 0.3 < 0.30000000000000004, so the whole leg went to
 -- the blank slice and ZZ-CC1 kept +0.3 uneliminated; assert_ic_slice_to_date_eliminated (which
--- decides coverage with ic_leg_covered) flags P2 ZZ-CC1 and the blank slice on both accounts.
+-- decides coverage with ic_leg_covered) returned 2 rows, P2 ZZ-CC1 and the blank slice on one
+-- account (CI, #404). Two pairs, because which Float64 sums land on the edge depends on how
+-- gold_ic_eliminations and the window sums order the additions; one is enough to go red.
 -- Tables named so the gate creates them (empty): epm_raw.general_journal_account_entry_bi_entities,
 -- epm_raw.general_journal_entry_bi_entities, epm_raw.ledgers, epm_raw.legal_entities,
 -- epm_raw.fiscal_calendar_years, epm_staging.historical_equity_rates,
