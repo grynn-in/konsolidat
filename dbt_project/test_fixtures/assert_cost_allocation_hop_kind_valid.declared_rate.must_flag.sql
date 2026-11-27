@@ -1,8 +1,9 @@
--- gate: expect assert_cost_allocation_hop_kind_valid flag 2
+-- gate: expect assert_cost_allocation_hop_kind_valid flag 3
 -- konsol#269 2b-2 W4(e) must-flag fixture: a Declared Rate sender is a SINK, it never passes cost on.
--- Run ZZRT: ZZIT charges a rate (weight rows 'Declared Rate'). Two rows:
+-- Run ZZRT: ZZIT charges a rate (weight rows 'Declared Rate'). Three rows:
 --   coefficient: a `pass` hop at sender ZZIT for origin ZZHR (ZZIT passing on the 80 it received);
---   line: a `pass` line sent by ZZIT for origin ZZIT (its own returning ticket passed on again).
+--   line (2): both lines of a `pass` hop sent by ZZIT for origin ZZIT (its own returning ticket passed
+--   on again): the sent line at ZZIT and the received line at ZZSA, one row each like any bad line.
 -- Every hop_kind here is 'own' or 'pass', so the shape check adds nothing; ZZHR's pass rows are fine.
 -- tables epm_staging.cost_allocation_coefficients, epm_staging.cost_allocation_run_weights, epm_gold.gold_cost_allocation
 INSERT INTO epm_staging.cost_allocation_run_weights (parent, idx, step, sender_member, receiver_member, driver, statistic, value_period, carried_forward, driver_value, source, effective_from, basis, rate, rate_from) VALUES

@@ -1,7 +1,15 @@
 -- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift
 -- gate: expect gold_cost_allocation built
 -- gate: expect assert_cost_allocation_expected_values pass
--- gate: expect assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift pass
+-- gate: expect assert_cost_allocation_conserved pass
+-- gate: expect assert_cost_allocation_coefficients_close pass
+-- gate: expect assert_cost_allocation_balanced_per_account pass
+-- gate: expect assert_cost_allocation_sender_relieved_once pass
+-- gate: expect assert_cost_allocation_hop_kind_valid pass
+-- gate: expect assert_cost_allocation_basis_valid pass
+-- gate: expect assert_cost_allocation_amounts pass
+-- gate: expect assert_cost_allocation_frozen_consistent pass
+-- gate: expect assert_cost_allocation_frozen_drift pass
 -- konsol#269 2b-2 W5: Reciprocal with a Declared Rate sender, values asserted. Run ZZEQ, Reciprocal, Declared
 -- Allocation Account ZZ6999, pools on ZZ6000: ZZIT 1,000, ZZHR 400, ZZFM 300. ZZIT charges 50 per ticket
 -- (ZZHR 5, ZZSA 8, ZZOP 6); ZZHR (share) by headcount ZZFM 4, ZZSA 1; ZZFM (share) by area ZZHR 5, ZZIT 1,
@@ -9,7 +17,8 @@
 -- to ZZIT, a rate sender, where cost of every origin stops (its own returning ticket included).
 --   Sent: ZZIT 950 (50 x 19), ZZHR 1,675, ZZFM 1,640. Received: ZZIT 205 (50 of its own, 80 of ZZHR's, 75
 --   of ZZFM's), ZZHR 1,275, ZZFM 1,340. On ZZ6999: ZZSA 940, ZZOP 505, ZZIT -745 (= 205 - 950), ZZHR 0,
---   ZZFM 0; gross ZZIT -> ZZHR own 250, ZZFM -> ZZIT pass 205 (everything ZZIT absorbs). ZZIT's absorption
+--   ZZFM 0; gross ZZIT -> ZZHR own 250; ZZFM -> ZZIT own 37.5 (ZZFM's pool) and pass 167.5 (ZZIT's own
+--   returning ticket 50, ZZHR's 80, ZZFM's returning 37.5), together the 205 ZZIT absorbs. ZZIT's absorption
 --   variance 255 = 1,000 + 205 - 950 stays on ZZ6000 for its own model. Totals: 940 + 505 + 255 = 1,700.
 -- The 27 coefficient rows are konsol's (cost_allocation_model.coefficient_rows, Reciprocal), not derived by
 -- hand; konsol's test_rate_reciprocal_worked_example_end_to_end_money pins the same money.

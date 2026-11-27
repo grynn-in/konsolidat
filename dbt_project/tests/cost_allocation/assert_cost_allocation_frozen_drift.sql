@@ -7,6 +7,12 @@
 -- The current pool is the macro's own (cost_allocation_pools), so the rule is
 -- not written twice. Pools are read from the origin's own sent lines
 -- (hop_kind = 'own'): a declared-mode pass-through sent line sits on the allocation account.
+-- Declared Rate origins (2b-2 W4d) are left out on both sides: a rate origin's
+-- frozen origin_amount is its RATE, not a pool, and its trial balance pool never
+-- enters its lines (it feeds the absorption variance instead), so comparing the
+-- two would report every rate origin. The frozen side drops lines with basis =
+-- 'Declared Rate'; the current side drops the run's rate senders
+-- (cost_allocation_rate_origins, the rule the lines use).
 -- Both directions are judged: a frozen key whose origin has
 -- lost its TB data, and an origin that got TB data after the freeze (no frozen
 -- lines, current pool != 0). The current side is limited to origins that have
@@ -19,10 +25,14 @@ with runs as (
     where amounts_after_approval = 'Freeze at Approval'
 ),
 
+rate_origins as (
+    {{ cost_allocation_rate_origins('runs') }}
+),
+
 sides as (
     select run, main_account, origin_member, max(origin_amount) as pool, 'frozen' as side
     from {{ ref('gold_cost_allocation_frozen') }}
-    where line_type = 'sent' and hop_kind = 'own'
+    where line_type = 'sent' and hop_kind = 'own' and basis != 'Declared Rate'
     group by run, main_account, origin_member
 
     union all
@@ -32,6 +42,7 @@ sides as (
     where (run, origin_member) in (
         select run, origin_member from {{ source('epm_staging', 'cost_allocation_coefficients') }}
     )
+    and (run, origin_member) not in (select run, origin_member from rate_origins)
 )
 
 select

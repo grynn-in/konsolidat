@@ -279,10 +279,10 @@ models:
         data_type: String
       - name: main_account
         data_type: String
-        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but the origin's own relief"
+        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but a share origin's own relief (a rate origin's relief is on the allocation account too)"
       - name: pool_account
         data_type: String
-        description: "Account of the origin pool this line distributes (the run account it was read from)"
+        description: "Account of the origin pool this line distributes (the run account it was read from); for a Declared Rate origin the run's allocation account, where its charge is relieved"
       - name: allocation_dimension
         data_type: String
       - name: member
@@ -294,6 +294,9 @@ models:
       - name: hop_kind
         data_type: String
         description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
+      - name: basis
+        data_type: String
+        description: "What origin_amount is (konsol#269 2b-2): 'Share of Pool', the origin's pool, split by share coefficients; or 'Declared Rate', the rate the run snapshotted, times coefficients in driver units. A rate origin's lines, its own relief included, sit on the run's allocation account; its pool stays on its own accounts"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -313,10 +316,10 @@ models:
         data_type: Decimal(38, 12)
       - name: origin_amount
         data_type: Decimal(38, 4)
-        description: "The origin member's pool on the run's accounts, from gold_scenario_trial_balance"
+        description: "basis 'Share of Pool': the origin member's pool on the run's accounts, from gold_scenario_trial_balance. basis 'Declared Rate': the rate per driver unit the run snapshotted (cost_allocation_run_weights.rate)"
       - name: amount
         data_type: Decimal(38, 16)
-        description: "origin_amount * coefficient, signed by line_type; sent and received cancel exactly"
+        description: "origin_amount * coefficient, signed by line_type; sent and received cancel exactly (pool x share, or rate x driver units)"
       - name: frozen_at
         data_type: Nullable(DateTime)
         description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"
@@ -345,10 +348,10 @@ models:
         data_type: String
       - name: main_account
         data_type: String
-        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but the origin's own relief"
+        description: "Account the line is booked to: the pool account, or in declared mode the allocation account for every line but a share origin's own relief (a rate origin's relief is on the allocation account too)"
       - name: pool_account
         data_type: String
-        description: "Account of the origin pool this line distributes (the run account it was read from)"
+        description: "Account of the origin pool this line distributes (the run account it was read from); for a Declared Rate origin the run's allocation account, where its charge is relieved"
       - name: allocation_dimension
         data_type: String
       - name: member
@@ -360,6 +363,9 @@ models:
       - name: hop_kind
         data_type: String
         description: "own (the origin's relief of its pool: sent on the pool account) or pass (a hop of cost the sender received; in declared mode on the allocation account); the sender of a pass hop may be the origin itself"
+      - name: basis
+        data_type: String
+        description: "What origin_amount is (konsol#269 2b-2): 'Share of Pool', the origin's pool, split by share coefficients; or 'Declared Rate', the rate the run snapshotted, times coefficients in driver units. A rate origin's lines, its own relief included, sit on the run's allocation account; its pool stays on its own accounts"
       - name: origin_member
         data_type: String
         description: "The member whose pool this line distributes; origin_amount repeats on every line of the origin"
@@ -379,10 +385,10 @@ models:
         data_type: Decimal(38, 12)
       - name: origin_amount
         data_type: Decimal(38, 4)
-        description: "The origin member's pool on the run's accounts, from gold_scenario_trial_balance"
+        description: "basis 'Share of Pool': the origin member's pool on the run's accounts, from gold_scenario_trial_balance. basis 'Declared Rate': the rate per driver unit the run snapshotted (cost_allocation_run_weights.rate)"
       - name: amount
         data_type: Decimal(38, 16)
-        description: "origin_amount * coefficient, signed by line_type; sent and received cancel exactly"
+        description: "origin_amount * coefficient, signed by line_type; sent and received cancel exactly (pool x share, or rate x driver units)"
       - name: frozen_at
         data_type: Nullable(DateTime)
         description: "NULL for a live line; the freeze time for a line from a run frozen at approval (W5)"

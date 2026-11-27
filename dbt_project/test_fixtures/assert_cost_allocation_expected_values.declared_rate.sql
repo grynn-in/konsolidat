@@ -1,7 +1,15 @@
 -- gate: build gold_cost_allocation_frozen gold_cost_allocation assert_cost_allocation_expected_values assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift
 -- gate: expect gold_cost_allocation built
 -- gate: expect assert_cost_allocation_expected_values pass
--- gate: expect assert_cost_allocation_conserved assert_cost_allocation_coefficients_close assert_cost_allocation_balanced_per_account assert_cost_allocation_sender_relieved_once assert_cost_allocation_hop_kind_valid assert_cost_allocation_basis_valid assert_cost_allocation_amounts assert_cost_allocation_frozen_consistent assert_cost_allocation_frozen_drift pass
+-- gate: expect assert_cost_allocation_conserved pass
+-- gate: expect assert_cost_allocation_coefficients_close pass
+-- gate: expect assert_cost_allocation_balanced_per_account pass
+-- gate: expect assert_cost_allocation_sender_relieved_once pass
+-- gate: expect assert_cost_allocation_hop_kind_valid pass
+-- gate: expect assert_cost_allocation_basis_valid pass
+-- gate: expect assert_cost_allocation_amounts pass
+-- gate: expect assert_cost_allocation_frozen_consistent pass
+-- gate: expect assert_cost_allocation_frozen_drift pass
 -- konsol#269 2b-2 W5: the plan's declared-rate worked example (section 3) has its VALUES asserted. Run ZZER,
 -- Step-Down, Declared Allocation Account ZZ6999, ZZ6000 pools ZZIT 1,000 and ZZHR 400. ZZIT charges 50 per
 -- ticket (ZZHR 5, ZZSA 8, ZZOP 6: 950 in all); ZZHR holds 400 + 250 = 650 and splits it 5/8 : 3/8.
