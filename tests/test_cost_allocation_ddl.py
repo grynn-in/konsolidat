@@ -1,4 +1,4 @@
-"""konsol#269 (cost allocation phase 1, task W1): the six epm_staging tables that
+"""konsol#269 (cost allocation phase 1, task W1): the seven epm_staging tables that
 konsol writes through for Cost Allocation Run, Cost Allocation Statistic and
 their child tables, and their dbt source declarations.
 
@@ -7,6 +7,16 @@ each is declared under the epm_staging source in
 dbt_project/models/staging/_staging__sources.yml. The body is the contract
 that konsol's write-through and the W2/W3 models read against; a change to one
 side without the other is a silent shape difference, so this test pins both.
+
+Phase 2b-1 (task C): the weights carry `source` and `effective_from` after
+driver_value, and the Account Set driver's accounts are a seventh table,
+cost_allocation_run_driver_accounts. Both are documented column by column in
+the sources YAML, so a reader can see what an unset effective_from is.
+
+Phase 2b-1 (DA): a driver_accounts row is one EXPANDED account (main_account)
+with the declared account it came from (declared_account, after main_account),
+so the drift test sums by main_account without an account tree, which
+ClickHouse cannot walk. konsol's _REFERENCE_TABLE_DDL carries the same body.
 
 Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_cost_allocation_ddl`.
@@ -38,7 +48,12 @@ TABLES = {
     "epm_staging.cost_allocation_run_weights": (
         "(parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, "
         "driver String, statistic String, value_period UInt8, carried_forward UInt8, "
-        "driver_value Decimal(38,9)) "
+        "driver_value Decimal(38,9), source String, effective_from Date) "
+        "ENGINE = MergeTree ORDER BY (parent, idx)"
+    ),
+    "epm_staging.cost_allocation_run_driver_accounts": (
+        "(parent String, idx UInt32, driver String, main_account String, "
+        "declared_account String, value_sign String) "
         "ENGINE = MergeTree ORDER BY (parent, idx)"
     ),
     "epm_staging.cost_allocation_coefficients": (
@@ -60,6 +75,12 @@ TABLES = {
 
 # The source table names, as written in the sources YAML (without the schema).
 SOURCE_TABLES = [name.split(".", 1)[1] for name in TABLES]
+
+# Phase 2b-1 (task C): the columns the sources YAML must document, per table.
+DOCUMENTED_COLUMNS = {
+    "cost_allocation_run_weights": ["source", "effective_from"],
+    "cost_allocation_run_driver_accounts": ["driver", "main_account", "declared_account", "value_sign"],
+}
 
 
 def _read(path):
@@ -105,6 +126,17 @@ class CostAllocationStagingDDL(unittest.TestCase):
         for name in SOURCE_TABLES:
             with self.subTest(table=name):
                 self.assertRegex(block, r"(?m)^      - name: " + re.escape(name) + r"$")
+
+    def test_the_new_columns_are_documented_in_the_sources_yaml(self):
+        """Phase 2b-1 (task C): each new column is listed under its source table."""
+        block = _epm_staging_block(_read(SOURCES))
+        for table, columns in DOCUMENTED_COLUMNS.items():
+            entry = re.search(r"(?ms)^      - name: " + re.escape(table) + r"$\n(.*?)(?=^      - name: |\Z)",
+                              block)
+            self.assertTrue(entry, table)
+            for column in columns:
+                with self.subTest(table=table, column=column):
+                    self.assertRegex(entry.group(1), r"(?m)^          - name: " + re.escape(column) + r"$")
 
     def test_ci_runs_this_test_and_watches_its_inputs(self):
         wf = _read(WORKFLOW)
