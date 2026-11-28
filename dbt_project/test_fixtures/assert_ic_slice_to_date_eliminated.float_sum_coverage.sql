@@ -1,7 +1,6 @@
 -- gate: build +gold_fully_consolidated_tb assert_ic_slice_to_date_eliminated assert_ic_matched_slice_nets_to_zero assert_ic_elimination_nets_zero assert_ic_elimination_slices_sum_to_the_leg assert_ic_elimination_share_is_bounded assert_ic_slice_not_moved_past_its_own assert_end_to_end_bs_balances
 -- gate: expect assert_ic_slice_to_date_eliminated pass
 -- gate: expect assert_ic_matched_slice_nets_to_zero pass
--- gate: expect pass
 -- gate: expect assert_ic_elimination_nets_zero pass
 -- gate: expect assert_ic_elimination_slices_sum_to_the_leg pass
 -- gate: expect assert_ic_elimination_share_is_bounded pass
