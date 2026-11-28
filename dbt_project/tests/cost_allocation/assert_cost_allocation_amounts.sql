@@ -9,21 +9,32 @@
 -- one full build it cannot fire; it fires when gold_scenario_trial_balance is
 -- rebuilt without rebuilding this model (a partial build) or on a seeded table.
 -- Pools come from the origin's own sent lines (hop_kind = 'own'), not the declared-mode
--- pass-through lines on the allocation account.
+-- pass-through lines on the allocation account. A Declared Rate origin (2b-2 W4d)
+-- is stamped like any other but not judged for staleness: its origin_amount is its
+-- RATE, and its trial balance pool never enters its lines; both sides of `stale`
+-- leave it out (basis on the lines, cost_allocation_rate_origins on the current side).
 -- Rows returned are violations. UNION ALL + GROUP BY, not a join: join_use_nulls=0.
 with runs as (
     select * from {{ source('epm_staging', 'cost_allocation_runs') }}
 ),
 
+live_runs as (
+    select * from runs where amounts_after_approval = 'Follow Latest Data'
+),
+
+rate_origins as (
+    {{ cost_allocation_rate_origins('live_runs') }}
+),
+
 published as (
     select
-        a.run as run, a.main_account as main_account, a.origin_member as origin_member,
+        a.run as run, a.main_account as main_account, a.origin_member as origin_member, a.basis as basis,
         max(a.origin_amount) as pool, max(r.amounts_after_approval) as policy,
         countIf(a.frozen_at is null) as unstamped, countIf(a.frozen_at is not null) as stamped
     from {{ ref('gold_cost_allocation') }} a
     inner join runs r on r.name = a.run
     where a.line_type = 'sent' and a.hop_kind = 'own'
-    group by a.run, a.main_account, a.origin_member
+    group by a.run, a.main_account, a.origin_member, a.basis
 ),
 
 stamp_violations as (
@@ -36,12 +47,13 @@ stamp_violations as (
 sides as (
     select run, main_account, origin_member, pool, 'published' as side
     from published
-    where policy = 'Follow Latest Data'
+    where policy = 'Follow Latest Data' and basis != 'Declared Rate'
 
     union all
 
     select run, main_account, origin_member, origin_amount as pool, 'current' as side
-    from ({{ cost_allocation_pools("(select * from runs where amounts_after_approval = 'Follow Latest Data')") }})
+    from ({{ cost_allocation_pools('live_runs') }})
+    where (run, origin_member) not in (select run, origin_member from rate_origins)
 ),
 
 stale as (

@@ -18,6 +18,11 @@ with the declared account it came from (declared_account, after main_account),
 so the drift test sums by main_account without an account tree, which
 ClickHouse cannot walk. konsol's _REFERENCE_TABLE_DDL carries the same body.
 
+Phase 2b-2 (R6): the weights carry the step's `basis`, the declared `rate` (4
+places, as konsol's Rule Rate stores it) and `rate_from`, the rate window's
+start, after effective_from. A Share of Pool row has rate 0 and rate_from
+unset (1970-01-01, like effective_from). Documented column by column too.
+
 Plain unittest, no third-party imports:
 `python -m unittest -v tests.test_cost_allocation_ddl`.
 """
@@ -48,7 +53,8 @@ TABLES = {
     "epm_staging.cost_allocation_run_weights": (
         "(parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, "
         "driver String, statistic String, value_period UInt8, carried_forward UInt8, "
-        "driver_value Decimal(38,9), source String, effective_from Date) "
+        "driver_value Decimal(38,9), source String, effective_from Date, "
+        "basis String, rate Decimal(38,4), rate_from Date) "
         "ENGINE = MergeTree ORDER BY (parent, idx)"
     ),
     "epm_staging.cost_allocation_run_driver_accounts": (
@@ -76,9 +82,9 @@ TABLES = {
 # The source table names, as written in the sources YAML (without the schema).
 SOURCE_TABLES = [name.split(".", 1)[1] for name in TABLES]
 
-# Phase 2b-1 (task C): the columns the sources YAML must document, per table.
+# Phase 2b-1 (task C) and 2b-2 (R6): the columns the sources YAML must document, per table.
 DOCUMENTED_COLUMNS = {
-    "cost_allocation_run_weights": ["source", "effective_from"],
+    "cost_allocation_run_weights": ["source", "effective_from", "basis", "rate", "rate_from"],
     "cost_allocation_run_driver_accounts": ["driver", "main_account", "declared_account", "value_sign"],
 }
 
