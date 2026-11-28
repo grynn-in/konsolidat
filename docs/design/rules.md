@@ -13,11 +13,11 @@ consolidation engine with every defect this one has already paid for.
 
 | | |
 |---|---|
-| assertions | **236** |
-| carrying their reasoning | 212 |
-| citing the issue that caused them | 210 |
+| assertions | **238** |
+| carrying their reasoning | 214 |
+| citing the issue that caused them | 212 |
 | severity `warn` (reports, does not stop a build) | 30 |
-| severity `error` (stops the build, and its children) | 206 |
+| severity `error` (stops the build, and its children) | 208 |
 
 **`warn` is not a weaker rule — it is a different kind.** An error says the
 number is wrong; a warning says it is unexplained. See konsol#247.
@@ -25,10 +25,10 @@ number is wrong; a warning says it is unexplained. See konsol#247.
 ## Contents
 
 - [Trial balance intake](#trial-balance-intake) — 20
-- [Currency and translation](#currency-and-translation) — 36
+- [Currency and translation](#currency-and-translation) — 37
 - [Ownership and the consolidated result](#ownership-and-the-consolidated-result) — 26
 - [Acquisitions and disposals](#acquisitions-and-disposals) — 17
-- [Intercompany](#intercompany) — 19
+- [Intercompany](#intercompany) — 20
 - [Equity method](#equity-method) — 5
 - [Cash flow](#cash-flow) — 3
 - [Reporting hierarchies](#reporting-hierarchies) — 10
@@ -154,7 +154,7 @@ Two claimed batches for the same entity-period flow ADDITIVELY into silver_gl_en
 
 **PRD-5 Test: Each top-side journal must be balanced (debits = credits).**
 
-konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency. A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
+konsol#353 follow-up: the tolerance is one unit of the journal currency's minor unit (USD 0.01, BHD 0.001, JPY 1), not a flat 0.01. The materiality floor is currency-scaled (Deepak Pai, 18 Sep 2026, konsolidat#209; a flat default was rejected). The journal's currency is its group's reporting currency (the root row, data_area_id ''), and its minor unit is the currencies row konsol writes from ISO Currency (group_minor_units()). A journal whose group declares no reporting currency with a minor unit has nothing to be judged by, so it is reported (reason 'no currency'), never judged at a default. join_use_nulls=0 would read a missing minor unit as 0 (a tolerance of 1), so the two cases are a UNION ALL with an INNER JOIN and a NOT IN, never a LEFT JOIN.
 
 <sub>`error (default)` · `tests/assert_topside_journal_balanced.sql` · konsol#353 konsolidat#209</sub>
 
@@ -387,6 +387,14 @@ A controlled subsidiary (full) is at 100% and has its own test, assert_group_equ
 konsol translates and does not remeasure. fx_method = 'historical' is therefore an Equity-only declaration: an Asset or Liability carried at the rate of the day it arrived would be remeasurement (IAS 21's non-monetary treatment), which this product does not do. konsol#239 refuses any such declaration at publish, so a chart governed today cannot carry one. A stack whose chart predates that guard still can, and that is what this test is for. The damage is not that the number is wrong in an obvious way: gold_consolidated_trial_balance applies a historical rate only where the chart declares one, so a Historical Equity Rate keyed to a non-equity account is simply never applied and the balance quietly falls back to the closing rate. Silent is the problem. This names the declaration instead. Error, not warn. assert_equity_rate_coverage warns because every row it returns is master data with a defined fallback (equity with no historical rate translates at closing, which is a decision, not a mistake). A historical declaration on a non-equity account has no such reading: it is a wrong declaration, and the fallback it lands on is not what the chart asked for. Nothing downstream can repair it, so the build should stop. GREEN requires every account declaring historical to be typed Equity — the konsolidat#213 invariant, uses_historical_rate = 1 implies is_equity = 1. is_equity is what the account IS (account_type = 'Equity'); uses_historical_rate is what the chart DECLARES (fx_method = 'historical'). Two kinds of offender, one row each, the assert_staging_not_stale shape: DECLARATION — the chart itself, an account typed non-equity that declares historical. One row per account. RATE — a Historical Equity Rate someone entered against an account that is not equity. The chart is where the damage is, but the rate is the row a user typed and expects to see honoured, and it can outlive the declaration that made it plausible (retype the account and the rate simply stops mattering, still sitting there). It is never applied either way, so name it too. One row per rate row, tranches included: each is a separately entered rate that does nothing.
 
 <sub>`error (default)` · `tests/assert_historical_is_equity_only.sql` · konsol#239 konsol#348 konsolidat#213 konsolidat#92</sub>
+
+### `ic_group_currency_has_minor_unit`
+
+**konsolidat#395, option B (Deepak Pai, 27 Nov 2026;**
+
+rejected: A, a fixed 4 places, and C, summing in Decimal). A group with intercompany eliminations must have a currency with an ISO minor unit. gold_fully_consolidated_tb decides whether a side's slices cover its elimination leg by rounding both to the group currency's minor unit (ic_leg_covered, macros/materiality.sql), following the 18 Sep 2026 decision that materiality follows the currency's minor unit (konsolidat#209). The minor unit comes from group_minor_units(): the group's reporting currency on its root row (data_area_id '') and the currencies row konsol writes from ISO Currency.minor_unit. A group with no minor unit has no scale to round to. The model never judges it at a default: join_use_nulls=0 would read a missing minor unit as 0, the JPY scale, so the model reads has_minor_unit instead, and with it 0 every leg of the group goes whole on the blank slice. That is a loss of detail, so this test refuses the build and names the group and the currency (blank when the root row declares none, or when the group has no root row). Error severity: without it the loss of slice detail would be silent.
+
+<sub>`error (default)` · `tests/assert_ic_group_currency_has_minor_unit.sql` · konsolidat#209 konsolidat#395</sub>
 
 ### `nci_equals_translated_times_minority`
 
@@ -880,6 +888,14 @@ Its difference_cause stays 'fx'. A P&L (movement) pair compares the period at av
 
 <sub>`error (default)` · `tests/assert_ic_match_status_cases.sql` · konsol#305</sub>
 
+### `ic_matched_slice_nets_to_zero`
+
+**konsolidat#395 (PR #404 review): a fully matched balance-sheet intercompany side leaves nothing on any of its slices.**
+
+This test does not use ic_leg_covered() or any other part of the coverage decision. It reads what the model emitted and checks a consequence of eliminating in full (konsol#117 pair 2 K3, IFRS 10.B86(c)): when a side's matched elimination to date is exactly minus its balance to date, and no slice holds a balance opposite to the side's net, every slice is eliminated to exactly its own balance. Each slice gets L(t) x aligned_s / aligned_gross with aligned_gross = |side| = |L(t)|, so its consolidated intercompany balance to date (its own balance plus the ic_elimination rows on it) is 0. A side sent whole to the blank slice instead leaves its balance on its own slices and the opposite amount on the blank slice: two rows here. The model and assert_ic_slice_to_date_eliminated decide coverage through the same macro, so a defect in that shared decision is invisible to that test. This one compares the model's output with the input balances only. Checked per (group, account, period to date), on accounts where: * every elimination leg is a balance-basis MATCHED leg (no difference leg, which sits on the blank slice by konsolidat#245 Q1 A, and no movement-basis leg); * every side on the account is fully matched to date: |L(t) + side balance| <= the floor (the residual of a side, which translated legs leave at a sub-cent size); * no slice of any side on the account opposes its side's net to date by more than the floor (decision 2B gives such a slice nothing, so it keeps its balance). The slice balance is gold_ic_side_slices (partner set), so a third-party balance on the same account does not enter. Tolerance: the account's total to date may differ from 0 by the floor plus the residuals already accepted on its sides, floor + sum of |L(t) + side balance| over the sides on the account. Each side was accepted within the floor, so several sides on one account can add past the floor with nothing wrong (28 Nov 2026, aquila-bike example: 15 false rows of 0.005 to 0.012). This cannot hide a leg sent whole to the blank slice: that leaves an amount of the leg's size on the slice and the opposite on the blank slice, each far over a tolerance made of sub-floor residuals (every side counted is within the floor of its leg, so the tolerance is the floor times at most the number of sides plus one, and a leg is many times the floor). Error severity: a slice keeping an intercompany balance the group eliminated in full is a wrong consolidated number that the account total does not show.
+
+<sub>`error (default)` · `tests/assert_ic_matched_slice_nets_to_zero.sql` · konsol#117 konsolidat#245 konsolidat#395 konsolidat#404</sub>
+
 ### `ic_pair_basis`
 
 **Decision 14 (13 Sep 2026): a balance-sheet intercompany pair matches on its balance to date (from inception, as gold_balance_sheet carries it).**
@@ -916,9 +932,9 @@ No elimination slice may be moved further than it moved itself. THE ASSERTION NO
 
 **konsolidat#245 option C, PR #260 review F1.**
 
-A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
+A balance-basis intercompany side is eliminated TO DATE, per slice, in proportion to each slice's TO-DATE balance. gold_ic_eliminations values a balance-sheet pair at its balance to date and posts each period the CHANGE in that to-date elimination (decision 14). A slice split by the period's MOVEMENT is therefore the wrong base: when the partner books a period late, the side moved nothing in the period the leg is posted, and the whole leg fell on the blank slice; when the side reclassifies its receivable between two cost centres, the leg is 0 and the first cost centre kept an elimination against a balance it no longer holds. Every per-period check in this layer passes on both, because they compare one period's leg with one period's movement. This test compares CUMULATIVE amounts, which is the only grain where the defect is visible. For every balance-basis MATCHED leg side (entity, partner, account) and every period in which that side or its leg changes, the expected to-date elimination on a slice is L(t) x aligned_s(t) / aligned_gross(t) where L(t) is the side's matched elimination to date (the sum of what gold_ic_eliminations posted), aligned_s(t) is the slice's to-date balance when it points the same way as the side's to-date net (decision 2B: an opposing slice takes nothing), and aligned_gross(t) their sum. When aligned_gross does not cover leg_coverage() x |L(t)| (decision 1B), the whole L(t) is expected on the blank slice instead. Coverage is decided at the group currency's ISO minor unit, through ic_leg_covered(), the macro the model uses (konsolidat#395, option B, Deepak Pai, 27 Nov 2026). Expected amounts are summed over every side that shares the account, and compared with the cumulative ic_elimination rows of gold_fully_consolidated_tb on that account and slice. Out of scope, on purpose: an account that ever carries a DIFFERENCE leg. Its blank-slice difference would mix into the cumulative amounts compared here. Since konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026) the difference entry sits on the blank slice on both legs; assert_ic_difference_on_the_blank_slice asserts that. Movement-basis (P&L) pairs are period-valued and are covered by assert_ic_slice_not_moved_past_its_own. Error severity: a slice left with an elimination it no longer holds is a wrong consolidated number that every total-based check accepts.
 
-<sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260</sub>
+<sub>`error (default)` · `tests/assert_ic_slice_to_date_eliminated.sql` · konsolidat#245 konsolidat#260 konsolidat#395</sub>
 
 ### `unrealized_profit_at_operator_share`
 

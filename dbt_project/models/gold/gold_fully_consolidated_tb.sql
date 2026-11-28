@@ -87,6 +87,12 @@ with entity_balances as (
    is big enough to divide by; otherwise it collapses to ONE blank-slice row
    carrying the whole leg. `matched` is a sentinel: 0 on a join miss, which
    cannot be confused with a real value. #}
+{# konsolidat#395 B (Deepak Pai, 27 Nov 2026): each group's currency minor
+   unit, from the one path in macros/materiality.sql. #}
+group_units as (
+    select consolidation_group, minor_unit, has_minor_unit from {{ group_minor_units() }}
+),
+
 side_slices_by_pair as (
     select
         consolidation_group,
@@ -170,9 +176,17 @@ side_shares_whole as (
    it needs the leg's size to do it, which is why the choice is made at the
    join and not here. #}
 side_slice_shares as (
-    select * from side_shares_sliced
-    union all
-    select * from side_shares_whole
+    select s.*, u.minor_unit as minor_unit, u.has_minor_unit as has_minor_unit
+    from (
+        select * from side_shares_sliced
+        union all
+        select * from side_shares_whole
+    ) as s
+    {# the group currency's ISO minor unit, the scale ic_leg_covered rounds to
+       (konsolidat#395 B). A LEFT JOIN: a group with no minor unit keeps its
+       rows with has_minor_unit = 0, which ic_leg_covered reads as not
+       covered, and assert_ic_group_currency_has_minor_unit refuses it. #}
+    left join group_units as u on u.consolidation_group = s.consolidation_group
 ),
 
 {# PR #260 review F1: a BALANCE pair's matched leg is split TO DATE.
@@ -334,20 +348,23 @@ bal_gross as (
     group by consolidation_group, fiscal_year, fiscal_period, rule_id, entity, partner, account
 ),
 
-{# 1B, to date: split only when the aligned slices cover the to-date leg. A side
-   with no slice row is a join miss, aligned_gross 0: not split. #}
+{# 1B, to date: split only when the aligned slices cover the to-date leg, at
+   the group currency's minor unit (ic_leg_covered, konsolidat#395 B). A side
+   with no slice row is a join miss, aligned_gross 0: not split. A group with
+   no minor unit is a join miss on group_units, has_minor_unit 0: not split. #}
 bal_cover as (
     select
         l.consolidation_group as consolidation_group, l.fiscal_year as fiscal_year,
         l.fiscal_period as fiscal_period, l.rule_id as rule_id,
         l.entity as entity, l.partner as partner, l.account as account,
         l.leg_td as leg_td, g.aligned_gross as aligned_gross,
-        toUInt8(g.aligned_gross > 0 and g.aligned_gross >= {{ leg_coverage() }} * abs(l.leg_td)) as split
+        toUInt8(g.aligned_gross > 0 and {{ ic_leg_covered('g.aligned_gross', 'l.leg_td', 'u.minor_unit', 'u.has_minor_unit') }}) as split
     from bal_leg_to_date as l
     left join bal_gross as g
         on g.consolidation_group = l.consolidation_group and g.fiscal_year = l.fiscal_year
         and g.fiscal_period = l.fiscal_period and g.rule_id = l.rule_id
         and g.entity = l.entity and g.partner = l.partner and g.account = l.account
+    left join group_units as u on u.consolidation_group = l.consolidation_group
 ),
 
 {# each slice's share of L(t), and the whole-leg row on the blank slice #}
@@ -458,12 +475,13 @@ ic_elims as (
         and sl.account = e.debit_account
         {# ONE representation of the side per leg (1B): its own activity must
            cover the whole leg before its slices divide it, else the single
-           whole-leg row. In the ON, so a side matching neither arm is a join
-           miss and the leg is still emitted (fail-safe) rather than dropped. #}
-        and (sl.is_flat = 0
-             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.debit_elimination)
-             or sl.is_flat = 1
-             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.debit_elimination))
+           whole-leg row. Covered is decided at the group currency's minor
+           unit (ic_leg_covered, konsolidat#395 B), and the two arms are one macro and
+           its negation, so exactly one matches. In the ON, so a side matching
+           neither arm is a join miss and the leg is still emitted (fail-safe)
+           rather than dropped. #}
+        and (sl.is_flat = 0 and {{ ic_leg_covered('sl.aligned_gross', 'e.debit_elimination', 'sl.minor_unit', 'sl.has_minor_unit') }}
+             or sl.is_flat = 1 and not {{ ic_leg_covered('sl.aligned_gross', 'e.debit_elimination', 'sl.minor_unit', 'sl.has_minor_unit') }})
         {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
            legs, is never split: a join miss, so it lands whole on the blank slice.
            assert_ic_difference_on_the_blank_slice pins it. #}
@@ -496,12 +514,13 @@ ic_elims as (
         and sl.account = e.credit_account
         {# ONE representation of the side per leg (1B): its own activity must
            cover the whole leg before its slices divide it, else the single
-           whole-leg row. In the ON, so a side matching neither arm is a join
-           miss and the leg is still emitted (fail-safe) rather than dropped. #}
-        and (sl.is_flat = 0
-             and sl.aligned_gross >= {{ leg_coverage() }} * abs(e.credit_elimination)
-             or sl.is_flat = 1
-             and sl.aligned_gross <  {{ leg_coverage() }} * abs(e.credit_elimination))
+           whole-leg row. Covered is decided at the group currency's minor
+           unit (ic_leg_covered, konsolidat#395 B), and the two arms are one macro and
+           its negation, so exactly one matches. In the ON, so a side matching
+           neither arm is a join miss and the leg is still emitted (fail-safe)
+           rather than dropped. #}
+        and (sl.is_flat = 0 and {{ ic_leg_covered('sl.aligned_gross', 'e.credit_elimination', 'sl.minor_unit', 'sl.has_minor_unit') }}
+             or sl.is_flat = 1 and not {{ ic_leg_covered('sl.aligned_gross', 'e.credit_elimination', 'sl.minor_unit', 'sl.has_minor_unit') }})
         {# konsolidat#245 Q1 A (Deepak Pai, 21 Nov 2026): the DIFFERENCE entry, both
            legs, is never split: a join miss, so it lands whole on the blank slice.
            assert_ic_difference_on_the_blank_slice pins it. #}
