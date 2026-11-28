@@ -17,11 +17,21 @@
 -- Checked per (group, account, period to date), on accounts where:
 --   * every elimination leg is a balance-basis MATCHED leg (no difference leg, which sits on the
 --     blank slice by konsolidat#245 Q1 A, and no movement-basis leg);
---   * every side on the account is fully matched to date: |L(t) + side balance| <= the floor;
+--   * every side on the account is fully matched to date: |L(t) + side balance| <= the floor
+--     (the residual of a side, which translated legs leave at a sub-cent size);
 --   * no slice of any side on the account opposes its side's net to date by more than the floor
 --     (decision 2B gives such a slice nothing, so it keeps its balance).
 -- The slice balance is gold_ic_side_slices (partner set), so a third-party balance on the same
 -- account does not enter.
+--
+-- Tolerance: the account's total to date may differ from 0 by the floor plus the residuals already
+-- accepted on its sides, floor + sum of |L(t) + side balance| over the sides on the account. Each
+-- side was accepted within the floor, so several sides on one account can add past the floor with
+-- nothing wrong (28 Nov 2026, aquila-bike example: 15 false rows of 0.005 to 0.012). This cannot hide
+-- a leg sent whole to the blank slice: that leaves an amount of the leg's size on the slice and the
+-- opposite on the blank slice, each far over a tolerance made of sub-floor residuals (every side
+-- counted is within the floor of its leg, so the tolerance is the floor times at most the number of
+-- sides plus one, and a leg is many times the floor).
 --
 -- Error severity: a slice keeping an intercompany balance the group eliminated in full is a wrong
 -- consolidated number that the account total does not show.
@@ -145,6 +155,13 @@ excluded as (
     where t.bal_td * if(sd.side_td >= 0, 1, -1) < -{{ floor }}
 ),
 
+{# the residuals accepted on each checked account and period, as a tolerance #}
+accepted_residual as (
+    select consolidation_group, account, pk, sum(abs(residual)) as tolerance
+    from side_residual
+    group by consolidation_group, account, pk
+),
+
 check_points as (
     select distinct consolidation_group, account, pk
     from account_points
@@ -174,16 +191,23 @@ eliminated as (
 )
 
 select
-    consolidation_group,
-    intDiv(pk, 100) as fiscal_year,
-    pk % 100 as fiscal_period,
-    account,
-    {{ dim_select(trailing=true) }}
-    sum(amount) as consolidated_ic_to_date
+    t.consolidation_group as consolidation_group,
+    intDiv(t.pk, 100) as fiscal_year,
+    t.pk % 100 as fiscal_period,
+    t.account as account,
+    {{ dim_select('t.', trailing=true) }}
+    t.consolidated_ic_to_date as consolidated_ic_to_date
 from (
-    select * from balances
-    union all
-    select * from eliminated
-)
-group by consolidation_group, pk, account {{ dim_group_by(leading=true) }}
-having abs(sum(amount)) > {{ floor }}
+    select consolidation_group, pk, account,
+           {{ dim_select(trailing=true) }}
+           sum(amount) as consolidated_ic_to_date
+    from (
+        select * from balances
+        union all
+        select * from eliminated
+    )
+    group by consolidation_group, pk, account {{ dim_group_by(leading=true) }}
+) as t
+inner join accepted_residual as r
+    on r.consolidation_group = t.consolidation_group and r.account = t.account and r.pk = t.pk
+where abs(t.consolidated_ic_to_date) > {{ floor }} + r.tolerance
