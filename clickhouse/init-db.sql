@@ -475,9 +475,13 @@ CREATE TABLE IF NOT EXISTS epm_gold.budget_annual_input (
 -- Account Set driver's accounts are their own table. effective_from is a plain
 -- Date: a statistic or account-set row leaves it unset, which konsol writes as
 -- DEFAULT and the column reads as 1970-01-01.
+-- Phase 2b-2 (R6): the weights carry the step's basis, the declared rate (4
+-- places, as konsol's Rule Rate stores it) and rate_from, the rate window's
+-- start, after effective_from (konsol adds them to an existing table in that
+-- position). A Share of Pool row has rate 0 and rate_from unset (1970-01-01).
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_runs (name String, rule_set String, method String, allocation_dimension String, receiver_account_mode String, allocation_account String, amounts_after_approval String, data_area_id String, scenario_id String, fiscal_year UInt16, fiscal_period UInt8, computed_at DateTime) ENGINE = MergeTree ORDER BY name;
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_accounts (parent String, idx UInt32, main_account String, declared_account String) ENGINE = MergeTree ORDER BY (parent, idx);
-CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_weights (parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, driver String, statistic String, value_period UInt8, carried_forward UInt8, driver_value Decimal(38,9), source String, effective_from Date) ENGINE = MergeTree ORDER BY (parent, idx);
+CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_weights (parent String, idx UInt32, step UInt16, sender_member String, receiver_member String, driver String, statistic String, value_period UInt8, carried_forward UInt8, driver_value Decimal(38,9), source String, effective_from Date, basis String, rate Decimal(38,4), rate_from Date) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_run_driver_accounts (parent String, idx UInt32, driver String, main_account String, declared_account String, value_sign String) ENGINE = MergeTree ORDER BY (parent, idx);
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_coefficients (run String, origin_member String, step UInt16, sender_member String, receiver_member String, driver String, hop_kind String, pool_coefficient Decimal(38,12), coefficient Decimal(38,12)) ENGINE = MergeTree ORDER BY (run, origin_member, step, receiver_member);
 CREATE TABLE IF NOT EXISTS epm_staging.cost_allocation_statistics (name String, driver String, dimension String, data_area_id String, scenario_id String, fiscal_year UInt16) ENGINE = MergeTree ORDER BY name;

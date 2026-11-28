@@ -6,6 +6,7 @@
         full_refresh=false,
         pre_hook=[
             "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS hop_kind String AFTER line_type{% endif %}",
+            "{% if is_incremental() %}ALTER TABLE {{ this }} ADD COLUMN IF NOT EXISTS basis String DEFAULT 'Share of Pool' AFTER hop_kind{% endif %}",
             "{% if is_incremental() %}{{ cost_allocation_backfill_hop_kind(this) }}{% endif %}",
             "{% if is_incremental() %}DELETE FROM {{ this }} WHERE run NOT IN (SELECT name FROM {{ source('epm_staging', 'cost_allocation_runs') }}){% endif %}"
         ],
@@ -43,7 +44,18 @@
 -- The ADD is a no-op once the column exists. The backfill is the macro
 -- cost_allocation_backfill_hop_kind: it counts the rows with hop_kind = '' and
 -- issues the UPDATE (a mutation: it rewrites parts) only when there are some, so
--- a build of a new-shape table runs no mutation (RF8). Any other column change still fails loudly.
+-- a build of a new-shape table runs no mutation (RF8).
+--
+-- Upgrade in place, 2b-2: `basis` (Share of Pool / Declared Rate) came with declared
+-- rates; a table built by phase 2a lacks it. The second pre_hook adds it with
+-- DEFAULT 'Share of Pool', which needs no backfill at all: every row frozen before
+-- 2b-2 was a share-of-pool row, and ClickHouse serves a column default for parts
+-- written before the column existed, so no mutation runs. It comes after the
+-- hop_kind ADD (its AFTER names hop_kind, which a phase-1 table gets in the first
+-- hook) and before the backfill. Fixture
+-- assert_cost_allocation_frozen_consistent.pre_2b_shape proves it: a 2a-shape table,
+-- then this build appends a rate run and every allocation test passes. Any other
+-- column change still fails loudly.
 --
 -- full_refresh=false: `dbt build --full-refresh` skips the rebuild of this table
 -- (dbt treats the model as a normal incremental run), so it cannot re-freeze

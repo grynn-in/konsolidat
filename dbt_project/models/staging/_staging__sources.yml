@@ -540,6 +540,12 @@ sources:
             description: "konsol#269 phase 2b-1: where the driver value came from: 'Uploaded Statistic', 'Fixed Weights' or 'Account Set'. '' on a run computed before phase 2b."
           - name: effective_from
             description: "konsol#269 phase 2b-1: for Fixed Weights, the start of the window the value was read from. Unset otherwise, which this Date column holds as 1970-01-01."
+          - name: basis
+            description: "konsol#269 phase 2b-2: the step's basis as the rule declared it at Compute: 'Share of Pool' (the sender's pool split by weight) or 'Declared Rate' (each receiver charged rate x its driver units). '' on a run computed before phase 2b-2, which is a Share of Pool row."
+          - name: rate
+            description: "konsol#269 phase 2b-2: for Declared Rate, the amount per driver unit the rule set declared for the run's period, 4 places as konsol stores it. 0 on a Share of Pool row."
+          - name: rate_from
+            description: "konsol#269 phase 2b-2: for Declared Rate, the start of the rate window konsol picked at Compute (the one window covering the whole run period). Unset otherwise, which this Date column holds as 1970-01-01."
       - name: cost_allocation_run_driver_accounts
         description: "konsol#269 phase 2b-1: the accounts each Account Set driver of a submitted Cost Allocation Run read at Compute, snapshotted on the run (parent = the run's name). One row per EXPANDED account (2b-1 DA): konsol walks the account tree at Compute, so the warehouse never has to."
         columns:
